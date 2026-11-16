@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { userEvent, within } from "storybook/test";
 import { Block, BlockHandle, PickBox, Stack, Text } from "./index";
 
 /**
@@ -48,4 +49,18 @@ export const Box: Story = {
 			<PickBox />
 		</div>
 	),
+};
+
+/** Pointed at, the grip says its name (the same as a screen reader hears), above it. */
+export const Tooltip: Story = {
+	tags: ["visual"],
+	render: (args) => (
+		<Stack direction="row" gap={8} align="start" maxWidth="reading">
+			<BlockHandle {...args} />
+			<Paragraph />
+		</Stack>
+	),
+	play: async ({ canvasElement }) => {
+		await userEvent.hover(within(canvasElement).getByRole("button", { name: "블록 메뉴" }));
+	},
 };

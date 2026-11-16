@@ -106,7 +106,7 @@ describe("what is pressed in the text answers the pointer", () => {
 						setTextSelection: (range: { from: number; to: number }) => void;
 						focus: () => void;
 					};
-					view: { coordsAtPos: (pos: number) => { top: number; bottom: number } };
+					view: { coordsAtPos: (pos: number) => { top: number; bottom: number; left: number } };
 				};
 			}
 		).editor;
@@ -138,10 +138,22 @@ describe("what is pressed in the text answers the pointer", () => {
 					return Math.min(Math.abs(words.top - at.bottom), Math.abs(at.top - words.bottom));
 				})
 				.toBeLessThan(24);
+			// The card's first button over the words' start (when the body's edge does not hold it back).
+			expect(Math.abs(card.element().getBoundingClientRect().left - words.left)).toBeLessThan(3);
 			const edge = body().element().getBoundingClientRect();
 			expect(card.element().getBoundingClientRect().left).toBeGreaterThanOrEqual(edge.left - 1);
 			expect(card.element().getBoundingClientRect().right).toBeLessThanOrEqual(edge.right + 1);
 		}
+	});
+
+	it("where the words are the card stands above them (over the title's room if need be), not below them", async () => {
+		await OwnFormat.run();
+		await expect.element(body()).toBeVisible();
+		await pickWords(body().element(), "나머지는 필요할 때 꺼내 본다.");
+		const card = page.getByRole("toolbar", { name: "서식" });
+		await expect.element(card).toBeVisible();
+		const picked = () => window.getSelection()?.getRangeAt(0).getClientRects()[0]?.top ?? 0;
+		await expect.poll(() => card.element().getBoundingClientRect().bottom).toBeLessThanOrEqual(picked() + 1);
 	});
 
 	it("a site's own text format is a row of the format bar's ⋯, starting with an icon as every menu row does", async () => {

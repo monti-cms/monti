@@ -410,3 +410,36 @@ export const CutTitle: Story = {
 		await within(document.body).findByRole("tooltip");
 	},
 };
+
+/**
+ * A table wider than its column (a panel open beside it, columns made wide): the cell with the ⋯ sticks to the column's edge in the row's own ground, so the
+ * ⋯ stays in reach and the cells under it do not show through; a line on its left says the table runs under it. The row under the pointer and the picked
+ * row keep their grounds under it.
+ */
+export const StickyActions: Story = {
+	tags: ["visual"],
+	render: () => (
+		// design-allow: a column narrower than its table, which the page's column is beside a panel
+		<div
+			data-clipping=""
+			style={{ width: 420, overflowX: "clip", position: "relative", ["--monti-edge-gap" as string]: "0px" }}
+		>
+			<ListScroll>
+				<Table container="none" layout="fixed" columns={[120, 240, 96, 48]}>
+					<TableHeader>
+						<TableRow>
+							<TableHead>상태</TableHead>
+							<TableHead>제목</TableHead>
+							<TableHead align="end">수정한 날</TableHead>
+							<TableHead />
+						</TableRow>
+					</TableHeader>
+					<TableBody>{rows((id) => ({ selected: id === "3" }))}</TableBody>
+				</Table>
+			</ListScroll>
+		</div>
+	),
+	play: async ({ canvasElement }) => {
+		await userEvent.hover(within(canvasElement).getByText("봄에 쓴 첫 글"));
+	},
+};

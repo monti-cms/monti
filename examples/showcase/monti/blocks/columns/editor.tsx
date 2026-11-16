@@ -28,9 +28,10 @@ const MOST = 4;
 /** No column is narrower than this share (%) when a border is dragged; the arrow keys move a border this much. */
 const NARROWEST = 10;
 const STEP = 5;
-/** The hit area over a border (px), and how thick the + strip is: inside the frame's right edge, no thicker than the table's. */
+/** The hit area over a border (px), and the + strip as the table's: 4px outside the frame's right edge and 16px thick. */
 const BORDER = 9;
-const STRIP = 8;
+const STRIP_GAP = 4;
+const STRIP = 16;
 
 const fill = (text: string, values: Record<string, number>) =>
 	text.replace(/\{(\w+)\}/g, (whole, name: string) => String(values[name] ?? whole));
@@ -68,6 +69,12 @@ export default function ColumnsEditor() {
 	// Drawn again once the columns are: their elements are what the tools stand on.
 	useLayoutEffect(() => setMade(count));
 	const columns = columnsOf();
+	// The tool row stands over the block's top left: a column's grip that would meet it (a narrow first column) is not drawn, so the two never overlap.
+	const meetsBar = (column: HTMLElement) => {
+		const bar = grid.current?.closest("[data-slot=block-frame]")?.querySelector("[data-slot=block-bar-place]");
+		const at = column.getBoundingClientRect();
+		return Boolean(bar && at.left + at.width / 2 - 12 < bar.getBoundingClientRect().right + 4);
+	};
 	const borderAt = (border: number) => () => {
 		const cols = columnsOf();
 		const frame = grid.current?.getBoundingClientRect();
@@ -75,10 +82,10 @@ export default function ColumnsEditor() {
 		const right = cols[border + 1]?.getBoundingClientRect().left ?? left;
 		return { left: (left + right) / 2 - BORDER / 2, top: frame?.top ?? 0, width: BORDER, height: frame?.height ?? 0 };
 	};
-	// Inside the frame's right edge, as thick as the table's + strip: over no words.
+	// Outside the frame's right edge, as the table's + strip is.
 	const stripAt = () => {
 		const frame = grid.current?.getBoundingClientRect();
-		return { left: (frame?.right ?? 0) - STRIP, top: frame?.top ?? 0, width: STRIP, height: frame?.height ?? 0 };
+		return { left: (frame?.right ?? 0) + STRIP_GAP, top: frame?.top ?? 0, width: STRIP, height: frame?.height ?? 0 };
 	};
 
 	const write = (next: number[] | null) =>
@@ -176,7 +183,7 @@ export default function ColumnsEditor() {
 							</Anchored>
 						))}
 						{columns.map((column, index) =>
-							menu === index || block.childAt === index || pointed === index ? (
+							(menu === index || block.childAt === index || pointed === index) && !meetsBar(column) ? (
 								<Anchored
 									// biome-ignore lint/suspicious/noArrayIndexKey: a grip is its column's place
 									key={index}
@@ -223,10 +230,11 @@ export default function ColumnsEditor() {
 								</Anchored>
 							) : null,
 						)}
-						{count < MOST && over && (
+						{count < MOST && (
 							<Anchored anchor={{ spot: stripAt, context: grid.current ?? undefined }} place="over-box">
 								<TableAddStrip
 									label={say(words.addColumn)}
+									shown={over}
 									onClick={() => block.insertChild(newColumn(), count, { widths: undefined })}
 								/>
 							</Anchored>

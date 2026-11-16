@@ -78,13 +78,25 @@ const HANDLE = 24;
 /** How far left of the text the pointer still counts as on a block's line: the margin the handle sits in, and some room to reach it. */
 const REACH = 64;
 
+/**
+ * A table's row grip stands 4px out of the table's left rule, 12px wide, with a 24px box to press: the block handle of a table stands left of that lane
+ * (its own 4px off the lane's far side), so the two never meet.
+ */
+const TABLE_LANE = 22;
+
 /** The box the handle stands for: a zero-wide line at the block's text edge, one grip high. A list item's handle sits left of its list, so the bullet stays in view. */
 function handleBox(element: HTMLElement) {
 	const rect = element.getBoundingClientRect();
 	const inList = element.tagName === "LI" ? element.parentElement : null;
 	const left = (inList ?? element).getBoundingClientRect().left;
 	const line = Number.parseFloat(getComputedStyle(element).lineHeight) || HANDLE;
-	return { left, top: rect.top + Math.max(0, (line - HANDLE) / 2), width: 0, height: HANDLE };
+	const table = element.tagName === "TABLE" || element.firstElementChild?.tagName === "TABLE";
+	return {
+		left: left - (table ? TABLE_LANE : 0),
+		top: rect.top + Math.max(0, (line - HANDLE) / 2),
+		width: 0,
+		height: HANDLE,
+	};
 }
 
 /** The handle's place beside a block's element. */

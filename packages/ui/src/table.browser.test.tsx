@@ -13,6 +13,7 @@ import {
 	RowLink,
 	RowMore,
 	RowTitle,
+	SidePanel,
 	Table,
 	TableBody,
 	TableCell,
@@ -888,5 +889,50 @@ describe("a cell that cuts its words", () => {
 		expect(tip().length).toBe(1);
 		await userEvent.hover(cells[1] as HTMLElement, { position: { x: 12, y: 8 }, force: true });
 		await expect.poll(tip).toEqual([]);
+	});
+});
+
+describe("the cell that holds a row's ⋯", () => {
+	const actions = () => document.querySelector("[data-slot=row-actions]")?.closest("td") as HTMLElement;
+	const row = () => actions().closest("tr") as HTMLElement;
+	const ground = (element: Element) => getComputedStyle(element).backgroundColor;
+	const Rows = ({ selected = false }: { selected?: boolean }) => (
+		<Table container="none" layout="fixed" columns={[120, undefined, 48]}>
+			<TableBody>
+				<TableRow selected={selected}>
+					<TableCell>제목</TableCell>
+					<TableCell>
+						<RowLink href="#">링크가 있는 행</RowLink>
+					</TableCell>
+					<TableCell>
+						<RowActions>
+							<RowMore label="더 보기" />
+						</RowActions>
+					</TableCell>
+				</TableRow>
+			</TableBody>
+		</Table>
+	);
+
+	it("on a tool panel it takes the panel's ground and the row has none, so no row turns white; hovered it takes the hover ground, as its row does", async () => {
+		render(
+			<SidePanel title="패널" onClose={() => undefined}>
+				<Rows />
+			</SidePanel>,
+		);
+		await expect.poll(() => document.querySelector("[data-slot=row-actions]")).not.toBeNull();
+		const panel = document.querySelector("[data-slot=side-panel]") as HTMLElement;
+		expect(getComputedStyle(row()).backgroundColor).toBe("rgba(0, 0, 0, 0)");
+		expect(ground(actions())).toBe(ground(panel));
+		await userEvent.hover(page.getByText("링크가 있는 행"));
+		await expect.poll(() => ground(row())).not.toBe("rgba(0, 0, 0, 0)");
+		expect(ground(actions())).toBe(ground(row()));
+	});
+
+	it("in a picked row it takes the picked ground, and on the page the page's", async () => {
+		render(<Rows selected />);
+		await expect.poll(() => document.querySelector("[data-slot=row-actions]")).not.toBeNull();
+		expect(ground(actions())).toBe(ground(row()));
+		expect(ground(actions())).not.toBe("rgba(0, 0, 0, 0)");
 	});
 });

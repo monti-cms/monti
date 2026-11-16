@@ -15,18 +15,18 @@ const addColumn = () => page.getByRole("button", { name: "열 더하기" });
 /** How many columns the table has: the cells of its first row. */
 const columns = () => (table().element() as HTMLTableElement).rows[0]?.cells.length;
 
-/** The pointer goes from a cell of the table to the + strip inside the table's right edge, as a hand moves it. */
+/** The pointer goes from a cell of the table out past its right edge to the + strip there, as a hand moves it. */
 async function toRightStrip() {
 	const box = table().element().getBoundingClientRect();
 	const y = box.top + box.height / 2;
 	await pointerPath([
 		{ x: box.right - 40, y },
-		{ x: box.right - 4, y },
+		{ x: box.right + 12, y },
 	]);
 }
 
 describe("a table's tools", () => {
-	it("[reach] the pointer travels from the table to the right + strip inside its edge, which stays to be pressed and adds a column", async () => {
+	it("[reach] the pointer travels from the table to the right + strip outside its edge, which stays to be pressed and adds a column", async () => {
 		await TableGrips.run();
 		await toRightStrip();
 		await expect.element(addColumn()).toBeVisible();
@@ -105,5 +105,31 @@ describe("a table's tools", () => {
 		await expect.poll(height).toBeGreaterThan(before + 20);
 		await toRightStrip();
 		await expect.poll(() => Math.abs(strip() - height())).toBeLessThan(1.5);
+	});
+
+	it("the strips stand outside the edge as the owner approved them: 16px thick, 4px off, with the 14px + glyph; and the block handle stands left of the row grip without meeting it", async () => {
+		await TableGrips.run();
+		await userEvent.click(body().getByRole("cell", { name: "편집기 다시 만들기" }));
+		await toRightStrip();
+		const box = table().element().getBoundingClientRect();
+		const strip = addColumn().element().getBoundingClientRect();
+		expect(strip.width).toBe(16);
+		expect(Math.round(strip.left - box.right)).toBe(4);
+		expect(Math.round(addColumn().element().querySelector("svg")?.getBoundingClientRect().width ?? 0)).toBe(14);
+		// The pointer on the table's block, beside it: the handle comes out next to the row grip.
+		await pointerPath([
+			{ x: box.left + 40, y: box.top + 10 },
+			{ x: box.left - 40, y: box.top + 14 },
+		]);
+		const handle = page.getByRole("button", { name: "블록 메뉴" });
+		await expect.element(handle).toBeVisible();
+		const grip = page
+			.getByRole("button", { name: /번째 행/ })
+			.first()
+			.element()
+			.getBoundingClientRect();
+		const at = handle.element().getBoundingClientRect();
+		// Not touching: not even the 24px box the grip is pressed in (6px beyond the grip's 12).
+		expect(at.right).toBeLessThanOrEqual(grip.left - 6);
 	});
 });

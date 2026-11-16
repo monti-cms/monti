@@ -2,13 +2,15 @@ import { type CSSProperties, useMemo, useSyncExternalStore } from "react";
 import { dockShown, watchDock } from "./bottom-dock";
 
 /**
- * Where floating things stand (overlay.md, the place rule). Two kinds:
+ * Where floating things stand (overlay.md, the place rule). Four kinds:
  *
- * - Things that stay while a person edits (the format card, a block's tool row, a table's grips and + strips, the block handle, the review bar)
- *   cover no text. They reserve their room (`TOOL_ROW_ROOM`, the review bar's end of the body) and fold inside the body box and the window
- *   (`Anchored`'s `within`).
- * - Things a person opens (menus, the "/" menu, cards) may cover text while open, but sit on what opened them: aligned to its edge, never narrower
- *   than it, and shrunk to scroll before they flip (`FIT_HEIGHT`).
+ * - Things that stay while a person edits (a block's tool row, a table's grips and + strips, the block handle) cover no text. They reserve their room
+ *   (`TOOL_ROW_ROOM`) and stand at their edge (`Anchored`).
+ * - Things a person opens (menus, the "/" menu, cards, the format card) may cover text while open, but sit on what opened them: aligned to its edge,
+ *   never narrower than it, folded inside the body across and the window up and down, and shrunk to scroll before they flip (`FIT_HEIGHT`).
+ * - Bars fixed to the window's edge (the editor header, the review bar): words scroll under them and every word can be scrolled clear of them, the body
+ *   keeping an end room of the bar's height and gap.
+ * - What lives in a block's node view (a block's tool row) is placed by CSS on its block.
  *
  * The numbers and the defaults are here once; no part picks its own.
  */
@@ -96,7 +98,7 @@ export const PLACES: Record<
 	/** The block handle: in the left margin, level with the block's first line, {@link EDGE_GAP} off the text. */
 	"block-left": { side: "left", align: "start", sideOffset: EDGE_GAP, collision: "exact" },
 	/** The format card: over the selected words, 8px up, flipped below when there is no room above; it is a thing opened and goes with the selection. */
-	"selection-above": { side: "top", align: "center", sideOffset: 8, collision: "stays" },
+	"selection-above": { side: "top", align: "start", sideOffset: 8, collision: "stays" },
 	/** A table's column grip: above the top edge, {@link EDGE_GAP} off, in the middle of the column. */
 	"table-above": { side: "top", align: "center", sideOffset: EDGE_GAP, collision: "exact" },
 	/** A table's row grip: out of the left rule by its own width and the gap, in the middle of the row. */

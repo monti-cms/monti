@@ -55,16 +55,19 @@ function TableGrip({
 }
 
 /**
- * The + strip along the inside of a table's right edge (a column) or bottom edge (a row), shown while the pointer is over the table, its name in a tooltip. It fills the box it is put in
- * (`Anchored` with the table's height or width).
+ * The + strip along a table's right edge (a column) or bottom edge (a row), 4px outside it and 16px thick, shown while the pointer is over the table, its name in a tooltip. It fills the box it is put in
+ * (`Anchored` with the table's height or width). Where it is drawn before the pointer comes (the columns block) `shown={false}` keeps it clear until the pointer or the keyboard is on it.
  */
 function TableAddStrip({
 	label,
+	shown = true,
 	className,
 	...props
 }: Omit<ButtonPrimitive.Props, "aria-label" | "children"> & {
 	/** What it adds, for screen readers and the tooltip ("Add a column"). */
 	label: string;
+	/** Drawn: with `false` it is there for the keyboard and the pointer, and clear until one is on it. */
+	shown?: boolean;
 }) {
 	const strip = (
 		<ButtonPrimitive
@@ -72,13 +75,14 @@ function TableAddStrip({
 			type="button"
 			aria-label={label}
 			className={cn(
-				"flex size-full cursor-pointer items-center justify-center overflow-hidden rounded-monti-full border-0 bg-monti-muted p-0 text-monti-subtle outline-none transition-colors hover:bg-monti-selected hover:text-monti-default focus-visible:ring-2 focus-visible:ring-monti-contrast/60",
+				"flex size-full cursor-pointer items-center justify-center rounded-monti-full border-0 bg-monti-muted p-0 text-monti-subtle outline-none transition-colors hover:bg-monti-selected hover:text-monti-default focus-visible:ring-2 focus-visible:ring-monti-contrast/60",
+				!shown && "opacity-0 hover:opacity-100 focus-visible:opacity-100",
 				className,
 			)}
 			onMouseDown={(event) => event.preventDefault()}
 			{...props}
 		>
-			<Add aria-hidden className="size-2.5 shrink-0" />
+			<Add aria-hidden className="size-3.5" />
 		</ButtonPrimitive>
 	);
 	return (

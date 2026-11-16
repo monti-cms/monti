@@ -27,9 +27,9 @@ const KEY_STEP_LARGE = 10;
 /** A border being dragged: whose table, which border, where the drag started and the shares then. */
 type Drag = { tablePos: number; at: number; startX: number; x: number; width: number; shares: number[] };
 
-/** How thick the + strips are: they lie inside the table's right and bottom edge, in the cells' own padding (8px at the sides, 6px above and below), no thicker, so they cover no text. */
-const STRIP_COLUMN = 8;
-const STRIP_ROW = 6;
+/** How far the + strips stand outside the table's right and bottom edge, and how thick they are (the owner's, 2026-11-14: the table's tools are as they were). */
+const STRIP_GAP = 4;
+const STRIP = 16;
 
 type Caret = { tablePos: number; row: number; column: number; rows: number; columns: number };
 
@@ -86,7 +86,7 @@ export function useTableTools(editor: Editor | null) {
 		const table = target.closest("table");
 		if (!table || !editor.view.dom.contains(table)) {
 			const current = hovered === null ? null : tableElement(editor, hovered)?.getBoundingClientRect();
-			const reach = STRIP_COLUMN;
+			const reach = STRIP_GAP + STRIP;
 			const near =
 				current && x >= current.left && x <= current.right + reach && y >= current.top && y <= current.bottom + reach;
 			if (!near) setHovered(null);
@@ -317,14 +317,14 @@ export function useTableTools(editor: Editor | null) {
 		if (hovered === null) return null;
 		const table = tableElement(editor, hovered);
 		if (!table) return null;
-		// Inside the table's edge, as long as the edge (the box is read again as the page moves).
+		// Outside the table's edge, as long as the edge (the box is read again as the page moves).
 		const column = () => {
 			const now = table.getBoundingClientRect();
-			return { left: now.right - STRIP_COLUMN, top: now.top, width: STRIP_COLUMN, height: now.height };
+			return { left: now.right + STRIP_GAP, top: now.top, width: STRIP, height: now.height };
 		};
 		const bottom = () => {
 			const now = table.getBoundingClientRect();
-			return { left: now.left, top: now.bottom - STRIP_ROW, width: now.width, height: STRIP_ROW };
+			return { left: now.left, top: now.bottom + STRIP_GAP, width: now.width, height: STRIP };
 		};
 		return (
 			<>

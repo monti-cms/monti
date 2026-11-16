@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { userEvent } from "storybook/test";
+import { userEvent, within } from "storybook/test";
 import { Edit, Settings, TextAlignCenter, TextAlignLeft, TextAlignRight } from "./icons";
 import { BlockBox, FloatingBar, FloatingBarButton, Image, ResizeCorner, Separator, Stack } from "./index";
 
@@ -91,5 +91,20 @@ export const ReadOnlyStops: Story = {
 		// As the keyboard arrives: the browser draws the keyboard's focus after a key.
 		await userEvent.keyboard("{Shift}");
 		canvasElement.querySelectorAll<HTMLElement>("[data-slot=block-box]")[1]?.focus();
+	},
+};
+
+/** A picture of a body that is written, pointed at: a thin ring says it can be picked and changed; picked, the 2px line stands over it. */
+export const PointedPicture: Story = {
+	tags: ["visual"],
+	render: () => (
+		<Stack gap={8} align="start" maxWidth="reading">
+			<BlockBox pointable width="420px">
+				<Image src={SAMPLE} alt="언덕 위로 해가 뜨는 풍경" ratio="wide" radius="md" />
+			</BlockBox>
+		</Stack>
+	),
+	play: async ({ canvasElement }) => {
+		await userEvent.hover(within(canvasElement).getByRole("img", { name: "언덕 위로 해가 뜨는 풍경" }));
 	},
 };

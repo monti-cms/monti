@@ -220,8 +220,8 @@ function textLines(body: Element, floating: Element): { words: string; box: Box 
 }
 
 /**
- * The words of `body` that `floating` covers: a thing that stays while a person edits (the format card, a block's tool row, a table's grips and +
- * strips, the block handle, the review bar) covers none (docs/design/admin/components/overlay.md, "자리 규칙"). A thing covers where it takes the
+ * The words of `body` that `floating` covers: a thing that stays while a person edits (a block's tool row, a table's grips and +
+ * strips, the block handle) covers none; the format card and menus that are opened may cover words, and the review bar lets every word scroll clear of it (docs/design/admin/components/overlay.md, "자리 규칙"). A thing covers where it takes the
  * pointer, so its 24px layers count with its own box. What it covers is read as the line boxes of the body's lines, not the glyphs: words, list
  * markers, check boxes, and the empty line the caret waits on with its placeholder. Words inside `floating` itself are not the body's.
  * Empty when nothing is covered; otherwise what was covered, with the overlap in px.

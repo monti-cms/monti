@@ -987,7 +987,7 @@ function ImageBlockView({ node, updateAttributes, getPos, selected, editor }: No
 						// Picked reads as picked whether the body is written or only read: with pictures one over the other, the line says whose bar it is (T133).
 						selected={picked}
 						pointable={editable}
-						toolRow={editable || Boolean(url)}
+						toolRow={editable}
 						measure={dragged ? sizeLabel(dragged.to) : undefined}
 						spoken={spoken}
 						{...stop}

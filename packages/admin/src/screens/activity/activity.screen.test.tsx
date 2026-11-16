@@ -232,8 +232,9 @@ describe("the activity log (doc 13, flow 12)", () => {
 		const edge = panel().element().getBoundingClientRect().left;
 		const actions = [...table().element().querySelectorAll("[data-slot=row-actions]")];
 		expect(actions.length).toBeGreaterThan(0);
+		// The column's edge is measured once the panel stands: poll.
+		await expect.poll(() => actions.every((each) => each.getBoundingClientRect().right <= edge + 1)).toBe(true);
 		for (const each of actions) {
-			expect(each.getBoundingClientRect().right).toBeLessThanOrEqual(edge + 1);
 			const button = each.querySelector("button") as HTMLElement;
 			const box = button.getBoundingClientRect();
 			expect(button.contains(document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2))).toBe(true);

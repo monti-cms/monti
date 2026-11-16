@@ -86,6 +86,8 @@ function PageColumn({
 			const port = scroller
 				? scroller.getBoundingClientRect().left + scroller.clientLeft + scroller.clientWidth
 				: window.innerWidth;
+			// The table runs under the edge: what sticks to it shows a line on its near side.
+			column.toggleAttribute("data-clipping", column.scrollWidth > column.clientWidth + 1);
 			column.style.setProperty(
 				"--monti-edge-gap",
 				`${Math.max(0, Math.round(port - column.getBoundingClientRect().right))}px`,
@@ -94,6 +96,7 @@ function PageColumn({
 		measure();
 		const watch = new ResizeObserver(measure);
 		watch.observe(column);
+		for (const child of column.children) watch.observe(child);
 		if (scroller) watch.observe(scroller);
 		return () => watch.disconnect();
 	}, []);
