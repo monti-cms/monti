@@ -1,5 +1,5 @@
 import { type Block, type Doc, type Inline, writeFence } from "@monti-cms/core";
-import { KEPT, KEPT_HTML } from "./kept";
+import { KEPT, KEPT_HTML } from "@monti-cms/core/markdown";
 
 export type WriteOptions = {
 	/** The address of a library file, for pictures and files; a body's own name for it (`media:<id>`) when left out. */

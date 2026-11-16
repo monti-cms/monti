@@ -16,6 +16,21 @@ const code = (id: string, lines: string): Block => ({
 	content: [{ type: "text", text: lines }],
 });
 
+const FOLDED: Block = {
+	id: "c2",
+	type: "codeBlock",
+	attrs: {
+		language: "ts",
+		rules: [{ scope: "document", name: "bold", pattern: "count", flags: "" }],
+		lines: [{ name: "collapse", start: 1, end: 4 }],
+	},
+	content: [
+		{ type: "text", text: "let count = 0;\nfunction reset() {\n  count = 0;\n}\nconst " },
+		{ type: "text", text: "add", marks: [{ type: "codeTip", text: "더하기" }] },
+		{ type: "text", text: " = () => count++;" },
+	],
+};
+
 const MINE: Doc = {
 	type: "doc",
 	blocks: [
@@ -37,6 +52,7 @@ const MINE: Doc = {
 			children: [paragraph("n1", text("콜아웃 본문입니다"))],
 		},
 		{ id: "m1", type: "math", attrs: { source: "a^2 + b^2 = c^2" } },
+		FOLDED,
 	],
 };
 const THEIRS: Doc = {
@@ -59,6 +75,7 @@ const THEIRS: Doc = {
 			children: [paragraph("n1", text("콜아웃 본문입니다 다르게"))],
 		},
 		{ id: "m1", type: "math", attrs: { source: "a^2 + b^2 = d^2" } },
+		FOLDED,
 	],
 };
 
@@ -91,7 +108,7 @@ describe("a body read without being written draws as the editor draws it", () =>
 		const frame = mine.querySelector("[data-slot=code-frame]") as HTMLElement;
 		expect(frame.textContent).toContain("src/counter.ts");
 		expect(frame.querySelector("[data-slot=code-number][data-tone=plus]")).not.toBeNull();
-		await expect.poll(() => frame.querySelectorAll("[data-slot=code-token]").length).toBeGreaterThan(0);
+		await expect.poll(() => frame.querySelectorAll("[data-token]").length).toBeGreaterThan(0);
 		expect(marked(mine).some((words) => words?.includes("++"))).toBe(true);
 		expect(marked(theirs).some((words) => words?.includes("--"))).toBe(true);
 	});
@@ -105,5 +122,25 @@ describe("a body read without being written draws as the editor draws it", () =>
 		// A formula is drawn, and its source, where it differs, is read as code with the words marked.
 		expect(mine.querySelector("[data-block=math]")?.textContent).not.toBe("");
 		expect(marked(mine).some((words) => words?.includes("c^2"))).toBe(true);
+	});
+
+	it("[reach] read-only code draws a rule's text styles and a tooltip as the editor does, and a closed fold stays folded until it is opened", async () => {
+		await Compared.run();
+		await expect.poll(() => sides()[0]?.querySelectorAll("[data-slot=code-frame]").length).toBe(3);
+		const frame = [...(sides()[0]?.querySelectorAll<HTMLElement>("[data-slot=code-frame]") ?? [])].find((each) =>
+			each.textContent?.includes("function reset"),
+		) as HTMLElement;
+		expect(frame.querySelector("[data-effect=bold]")?.textContent).toBe("count");
+		expect(frame.querySelector("[data-monti-mark=codeTip]")?.textContent).toBe("add");
+		expect(frame.querySelector("[data-monti-mark=codeTip]")?.getAttribute("title")).toBe("더하기");
+		// The fold's lines are hidden and its summary stands in their place, with the editor's own button to open it.
+		expect(frame.querySelectorAll("[data-code-hidden]").length).toBeGreaterThan(0);
+		const numbers = () => frame.querySelectorAll("[data-slot=code-number]").length;
+		expect(numbers()).toBe(3);
+		const open = frame.querySelector("[data-slot=code-aside] button") as HTMLButtonElement;
+		expect(open.textContent).toBe("접힌 2줄");
+		open.click();
+		await expect.poll(numbers).toBe(5);
+		expect(frame.querySelectorAll("[data-code-hidden]").length).toBe(0);
 	});
 });

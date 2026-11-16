@@ -4,19 +4,22 @@ import {
 	CHECK_MARK_PATH,
 	ChangeDot,
 	CodeArea,
+	CodeAside,
 	CodeFrame,
 	CodeGround,
 	CodeNumber,
-	CodeToken,
 	CompareBlock,
 	CompareText,
 	CompareValues,
 	Del,
 	EditorBody,
+	IconButton,
 	Inline,
 	Ins,
 	Text,
+	TextButton,
 } from "@monti-cms/ui";
+import { ChevronDown, ChevronRight } from "@monti-cms/ui/icons";
 import { getSchema } from "@tiptap/core";
 import type { DOMOutputSpec, Mark as MarkOf, Node as NodeOf, Schema } from "@tiptap/pm/model";
 import { createElement, Fragment, type ReactNode, useEffect, useMemo, useState } from "react";
@@ -25,7 +28,18 @@ import { useRead } from "../operations/use-operation";
 import { type CodeChange, type Part, type ReadMarks, valuesOf } from "../screens/entry/compare-entries";
 import { useBlockNames } from "../screens/entry/use-block-names";
 import type { Catalog, CatalogBlock } from "./catalog";
-import { type CodeData, codeColours, dataOf, looksOf, type Piece } from "./code/code-state";
+import {
+	type CodeData,
+	type CodeRange,
+	codeColours,
+	codeRanges,
+	dataOf,
+	foldKey,
+	foldsOf,
+	hiddenLines,
+	looksOf,
+	type Piece,
+} from "./code/code-state";
 import { docToEditor } from "./convert";
 import { footnoteNumbers } from "./footnotes";
 import { MarkLooks } from "./mark-looks";
@@ -113,29 +127,57 @@ function useColours(settings: CodeBlockSettings | undefined, language: string | 
 	return pieces;
 }
 
-/** One stretch of a code with what it is drawn with: its colour, and whether its words changed. */
-type Stretch = { from: number; to: number; piece?: Piece; changed: boolean };
+/** A stretch of a code's text and what is drawn on it: the attributes of the ranges over it (`codeRanges`), its marks, whether its words changed. */
+type Stretch = {
+	from: number;
+	to: number;
+	attrs: Record<string, string>;
+	wrap?: (inner: ReactNode) => ReactNode;
+	changed: boolean;
+};
 
-function stretches(code: string, pieces: readonly Piece[], ranges: readonly Range[]): Stretch[] {
-	const edges = new Set<number>([0, code.length]);
-	for (const piece of pieces) {
-		edges.add(piece.from);
-		edges.add(piece.to);
+/** What the code's marks draw on a stretch of its text (a tooltip, a fold of words): the same elements the editor draws, from the text node's marks. */
+type Wrap = { from: number; to: number; wrap: (inner: ReactNode) => ReactNode };
+
+/** A style as the editor's decorations write it (`--shiki-light:…;font-style:italic`) as the object React takes. */
+function colourStyle(text: string) {
+	const style: Record<string, string> = {};
+	for (const rule of text.split(";")) {
+		const at = rule.indexOf(":");
+		if (at < 0) continue;
+		const name = rule.slice(0, at).trim();
+		const value = rule.slice(at + 1).trim();
+		if (name.startsWith("--")) style[name] = value;
+		else if (name === "font-style") style.fontStyle = value;
+		else if (name === "font-weight") style.fontWeight = value;
 	}
-	for (const range of ranges) {
-		edges.add(range.from);
-		edges.add(range.to);
+	return style;
+}
+
+function stretches(
+	code: string,
+	ranges: readonly CodeRange[],
+	parts: readonly Range[],
+	wraps: readonly Wrap[],
+): Stretch[] {
+	const edges = new Set<number>([0, code.length]);
+	for (const each of [...ranges, ...parts, ...wraps]) {
+		edges.add(each.from);
+		edges.add(each.to);
 	}
 	const sorted = [...edges].filter((edge) => edge >= 0 && edge <= code.length).sort((a, b) => a - b);
 	const out: Stretch[] = [];
 	for (let at = 0; at < sorted.length - 1; at++) {
 		const from = sorted[at] as number;
 		const to = sorted[at + 1] as number;
+		const attrs: Record<string, string> = {};
+		for (const range of ranges) if (range.from <= from && to <= range.to) Object.assign(attrs, range.attrs);
 		out.push({
 			from,
 			to,
-			piece: pieces.find((piece) => piece.from <= from && to <= piece.to),
-			changed: ranges.some((range) => range.changed && range.from <= from && to <= range.to),
+			attrs,
+			wrap: wraps.find((each) => each.from <= from && to <= each.to)?.wrap,
+			changed: parts.some((range) => range.changed && range.from <= from && to <= range.to),
 		});
 	}
 	return out;
@@ -143,11 +185,14 @@ function stretches(code: string, pieces: readonly Piece[], ranges: readonly Rang
 
 /**
  * A code block read: the editor's frame with its language and file name, its numbers, the lines' effects, the code in the site's colors, and its changed
- * words marked. A closed fold is not closed here: every line is shown.
+ * words marked. The text is drawn by the editor's own ranges (`codeRanges`: colors, a rule's styles, a wavy line) and marks (a tooltip, folded words). A
+ * closed fold is closed, with the editor's controls to open it: reading includes unfolding.
  */
 function ReadCode({
 	code,
 	data,
+	node,
+	wraps = [],
 	inExplorer = false,
 	settings,
 	parts,
@@ -156,6 +201,9 @@ function ReadCode({
 }: {
 	code: string;
 	data: CodeData;
+	/** The editor's node of the block, which has the folds; a source read as code has none. */
+	node?: NodeOf;
+	wraps?: readonly Wrap[];
 	inExplorer?: boolean;
 	settings?: CodeBlockSettings;
 	parts?: readonly Part[];
@@ -163,44 +211,31 @@ function ReadCode({
 	kind: ReadMark;
 }) {
 	const { t } = useAdmin();
+	const [folds, setFolds] = useState<ReadonlyMap<string, boolean>>(new Map());
 	const language = data.language;
 	const pieces = useColours(settings, language, code);
 	const starts = lineStarts(code);
 	const effects = data.lines ?? [];
 	const changedLines = new Set(change?.lines ?? []);
-	const all = stretches(code, pieces, parts ? rangesOf(parts) : []);
-	const wavyOf = (line: number) => {
-		for (const effect of effects) {
-			if (effect.start > line || line >= effect.end) continue;
-			const wavy = settings?.lineEffects.find((each) => each.name === effect.name)?.editor;
-			if (wavy?.wavy) return wavy.tone === "danger" ? "error" : "warning";
-		}
-		return undefined;
+	const blockId = String(node?.attrs.blockId ?? "");
+	const blockFolds = node ? foldsOf(node, folds) : [];
+	const hidden = node ? hiddenLines(node, folds) : new Set<number>();
+	const rows = starts.map((_, line) => line).filter((line) => !hidden.has(line));
+	const toggle = (start: number, open: boolean) => setFolds((was) => new Map(was).set(foldKey(blockId, start), open));
+	const ranges: CodeRange[] = [
+		...(settings ? codeRanges(code, data, settings, pieces) : []),
+		// A closed fold's lines are hidden, as the editor hides them; the offsets of `foldsOf` stand one after the block's start.
+		...blockFolds
+			.filter((fold) => !fold.shown)
+			.map((fold) => ({ from: fold.from - 1, to: fold.to - 1, attrs: { "data-code-hidden": "" } })),
+	];
+	const all = stretches(code, ranges, parts ? rangesOf(parts) : [], wraps);
+	const edgeOf = (line: number) => {
+		const around = blockFolds.find(({ effect, shown }) => shown && effect.start <= line && line < effect.end);
+		if (!around) return undefined;
+		const { effect } = around;
+		return line === effect.start ? "start" : line === effect.end - 1 ? "end" : "middle";
 	};
-	const drawn = (stretch: Stretch, from: number, to: number, key: string) => {
-		let node: ReactNode = code.slice(from, to);
-		if (stretch.changed) node = <Marked kind={kind}>{node}</Marked>;
-		if (stretch.piece) {
-			const { fontWeight, fontStyle } = fontOf(stretch.piece.fontStyle);
-			if (fontWeight) node = <b>{node}</b>;
-			if (fontStyle) node = <i>{node}</i>;
-			node = (
-				<CodeToken light={stretch.piece.light} dark={stretch.piece.dark}>
-					{node}
-				</CodeToken>
-			);
-		}
-		return <span key={key}>{node}</span>;
-	};
-	const lines = starts.map((start, line) => {
-		const end = line + 1 < starts.length ? (starts[line + 1] as number) - 1 : code.length;
-		const inLine = all.flatMap((stretch) =>
-			stretch.to > start && stretch.from < end
-				? [{ stretch, from: Math.max(stretch.from, start), to: Math.min(stretch.to, end) }]
-				: [],
-		);
-		return { start, end, inLine, wavy: wavyOf(line) };
-	});
 	return (
 		<CodeFrame
 			head={
@@ -218,11 +253,21 @@ function ReadCode({
 			}
 		>
 			<CodeArea
-				gutter={lines.map((_, line) => {
+				aside={blockFolds
+					// A closed fold inside another closed fold has its first line hidden too: only the outer one says what it hides.
+					.filter(({ shown, effect }) => !shown && rows.includes(effect.start))
+					.map(({ effect }) => (
+						<CodeAside key={effect.start} row={rows.indexOf(effect.start)}>
+							<TextButton size="caption" onClick={() => toggle(effect.start, true)}>
+								{t("editor.code.folded", { n: effect.end - effect.start - 1 })}
+							</TextButton>
+						</CodeAside>
+					))}
+				gutter={rows.map((line) => {
 					const look = settings ? looksOf(settings, effects, line) : { tone: undefined, mark: undefined };
+					const fold = blockFolds.find(({ effect }) => effect.start === line);
 					return (
 						<CodeNumber
-							// biome-ignore lint/suspicious/noArrayIndexKey: the lines of one code, in order
 							key={line}
 							data-line={line}
 							number={line + 1}
@@ -230,34 +275,42 @@ function ReadCode({
 							mark={look.mark}
 							numbersOff={!data.lineNumbers}
 							readOnly
+							folds={blockFolds.length > 0}
+							edge={edgeOf(line)}
 							changed={changedLines.size ? (changedLines.has(line) ? t("compare.codeEffects") : "") : undefined}
+							fold={
+								fold ? (
+									<IconButton
+										size="xs"
+										label={t(fold.open ? "editor.code.foldFrom" : "editor.code.unfoldFrom", { n: line + 1 })}
+										aria-expanded={fold.open}
+										onClick={() => toggle(line, !fold.open)}
+									>
+										{fold.open ? <ChevronDown aria-hidden /> : <ChevronRight aria-hidden />}
+									</IconButton>
+								) : undefined
+							}
 						/>
 					);
 				})}
-				grounds={lines.map((_, line) => (
-					// biome-ignore lint/suspicious/noArrayIndexKey: the lines of one code, in order
+				grounds={rows.map((line) => (
 					<CodeGround key={line} tone={settings ? looksOf(settings, effects, line).tone : undefined} />
 				))}
 			>
-				{lines.map((line, at) => (
-					// biome-ignore lint/suspicious/noArrayIndexKey: the lines of one code, in order
-					<span key={at}>
-						<span data-wavy={line.wavy}>
-							{line.inLine.map(({ stretch, from, to }) => drawn(stretch, from, to, `${from}:${to}`))}
-						</span>
-						{at < lines.length - 1 ? "\n" : null}
-					</span>
-				))}
+				{all.map((stretch) => {
+					const text: ReactNode = code.slice(stretch.from, stretch.to);
+					const marked = stretch.changed ? <Marked kind={kind}>{text}</Marked> : text;
+					const { style, ...attrs } = stretch.attrs;
+					return createElement(
+						"span",
+						{ key: `${stretch.from}:${stretch.to}`, ...attrs, ...(style ? { style: colourStyle(style) } : {}) },
+						stretch.wrap ? stretch.wrap(marked) : marked,
+					);
+				})}
 			</CodeArea>
 		</CodeFrame>
 	);
 }
-
-const fontOf = (fontStyle: number | undefined) => ({
-	// The highlighter's bit flags: italic 1, bold 2.
-	fontStyle: ((fontStyle ?? 0) & 1) !== 0,
-	fontWeight: ((fontStyle ?? 0) & 2) !== 0,
-});
 
 // --- Elements --------------------------------------------------------------------------------------------------------------------------------
 
@@ -457,6 +510,19 @@ function drawNode(node: NodeOf, context: Context, key: number, parent: NodeOf): 
 }
 
 /** One block of the catalog as an element: the core's by the editor's own `renderHTML`, a site's block by its drawing, or a box with its name. */
+/** The marks of a code's text (a tooltip, folded words), each over the stretch of the code it is on, drawn as the editor draws them. */
+function markWraps(node: NodeOf, context: Context): Wrap[] {
+	const wraps: Wrap[] = [];
+	let at = 0;
+	node.forEach((child) => {
+		const length = child.text?.length ?? 0;
+		if (child.isText && child.marks.length > 0)
+			wraps.push({ from: at, to: at + length, wrap: (inner) => drawMarks(child, inner, context) });
+		at += length;
+	});
+	return wraps;
+}
+
 function drawBlock(
 	node: NodeOf,
 	block: CatalogBlock,
@@ -474,6 +540,8 @@ function drawBlock(
 				key={key}
 				code={node.textContent}
 				data={dataOf(node)}
+				node={node}
+				wraps={markWraps(node, context)}
 				inExplorer={inExplorer}
 				settings={context.settings}
 				parts={context.marks?.words.get(id)}

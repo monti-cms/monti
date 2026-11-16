@@ -1,4 +1,4 @@
-import { readMarkdown } from "@monti-cms/mdx/read";
+import { readMarkdown } from "@monti-cms/core/markdown";
 import { ChatMessage } from "@monti-cms/ui";
 import { useMemo } from "react";
 import { ReadBody } from "../editor/read-body";

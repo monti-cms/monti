@@ -424,7 +424,7 @@ describe("the entry editor: saving and coming back", () => {
 		await userEvent.click(button("비교하기"));
 		await expect.element(page.getByText("임시 저장본과 비교")).toBeVisible();
 		const sides = () => [...document.querySelectorAll<HTMLElement>("[data-slot=compare-side]")];
-		await expect.poll(() => sides()[0]?.querySelector("[data-slot=code-frame] [data-slot=code-token]")).not.toBeNull();
+		await expect.poll(() => sides()[0]?.querySelector("[data-slot=code-frame] [data-token]")).not.toBeNull();
 		const [ours, theirs] = sides() as [HTMLElement, HTMLElement];
 		expect(ours.querySelector("strong")?.textContent).toContain("둘");
 		expect(ours.querySelector("a")?.getAttribute("href")).toBe("https://example.dev/docs");

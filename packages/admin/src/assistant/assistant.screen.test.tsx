@@ -158,7 +158,7 @@ describe("the answer's Markdown", () => {
 		expect(root.querySelector("[data-slot=editor-body] h2")?.textContent).toBe("결과");
 		expect(root.querySelectorAll("li")).toHaveLength(2);
 		expect(root.querySelector(":not(pre) > code")?.textContent).toBe("code");
-		await expect.poll(() => root.querySelector("[data-slot=code-frame] [data-slot=code-token]")).not.toBeNull();
+		await expect.poll(() => root.querySelector("[data-slot=code-frame] [data-token]")).not.toBeNull();
 	});
 });
 
