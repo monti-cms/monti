@@ -103,7 +103,7 @@
 | "이미지" | `FormField`, 문장 `Text`, "바깥 이미지 6개도 옮기기" `Option spread` + `Switch` |  |
 | "알아 두세요" | `FormField`, 문장 `Text`(컴포넌트 이름은 `mono`) |  |
 | 가져온 뒤 | `Text variant="heading"` "21편을 가져왔습니다.", 그 아래 `Text tone="subtle"`, "주소를 바꾼 글 · 2" `Label` 아래 `ChangeLines`(`what` 글 이름 링크, `then` mono "/about → /about-2") | 글 이름을 누르면 그 글이 열린다. |
-| (빠짐, 2026-11-05) 복원 요약 | `DescriptionList variant="summary"` + `DescriptionItem`: "글" · "폴더" · "미디어" · "주소" · "템플릿" | 이름 칸 120px, 값은 잉크 숫자, 뒤에 흐린 메모 `Text variant="meta" tone="subtle"`("초안 12 · 발행 130 · 보관 6 · 번역 21"). |
+| (빠짐, 2026-11-05) 복원 요약 | `DescriptionList variant="summary"` + `DescriptionItem`: "글" · "폴더" · "미디어" · "주소" · "템플릿" | 이름 칸 120px, 값은 잉크 숫자, 뒤에 흐린 메모 `Text variant="caption" tone="subtle"`("초안 12 · 발행 130 · 보관 6 · 번역 21"). |
 | (빠짐, 2026-11-05) 복원 막힘 문제 목록 | 문장 하나 `Text` "문제가 2개 있어서 복원하지 않습니다.", 그 아래 문제마다 `IssueRow`(`name` "이 사이트에 없는 필드", `code` "series", `warning` "글 14편이 이 값을 가지고 있습니다") | 아무것도 쓰지 않았다는 문장 하나. 행 사이는 가는 선. 고르기는 없다. 고치는 곳은 가져오기 흐름이다(발의 "가져오기로 열기"). 그 길을 설명하는 문장은 두지 않는다. |
 | 발 | `SheetFooter`: "취소" `TextButton`, 알약 `Button variant="primary"`("21편 가져오기", 일하는 동안 `loading` "가져오는 중 12/21", "복원", "복원하는 중…"). 복원이 막히면 알약은 "가져오기로 열기"이고 누를 수 있다. 같은 파일을 가져오기 흐름으로 연다(없는 필드는 필드 메뉴로 맞추고, 겹치는 주소에는 "-2"가 붙는다). 가져온 뒤에는 왼쪽 "되돌리기" `TextButton`, 알약 "목록에서 보기"(`href`). | 알약은 하나다. |
 

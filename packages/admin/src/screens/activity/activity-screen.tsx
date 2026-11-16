@@ -492,7 +492,7 @@ export function ActivityScreen({
 										</TableCell>
 									)}
 									<TableCell align="end" truncate short title={fullTime(line.at, language)}>
-										<Text mono variant="meta" tone="muted">
+										<Text mono variant="caption" tone="muted">
 											{shortTime(line.at, language)}
 										</Text>
 									</TableCell>

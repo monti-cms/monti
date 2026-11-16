@@ -709,7 +709,7 @@ export function FieldsTab({
 			</Sortable>
 			{pluginTab ? (
 				// Why nothing here is changed: the tab is a plugin's, set in the site's code.
-				<Text as="p" variant="meta" tone="subtle">
+				<Text as="p" variant="caption" tone="subtle">
 					{t("settings.fields.pluginTab", { plugin: pluginTab.plugin })}
 				</Text>
 			) : (
@@ -726,7 +726,7 @@ export function FieldsTab({
 							{t("settings.fields.addGroup")}
 						</Button>
 					</Inline>
-					<Text as="p" variant="meta" tone="subtle">
+					<Text as="p" variant="caption" tone="subtle">
 						{t("settings.fields.legend")}
 					</Text>
 				</Stack>

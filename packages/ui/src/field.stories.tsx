@@ -245,7 +245,7 @@ export const Proposed: Story = {
 					미리보기 경로
 				</FormFieldLabel>
 				<Affix id="p-preview" prefix="/" defaultValue="draft" proposal />
-				<Text variant="meta" mono>
+				<Text variant="caption" mono>
 					<Del>/preview</Del>
 				</Text>
 			</FormField>

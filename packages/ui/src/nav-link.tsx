@@ -12,7 +12,7 @@ export const NAV_ROW =
 
 /** The count or identifier at the end of a {@link NAV_ROW}: mono, small and quiet, in the flow of the row, so a long name is cut before it. */
 export const NAV_ROW_END =
-	"ml-auto shrink-0 select-none font-mono font-normal text-monti-meta tabular-nums text-monti-subtle";
+	"ml-auto shrink-0 select-none font-mono font-normal text-monti-caption tabular-nums text-monti-subtle";
 
 /**
  * One link of a page's own navigation, such as the collections beside the settings editor: 36px, the name, and at the end the identifier (`note`, mono,

@@ -36,7 +36,7 @@ export function Spec({ name, usage, children }: { name: string; usage?: string; 
 	return (
 		<Stack gap={4} className="w-56">
 			{children}
-			<Text variant="meta">{name}</Text>
+			<Text variant="caption">{name}</Text>
 			{usage && (
 				<Text variant="note" tone="muted">
 					{usage}

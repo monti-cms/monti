@@ -65,7 +65,7 @@ function TodoItem({
 				<span
 					data-slot="todo-mark"
 					className={cn(
-						"w-11 shrink-0 whitespace-nowrap text-monti-meta",
+						"w-11 shrink-0 whitespace-nowrap text-monti-caption",
 						tagTone === "danger"
 							? "text-monti-danger"
 							: tagTone === "success"

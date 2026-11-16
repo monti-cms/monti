@@ -62,7 +62,7 @@ function LanguageRow({
 			{handled && <span className="flex items-center justify-center">{handle}</span>}
 			<span className={cn("min-w-0 truncate whitespace-nowrap", gone && "text-monti-faint line-through")}>
 				<span className={cn("text-monti-body", !gone && "text-monti-default")}>{name}</span>{" "}
-				<span className="font-mono text-monti-faint text-monti-meta">{code}</span>
+				<span className="font-mono text-monti-caption text-monti-faint">{code}</span>
 				{label && label !== name && <span className="text-monti-note text-monti-subtle"> · {label}</span>}
 				{locked && <LockMark label={locked} />}
 				{dot && <ChangeDot tone={dotTone} label={dot} className="ml-monti-6 align-middle" />}

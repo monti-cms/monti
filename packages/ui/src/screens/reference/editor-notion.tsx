@@ -101,7 +101,7 @@ export function EntryHeader({
 					{back}
 				</TextButton>
 				{address ? (
-					<Text mono variant="meta" tone="faint" truncate>
+					<Text mono variant="caption" tone="faint" truncate>
 						{address}
 					</Text>
 				) : null}

@@ -55,7 +55,7 @@ function Choices({ items, mono }: { items: readonly Choice[]; mono?: boolean }) 
 						item.label
 					)}
 					{item.note ? (
-						<Text variant="meta" tone="warning">
+						<Text variant="caption" tone="warning">
 							{item.note}
 						</Text>
 					) : null}

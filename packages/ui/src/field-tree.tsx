@@ -164,7 +164,7 @@ function FieldRow({
 				{description && <span className="ml-monti-12 text-monti-faint">{description}</span>}
 				{note && <span className="ml-monti-8 text-monti-faint text-monti-micro">{note}</span>}
 			</span>
-			<span className="flex items-center justify-end gap-monti-6 font-mono text-monti-meta text-monti-muted">
+			<span className="flex items-center justify-end gap-monti-6 font-mono text-monti-caption text-monti-muted">
 				{kind}
 				{/* Over the row's button, so the pointer finds the lock and its tooltip says why; the keyboard stops on it after the row's name. */}
 				{locked && <LockMark label={locked} flush className="relative z-1 size-[11px]" />}

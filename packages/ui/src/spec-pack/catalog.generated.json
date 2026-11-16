@@ -2491,19 +2491,7 @@
 				},
 				"variant": {
 					"kind": "variant",
-					"enum": [
-						"body",
-						"caption",
-						"display",
-						"heading",
-						"label",
-						"meta",
-						"micro",
-						"note",
-						"page",
-						"reading",
-						"title"
-					]
+					"enum": ["body", "caption", "display", "heading", "label", "micro", "note", "page", "reading", "title"]
 				},
 				"weight": {
 					"kind": "variant",
@@ -2787,7 +2775,7 @@
 			"props": {
 				"size": {
 					"kind": "variant",
-					"enum": ["caption", "meta", "note"]
+					"enum": ["caption", "note"]
 				},
 				"tone": {
 					"kind": "variant",

@@ -723,7 +723,7 @@ export function EventsScreen({ stage = "default" }: { stage?: EventsStage }) {
 										</TableCell>
 									)}
 									<TableCell align="end">
-										<Text mono variant="meta" tone="muted">
+										<Text mono variant="caption" tone="muted">
 											{line.time}
 										</Text>
 									</TableCell>

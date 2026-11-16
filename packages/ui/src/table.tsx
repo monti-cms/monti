@@ -430,13 +430,13 @@ function RowTitle({
 						whole={addressTitle}
 						className={cn(
 							"relative z-1 max-w-max grow basis-[3ch] text-monti-faint",
-							note ? "text-monti-caption" : "font-mono text-monti-meta",
+							note ? "text-monti-caption" : "font-mono text-monti-caption",
 						)}
 					>
 						{note ? (
 							<>
 								{address ? (
-									<span data-slot="row-title-address" className="font-mono text-monti-meta">
+									<span data-slot="row-title-address" className="font-mono text-monti-caption">
 										{address}
 									</span>
 								) : null}

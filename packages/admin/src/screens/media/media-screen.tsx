@@ -392,7 +392,7 @@ function FilterMenu<Value extends string>({ label, ...filter }: FilterProps<Valu
 function MetaCell({ value, align }: { value: string; align?: "end" }) {
 	return (
 		<TableCell align={align} truncate title={value}>
-			<Text mono variant="meta" tone="subtle">
+			<Text mono variant="caption" tone="subtle">
 				{value}
 			</Text>
 		</TableCell>
@@ -969,7 +969,7 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 											</>
 										)}
 										<TableCell align="end" truncate short title={fullTime(item.uploadedAt, language)}>
-											<Text mono variant="meta" tone="muted">
+											<Text mono variant="caption" tone="muted">
 												{shortDate(item.uploadedAt, language)}
 											</Text>
 										</TableCell>

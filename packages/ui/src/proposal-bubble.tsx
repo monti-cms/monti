@@ -74,7 +74,7 @@ function ProposalBubble({
 				<span className="inline-flex min-w-0 items-center gap-[7px] font-semibold text-monti-proposal">{who}</span>
 			)}
 			<span aria-hidden className="h-3.5 border-monti-default border-l" />
-			<span className="inline-flex items-center gap-monti-6 font-mono text-monti-meta text-monti-muted">
+			<span className="inline-flex items-center gap-monti-6 font-mono text-monti-caption text-monti-muted">
 				<button type="button" aria-label={previousLabel} className={STEP} disabled={total < 2} onClick={onPrevious}>
 					↑
 				</button>

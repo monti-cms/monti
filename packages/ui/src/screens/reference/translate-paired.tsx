@@ -127,7 +127,7 @@ export function TranslatePairedScreen() {
 							name={
 								<Stack gap={0}>
 									<span>콜아웃</span>
-									<Text variant="meta" tone="faint">
+									<Text variant="caption" tone="faint">
 										제목 + 본문
 									</Text>
 								</Stack>
@@ -155,7 +155,7 @@ export function TranslatePairedScreen() {
 							name={
 								<Stack gap={0}>
 									<span>이미지</span>
-									<Text variant="meta" tone="faint">
+									<Text variant="caption" tone="faint">
 										같은 파일
 									</Text>
 								</Stack>
@@ -183,7 +183,7 @@ export function TranslatePairedScreen() {
 							name={
 								<Stack gap={0}>
 									<span>코드 블록</span>
-									<Text variant="meta" tone="faint">
+									<Text variant="caption" tone="faint">
 										tsx
 									</Text>
 								</Stack>

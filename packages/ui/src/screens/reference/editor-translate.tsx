@@ -91,7 +91,7 @@ export function EditorTranslateScreen({ stage = "new" }: { stage?: "new" | "tran
 				<Box as="aside" aria-label="한국어 원문 · 읽기 전용" background="tool" border="right" grow minWidth={0}>
 					<Box paddingX={40} paddingTop={16} paddingBottom={48} maxWidth="reading" centered>
 						<Inline minHeight="control-md">
-							<Text variant="meta" tone="subtle">
+							<Text variant="caption" tone="subtle">
 								한국어 원문 · 읽기 전용
 							</Text>
 						</Inline>

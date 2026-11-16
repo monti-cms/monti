@@ -18,7 +18,7 @@
 | 상태 | 속성-상태-세기 | `fg-danger`, `bg-danger-emphasis`, `bg-proposal-muted` |
 | 고정 크기 | `height-` 또는 `width-` | `height-header`, `width-sheet` |
 | 그림자 | 표면의 이름 | `shadow-floating`(메뉴, 카드, 말풍선), `shadow-overlay`(대화상자), `shadow-sheet` |
-| 글자 | `text-` 역할 | `text-page`, `text-body`, `text-meta` |
+| 글자 | `text-` 역할 | `text-page`, `text-body`, `text-caption` |
 
 ## 색
 
@@ -167,8 +167,7 @@
 | `text-prose` | sans | 14 / 24 | 400 | – | 여러 줄로 이어지는 UI 글: 어시스턴트의 답과 관리자의 말풍선, 대화상자 설명, 여러 줄 입력 칸. |
 | `text-label` | sans | 13 / 18 | 500 | – | 탭, 필터, 작은 버튼. |
 | `text-note` | sans | 13 / 20 | 400 | – | 행 제목 아래의 보조 줄, 피할 수 없는 힌트. |
-| `text-caption` | sans | 12 / 16 | 400 | – | 캡션, sans로 쓴 시각. |
-| `text-meta` | sans | 12 / 16 | 400 | – | 줄 안의 작은 말과 숫자: 개수, 파일 크기, 이름 아래의 세부, 상태 표시줄 칸. 적힌 그대로의 값(주소, 식별자)에는 `font-mono`를 더한다(만들며 정함 (2026-11-16): 앞서는 이 역할이 mono라 한글도 mono로 그려졌다). |
+| `text-caption` | sans | 12 / 16 | 400 | – | 줄 안의 작은 말과 숫자: 캡션, 시각, 개수, 파일 크기, 이름 아래의 세부, 상태 표시줄 칸, 필드 라벨. 적힌 그대로의 값(주소, 식별자)에는 `font-mono`를 더한다. 앞서 `text-caption`가 같은 12 / 16 / 400이었고 이름만 달라 하나로 합쳤다(만들며 정함 (2026-11-16)). |
 | `text-micro` | sans | 11 / 14 | 400 | – | 메뉴와 패널의 묶음 라벨, 행 끝의 짧은 덧말. 필드 라벨은 `text-caption`(sans 12)을 쓴다(만들며 정함 (2026-11-16)). |
 | `text-code` | mono | 12 / 20 | 400 | – | 여러 줄 코드와 JSON: 비교와 변경 보기의 코드. |
 | `text-editor-code` | mono | 14 / 24 | 400 | – | 편집기 본문의 코드 블록과 인라인 코드(소유자 (2026-11-16)). 다른 코드는 `text-code`(12)다. |
@@ -181,7 +180,7 @@
 - 줄 높이는 역할이 정하고 모두 4px의 배수다. 한 줄짜리 UI 글은 `body`(20), 여러 줄로 이어지는 글은 `prose`(24), 코드는 `code`(20)다. 크기의 몇 배(1.6, 1.7)로 줄 높이를 주지 않는다(2026-11-05 소유자: 1.6, 1.65, 1.7배가 섞여 있던 것을 둘로 줄였다).
 - 굵기는 역할을 따른다. 400은 글, 500은 `text-label`에서만, 600은 강조(패널 · 시트 · 구역 제목, 버튼, 고른 탭, 표 묶음 머리), 700은 큰 제목 역할(`display`, `page`, `heading`)과 페이지 툴바의 고른 탭뿐이다. 부품이 `font-bold`나 `font-medium`을 덧붙이지 않는다. 본문 안의 굵은 글과 서식 막대의 B는 굵게 그 자체라 예외다. `check:design`이 막는다.
 - 단계 밖의 크기는 둘뿐이다. 여백의 요청 표시(10px mono)와 제목 아이콘의 단계 숫자(8px)다.
-- `text-meta`와 `text-micro`는 sans 역할이다(만들며 정함 (2026-11-16)). 한글 낱말을 mono로 그리지 않는다. mono는 값에만 쓰고, 값은 그 칸에 `font-mono`(`Text`의 `mono`)를 적는다. `check:design`의 `mono-words`가 `font-mono` · `text-monti-meta` · `text-monti-micro`를 쓰는 파일에 `MONO_OK`의 까닭을 요구한다.
+- `text-caption`과 `text-micro`는 sans 역할이다(만들며 정함 (2026-11-16)). 한글 낱말을 mono로 그리지 않는다. mono는 값에만 쓰고, 값은 그 칸에 `font-mono`(`Text`의 `mono`)를 적는다. `check:design`의 `mono-words`가 `font-mono` · `text-monti-meta` · `text-monti-micro`를 쓰는 파일에 `MONO_OK`의 까닭을 요구한다.
 - 숫자는 전역에서 자리가 같은 숫자(`tabular-nums`)다(만들며 정함 (2026-11-16), `admin.css`의 `.monti-admin`과 body). 9가 10이 될 때 옆의 것이 밀리지 않고, 크기와 날짜의 세로줄이 맞는다. `tabular` 규칙이 그 선언이 있는지 본다. mono가 아닌 숫자도 같다.
 - 숫자와 날짜와 크기를 담은 열은 오른쪽에, 글은 왼쪽에 맞춘다(list.md, "열 정렬과 행 높이").
 - mono는 적힌 그대로 치거나 복사하는 것에만 쓴다(2026-11-12 만들며 정함): 주소, 식별자, 모델 이름, 키의 끝 글자, 개수. 사람이 읽는 말은 sans다. 보조 줄과 상태 칸(키 줄의 "1.24M 토큰", "채우기 · 요청 · 번역")은 `text-note`이고, 사람이 붙인 이름(키 이름)도 sans다. 같은 자리의 줄이 한 화면에서 두 글꼴로 서지 않는다. 한 칸(span)은 한 글꼴이다: 행 제목 뒤 회색 줄처럼 주소와 말이 한 줄에 함께 서면, 주소는 mono 주소 칸(`RowTitle`의 `address`)에, 말은 sans 칸(`note`)에 따로 담고 한 칸에 섞지 않는다. 그래서 같은 자리에 두 글꼴이 있는 것이 아니라, 두 칸이 저마다 한 글꼴이다(만들며 정함 (2026-11-14)). 메뉴와 패널의 묶음 라벨(`text-micro`)은 sans다.
@@ -359,6 +358,50 @@
 - 사이트는 `:root`, `.dark`, `[data-theme="dark"]`에서 어떤 `--monti-*` 변수든 덮어쓸 수 있다. 기본값은 명시도가 0이라, 스타일시트 순서와 상관없이 사이트의 덮어쓰기가 이긴다.
 - 어두운 모드는 감싸는 요소에 붙는 `dark` 클래스(또는 `data-theme="dark"`)다. 그 안에서는 모든 역할 색과 그림자가 바뀐다.
 - Storybook은 모든 묶음을 Foundations 페이지에서 보여 준다: `packages/ui/src/foundations/`.
+
+## 측정으로 정한 자리
+
+감사에서 "읽어서는 모른다"고 남은 자리를 브라우저에서 재어 정한 것이다(만들며 정함 (2026-11-16)). 각 줄은 지키는 값과, 그것을 재는 테스트다. 재는 테스트가 깨지면 그 부품이 어긋난 것이다.
+
+| 자리 | 값 | 테스트 |
+|---|---|---|
+| 속성 패널의 필드(PP-07, PP-08, PP-09, PP-10) | 모두 높이 32px(`md`), 폭은 패널의 폭 하나, 글은 칸 가장자리에서 8px 안에서 시작한다. | `layout.screen.test.tsx` |
+| 탭(PP-18) | 탭 사이 20px, 누르는 자리는 높이 24px 이상이다. 폭은 글이 정한다(사이 20px이 누르는 자리의 여유다). | `parts.browser.test.tsx` |
+| 스위치 줄(PP-24) | 글은 줄 처음에, 스위치는 줄 끝에, 줄 높이 32px(`Option spread`). 설명 줄은 두지 않는다(원칙: 화면 안 설명 문장 없음). | `parts.browser.test.tsx` |
+| 막대의 아이콘(LB-06) | 한 막대의 아이콘은 16px 하나다. 글자 버튼의 14px 아이콘은 크기를 따로 받으면 그것을 따른다. | `parts.browser.test.tsx` |
+| 도구 막대의 글자색(EB-04) | 토큰이다. 순검정이 아니다. | `parts.browser.test.tsx` |
+| 제목 아래 선(MD-20, ST-39) | 모두 1px이다. 페이지, 편집기 제목 선이 같다. | `parts.browser.test.tsx` |
+| 호버 바탕(LH-07) | 바탕 없는 단추는 `bg-muted`, 주 알약은 제 색의 90%다. 토큰 밖의 투명도 값은 없다. | `parts.browser.test.tsx` |
+| 고른 그림의 선(EI-01) | 그림과 같은 모서리(6px)다. | `parts.browser.test.tsx` |
+| 체크박스의 포커스(LK-02) | 2px 선, 모서리 3px의 네모 둘레다. 다른 컨트롤의 고리와 모양이 다른 것은 의도다(tokens.md 상태). | `parts.browser.test.tsx` |
+| 파일의 자리(MD-54) | 어두운 테마에서도 `bg-muted`다. 자기 회색이 없다. | `parts.browser.test.tsx` |
+| 물음의 두 단추(TL-03) | 높이 36px, 사이 16px, 대화상자 안쪽 여백 24px에서 끝난다. | `parts.browser.test.tsx` |
+| 글 단의 블록(ET-09, ET-10) | 오른쪽 · 가운데 맞춤 문단도 블록과 같은 폭이라 글이 다른 블록의 오른쪽 끝에서 끝난다. 인용 안의 블록은 막대 2px와 안쪽 16px 뒤에서 시작해 인용의 오른쪽 끝에서 끝난다. | `editor-body.browser.test.tsx` |
+| 글 단의 목록(ET-12) | 점 · 번호 · 체크 목록의 글은 한 x에서 시작한다. | `editor-body.browser.test.tsx` |
+| 각주(EL-05) | 각주 글은 번호가 선 자리에서 24px 뒤에서 시작한다. | `editor-body.browser.test.tsx` |
+| 표 칸(EX-07) | 머리와 몸 모두 위 · 아래 6px, 양옆 8px이다. | `editor-body.browser.test.tsx` |
+| 칸을 가르는 선(ET-11, EX-06) | `border-emphasis`다. | `editor-body.browser.test.tsx` |
+| 고른 칸(EX-09) | 고른 칸은 제 바탕(`bg-selected`) 하나만 갖고, 브라우저의 글자 선택 바탕이 그 위에 겹치지 않는다. | `editor-body.browser.test.tsx` |
+| 코드 블록 머리(EC-02) | 언어(말, sans)와 파일 이름(적힌 글, mono)은 크기가 같다(12px). 글꼴이 둘인 것은 말과 값의 규칙이다. | `code-frame.browser.test.tsx` |
+| 코드 번호(EC-08) | 번호는 칸 오른쪽에 맞고, 번호 끝에서 코드까지는 24px 이내(앞서는 30px)다. 줄은 24px이다. | `code-frame.browser.test.tsx` |
+| 코드 언어 목록(EB-11) | 열릴 때 키보드의 표시가 지금 언어의 줄(✓가 있는 줄)에 선다. 표시와 ✓가 서로 다른 줄에 있어 현재 값이 둘로 보이던 것을 고쳤다. | `code-block.screen.test.tsx` |
+| 블록 핸들(EB-07) | 20 × 24px, 블록 왼쪽 4px 밖의 여백에 선다. | `layout.screen.test.tsx` |
+| 언어 탭(EH-01) | 제목과의 사이가 24px 이상이다. | `layout.screen.test.tsx` |
+| 탭 블록의 열린 탭(EE-03) | 열린 탭은 이름만큼의 폭이다(앞서는 이름 칸이 100%라 줄을 차지했다). | `layout.screen.test.tsx` |
+| 설정 섹션(ST-06, ST-25) | 섹션 제목의 윗선이 첫 라벨의 윗선과 같다(앞서는 6px 아래였다). 두 칸 필드는 폭이 같다. 잠금 표시는 12px, 글에서 6px다. | `layout.screen.test.tsx` |
+| 번역 창(TR-03, TR-08, TR-31) | 원문 창 머리는 sans `fg-subtle`, "원문 따름" 표시는 sans이고 창 안에 선다. 고른 글은 어디서나 `bg-selection`이다. | `layout.screen.test.tsx` |
+| 미디어 화면(MD-06, MD-09, MD-10, MD-27, MD-42) | 필터 줄과 격자는 제목에서 12px 안(행의 안쪽 여백)에서 시작한다. 머리의 단추 36px, 갈라 고르기 28px, 필터 줄 48px. 목록 보기의 열은 표를 채우고 이름이 가장 넓다. 파일 이름의 확장자는 같은 밑줄 안에 있다. 쓰는 곳 링크는 호버에서 바뀐다. | `layout.screen.test.tsx` |
+| 목록 머리(LH-11, LT-02) | 검색을 Esc로 닫아도 머리의 단추는 움직이지 않는다. 열 이름은 그 열의 글 위에, 또는 글을 이끄는 표시(아이콘, 점) 앞에 선다. | `layout.screen.test.tsx` |
+| 어두운 꺼진 알약(PP-61) | "발행됨"은 꺼진 알약(불투명도 .45)이고, 그 안의 글은 채움과 3:1 이상이다. | `layout.screen.test.tsx` |
+
+**글로 정한 자리**(재어서 달라지지 않는 것).
+
+- 폴더 행의 개수(LF-05): 이름 뒤에 이어 서는 말이다. 열이 아니라서 이름의 길이에 따라 x가 다르다. 정렬하지 않는다.
+- 목록의 칸 색(LR-05): 제목은 잉크, 언어는 잉크 코드, 때(날짜)는 `fg-muted`, 나머지 값은 `fg-subtle`이다. 세 색은 뜻이 다르다(누구의 것 · 언제 · 무엇).
+- 폴더 행의 호버(LR-13): 글 행과 같은 바탕이다. 폴더는 앞의 아이콘과 이름 뒤의 개수로 갈린다. 바탕까지 달리하지 않는다.
+- 표 아래의 빈 곳(LR-20)과 1px 반올림(TC-10): 화면의 아래 여백(40px)과 홀수 폭의 반픽셀이다. 고칠 값이 없다.
+- 사이트 블록의 모양(EE-04, EE-05, EE-06, EE-09): 콜아웃과 탭 블록의 겉모양(칸, 막대, 모서리, 글 크기)은 사이트의 것이다. `packages/blocks/blocks/*/style.ts`의 CSS가 정하고 사이트가 바꾼다(18 문서). 관리자 디자인 시스템이 정하지 않는다. 관리자가 정하는 것은 블록 안에서 치는 이름 칸과 도구 행뿐이다.
+- 한국어 글의 서체와 크기(LX-01): 위 표의 역할이 정한다. `text-caption`과 앞서 같은 12 / 16 / 400이던 `text-meta`는 하나로 합쳤다.
 
 ## 어긋나는 곳
 

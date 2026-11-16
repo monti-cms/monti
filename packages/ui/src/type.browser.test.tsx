@@ -68,7 +68,7 @@ describe("Korean words are sans; values are mono where they say so (LX-02, UX-02
 		render(
 			<>
 				<Text variant="micro">발행 전에 고칠 것</Text>
-				<Text variant="meta">할 일 없음</Text>
+				<Text variant="caption">할 일 없음</Text>
 			</>,
 		);
 		await expect.element(page.getByText("발행 전에 고칠 것")).toBeVisible();
@@ -79,7 +79,7 @@ describe("Korean words are sans; values are mono where they say so (LX-02, UX-02
 	it("a typed value takes `mono`, and a count is mono", async () => {
 		render(
 			<>
-				<Text mono variant="meta">
+				<Text mono variant="caption">
 					/posts/first-post
 				</Text>
 				<Count>148</Count>

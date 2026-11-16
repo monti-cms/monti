@@ -38,7 +38,7 @@
 |---|---|---|
 | 창 | `Dialog`(`DialogContent`, `DialogHeader`, `DialogTitle` "고른 글 2개 내보내기") | 입력은 두 가지 고르기뿐이라 시트가 아니라 창이다. |
 | "보관 파일의 용도" | `FormFieldSet` + `FormFieldLegend variant="field"`, `RadioGroup` + `RadioItem`(`label` "백업용" · "공개용", `description` "초안 포함" · "발행본만") | 하나를 고른다. 처음에는 백업용. |
-| "담을 파일" | `FormFieldSet` + `FormFieldLegend variant="field"`, 줄마다 `Option` + `Checkbox` | "JSON 문서"는 늘 담기므로 `Checkbox checked disabled`와 `Text variant="note" tone="subtle"` "항상 담겨요". 플러그인 형식은 이름 뒤 확장자 `Text variant="meta" tone="subtle"` ".mdx". |
+| "담을 파일" | `FormFieldSet` + `FormFieldLegend variant="field"`, 줄마다 `Option` + `Checkbox` | "JSON 문서"는 늘 담기므로 `Checkbox checked disabled`와 `Text variant="note" tone="subtle"` "항상 담겨요". 플러그인 형식은 이름 뒤 확장자 `Text variant="caption" tone="subtle"` ".mdx". |
 | "담기는 것" | `Label`, 그 아래 종류마다 `CountRow`(`label` 왼쪽 이름, `count` 오른쪽 mono 개수) | 종류마다 한 줄이다: "글 1", "분류 1", "번역 1", "폴더 1", "주소 3", "미디어 정보(파일 제외) 4". 두 종류를 한 줄에 더하지 않는다(보드의 "글과 분류 2" 대신, 2026-11-04 소유자 결정). |
 | "취소" · "내보내기" | `DialogFooter`: `DialogClose`(`TextButton`) "취소", `Button variant="primary"` "내보내기"(만드는 동안 `loading`) | 만들면 파일을 받고 창이 닫힌다. |
 
@@ -48,7 +48,7 @@
 |---|---|---|
 | ⋯ 메뉴, 글자 버튼이 여는 메뉴 | `DropdownMenu`(`DropdownMenuTrigger`, `DropdownMenuContent`, `DropdownMenuItem`, `DropdownMenuSeparator`, `DropdownMenuSub`, `DropdownMenuSubTrigger`, `DropdownMenuSubContent`, `DropdownMenuRadioGroup`, `DropdownMenuRadioItem`, `DropdownMenuCheckboxItem`, `DropdownMenuLabel`, `DropdownMenuSearch`, `DropdownMenuScroll`), 끝의 표시는 `MenuShortcut`·`MenuTick`·`MenuValue` | 할 수 있는 것만 둔다. 위험한 것은 맨 아래 `variant="danger"`. 둘째 단계까지만. 할 수 없는 행은 숨긴다. |
 | 행 오른쪽 클릭 | `ContextMenu`(`ContextMenuTrigger`, `ContextMenuContent`, `ContextMenuItem`, `ContextMenuSeparator`, `ContextMenuSub`, `ContextMenuSubTrigger`, `ContextMenuSubContent`, `ContextMenuLabel`) | 같은 항목이 행의 ⋯에도 있다. 메뉴가 열린 동안 그 행은 호버 바탕을 유지한다. |
-| 값을 여는 버튼 (모델, 쪽마다) | `ModelMenuButton`(`Button variant="ghost" size="sm"`, 입력 상자 안쪽 여백으로 6px 당기고, 글자 쪽 10px · 꺾쇠 쪽 6px 여백, 꺾쇠는 글자에서 6px), `PageSizeMenu`(`TextButton variant="quiet" size="meta"`) + `Caret` | mono 12. 메뉴가 열린 동안 잉크(모델 버튼은 ghost 바탕). |
+| 값을 여는 버튼 (모델, 쪽마다) | `ModelMenuButton`(`Button variant="ghost" size="sm"`, 입력 상자 안쪽 여백으로 6px 당기고, 글자 쪽 10px · 꺾쇠 쪽 6px 여백, 꺾쇠는 글자에서 6px), `PageSizeMenu`(`TextButton variant="quiet" size="caption"`) + `Caret` | mono 12. 메뉴가 열린 동안 잉크(모델 버튼은 ghost 바탕). |
 | 검색이 있는 고르기 | `Popover`의 `PopoverContent padding="menu"` 안에 `Command`(`CommandInput`, `CommandList`, `CommandGroup`, `CommandItem`, `CommandEmpty`, `CommandFooter`) | 값이 많은 고르기(언어 코드, 태그, 링크할 글). |
 
 ## AI 버튼

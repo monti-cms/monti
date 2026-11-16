@@ -153,7 +153,11 @@ function PageSizeMenu({
 }) {
 	return (
 		<DropdownMenu>
-			<DropdownMenuTrigger aria-label={label} data-slot="page-size" render={<TextButton variant="quiet" size="meta" />}>
+			<DropdownMenuTrigger
+				aria-label={label}
+				data-slot="page-size"
+				render={<TextButton variant="quiet" size="caption" />}
+			>
 				{options.find((option) => option.value === value)?.label ?? value}
 				<Caret />
 			</DropdownMenuTrigger>

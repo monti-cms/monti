@@ -398,7 +398,7 @@ export function KeysScreen({ tabs }: { tabs: ReactNode }) {
 																{t("apiKeys.unreadable")}
 															</Text>
 														) : (
-															<Text as="div" variant="meta" mono tone="subtle" truncate>
+															<Text as="div" variant="caption" mono tone="subtle" truncate>
 																{slot.plugin}
 															</Text>
 														)}

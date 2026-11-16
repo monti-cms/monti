@@ -13,7 +13,7 @@ describe("EntryStatus", () => {
 					<EntryStatus status="published">발행됨</EntryStatus>
 				</Inline>
 				<Inline gap={12}>
-					<Text mono variant="meta" truncate>
+					<Text mono variant="caption" truncate>
 						/posts/a-very-long-address-that-does-not-fit-in-the-head-of-the-editor-however-wide
 					</Text>
 					<EntryStatus status="published">발행됨</EntryStatus>

@@ -60,7 +60,7 @@
  *   format-only         Dates, times, file sizes and the names of languages are written by `packages/admin/src/format/` alone: no
  *                       `Intl.DateTimeFormat` or `Intl.DisplayNames`, no `padStart`, no date part in a template and no `toUpperCase()` in
  *                       the admin's other sources. `check-format.mjs` says what it cannot see. A `design-allow` marker does not skip it.
- *   mono-words          `font-mono`, `text-monti-meta` and `text-monti-micro` (the small roles are sans; mono is for values) only in a file named in
+ *   mono-words          `font-mono` and `text-monti-micro` (the small role is sans; mono is for values) only in a file named in
  *                       `MONO_OK` of `check-type-colour.mjs` with its reason. `check-type-colour.mjs` says what it cannot see.
  *   type-order          The heading roles step down, and the editor body's h2, h3, h4 are not smaller than its text (h4, the text's size, is semibold).
  *   tabular             `admin.css` sets tabular digits on `.monti-admin` and the body, and no source takes them back.

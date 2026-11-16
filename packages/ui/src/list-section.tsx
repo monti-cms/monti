@@ -124,7 +124,7 @@ function ListSectionRow({
 					<span
 						className={cn(
 							"mt-monti-2 truncate",
-							metaMono ? "font-mono text-monti-meta" : "text-monti-note",
+							metaMono ? "font-mono text-monti-caption" : "text-monti-note",
 							metaTone === "muted" && "text-monti-muted",
 							metaTone === "subtle" && "text-monti-subtle",
 							metaTone === "faint" && "text-monti-faint",

@@ -55,7 +55,7 @@ const EDITOR_BODY = cn(
 	// A table is a light grid while it is written (every cell is a place to type), its head row only bolder (editor-tools.md, the table).
 	"[&_table]:mb-monti-20 [&_table]:w-full [&_table]:table-fixed [&_table]:border-collapse [&_table]:text-monti-body [&_td]:relative [&_td]:border [&_td]:border-monti-emphasis [&_td]:px-monti-8 [&_td]:py-monti-6 [&_td]:align-top [&_th]:relative [&_th]:border [&_th]:border-monti-emphasis [&_th]:px-monti-8 [&_th]:py-monti-6 [&_th]:text-left [&_th]:align-top [&_th]:font-semibold",
 	// Cells picked by dragging across them.
-	"[&_.selectedCell]:bg-monti-selected",
+	"[&_.selectedCell]:bg-monti-selected [&_.selectedCell]:selection:bg-transparent! [&_.selectedCell_*]:selection:bg-transparent!",
 	"[&_hr]:mt-monti-8 [&_hr]:mb-monti-24 [&_hr]:border-0 [&_hr]:border-monti-emphasis [&_hr]:border-t",
 	// Marks.
 	"[&_a]:underline [&_a]:decoration-monti-strong [&_a]:underline-offset-4",
@@ -92,7 +92,7 @@ const EDITOR_BODY = cn(
 	"[&_[data-picking]]:selection:bg-transparent",
 	"[&_[data-held]]:opacity-40",
 	"[&_[data-untranslated]]:text-monti-faint",
-	"[&_[data-off]]:text-monti-faint [&_[data-off]]:after:ml-monti-8 [&_[data-off]]:after:text-monti-meta [&_[data-off]]:after:content-[attr(data-off-label)]",
+	"[&_[data-off]]:text-monti-faint [&_[data-off]]:after:ml-monti-8 [&_[data-off]]:after:text-monti-caption [&_[data-off]]:after:content-[attr(data-off-label)]",
 	"[&_[data-box]]:mb-monti-20 [&_[data-box]]:rounded-monti-lg [&_[data-box]]:bg-monti-muted [&_[data-box]]:px-monti-16 [&_[data-box]]:py-monti-12 [&_[data-box]]:text-monti-note [&_[data-box]]:text-monti-subtle [&_[data-box]]:before:content-[attr(data-box-label)]",
 );
 

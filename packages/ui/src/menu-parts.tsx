@@ -132,7 +132,7 @@ function MenuValue({
 			{...props}
 		>
 			{address ? (
-				<span data-slot="menu-value-address" className="font-mono text-monti-meta text-monti-subtle">
+				<span data-slot="menu-value-address" className="font-mono text-monti-caption text-monti-subtle">
 					{address}
 				</span>
 			) : null}

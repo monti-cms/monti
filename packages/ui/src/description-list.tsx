@@ -10,7 +10,7 @@ const VariantContext = React.createContext<DescriptionListVariant>("default");
 /**
  * Label and value rows (an event's details, a file's information). The label column is 76px wide, so values line up; long values wrap. Labels are quiet,
  * values a step darker, both at the regular weight. `summary` is a count of what something holds (what a backup restores): a 120px label column, values
- * in ink, a quiet note after a value in `Text variant="meta" tone="subtle"`.
+ * in ink, a quiet note after a value in `Text variant="caption" tone="subtle"`.
  */
 function DescriptionList({
 	variant = "default",
@@ -77,7 +77,7 @@ function CountRow({ label, count }: { label: React.ReactNode; count: React.React
 			className="flex items-baseline justify-between gap-monti-12 py-monti-6 text-monti-muted text-monti-note"
 		>
 			<span className="min-w-0">{label}</span>
-			<span className="shrink-0 font-mono text-monti-meta">{count}</span>
+			<span className="shrink-0 font-mono text-monti-caption">{count}</span>
 		</div>
 	);
 }

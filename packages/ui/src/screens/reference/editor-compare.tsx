@@ -32,7 +32,7 @@ export function EditorCompareScreen() {
 						편집기로
 					</TextButton>
 					<Text variant="title">서버 최신본과 비교</Text>
-					<Text mono variant="meta" tone="faint" truncate>
+					<Text mono variant="caption" tone="faint" truncate>
 						/posts/first-post
 					</Text>
 				</Inline>

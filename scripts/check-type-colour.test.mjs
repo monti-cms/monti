@@ -27,14 +27,14 @@ test("mono-words: a file that draws mono with no reason is named with its line",
 	assert.equal(found[0].line, 1);
 });
 
-test("mono-words: the small roles need a reason too, a listed file passes and a listed file that stopped using them fails", () => {
+test("mono-words: the small role needs a reason too, a listed file passes and a listed file that stopped using them fails", () => {
 	const allowed = new Map([
 		["ui/src/a.tsx", "an address"],
 		["ui/src/gone.tsx", "was an address"],
 	]);
 	const found = monoWords(
 		{
-			"packages/ui/src/a.tsx": '<span className="text-monti-meta">x</span>',
+			"packages/ui/src/a.tsx": '<span className="text-monti-micro">x</span>',
 			"packages/ui/src/b.tsx": '<span className="text-monti-micro">x</span>',
 			"packages/ui/src/gone.tsx": "export const A = 1;",
 		},
@@ -55,11 +55,10 @@ test("mono-words: tests and stories are not read, and a mono family on a small r
 		),
 		[],
 	);
-	const theme =
-		"@utility text-monti-meta {\n\tfont-family: var(--monti-font-mono);\n}\n@utility text-monti-micro {\n\tfont-family: var(--monti-family, var(--monti-font-sans));\n}";
+	const theme = "@utility text-monti-micro {\n\tfont-family: var(--monti-font-mono);\n}";
 	const found = monoWords({}, { allowed: new Map(), themeCss: theme });
 	assert.equal(found.length, 1);
-	assert.match(found[0].message, /text-monti-meta sets the mono family/);
+	assert.match(found[0].message, /text-monti-micro sets the mono family/);
 });
 
 test("mono-words: the repository's own files pass", () => {

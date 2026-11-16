@@ -35,7 +35,7 @@ function TrashRowTitle({
 				<span className="min-w-0 truncate text-monti-body text-monti-muted [&_[data-slot=row-link]]:text-inherit">
 					{title}
 				</span>
-				{address && <span className="truncate font-mono text-monti-faint text-monti-meta">{address}</span>}
+				{address && <span className="truncate font-mono text-monti-caption text-monti-faint">{address}</span>}
 			</span>
 			<span
 				data-slot="trash-row-meta"
@@ -74,7 +74,8 @@ function TrashRowDate({
 	byAssistant?: { label: string; onOpen?: () => void };
 }) {
 	// In a column dragged narrow the words end in "…" and the mark stays: each piece may shrink to the cell.
-	const MARK = "inline-flex min-w-0 max-w-full items-center gap-monti-4 font-mono text-monti-meta text-monti-proposal";
+	const MARK =
+		"inline-flex min-w-0 max-w-full items-center gap-monti-4 font-mono text-monti-caption text-monti-proposal";
 	const assistant = (words: React.ReactNode) =>
 		!byAssistant ? null : byAssistant.onOpen ? (
 			<button
@@ -110,13 +111,13 @@ function TrashRowDate({
 		>
 			{date !== undefined &&
 				(assistant(date) ?? (
-					<span className="max-w-full truncate font-mono text-monti-meta text-monti-subtle">{date}</span>
+					<span className="max-w-full truncate font-mono text-monti-caption text-monti-subtle">{date}</span>
 				))}
 			{(date === undefined && assistant(left)) || (
 				<span
 					data-slot="trash-row-left"
 					className={cn(
-						"max-w-full truncate font-mono text-monti-meta",
+						"max-w-full truncate font-mono text-monti-caption",
 						urgent ? "text-monti-warning" : "text-monti-faint",
 					)}
 				>

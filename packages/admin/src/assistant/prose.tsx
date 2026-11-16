@@ -105,7 +105,7 @@ function inline(text: string, onOpen: (address: string) => void): ReactNode[] {
 			);
 		else if (code !== undefined)
 			nodes.push(
-				<Text key={key} mono variant="meta" tone="inherit">
+				<Text key={key} mono variant="caption" tone="inherit">
 					{code}
 				</Text>,
 			);
@@ -154,7 +154,7 @@ export function Prose({
 						<Stack key={key} as={block.ordered ? "ol" : "ul"} gap={4}>
 							{block.items.map((item, at) => (
 								<Inline key={`${at}:${item.slice(0, 12)}`} as="li" gap={8} align="baseline" wrap={false}>
-									<Text tone="subtle" mono={block.ordered} variant={block.ordered ? "meta" : "body"}>
+									<Text tone="subtle" mono={block.ordered} variant={block.ordered ? "caption" : "body"}>
 										{block.ordered ? `${at + 1}.` : "·"}
 									</Text>
 									<ChatMessage author="assistant">{inline(item, onOpen)}</ChatMessage>

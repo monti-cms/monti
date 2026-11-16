@@ -263,7 +263,7 @@ export function MenuField({
 							<span
 								className={cn(
 									"min-w-0 truncate text-monti-subtle",
-									metaMono ? "font-mono text-monti-meta" : "text-monti-caption",
+									metaMono ? "font-mono text-monti-caption" : "text-monti-caption",
 								)}
 							>
 								{meta}

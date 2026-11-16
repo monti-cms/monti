@@ -343,22 +343,13 @@
 	letter-spacing: var(--monti-text-note-tracking);
 }
 
-/* 12px/16px 400. Captions, timestamps in sans. */
+/* 12px/16px 400. Small words and numbers in a line: captions, counts, file sizes, details under a name, timestamps, status bar cells. A typed value (an address, an id) adds `font-mono`. */
 @utility text-monti-caption {
 	font-family: var(--monti-family, var(--monti-font-sans));
 	font-size: var(--monti-text-caption-size);
 	line-height: var(--monti-text-caption-line);
 	font-weight: var(--monti-text-caption-weight);
 	letter-spacing: var(--monti-text-caption-tracking);
-}
-
-/* 12px/16px 400. Small words and numbers in a line: counts, file sizes, details under a name, status bar cells. A typed value (an address, an id) adds `font-mono`. */
-@utility text-monti-meta {
-	font-family: var(--monti-family, var(--monti-font-sans));
-	font-size: var(--monti-text-meta-size);
-	line-height: var(--monti-text-meta-line);
-	font-weight: var(--monti-text-meta-weight);
-	letter-spacing: var(--monti-text-meta-tracking);
 }
 
 /* 11px/14px 400. Group labels in menus and panels, a short note at the end of a row. Field labels use `text-caption`. */

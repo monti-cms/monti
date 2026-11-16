@@ -66,7 +66,7 @@ function BulkBar({
 				<>
 					<Separator orientation="vertical" length="control" flush />
 					<TextButton tone="proposal" onClick={request.onClick}>
-						<Spark />
+						<Spark className="size-monti-icon-md" />
 						{request.label}
 					</TextButton>
 				</>

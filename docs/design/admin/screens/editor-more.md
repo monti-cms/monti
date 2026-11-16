@@ -65,7 +65,7 @@
 |---|---|---|
 | "‹ 편집기로" | `TextButton variant="quiet"`(앞 아이콘) | 비교하지 않고 편집기로 돌아간다. 같은 글의 같은 주소 안에서 보기만 바뀌므로 링크가 아니라 버튼이다. 키보드로 누르면 포커스는 쓰던 본문으로 간다(답 버튼들과 같다, `useFocusHandOff`). |
 | 제목 "서버 최신본과 비교" · "임시 저장본과 비교" | `Text variant="title"` | 이 화면의 제목이다. |
-| 주소 `/posts/first-post` | `Text variant="meta" tone="faint"` | 읽기만 한다. 비교할 글을 읽지 못해 띠("글을 불러오지 못했습니다 · 다시 시도")만 있는 동안에도 "편집기로", 제목과 함께 머리 줄에 있다. |
+| 주소 `/posts/first-post` | `Text variant="caption" tone="faint"` | 읽기만 한다. 비교할 글을 읽지 못해 띠("글을 불러오지 못했습니다 · 다시 시도")만 있는 동안에도 "편집기로", 제목과 함께 머리 줄에 있다. |
 | "차이 3곳" | `Text variant="note"` | 서로 다른 속성, 제목, 본문 블록의 수. |
 | 구분선 | `Separator orientation="vertical" length="control"` | |
 | 곁 동작 "서버 최신본 불러오기" · "버리기" | `TextButton` | 아래 주 동작의 칸에 적었다. |

@@ -144,7 +144,13 @@ function FolderTabEdit({ children, className, ...props }: Omit<React.ComponentPr
 	return (
 		<div
 			data-slot="folder-tab-edit"
-			className={cn(FOLDER_TAB, "border-b-(color:--monti-bg-page) bg-monti-page text-monti-default", className)}
+			className={cn(
+				FOLDER_TAB,
+				"border-b-(color:--monti-bg-page) bg-monti-page text-monti-default",
+				// The name typed in the open tab is as wide as its words (the block's own title rule is 100%), so the open tab does not take the row.
+				"[&_[data-slot=block-title]]:field-sizing-content [&_[data-slot=block-title]]:w-auto [&_[data-slot=block-title]]:min-w-[3ch]",
+				className,
+			)}
 			{...props}
 		>
 			{children}

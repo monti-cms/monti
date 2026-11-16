@@ -18,7 +18,7 @@ function StatusBar({ className, ...props }: React.ComponentProps<"section">) {
 		<section
 			data-slot="status-bar"
 			className={cn(
-				"hidden h-monti-statusbar items-stretch overflow-hidden border-monti-default border-t bg-monti-tool text-monti-meta text-monti-subtle has-[[data-slot=status-bar-cell]]:flex",
+				"hidden h-monti-statusbar items-stretch overflow-hidden border-monti-default border-t bg-monti-tool text-monti-caption text-monti-subtle has-[[data-slot=status-bar-cell]]:flex",
 				className,
 			)}
 			{...props}

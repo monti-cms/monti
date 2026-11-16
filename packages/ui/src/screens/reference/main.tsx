@@ -305,12 +305,12 @@ export function MainScreen({ rowMenu = false, banner }: { rowMenu?: boolean; ban
 											{post.tags}
 										</TableCell>
 										<TableCell>
-											<Text mono variant="meta">
+											<Text mono variant="caption">
 												{post.language}
 											</Text>
 										</TableCell>
 										<TableCell align="end">
-											<Text mono variant="meta" tone="muted">
+											<Text mono variant="caption" tone="muted">
 												{post.date}
 											</Text>
 										</TableCell>

@@ -110,7 +110,7 @@ export function DocumentViewPane({ tools, doc, title }: { tools: Tools; doc: Doc
 			<Box as="aside" aria-label={name} background="tool" grow overflow="y">
 				<Box paddingX={24} paddingTop={16} paddingBottom={48}>
 					<Inline minHeight="control-md">
-						<Text variant="meta" tone="subtle">
+						<Text variant="caption" tone="subtle">
 							{name}
 						</Text>
 					</Inline>

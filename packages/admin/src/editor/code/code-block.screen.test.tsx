@@ -70,6 +70,25 @@ describe("the code block in the editor (doc 17)", () => {
 		await expect.poll(async () => (await keptCode(story.loaded()))?.attrs?.language).toBe("python");
 	});
 
+	it("EB-11 the language list opens with the current language as its one marked row: the row on the keyboard's mark is the one with the ✓", async () => {
+		await on("code").run();
+		await opened();
+		await intoCode("let count");
+		await userEvent.click(button("언어: TypeScript"));
+		const options = page.getByRole("option");
+		await expect.element(options.first()).toBeVisible();
+		const rows = options.elements() as HTMLElement[];
+		const current = rows.filter((row) => row.querySelector("[data-slot=menu-tick]"));
+		const lit = rows.filter(
+			(row) => row.hasAttribute("data-highlighted") || row.getAttribute("data-selected") === "true",
+		);
+		expect(current).toHaveLength(1);
+		expect(
+			lit.every((row) => current.includes(row)),
+			`lit: ${lit.map((row) => row.textContent).join(", ")}; current: ${current[0]?.textContent}`,
+		).toBe(true);
+	});
+
 	it("the file name is typed in the tool row's card and shows in the head row", async () => {
 		const story = on("code");
 		await story.run();

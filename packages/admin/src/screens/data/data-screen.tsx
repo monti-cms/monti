@@ -78,7 +78,7 @@ export function DataScreen({ tabs }: { tabs: ReactNode }) {
 										onCheckedChange={(next) => setMedia(next === true)}
 									/>
 									{t("data.backup.media")}
-									<Text mono variant="meta" tone="subtle">
+									<Text mono variant="caption" tone="subtle">
 										{bytes(status.data.mediaBytes)}
 									</Text>
 								</Option>

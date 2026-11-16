@@ -51,7 +51,7 @@ function DangerRow({
 				{meta ? (
 					<>
 						{" "}
-						<Text variant="meta" tone="subtle">{`· ${meta}`}</Text>
+						<Text variant="caption" tone="subtle">{`· ${meta}`}</Text>
 					</>
 				) : null}
 			</span>

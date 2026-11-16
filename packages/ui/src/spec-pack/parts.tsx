@@ -474,7 +474,7 @@ function CountCell({
 	return (
 		<TableCell align={align}>
 			{tone ? (
-				<Text mono variant="meta" tone={tone === "muted" ? "muted" : undefined}>
+				<Text mono variant="caption" tone={tone === "muted" ? "muted" : undefined}>
 					{children}
 				</Text>
 			) : (
@@ -707,7 +707,7 @@ function OptionCheck({
 			<Checkbox checked={checked ?? false} />
 			{mono ? <Text mono>{label}</Text> : label}
 			{note && (
-				<Text variant="meta" tone={noteTone ?? "subtle"}>
+				<Text variant="caption" tone={noteTone ?? "subtle"}>
 					{note}
 				</Text>
 			)}
@@ -827,7 +827,7 @@ function TwoLineCell({ title, sub, proposal }: { title?: string; sub?: string; p
 					</Text>
 				)}
 				{/* The line under the title stands in a 20px line, as the title does (`.mt-row-sub`). */}
-				<Text as="div" variant="meta" tone="subtle" truncate className="py-monti-2">
+				<Text as="div" variant="caption" tone="subtle" truncate className="py-monti-2">
 					{sub}
 				</Text>
 			</StackPart>
@@ -1720,7 +1720,7 @@ function SourceColumn({ label, title, children }: { label?: string; title?: stri
 		<BoxPart as="aside" aria-label={label} background="tool" border="right" grow minWidth={0}>
 			<BoxPart paddingX={40} paddingTop={16} paddingBottom={48} maxWidth="reading" className="mx-auto">
 				<Inline minHeight="control-md">
-					<Text variant="meta" tone="subtle">
+					<Text variant="caption" tone="subtle">
 						{label}
 					</Text>
 				</Inline>

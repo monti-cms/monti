@@ -1316,7 +1316,7 @@ export function EntryEditor({
 						{trashed ? t("frame.trash") : labelOfCollection(schema.data?.adminValues, collection)}
 					</EditorBack>
 					{address ? (
-						<Text mono variant="meta" tone="faint" truncate>
+						<Text mono variant="caption" tone="faint" truncate>
 							{address}
 						</Text>
 					) : null}

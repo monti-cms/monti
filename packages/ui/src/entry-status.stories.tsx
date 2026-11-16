@@ -59,7 +59,7 @@ export const BesideLongText: Story = {
 	render: () => (
 		<Stack width="panel">
 			<Inline gap={12}>
-				<Text mono variant="meta" tone="faint" truncate>
+				<Text mono variant="caption" tone="faint" truncate>
 					/posts/a-very-long-address-that-does-not-fit-in-the-head-of-the-editor
 				</Text>
 				<EntryStatus status="published">발행됨</EntryStatus>

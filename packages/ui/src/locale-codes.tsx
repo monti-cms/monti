@@ -62,7 +62,7 @@ function LocaleCodes({
 				<span
 					ref={box}
 					data-slot="locale-codes"
-					className="relative z-1 block min-w-0 truncate font-mono text-monti-meta"
+					className="relative z-1 block min-w-0 truncate font-mono text-monti-caption"
 				/>
 			}
 		>

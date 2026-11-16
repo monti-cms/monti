@@ -65,7 +65,7 @@ function CodeArea({
 						data-slot="code-text"
 						data-picking={picking ? "" : undefined}
 						className={cn(
-							"relative whitespace-pre pr-monti-16 pl-monti-16 font-mono text-monti-default text-monti-editor-code",
+							"relative whitespace-pre pr-monti-16 pl-monti-8 font-mono text-monti-default text-monti-editor-code",
 							"data-picking:caret-transparent [&>*]:outline-none [&_.ProseMirror-trailingBreak]:hidden",
 							// The site's two themes colour each piece (`--shiki-light`, `--shiki-dark` set on it by the highlighter).
 							"[&_[data-token]]:text-(--shiki-light) monti-dark:[&_[data-token]]:text-(--shiki-dark)",
@@ -254,7 +254,7 @@ function CodeLine({
 				tone={tone}
 				className="select-none"
 			/>
-			<span className="relative flex flex-1 items-center whitespace-pre pr-monti-16 pl-monti-16 text-monti-default">
+			<span className="relative flex flex-1 items-center whitespace-pre pr-monti-16 pl-monti-8 text-monti-default">
 				<span
 					className={cn(
 						wavy && "underline decoration-1 decoration-wavy underline-offset-4",

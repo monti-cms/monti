@@ -20,7 +20,7 @@ import { Spinner } from "./spinner";
  * over a text; while the assistant works, `AiWorking` ("Generating · Stop") takes its place. While a button works (`loading`) a ring leads the words, it cannot be pressed again, it is not dimmed, it is `aria-busy`, and it keeps the focus it had.
  */
 const textButtonVariants = cva(
-	`${HIT_AREA} inline cursor-pointer border-0 decoration-1 focus-visible:rounded-monti-sm underline-offset-4 not-data-loading:not-disabled:hover:underline focus-visible:outline-2 focus-visible:outline-monti-contrast/50 focus-visible:outline-offset-2 bg-transparent p-0 text-left whitespace-nowrap aria-expanded:text-monti-default disabled:pointer-events-none disabled:opacity-45 aria-disabled:pointer-events-none aria-disabled:opacity-45 [&_svg:not([data-slot=caret])]:mr-monti-6 [&_svg:not([data-slot=caret])]:inline-block [&_svg:not([data-slot=caret])]:size-3.5 [&_svg]:shrink-0 [&_svg:not([data-slot=caret])]:align-[-0.2em]`,
+	`${HIT_AREA} inline cursor-pointer border-0 decoration-1 focus-visible:rounded-monti-sm underline-offset-4 not-data-loading:not-disabled:hover:underline focus-visible:outline-2 focus-visible:outline-monti-contrast/50 focus-visible:outline-offset-2 bg-transparent p-0 text-left whitespace-nowrap aria-expanded:text-monti-default disabled:pointer-events-none disabled:opacity-45 aria-disabled:pointer-events-none aria-disabled:opacity-45 [&_svg:not([data-slot=caret])]:mr-monti-6 [&_svg:not([data-slot=caret])]:inline-block [&_svg:not([data-slot=caret]):not([class*='size-'])]:size-3.5 [&_svg]:shrink-0 [&_svg:not([data-slot=caret])]:align-[-0.2em]`,
 	{
 		variants: {
 			variant: {
@@ -45,11 +45,9 @@ const textButtonVariants = cva(
 			/** The text size of the line it stands in, when that is not the surrounding text's: the `note` of a list row, the `caption` of a label row. */
 			size: {
 				note: "text-monti-note",
-				/** A field label's type (sans 12); an icon beside it is 12px, the size for 12px text. */
+				/** 12px: a field label's type, or words that open a menu of values (rows per page); an icon beside it is 12px. A typed value in it (a model name) adds `font-mono`. */
 				caption:
 					"text-monti-caption [&_svg:not([data-slot=caret])]:mr-monti-4 [&_svg:not([data-slot=caret])]:size-monti-icon-xs",
-				/** 12px words or numbers that open a menu of values (rows per page). A typed value in it (a model name) adds `font-mono`. */
-				meta: "text-monti-meta",
 			},
 			/** The assistant's action, in the proposal blue (its rule too). */
 			tone: {

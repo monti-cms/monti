@@ -654,7 +654,7 @@ function DocumentListScreen({
 				return (
 					<TableCell key={column.id} align="end" truncate short title={at ? fullTime(at, language) : undefined}>
 						{check}
-						<Text mono variant="meta" tone="muted">
+						<Text mono variant="caption" tone="muted">
 							{shortDate(at, language)}
 						</Text>
 					</TableCell>

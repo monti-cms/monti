@@ -18,7 +18,6 @@ export const textVariants = cva("", {
 	variants: {
 		variant: {
 			micro: "text-monti-micro",
-			meta: "text-monti-meta",
 			caption: "text-monti-caption",
 			note: "text-monti-note",
 			label: "text-monti-label",

@@ -4,9 +4,9 @@
 const lineOf = (source, index) => source.slice(0, index).split("\n").length;
 
 /**
- * `mono-words`: `font-mono`, `text-monti-meta` and `text-monti-micro` are the places Korean words once came out in the mono face (the two small roles were
+ * `mono-words`: `font-mono` and `text-monti-micro` (and `meta`, now merged into `caption`) are the places Korean words once came out in the mono face (the two small roles were
  * mono, so every word in them was). A file may use them only if it is named here with the reason, and the reason says which values stay mono. A name whose
- * file no longer uses any of them fails too, so the list is only what is true. The two small roles are sans now; `font-mono` on a span says "this is a value".
+ * file no longer uses any of them fails too, so the list is only what is true. The small role `micro` is sans now; `font-mono` on a span says "this is a value".
  *
  * Cannot see: whether a given child of a listed file is a number or a word. The reason carries that, and a person reading the diff of this list sees a new
  * place. A mono face set by another word (a `style` or `font-family` of its own) is the `off-system` rule's.
@@ -28,7 +28,6 @@ export const MONO_OK = new Map([
 	["ui/src/description-list.tsx", "a count is mono; a quiet note after a value is words in the small sans role"],
 	["ui/src/doc-blocks.tsx", "a number cell of a table of documentation, mono"],
 	["ui/src/editor-body.tsx", "the editor's code, and the words of the small sans role in a block's label"],
-	["ui/src/editor-overlay.tsx", "the kind of a block is a word in the small sans role"],
 	["ui/src/error-box.tsx", "a raw error message as written"],
 	["ui/src/field-tree.tsx", "field names and their counts are identifiers; a note is a word in the small sans role"],
 	["ui/src/file-block.tsx", "a file's size is a value"],
@@ -40,7 +39,6 @@ export const MONO_OK = new Map([
 	["ui/src/list-section.tsx", "`metaMono`: a meta that is a date or a count"],
 	["ui/src/locale-codes.tsx", "language codes are identifiers"],
 	["ui/src/map-row.tsx", "a key of an import and a code are typed values"],
-	["ui/src/marker.tsx", "a tag in a block's margin is a short code"],
 	[
 		"ui/src/menu-parts.tsx",
 		"a row's typed address is mono; group labels and shortcuts are words in the small sans role",
@@ -57,20 +55,17 @@ export const MONO_OK = new Map([
 	["ui/src/radio-group.tsx", "a description is words in the small sans role; a hint that is a typed value is mono"],
 	["ui/src/secret-input.tsx", "a key is typed text"],
 	["ui/src/sheet.tsx", "a title's count may be mono (`ofMono`)"],
-	["ui/src/status-bar.tsx", "the status bar's words are in the small sans role"],
 	["ui/src/table.tsx", "the address of a row's title is a typed value; a note is a word"],
 	["ui/src/tag-input.tsx", "`mono` tags: identifiers"],
 	["ui/src/text-button.tsx", "the `mono` option of a text button, and the small sans role for its words"],
 	["ui/src/text.tsx", "the `mono` option of `Text`, and the roles"],
 	["ui/src/textarea.tsx", "`mono` text: code and source"],
-	["ui/src/tile.tsx", "the tile's detail line: numbers and words in the small sans role"],
-	["ui/src/todo-item.tsx", "the tag of a to-do is a word in the small sans role"],
 	["ui/src/tooltip.tsx", "a tooltip's key hint in the small sans role"],
 	["ui/src/trash-row.tsx", "an address, a date and the days left are values"],
 ]);
 
 /** The tokens `mono-words` looks for. */
-const MONO_WORDS = /\b(?:font-mono|text-monti-meta|text-monti-micro)\b/g;
+const MONO_WORDS = /\b(?:font-mono|text-monti-micro)\b/g;
 
 export function monoWords(sources, { allowed = MONO_OK, themeCss = "" } = {}) {
 	const problems = [];
@@ -93,10 +88,10 @@ export function monoWords(sources, { allowed = MONO_OK, themeCss = "" } = {}) {
 			problems.push({
 				file: `packages/${key}`,
 				line: 1,
-				message: "MONO_OK names a file that no longer uses `font-mono`, `text-monti-meta` or `text-monti-micro`",
+				message: "MONO_OK names a file that no longer uses `font-mono` or `text-monti-micro`",
 			});
 	// The roles themselves: `meta` and `micro` are sans, so they set no mono family.
-	for (const role of ["meta", "micro"]) {
+	for (const role of ["micro"]) {
 		const block = new RegExp(`@utility text-monti-${role} \\{([^}]*)\\}`).exec(themeCss);
 		if (block?.[1].includes("--monti-font-mono"))
 			problems.push({

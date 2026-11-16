@@ -51,7 +51,7 @@ function ChangeGroup({
 			<span className="flex min-w-0 items-baseline gap-monti-12 text-monti-body">
 				<b className="truncate font-semibold">{title}</b>
 				{identifier && (
-					<span className="ml-auto whitespace-nowrap font-mono text-monti-meta text-monti-subtle">{identifier}</span>
+					<span className="ml-auto whitespace-nowrap font-mono text-monti-caption text-monti-subtle">{identifier}</span>
 				)}
 			</span>
 			<div data-slot="change-body" className="flex min-w-0 flex-col gap-monti-10">

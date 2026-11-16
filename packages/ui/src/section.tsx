@@ -38,10 +38,7 @@ function Section({
 			)}
 			{...props}
 		>
-			<h2
-				id={titleId}
-				className={cn("mb-0 text-monti-title", stacked || dense ? "mt-0" : "mt-monti-6 flex-[1_1_180px]")}
-			>
+			<h2 id={titleId} className={cn("mb-0 text-monti-title", stacked || dense ? "mt-0" : "mt-0 flex-[1_1_180px]")}>
 				{title}
 			</h2>
 			{stacked || dense ? (
