@@ -131,6 +131,7 @@ export default defineSchema({
 type CollectionAdminValues = {
   collection: "post";
   label: "게시글";
+  icon: "book"; // 고르지 않았으면 없다. 종류의 기본 아이콘(글 "document", 항목 "tag")이 쓰인다
   folders: true;
   fields: {
     summary: { label: "요약"; description: "목록과 검색 결과에 나오는 한 문장. 결론을 먼저." };
@@ -142,6 +143,7 @@ type CollectionAdminValues = {
 };
 ```
 
+- 아이콘(`icon`)은 `tag`, `user`, `user-multiple`, `book`, `folder`, `document`, `bookmark`, `favorite`, `calendar`, `chat`, `globe`, `image`, `idea`, `flag`, `gift`, `layers`, `list`, `box`, `email`, `hashtag` 스무 개 가운데 하나다(`COLLECTION_ICONS`). 사이드바의 줄, 컬렉션을 가리키는 메뉴(행 메뉴의 관계 하위 메뉴)가 모두 이 값을 한 함수로 읽는다. 목록에 없는 이름은 저장되지 않는다. (소유자, 2026-11-16: 컬렉션의 아이콘은 컬렉션 설정에서 정해진 목록에서 고른다. 고르기 전에는 종류에 따른 기본값이다).
 - 배치(`layout`)가 없으면 탭 하나에 필드를 파일에 적힌 순서대로 둔다.
 - 파일에 없는 필드가 관리자 값에 남아 있으면 무시한다. 필드를 지우는 변경이 그 필드의 관리자 값(표시 이름, 설명, 배치 속 자리)도 지우고, 이름을 바꾸는 변경은 그것을 새 이름으로 옮긴다. 운영 배포도 같은 단계를 따르므로 표시 이름이 사라지지 않는다.
 - 플러그인이 더하는 필드와 탭은 이 파일에 적히지 않는다. 플러그인 설정에서 온다. 사이트가 도는 스키마는 파일의 것에 플러그인의 필드를 더한 것이고, 구조를 바꾸는 기능은 파일의 것만 다룬다. 플러그인의 탭은 컬렉션의 탭 뒤에 서고 설정에서는 잠겨 보인다(14의 "만들며 정함 · 플러그인", 2026-11-13).

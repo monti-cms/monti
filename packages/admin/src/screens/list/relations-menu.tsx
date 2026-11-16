@@ -14,9 +14,9 @@ import {
 	MenuValue,
 	toast,
 } from "@monti-cms/ui";
-import { Tag } from "@monti-cms/ui/icons";
 import { useState } from "react";
 import { useUndo } from "../../activity/use-undo";
+import { useCollectionIcon } from "../../format/collection-icon";
 import { addressIfShared, endsClosed, fieldName as fieldNameOf, titleOf } from "../../format/names";
 import { useAdmin } from "../../operations/admin-context";
 import { reasonOf, useOperation, useRead } from "../../operations/use-operation";
@@ -40,6 +40,7 @@ export type RelationSubmenuProps = {
  */
 export function RelationSubmenu({ collection, column, rows, context, icon = false, onDone }: RelationSubmenuProps) {
 	const { t } = useAdmin();
+	const iconOf = useCollectionIcon();
 	const [find, setFind] = useState("");
 	const fieldName = column.field ?? column.id;
 	const read = useRead<RelationOptionsResult>("relations.options", { collection, field: fieldName });
@@ -152,7 +153,7 @@ export function RelationSubmenu({ collection, column, rows, context, icon = fals
 		return (
 			<ContextMenuSub>
 				<ContextMenuSubTrigger>
-					{icon && <Tag aria-hidden />}
+					{icon && iconOf(read.data?.targetCollection, read.data?.targetKind)}
 					{fieldLabel}
 				</ContextMenuSubTrigger>
 				<ContextMenuSubContent>{menuItems}</ContextMenuSubContent>
@@ -163,7 +164,7 @@ export function RelationSubmenu({ collection, column, rows, context, icon = fals
 	return (
 		<DropdownMenuSub>
 			<DropdownMenuSubTrigger>
-				{icon && <Tag aria-hidden />}
+				{icon && iconOf(read.data?.targetCollection, read.data?.targetKind)}
 				{fieldLabel}
 			</DropdownMenuSubTrigger>
 			<DropdownMenuSubContent>{menuItems}</DropdownMenuSubContent>

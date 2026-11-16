@@ -14,7 +14,7 @@
 | 틀 | `SidebarProvider`(`rail`, `onRailChange`, `resizeKey`, `fixed`) + `Sidebar`(`label` "관리 메뉴") | 폭 232px에서 시작하고 가장자리를 끌어 200–400px로 바꾼다. 접힌 상태와 폭은 이 브라우저에 기억한다. 좁은 화면에서는 서랍이 된다. |
 | 머리: 사이트 이름 | `SidebarHeader` 안의 `Text variant="title" truncate` | 긴 이름은 말줄임표. 사이트로 가는 링크는 없다. |
 | 머리: 접기 | `SidebarRailToggle` | 이름과 툴팁이 "사이드바 접기" / "사이드바 펼치기"를 말하고, 툴팁에 ⌘B. |
-| 위 묶음: 컬렉션 | `SidebarContent` > `SidebarGroup` > `SidebarMenu` > `SidebarMenuItem` > `SidebarMenuButton`(`href`, 아이콘, 이름, `isActive`, `tooltip` "게시글 148") | 스키마의 컬렉션마다 한 행(게시글, 메모, 카테고리, 태그, 시리즈, 노트 …), 스키마 순서. 지금 위치는 `isActive`(`bg-current`, 600). 포인터 아래 행은 `bg-selected`. |
+| 위 묶음: 컬렉션 | `SidebarContent` > `SidebarGroup` > `SidebarMenu` > `SidebarMenuItem` > `SidebarMenuButton`(`href`, 아이콘, 이름, `isActive`, `tooltip` "게시글 148") | 스키마의 컬렉션마다 한 행(게시글, 메모, 카테고리, 태그, 시리즈, 노트 …), 스키마 순서. 아이콘은 그 컬렉션 설정에서 고른 것이고(`collectionIcon`, 소유자, 2026-11-16), 고르기 전에는 종류에 따른다(글은 페이지, 항목은 태그). 지금 위치는 `isActive`(`bg-current`, 600). 포인터 아래 행은 `bg-selected`. |
 | 컬렉션의 글 수 "148" | `SidebarMenuBadge` | mono, 행 오른쪽 끝. 접히면 숨는다. |
 | 글 폴더 트리 "시리즈 원고 2" | `SidebarMenuSub` > `SidebarMenuSubButton`(`depth`, `isActive`), 개수는 `Count` | 그 컬렉션이 열려 있을 때만 그 아래에 보인다. 폴더 안이면 컬렉션 행은 현재 위치로 남고, 열린 폴더가 `isActive`로 굵어진다. 40px 들여쓰기는 행 안쪽 여백이라 바탕은 위 행과 같은 폭이다. |
 | "미디어" | `SidebarMenuButton`(`href`, `isActive`) | |

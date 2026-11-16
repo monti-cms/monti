@@ -35,9 +35,39 @@ export const ListPrefs = z.object({
 
 type LayoutField = string | { group: string; fields: string[] };
 
+/**
+ * The icons a collection can wear in the admin (its sidebar row, the menus that name it): a fixed list, picked in the collection's settings. The names
+ * are the admin's own; the admin draws each with one icon of its list. A collection that picked none has the one of its kind.
+ */
+export const COLLECTION_ICONS = [
+	"tag",
+	"user",
+	"user-multiple",
+	"book",
+	"folder",
+	"document",
+	"bookmark",
+	"favorite",
+	"calendar",
+	"chat",
+	"globe",
+	"image",
+	"idea",
+	"flag",
+	"gift",
+	"layers",
+	"list",
+	"box",
+	"email",
+	"hashtag",
+] as const;
+export type CollectionIcon = (typeof COLLECTION_ICONS)[number];
+
 /** A collection's admin values (doc 01, "where values live"). */
 export const AdminValues = z.object({
 	label: z.string().optional(),
+	/** The icon the admin shows for the collection; without it, the one of its kind. */
+	icon: z.enum(COLLECTION_ICONS).optional(),
 	folders: z.boolean().optional(),
 	fields: z.record(z.string(), FieldAdminValues).optional(),
 	/** The property panel: tabs of fields and groups. Without it, one tab in the schema's order. */
@@ -77,6 +107,7 @@ const FieldAdminValuesPatch = z.object({
  */
 export const AdminValuesPatch = z.object({
 	label: AdminValues.shape.label.unwrap().nullable().optional(),
+	icon: AdminValues.shape.icon.unwrap().nullable().optional(),
 	folders: AdminValues.shape.folders.unwrap().nullable().optional(),
 	fields: z.record(z.string(), FieldAdminValuesPatch.nullable()).nullable().optional(),
 	layout: AdminValues.shape.layout.unwrap().nullable().optional(),

@@ -214,6 +214,27 @@ describe("the live site", () => {
 	});
 });
 
+describe("a collection's icon", () => {
+	it("[D1] is saved with the admin values on the live site, read back, kept by a patch that leaves it out, and refused when it is not on the list", async () => {
+		const monti = live();
+		const send = (values: unknown) => api(monti)(post("collections.updateAdminValues", { collection: "post", values }));
+		const read = async () =>
+			(
+				(await monti.run("schema.read", {}, { actor: "assistant" })) as {
+					adminValues: Record<string, { icon?: string; label?: string }>;
+				}
+			).adminValues.post;
+		expect((await send({ icon: "book" })).status).toBe(200);
+		expect((await read())?.icon).toBe("book");
+		expect((await send({ label: "글" })).status).toBe(200);
+		expect(await read()).toMatchObject({ icon: "book", label: "글" });
+		expect((await send({ icon: "rocket-ship" })).status).toBeGreaterThanOrEqual(400);
+		expect((await read())?.icon).toBe("book");
+		expect((await send({ icon: null })).status).toBe(200);
+		expect((await read())?.icon).toBeUndefined();
+	});
+});
+
 describe("a collection's preview address", () => {
 	const withPreview = (previewPath?: string): Schema => {
 		const { previewPath: _old, ...post } = base.collections.post as Schema["collections"][string] & {

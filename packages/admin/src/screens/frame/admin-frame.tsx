@@ -1,4 +1,4 @@
-import type { FolderNode } from "@monti-cms/core";
+import type { CollectionIcon, FolderNode } from "@monti-cms/core";
 import {
 	Count,
 	folderTree,
@@ -23,8 +23,9 @@ import {
 	Stack,
 	Text,
 } from "@monti-cms/ui";
-import { Document, Image, RecentlyViewed, SettingsAdjust, Tag, Tools, TrashCan } from "@monti-cms/ui/icons";
+import { Image, RecentlyViewed, SettingsAdjust, Tools, TrashCan } from "@monti-cms/ui/icons";
 import { type ReactNode, useEffect } from "react";
+import { collectionIcon } from "../../format/collection-icon";
 import { labelOfCollection } from "../../format/names";
 import { FolderFilesProvider, useGiveFolderFiles } from "../../media/folder-files";
 import { useFolderDrop } from "../../media/use-file-drop";
@@ -43,7 +44,7 @@ export type Place = { collection: string } | "media" | "trash" | "activity" | "t
 
 type SchemaRead = {
 	schema: { collections: Record<string, { kind: "document" | "item" }> };
-	adminValues: Record<string, { label?: string; folders?: boolean }>;
+	adminValues: Record<string, { label?: string; icon?: CollectionIcon; folders?: boolean }>;
 };
 export type FrameCounts = {
 	collections: Record<string, number>;
@@ -220,7 +221,7 @@ export function AdminFrame({
 												key={name}
 												place={{ collection: name }}
 												open={open}
-												icon={collection.kind === "item" ? <Tag /> : <Document />}
+												icon={collectionIcon(state?.adminValues[name]?.icon, collection.kind)}
 												name={labelOfCollection(state?.adminValues, name)}
 												count={counts?.collections[name]}
 												onOpen={onOpen}

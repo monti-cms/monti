@@ -426,7 +426,7 @@ export const schemaOperations = [
 		name: "collections.updateAdminValues",
 		kind: "write",
 		description:
-			"Change a collection's admin values: its label, folders, field labels and descriptions (how to fill each field), the property panel layout and the editor's allowed blocks. A patch: only the keys given change, null clears one, everything left out stays as saved (fields go by field and by key, so { fields: { summary: { label } } } renames one label and nothing else). Works on the live site too.",
+			"Change a collection's admin values: its label, icon (one of a fixed list), folders, field labels and descriptions (how to fill each field), the property panel layout and the editor's allowed blocks. A patch: only the keys given change, null clears one, everything left out stays as saved (fields go by field and by key, so { fields: { summary: { label } } } renames one label and nothing else). Works on the live site too.",
 		input: z.object({ collection: z.string(), values: AdminValuesPatch }),
 		touches: (input) => [{ kind: "collectionAdminValues", id: input.collection }],
 		check(input, ctx) {

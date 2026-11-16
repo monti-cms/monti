@@ -1,4 +1,4 @@
-import type { SchemaProblem } from "@monti-cms/core";
+import type { CollectionIcon, SchemaProblem } from "@monti-cms/core";
 import {
 	Affix,
 	Button,
@@ -14,16 +14,25 @@ import {
 	Label,
 	LockMark,
 	ReadValue,
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
 	Stack,
 	Switch,
 	TextButton,
 } from "@monti-cms/ui";
 import { useEffect, useRef } from "react";
+import { COLLECTION_ICON_NAMES, collectionIcon, iconNamed } from "../../format/collection-icon";
 import { useAdmin } from "../../operations/admin-context";
 import { useFocusHandOff } from "../frame/focus-hand-off";
 import { at } from "./schema-draft";
 import { useCell } from "./use-cell";
 import type { SettingsDraft } from "./use-settings-draft";
+
+/** The picker's row for no icon of its own: the collection wears the one of its kind. */
+const DEFAULT_ICON = "default";
 
 /** "/posts/:slug" ↔ "posts": the part of a public address the person types. */
 export const addressPart = (path: string) => path.replace(/^\//, "").replace(/\/?:slug$/, "");
@@ -81,6 +90,7 @@ export function BasicsTab({
 	const preview = previewCell.value;
 	const previewChanged = marked(previewCell);
 	const labelPlace = at.collectionValue(c, "label");
+	const iconPlace = at.collectionValue(c, "icon");
 	const foldersPlace = at.collectionValue(c, "folders");
 	// What is wrong with an address is told under its field, as a field's problem is told on its row: the review's "open" leads here.
 	const problemOf = (place: AddressPlace) => {
@@ -111,6 +121,7 @@ export function BasicsTab({
 		return () => clearTimeout(later);
 	}, [attention]);
 	const label = cell(labelPlace);
+	const icon = cell(iconPlace);
 	const folders = cell(foldersPlace);
 	// A row's undo goes away with the change it puts back: the keyboard's focus it held goes to the row's own control, the one the undo acted
 	// on (an item's row is its switch: the address field goes with the public page).
@@ -119,9 +130,11 @@ export function BasicsTab({
 	);
 	const previewUndo = useFocusHandOff(() => document.getElementById("collection-preview-path"));
 	const labelUndo = useFocusHandOff(() => document.getElementById("collection-label"));
+	const iconUndo = useFocusHandOff(() => document.getElementById("collection-icon"));
 	const foldersUndo = useFocusHandOff(() => document.getElementById("collection-folders"));
 	// Every value of the tab marks its change the same way: the dot by its name and the undo at the row's end (settings.md, the site name).
 	const labelChanged = marked(label);
+	const iconChanged = marked(icon);
 	const foldersChanged = marked(folders);
 	return (
 		<>
@@ -152,6 +165,47 @@ export function BasicsTab({
 						onChange={(event) => draft.set(labelPlace, event.target.value || undefined)}
 					/>
 					{label.proposal && label.was ? <FormFieldWas>{String(label.was)}</FormFieldWas> : null}
+				</FormField>
+				<FormField>
+					{/* The icon the sidebar, the menus that name the collection and its relations draw it by: one of a fixed list, or the kind's own. */}
+					<FormFieldLabel
+						htmlFor="collection-icon"
+						changed={iconChanged ? { ...iconChanged, undoRef: iconUndo } : undefined}
+					>
+						{t("settings.basics.icon")}
+					</FormFieldLabel>
+					<Select
+						items={[
+							{ value: DEFAULT_ICON, label: t("settings.basics.iconDefault") },
+							...COLLECTION_ICON_NAMES.map((name) => ({ value: name, label: t(`collection.icon.${name}`) })),
+						]}
+						value={String(icon.value ?? DEFAULT_ICON)}
+						onValueChange={(next) => draft.set(iconPlace, next === null || next === DEFAULT_ICON ? undefined : next)}
+					>
+						<SelectTrigger id="collection-icon" width="full" size="md" proposal={icon.proposal}>
+							<SelectValue>
+								{(value: string) => (
+									<Inline gap={8} align="center">
+										{value === DEFAULT_ICON ? collectionIcon(undefined, kind) : iconNamed(value as CollectionIcon)}
+										{value === DEFAULT_ICON ? t("settings.basics.iconDefault") : t(`collection.icon.${value}`)}
+									</Inline>
+								)}
+							</SelectValue>
+						</SelectTrigger>
+						<SelectContent>
+							<SelectItem value={DEFAULT_ICON}>
+								{collectionIcon(undefined, kind)}
+								{t("settings.basics.iconDefault")}
+							</SelectItem>
+							{COLLECTION_ICON_NAMES.map((name) => (
+								<SelectItem key={name} value={name}>
+									{iconNamed(name)}
+									{t(`collection.icon.${name}`)}
+								</SelectItem>
+							))}
+						</SelectContent>
+					</Select>
+					{icon.proposal && icon.was ? <FormFieldWas>{t(`collection.icon.${String(icon.was)}`)}</FormFieldWas> : null}
 				</FormField>
 				{locked ? (
 					kind === "document" || path !== undefined ? (
