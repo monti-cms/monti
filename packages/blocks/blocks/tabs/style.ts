@@ -139,13 +139,11 @@ export const style = `/*
 	display: none;
 }
 .monti-block-tabs-panel > :first-child,
-.monti-block-tabs-pane > :first-child,
-.monti-block-tabs-pane [data-node-view-content-react] > :first-child {
+.monti-block-tabs-pane > :first-child {
 	margin-top: 0;
 }
 .monti-block-tabs-panel > :last-child,
-.monti-block-tabs-pane > :last-child,
-.monti-block-tabs-pane [data-node-view-content-react] > :last-child {
+.monti-block-tabs-pane > :last-child {
 	margin-bottom: 0;
 }
 

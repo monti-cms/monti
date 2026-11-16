@@ -4,7 +4,8 @@ import { page, userEvent } from "vitest/browser";
 import { scene } from "../../../test/scene";
 import * as blocks from "./site-blocks.stories";
 
-const on = (doc: Doc) => scene<blocks.Loaded>({ loaders: blocks.site(doc) }, blocks.default);
+const on = (doc: Doc, options: { archived?: true } = {}) =>
+	scene<blocks.Loaded>({ loaders: blocks.site(doc, options) }, blocks.default);
 const body = () => page.getByRole("textbox", { name: "본문" });
 const p = (id: string, text: string): Block => ({ id, type: "paragraph", content: [{ type: "text", text }] });
 
@@ -73,6 +74,51 @@ describe("the looks of the site's blocks in the editor (doc 18)", () => {
 			// Named by its kind when the writer's title says something else; the default title already is that name, so no second reading.
 			expect(box.getAttribute("aria-label") === null, tone).toBe(tone === "note");
 		}
+	});
+
+	describe.each([
+		["in the editor", {}],
+		["read-only", { archived: true as const }],
+	])("the last block of a container, %s", (_where, options) => {
+		it("18-4 a callout that ends in a formula keeps the room under its last line that one ending in a paragraph keeps", async () => {
+			const formula: Block = { id: "m", type: "math", attrs: { source: "a^2 + b^2 = c^2" } };
+			const made = on(
+				{
+					type: "doc",
+					blocks: [
+						{ id: "c1", type: "callout", attrs: { tone: "tip", title: "끝이 글" }, children: [p("c1p", "끝 문단 글")] },
+						{
+							id: "c2",
+							type: "callout",
+							attrs: { tone: "tip", title: "끝이 수식" },
+							children: [p("c2p", "앞 문단 글"), { ...formula, id: "m2" }],
+						},
+					],
+				},
+				options,
+			);
+			await made.run();
+			await expect.element(body().getByText("끝 문단 글")).toBeVisible();
+			await expect
+				.poll(() => body().element().querySelectorAll('[data-block="math"]').length, { timeout: 15_000 })
+				.toBe(1);
+			await expect
+				.poll(() => body().element().querySelectorAll(".katex").length, { timeout: 15_000 })
+				.toBeGreaterThan(0);
+			const text = body().element();
+			/** The room between the last thing a container draws and its own edge. */
+			const under = (box: Element, last: Element) =>
+				box.getBoundingClientRect().bottom - last.getBoundingClientRect().bottom;
+			const calloutEnd = text.querySelector('[data-block="callout"] .monti-block-callout-body p') as Element;
+			const callouts = text.querySelectorAll<HTMLElement>(".monti-block-callout");
+			const endsInFormula = callouts[1].querySelector(
+				"[data-block=math] .monti-block-math, [data-block=math]",
+			) as Element;
+			const paragraph = under(callouts[0], calloutEnd);
+			const formulaEnd = under(callouts[1], endsInFormula);
+			expect(Math.abs(formulaEnd - paragraph), `${formulaEnd} against ${paragraph}`).toBeLessThanOrEqual(2);
+			expect(formulaEnd).toBeLessThanOrEqual(14);
+		});
 	});
 
 	it("18-5 the editor's tabs are the folder tabs: the open tab joins the box under it, the box has one frame and its top-left corner is square", async () => {
