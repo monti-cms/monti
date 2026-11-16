@@ -4,6 +4,10 @@ import { page, userEvent } from "vitest/browser";
 import { dragPath, dropDrag, middleOf, onTopOf, pointerPath, wholeUnderPointer } from "../../../testing/input";
 import { render } from "../test/render";
 import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuTrigger,
 	FileUseRow,
 	ListHead,
 	ListScroll,
@@ -934,5 +938,49 @@ describe("the cell that holds a row's ⋯", () => {
 		await expect.poll(() => document.querySelector("[data-slot=row-actions]")).not.toBeNull();
 		expect(ground(actions())).toBe(ground(row()));
 		expect(ground(actions())).not.toBe("rgba(0, 0, 0, 0)");
+	});
+
+	it("every state the row shows, the cell shows too, from the row's one list of grounds: a row with onClick and no link under the pointer, a row whose menu is open", async () => {
+		render(
+			<Table container="none" layout="fixed" columns={[120, 48]}>
+				<TableBody>
+					<TableRow onClick={() => undefined}>
+						<TableCell>행을 누르면 열린다</TableCell>
+						<TableCell>
+							<RowActions>
+								<RowMore label="더 보기" />
+							</RowActions>
+						</TableCell>
+					</TableRow>
+					<TableRow>
+						<TableCell>메뉴가 열린 행</TableCell>
+						<TableCell>
+							<RowActions>
+								<DropdownMenu>
+									<RowMore label="메뉴" trigger={(button) => <DropdownMenuTrigger render={button} />} />
+									<DropdownMenuContent>
+										<DropdownMenuItem>지우기</DropdownMenuItem>
+									</DropdownMenuContent>
+								</DropdownMenu>
+							</RowActions>
+						</TableCell>
+					</TableRow>
+				</TableBody>
+			</Table>,
+		);
+		await expect.poll(() => document.querySelectorAll("[data-slot=row-actions]").length).toBe(2);
+		const [clickable, menu] = [...document.querySelectorAll("tr")] as HTMLElement[];
+		const cell = (row: HTMLElement) => row.querySelector("td:has([data-slot=row-actions])") as HTMLElement;
+		const rest = getComputedStyle(clickable as HTMLElement).backgroundColor;
+		await userEvent.hover(page.getByText("행을 누르면 열린다"));
+		await expect.poll(() => getComputedStyle(clickable as HTMLElement).backgroundColor).not.toBe(rest);
+		expect(getComputedStyle(cell(clickable as HTMLElement)).backgroundColor).toBe(
+			getComputedStyle(clickable as HTMLElement).backgroundColor,
+		);
+		await userEvent.click(page.getByRole("button", { name: "메뉴" }));
+		await expect.poll(() => getComputedStyle(menu as HTMLElement).backgroundColor).not.toBe("rgba(0, 0, 0, 0)");
+		expect(getComputedStyle(cell(menu as HTMLElement)).backgroundColor).toBe(
+			getComputedStyle(menu as HTMLElement).backgroundColor,
+		);
 	});
 });

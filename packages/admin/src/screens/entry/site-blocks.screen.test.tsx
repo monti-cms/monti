@@ -133,6 +133,60 @@ describe("the site's blocks in the editor (doc 18)", () => {
 		expect(JSON.stringify(columns)).toContain("오른쪽 단");
 	});
 
+	/** A body of one paragraph and a columns block of two columns sized `widths` (so its tool row, "even widths", is there). */
+	const sized = (widths: string): Doc => ({
+		type: "doc",
+		blocks: [
+			{ id: "s1", type: "paragraph", content: [{ type: "text", text: "단 위의 글." }] },
+			{
+				id: "columns",
+				type: "columns",
+				attrs: { widths },
+				children: [
+					{
+						id: "k1",
+						type: "column",
+						children: [{ id: "k1p", type: "paragraph", content: [{ type: "text", text: "왼쪽 단" }] }],
+					},
+					{
+						id: "k2",
+						type: "column",
+						children: [{ id: "k2p", type: "paragraph", content: [{ type: "text", text: "오른쪽 단" }] }],
+					},
+				],
+			},
+		] as Block[],
+	});
+	const meets = (a: DOMRect, b: DOMRect) =>
+		a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
+
+	it("18-5 columns: a column's grip that would meet the tool row is not drawn (a narrow first column), and none that is drawn meets it", async () => {
+		const narrow = on(sized("15,85"));
+		await narrow.run();
+		await expect.poll(() => document.querySelector(".monti-block-columns-editor")).not.toBeNull();
+		await caretAfter(body().element(), "왼쪽 단");
+		const bar = page.getByRole("toolbar");
+		await expect.element(bar).toBeVisible();
+		// The first column is narrow: its grip would stand over the row's "even widths", so it is not drawn; the second column's is.
+		await expect.poll(() => page.getByRole("button", { name: "단 1", exact: true }).elements().length).toBe(0);
+		await userEvent.hover(body().getByText("오른쪽 단"));
+		await expect.element(page.getByRole("button", { name: "단 2", exact: true })).toBeVisible();
+		for (const grip of page.getByRole("button", { name: /^단 \d$/ }).elements())
+			expect(meets(grip.getBoundingClientRect(), bar.element().getBoundingClientRect())).toBe(false);
+	});
+
+	it("18-5 columns: with even widths the first column's grip is drawn beside the tool row, not over it", async () => {
+		const even = on(sized("50,50"));
+		await even.run();
+		await expect.poll(() => document.querySelector(".monti-block-columns-editor")).not.toBeNull();
+		await caretAfter(body().element(), "왼쪽 단");
+		const bar = page.getByRole("toolbar");
+		await expect.element(bar).toBeVisible();
+		const grip = page.getByRole("button", { name: "단 1", exact: true });
+		await expect.element(grip).toBeVisible();
+		expect(meets(grip.element().getBoundingClientRect(), bar.element().getBoundingClientRect())).toBe(false);
+	});
+
 	it("18-4 a collapsible folds in the editor too, and its tool row's labelled toggle sets it to start open", async () => {
 		const made = on();
 		await made.run();

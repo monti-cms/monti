@@ -239,6 +239,12 @@ describe("the activity log (doc 13, flow 12)", () => {
 			const box = button.getBoundingClientRect();
 			expect(button.contains(document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2))).toBe(true);
 		}
+		// The table runs under the ⋯ cell: it shows its edge line, and the head's last cell stands over it at the same left edge.
+		const cell = actions[0]?.closest("td") as HTMLElement;
+		expect(getComputedStyle(cell).boxShadow).not.toBe("none");
+		const head = table().element().querySelector("thead th:last-child") as HTMLElement;
+		expect(getComputedStyle(head).position).toBe("sticky");
+		expect(Math.abs(head.getBoundingClientRect().left - cell.getBoundingClientRect().left)).toBeLessThanOrEqual(1);
 		// The last row's ⋯ opens its menu.
 		await userEvent.click(actions[actions.length - 1]?.querySelector("button") as Element);
 		await expect.element(page.getByRole("menu")).toBeVisible();

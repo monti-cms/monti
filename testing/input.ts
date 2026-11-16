@@ -243,3 +243,14 @@ export function coversText(floating: Element, body: Element): string[] {
 		}
 	return covered;
 }
+
+/**
+ * How far a block's own frame stands below what is before it: from the bottom of the body's element before the block to the top of the block's
+ * frame (`block-box` or `block-frame`, else the wrapper). The plain gap between blocks is the one above a block that keeps no room for a tool row.
+ */
+export function gapAbove(block: Element): number {
+	const top = block.closest(".ProseMirror > *") ?? block;
+	const before = top.previousElementSibling?.getBoundingClientRect().bottom ?? 0;
+	const frame = block.querySelector("[data-slot=block-box], [data-slot=block-frame]") ?? block;
+	return frame.getBoundingClientRect().top - before;
+}

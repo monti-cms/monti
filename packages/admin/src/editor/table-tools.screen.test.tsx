@@ -1,5 +1,5 @@
 import { composeStories } from "@storybook/react-vite";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, onTestFinished } from "vitest";
 import { page, userEvent } from "vitest/browser";
 import { coversText, onTopOf, pointerPath, scrollsSideways } from "../../../../testing/input";
 import { scene } from "../../test/scene";
@@ -131,5 +131,39 @@ describe("a table's tools", () => {
 		const at = handle.element().getBoundingClientRect();
 		// Not touching: not even the 24px box the grip is pressed in (6px beyond the grip's 12).
 		expect(at.right).toBeLessThanOrEqual(grip.left - 6);
+	});
+
+	it("a grip hides as soon as any part of it leaves the box the editor scrolls in, and is back when the table is scrolled down again", async () => {
+		await TableGrips.run();
+		await userEvent.click(body().getByRole("cell", { name: "편집기 다시 만들기" }));
+		// A short window, so the page has room to scroll.
+		await page.viewport(1280, 300);
+		onTestFinished(() => page.viewport(1440, 900));
+		// By the DOM: a hidden grip is out of the roles.
+		const grip = {
+			element: () => document.querySelector('[data-slot=table-grip][aria-label="2번째 열"]') as HTMLElement,
+		};
+		await expect.poll(() => grip.element()).not.toBeNull();
+		const scroller = (() => {
+			for (let at = table().element().parentElement; at; at = at.parentElement)
+				if (/(auto|scroll)/.test(getComputedStyle(at).overflowY) && at.scrollHeight > at.clientHeight) return at;
+			throw new Error("nothing scrolls");
+		})();
+		const stands = () => grip.element().closest("[data-slot=anchored]") as HTMLElement;
+		const scrollTo = (gap: number) => {
+			scroller.scrollTop += table().element().getBoundingClientRect().top - scroller.getBoundingClientRect().top - gap;
+		};
+		// The table's head 60px under the top of the box: the grip above it is whole in the box and shows.
+		scrollTo(60);
+		await expect.poll(() => getComputedStyle(stands()).visibility).toBe("visible");
+		// Scrolled so the head sits 8px under the top: the grip, above it, is half out of the box, and is hidden at once.
+		scrollTo(8);
+		await expect.poll(() => getComputedStyle(stands()).visibility).toBe("hidden");
+		const cut = grip.element().getBoundingClientRect();
+		expect(cut.top).toBeLessThan(scroller.getBoundingClientRect().top);
+		expect(cut.bottom).toBeGreaterThan(scroller.getBoundingClientRect().top);
+		// Back down, it shows again.
+		scrollTo(60);
+		await expect.poll(() => getComputedStyle(stands()).visibility).toBe("visible");
 	});
 });
