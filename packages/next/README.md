@@ -101,6 +101,56 @@ export default async function Post({ params }: { params: Promise<{ slug: string 
   address (`path`).
 - `tocOf(post.doc)` gives the table of contents; the headings `renderDocument` draws carry the same ids.
 
+### Languages
+
+An entry names its pages in the site's other languages: `entry.translations` is `{ locale, path }[]`, the published ones only, its own
+language left out.
+
+```tsx
+import { languageLinks } from "@monti-cms/next";
+
+// Each language goes to this same entry in it, and to that language's first page when the entry is not published in it.
+languageLinks(reader.locales(), entry).map((link) => (
+	<Link key={link.locale} href={link.href} aria-current={link.current ? "page" : undefined}>
+		{link.name}
+	</Link>
+));
+```
+
+Draw the switcher in the page, not in the layout: only the page knows which entry it shows. `homePath(reader.locales(), locale)` is a
+language's first page.
+
+### Search and share values
+
+```ts
+import { pageMetadata } from "@monti-cms/next";
+
+export async function generateMetadata({ params }) {
+	const found = await reader.entry({ collection: "post", slug: (await params).slug, locale: "ko" });
+	if (!found || !("entry" in found)) return {};
+	const { entry } = found;
+	return pageMetadata({ title: entry.title, locale: entry.locale, path: entry.path, translations: entry.translations });
+}
+```
+
+`pageMetadata` gives Next the title and description, the canonical address (the page's own unless `canonical` names another), the other
+languages (`hreflang`, left out for a page with `noindex` or a canonical address elsewhere), and `og:title`, `og:url`, `og:image` and the
+card. With the SEO plugin, spread `seoOf(entry)` into it. The addresses are paths: set `metadataBase` in the site's layout to the site's
+own address and Next makes them whole.
+
+### The page that is not found
+
+`entryPage` calls `notFound()`, and Next draws the nearest `not-found.tsx` inside that route's layout, so a `not-found.tsx` beside the
+site's layout keeps the site's header on it. Two things Next does not do for it:
+
+- A `notFound()` called by a layout is not drawn by that layout's own `not-found.tsx`. Check the language of the address in the page, and
+  let the layout draw any address.
+- A site with more than one root layout (`app/(site)/layout.tsx` and `app/[locale]/layout.tsx`) has no `app/not-found.tsx` for addresses
+  no route takes. A catch-all page that only calls `notFound()` (`app/[locale]/[...rest]/page.tsx`) gives them the same page.
+
+`not-found.tsx` is handed nothing of the address; a client component in it reads the language with `useParams()`. The example sites do
+all of this.
+
 ## Preview
 
 "Preview" in the editor opens `<admin>/api/preview?token=…&path=…`. A good token turns Next's draft mode on for that browser and goes to the

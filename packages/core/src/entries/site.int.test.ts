@@ -133,11 +133,11 @@ describe("an event's paths are public addresses, whatever made it", () => {
 			slug: "hello-en",
 		});
 		await write("entries.publish", { ids: [translation.id] });
-		expect(published("post").at(-1)?.paths).toEqual(["/en/posts/hello-en"]);
+		expect(published("post").at(-1)?.paths).toEqual(["/en/posts/hello"]);
 		sent = [];
 		await write("entries.save", { id, version: await versionOf(id), title: "안녕하세요" });
 		await write("entries.publish", { ids: [id] });
-		expect(published("post").map((event) => event.paths)).toEqual([["/posts/hello", "/en/posts/hello-en"]]);
+		expect(published("post").map((event) => event.paths)).toEqual([["/posts/hello", "/en/posts/hello"]]);
 	});
 });
 
@@ -256,7 +256,7 @@ describe("an undo that changes what the site shows says so", () => {
 		const again = await act("entries.publish", { ids: [id] });
 		sent = [];
 		await undo(again.activityId);
-		expect(shown()).toEqual([["entry.published", ["/posts/hello", "/en/posts/hello-en"]]]);
+		expect(shown()).toEqual([["entry.published", ["/posts/hello", "/en/posts/hello"]]]);
 	});
 
 	it("02-7 T29 undoing a publish that changed only the date puts the old date back, and says so", async () => {
@@ -308,6 +308,43 @@ describe("what the site reads", () => {
 		});
 		await write("items.saveGroup", { collection: "tag", locales: { ko: { title: "웹", slug: "web" } } });
 		expect((await reader().entries({ collection: "tag", locale: "ko" })).map((entry) => entry.path)).toEqual([null]);
+	});
+
+	it("16-10 an entry names its pages in the other languages: published ones only, never its own, none for a collection with no page", async () => {
+		const id = await post("안녕", "hello");
+		const ko = async () => {
+			const found = await reader().entry({ collection: "post", locale: "ko", slug: "hello" });
+			return found && "entry" in found ? found.entry.translations : null;
+		};
+		expect(await ko()).toEqual([]);
+		const translation = await write("translations.create", { source: id, locale: "en" });
+		await write("entries.save", { id: translation.id, version: await versionOf(translation.id), title: "Hello" });
+		// A translation being written is not on the site: the source does not name it.
+		expect(await ko()).toEqual([]);
+		await write("entries.publish", { ids: [translation.id] });
+		expect(await ko()).toEqual([{ locale: "en", path: "/en/posts/hello" }]);
+		const en = await reader().entry({ collection: "post", locale: "en", slug: "hello" });
+		expect(en && "entry" in en && en.entry.translations).toEqual([{ locale: "ko", path: "/posts/hello" }]);
+		// The lists give the same.
+		expect((await reader().entries({ collection: "post", locale: "en" })).map((entry) => entry.translations)).toEqual([
+			[{ locale: "ko", path: "/posts/hello" }],
+		]);
+		// Taken off the site, or thrown away, it is named no more.
+		await write("entries.archive", { ids: [translation.id] });
+		expect(await ko()).toEqual([]);
+		await write("entries.unarchive", { ids: [translation.id] });
+		await write("entries.publish", { ids: [translation.id] });
+		expect(await ko()).toHaveLength(1);
+		await write("trash.move", { rows: [{ kind: "entry", id: translation.id }] });
+		expect(await ko()).toEqual([]);
+
+		await write("items.saveGroup", {
+			collection: "tag",
+			locales: { ko: { title: "웹", slug: "web" }, en: { title: "Web", slug: "web" } },
+		});
+		expect((await reader().entries({ collection: "tag", locale: "ko" })).map((entry) => entry.translations)).toEqual([
+			[],
+		]);
 	});
 
 	it("16-1 a list is read a page at a time, newest first, each entry once", async () => {

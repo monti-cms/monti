@@ -24,6 +24,9 @@ export type ResolvedRelation = {
 	fallback?: boolean;
 };
 
+/** The same entry in another language, where the site shows it (doc 16). */
+export type SiteTranslation = { locale: string; path: string };
+
 /** An entry as the site reads it: only the fields the schema has now (doc 01). */
 export type SiteEntry = {
 	id: string;
@@ -33,6 +36,12 @@ export type SiteEntry = {
 	slug: string;
 	/** Its public address, the language shown as the site shows it; `null` for an item of a collection with no page. */
 	path: string | null;
+	/**
+	 * The pages of this entry in the site's other languages: its published translations (and, for a translation, its published source), in the
+	 * order of the site's languages. The entry's own language is not among them, and neither is a language it is not published in. Empty for a
+	 * collection with no page.
+	 */
+	translations: SiteTranslation[];
 	values: Record<string, unknown>;
 	/** The body as the site draws it (`renderDocument`). */
 	doc: Doc | null;
@@ -43,7 +52,7 @@ export type SiteEntry = {
 };
 
 /** An entry as it is read from its row, before it is made the site's: its body as stored. */
-type StoredEntry = Omit<SiteEntry, "doc" | "relations" | "media" | "path"> & { doc: unknown };
+type StoredEntry = Omit<SiteEntry, "doc" | "relations" | "media" | "path" | "translations"> & { doc: unknown };
 
 export type ReaderOptions = {
 	db: Kysely<Database>;
@@ -117,6 +126,27 @@ function readerOf(options: ReaderOptions & { schema: Schema }) {
 		};
 	}
 
+	/** Where an entry is on the site in the other languages (`SiteEntry.translations`). */
+	async function translationsOf(entry: StoredEntry): Promise<SiteTranslation[]> {
+		if (!schema.collections[entry.collection]?.path) return [];
+		const rows = await db
+			.selectFrom("entries as e")
+			.innerJoin("entries as t", (join) =>
+				join.onRef("t.translation_group", "=", "e.translation_group").on("t.trashed_at", "is", null),
+			)
+			.innerJoin("entry_published as p", "p.entry_id", "t.id")
+			.select(["p.locale", "p.slug"])
+			.where("e.id", "=", entry.id)
+			.where("p.locale", "<>", entry.locale)
+			.execute();
+		// Only the languages the site has now, in its own order.
+		return schema.locales.list.flatMap(({ code }) => {
+			const row = rows.find((found) => found.locale === code);
+			const path = row && publicPath(schema, entry.collection, row.slug, code);
+			return path ? [{ locale: code, path }] : [];
+		});
+	}
+
 	/**
 	 * An entry as the site gets it (doc 04): no pending block, and in a translation the source's published blocks for `followSource` ones and the
 	 * source's values for `same` fields and empty `fromSource` ones. While the source is not on the site, a translation keeps its own values.
@@ -124,9 +154,10 @@ function readerOf(options: ReaderOptions & { schema: Schema }) {
 	async function forSite(entry: StoredEntry): Promise<SiteEntry> {
 		const doc = entry.doc === null || entry.doc === undefined ? null : asDoc(entry.doc);
 		const path = publicPath(schema, entry.collection, entry.slug, entry.locale);
+		const translations = await translationsOf(entry);
 		let base: SiteEntry;
 		if (entry.locale === schema.locales.source) {
-			base = { ...entry, path, doc: doc && siteDoc(doc, null) };
+			base = { ...entry, path, translations, doc: doc && siteDoc(doc, null) };
 		} else {
 			const source = await db
 				.selectFrom("entries as e")
@@ -149,6 +180,7 @@ function readerOf(options: ReaderOptions & { schema: Schema }) {
 			base = {
 				...entry,
 				path,
+				translations,
 				title: fields.title,
 				values: onlySchemaFields(schema, entry.collection, fields.values),
 				doc: doc && siteDoc(doc, source ? asDoc(source.doc) : null),
