@@ -201,16 +201,18 @@ A code block holds its code as text, with its language, file name (`title`), whe
 strike, underline, a fold (`codeFold`) and a tooltip (`codeTip`) go inside the code as marks. A code link in the text is the mark
 `codeRef { block, anchor }`; one whose lines are gone blocks the publish.
 
-`codeBlock` in `monti.config.ts` sets the two Shiki themes, the languages the editor offers, the editor's tools and the line effects:
+`codeBlock` in `monti.config.ts` sets the languages the editor offers, the editor's tools and the line effects:
 
 ```ts
 codeBlock: {
-	themes: { light: "github-light", dark: "github-dark" },
 	languages: ["ts", "tsx", "bash", "json"],
 	tools: { rules: false }, // rules, fold, tooltip, textStyles, links: all on unless false
 	lineEffects: [{ name: "info", label: "Info", class: "line-info", editor: { tone: "neutral", marker: "i" } }],
 },
 ```
+
+The code colours are Monti's own pair, `monti-light` and `monti-dark`, made from the design tokens. A site that wants other colours names two
+Shiki themes: `themes: { light: "min-light", dark: "min-dark" }`.
 
 The site opens the same colours once and hands them to `renderDocument`; `@monti-cms/core/render.css` is the default look (plain CSS), and
 `<CodeTools />` of `@monti-cms/next` does the pressing (copy, code links):

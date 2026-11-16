@@ -90,6 +90,9 @@ export function CodeBlockView({ node, editor, getPos, updateAttributes }: NodeVi
 		?.settings;
 	const editable = media ? !media.readOnly : editor.isEditable;
 	const data = dataOf(node);
+	// A file of a code explorer is named by the path line above its code: its head says the language only.
+	const place = getPos();
+	const inExplorer = typeof place === "number" && editor.state.doc.resolve(place).parent.type.name === "codeExplorer";
 	const code = node.textContent;
 	const starts = lineStarts(code);
 	const effects = data.lines ?? [];
@@ -403,7 +406,7 @@ export function CodeBlockView({ node, editor, getPos, updateAttributes }: NodeVi
 								<Text variant="caption" tone="muted">
 									{languageLabel}
 								</Text>
-								{data.title ? (
+								{data.title && !inExplorer ? (
 									<Text variant="caption" mono truncate>
 										{data.title}
 									</Text>

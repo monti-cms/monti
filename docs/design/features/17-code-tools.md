@@ -207,7 +207,7 @@ type CodeRule = {
 
 ```ts
 codeBlock: {
-	themes: { light: "github-light", dark: "github-dark" }, // Shiki theme names; the site and the editor use the same pair
+	themes: { light: "min-light", dark: "min-dark" },        // Shiki theme names; the site and the editor use the same pair. Left out: Monti's own pair (monti-light, monti-dark)
 	languages: ["ts", "tsx", "bash", "json", "css"],         // Shiki language names; the editor's whole list
 	tools: { rules: false, fold: true, tooltip: true, textStyles: true, links: true }, // all on unless false
 	omitLineEffects: ["focus"],                              // line effects the editor does not offer
@@ -225,6 +225,7 @@ codeBlock: {
 ## 문법 색
 
 - **칠하는 것은 하나다: Shiki.** `@monti-cms/core/code`의 `codeHighlighter({ themes, languages })`가 Shiki(`shiki/core`, 자바스크립트 정규식 엔진)를 연다. 편집기와 사이트가 같은 함수, 같은 테마, 같은 언어로 칠하므로 편집기의 색이 사이트의 색이다. 옛 코드 그대로(`createCodeHighlighter`)이고, 사이트 쪽이 동기로 부를 수 있게 열기만 비동기다.
+- **기본 색은 Monti의 한 쌍이다(만들며 정함, 2026-11-16).** `codeBlock.themes`를 적지 않으면 `monti-light`와 `monti-dark`다. 두 테마는 디자인 토큰에서 `pnpm gen:tokens`가 만든 Shiki 테마(`core/src/code/monti-theme.generated.ts`)이고, 글자색은 `fg-default`, `danger-11`, `success-11`, `proposal-11` 같은 토큰의 값이며 코드 상자 바탕(`bg-muted`) 위에서 4.5:1 이상이다(안 되면 `gen:tokens`가 만들지 않고, 단위 테스트가 한 번 더 잰다). 사이트는 `themes`에 Shiki 테마 이름 둘을 적어 다른 색을 쓸 수 있다(예: `min-light`, `min-dark`). 그 경우의 대비는 사이트의 몫이다.
 - **불러오는 문법은 사이트가 고른 것뿐이다.** 문법과 테마는 Shiki의 언어 하나 · 테마 하나 단위 파일이고, 관리자 화면은 목록의 언어를 그 블록이 처음 그 언어로 그려질 때 불러온다. 고르지 않은 언어의 문법은 관리자 화면에 실리지 않는다. 사이트 서버는 연 도구를 한 번 만들어 둔다(모듈 안에서 한 번).
 - **편집기의 색.** 관리자의 밝은 화면에서는 밝은 테마의 글자색, 어두운 화면에서는 어두운 테마의 글자색이다. 코드 상자의 바탕은 관리자 토큰(`bg-muted`)이고 테마의 바탕은 쓰지 않는다: 본문의 다른 상자와 같은 상자다.
 - **문법을 불러오는 동안** 코드는 색 없는 글자로 서 있고, 불러오면 색이 입혀진다(자리는 움직이지 않는다). 불러오지 못하면 색 없는 글자로 남고 말은 없다.
@@ -272,7 +273,7 @@ import "@monti-cms/core/render.css";
 <CodeTools />
 ```
 
-- **`renderDocument`가 그리는 코드 블록.** `<figure data-code>` 안에 파일 이름(`<figcaption>`), 복사 버튼(`<button data-code-copy>`, 글자는 글의 언어로 "복사" · "Copy"), `<pre data-language data-line-numbers>`, 줄마다 `<span class="line" data-line="3">`과 그 줄의 효과 이름(`data-effect="plus"`), 사이트 효과의 `class`. 글자 조각은 테마 둘의 색을 CSS 변수로 가진다(`--shiki-light`, `--shiki-dark`). 접기는 `<details>`, 글자 접기는 누르면 펴지는 `…`, 툴팁은 가리키거나 포커스하면 뜨는 설명(터치 화면에서는 코드 아래 번호 목록). `code`를 주지 않은 사이트는 색 없이 같은 모양으로 그린다.
+- **`renderDocument`가 그리는 코드 블록.** `<figure data-code>` 안에 머리(`<figcaption>`: 언어의 이름 `<span data-code-language>`, 그리고 파일 이름 `<span data-code-name>`. 둘 다 없으면 머리가 없다. 편집기의 머리와 같은 글이다, WS-16, 만들며 정함 2026-11-16), 복사 버튼(`<button data-code-copy>`, 글자는 글의 언어로 "복사" · "Copy"), `<pre data-language data-line-numbers>`, 줄마다 `<span class="line" data-line="3">`과 그 줄의 효과 이름(`data-effect="plus"`), 사이트 효과의 `class`. 글자 조각은 테마 둘의 색을 CSS 변수로 가진다(`--shiki-light`, `--shiki-dark`). 접기는 `<details>`, 글자 접기는 누르면 펴지는 `…`, 툴팁은 가리키거나 포커스하면 뜨는 설명(터치 화면에서는 코드 아래 번호 목록). `code`를 주지 않은 사이트는 색 없이 같은 모양으로 그린다.
 - **`render.css`.** 줄 효과의 바탕과 줄 앞 표시, 어두운 테마(`.dark`, `[data-theme="dark"]`), 포커스 흐림, 링크가 가리키는 줄, 복사 버튼(코드 위에 포인터가 있거나 포커스가 있을 때), 접기, 툴팁, 들여쓰기 선. 옛 `render.css` 그대로이고 Tailwind 없이 읽힌다. 사이트는 이것을 싣거나 베껴 고친다.
 - **`<CodeTools />`(`@monti-cms/next`의 `attachCodeTools(document)`).** 복사(누르면 2초 동안 "복사함" · "Copied"), 코드 링크(가리키면 그 줄 강조와 다른 줄 흐림, 누르면 그 줄로 가서 접힌 곳을 펴고 잠시 강조, 줄이 화면 밖이면 글 옆에 줄 미리보기, 줄 끝의 "글로 돌아가기" 단추)를 문서 하나에 한 번 건다. 옛 코드의 움직임 그대로다.
 - **예제 앱.** `examples/blog`가 `codeBlock` 설정, `CodeTools`, `render.css`를 쓴다. 흐름 테스트가 예제 앱에서 복사 버튼과 코드 링크를 눌러 본다.

@@ -90,13 +90,13 @@ function At({ top, left, right, children }: { top: number; left?: number; right?
 
 // --- The code -------------------------------------------------------------------------------------------------------------------------------
 
-/** The site's light theme (github-light), as the highlighter colours the code at run time. */
-const KEYWORD = "#d73a49";
-const STRING = "#032f62";
-const NUMBER = "#005cc5";
-const NAME = "#6f42c1";
-const VARIABLE = "#e36209";
-const TAG = "#22863a";
+/** The default light theme (monti-light, from the design tokens), as the highlighter colours the code at run time. */
+const KEYWORD = "#a8353c";
+const STRING = "#336a4f";
+const NUMBER = "#2f56c8";
+const NAME = "#1c1b18";
+const VARIABLE = "#336a4f";
+const TAG = "#a8353c";
 
 type Piece = string | [string, string];
 const CODE: Piece[][] = [

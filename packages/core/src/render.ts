@@ -55,6 +55,21 @@ export type RenderOptions<Node> = {
 	locale?: string;
 };
 
+/** What a file link adds to its name: the kind (the name's extension) and the size, `PDF · 120 KB`; nothing for a file that does not say. */
+export function fileMeta(file: Pick<SiteMedia, "name" | "mime" | "size">): string {
+	const kind = (/\.([a-z0-9]{1,5})$/i.exec(file.name)?.[1] ?? file.mime?.split("/")[1] ?? "").toUpperCase();
+	const size = file.size;
+	const bytes =
+		typeof size !== "number" || size <= 0
+			? ""
+			: size < 1024
+				? `${size} B`
+				: size < 1024 ** 2
+					? `${Math.round(size / 1024)} KB`
+					: `${(size / 1024 ** 2).toFixed(1)} MB`;
+	return [kind, bytes].filter(Boolean).join(" · ");
+}
+
 const text = (value: unknown) => (typeof value === "string" ? value : undefined);
 
 /** A heading in a body's table of contents: `depth` counts from the shallowest level listed (0), so a list can indent by it. */
@@ -283,7 +298,13 @@ export function renderDocument<Node>(doc: Doc, options: RenderOptions<Node>): (N
 			case "file": {
 				const file = options.media?.[String(attrs.media)];
 				if (!file) return null;
-				return h("a", { key, href: file.url, download: true }, text(attrs.name)?.trim() || file.name);
+				const meta = fileMeta(file);
+				return h(
+					"a",
+					{ key, href: file.url, download: true },
+					text(attrs.name)?.trim() || file.name,
+					...(meta ? [" ", h("span", { key: "meta", "data-file-meta": "" }, meta)] : []),
+				);
 			}
 		}
 		return undefined;

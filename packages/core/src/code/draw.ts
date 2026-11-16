@@ -218,7 +218,18 @@ export function drawCodeBlock<Node>(
 		return out;
 	};
 	const children: unknown[] = [];
-	if (typeof attrs.title === "string" && attrs.title) children.push(h("figcaption", { key: "title" }, attrs.title));
+	// The head: the language, then the file name (doc 17); a block with neither has no head.
+	const title = typeof attrs.title === "string" && attrs.title ? attrs.title : undefined;
+	const named = language ? (options.colors?.languageName(language) ?? language) : undefined;
+	if (named || title)
+		children.push(
+			h(
+				"figcaption",
+				{ key: "title" },
+				named ? h("span", { key: "language", "data-code-language": "" }, named) : null,
+				title ? h("span", { key: "name", "data-code-name": "" }, title) : null,
+			),
+		);
 	children.push(
 		h("button", { key: "copy", type: "button", "data-code-copy": "", "data-copied": copied }, copy),
 		h(

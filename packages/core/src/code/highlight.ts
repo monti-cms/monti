@@ -2,7 +2,8 @@ import { createHighlighterCore, type HighlighterCore } from "shiki/core";
 import { createJavaScriptRegexEngine } from "shiki/engine/javascript";
 import { bundledLanguages, bundledLanguagesInfo } from "shiki/langs";
 import { bundledThemes } from "shiki/themes";
-import { type CodeBlockConfig, codeBlockSettings } from "./settings";
+import { MONTI_CODE_THEMES } from "./monti-theme.generated";
+import { type CodeBlockConfig, codeBlockSettings, DEFAULT_CODE_THEMES } from "./settings";
 
 /** A piece of a line in one colour: the light theme's and the dark theme's. */
 export type CodeToken = { text: string; light?: string; dark?: string };
@@ -13,6 +14,8 @@ export type CodeToken = { text: string; light?: string; dark?: string };
  */
 export type CodeColors = {
 	lines: (code: string, language: string | undefined) => CodeToken[][];
+	/** The display name of a language (`ts` → `TypeScript`), or the name itself. */
+	languageName: (language: string) => string;
 	/** Whether the language is loaded. */
 	has: (language: string | undefined) => boolean;
 	/** Loads a language Shiki has (the editor loads a block's language when it first draws it); `false` for a name Shiki does not know. */
@@ -44,6 +47,7 @@ export function colorsOf(
 	return {
 		themes,
 		lineClasses,
+		languageName,
 		has,
 		load: (language) => loadLanguage(highlighter, language).catch(() => false),
 		lines(code, language) {
@@ -80,14 +84,18 @@ export async function codeHighlighter(
 	{ lazy = false }: { lazy?: boolean } = {},
 ): Promise<CodeColors> {
 	const settings = codeBlockSettings(config);
-	const theme = (name: string) => bundledThemes[name as keyof typeof bundledThemes];
+	// Monti's own pair (made from the design tokens) is the default; a site names any other Shiki theme.
+	const theme = (name: string) =>
+		name in MONTI_CODE_THEMES
+			? () => MONTI_CODE_THEMES[name as keyof typeof MONTI_CODE_THEMES]
+			: bundledThemes[name as keyof typeof bundledThemes];
 	const themes = {
-		light: theme(settings.themes.light) ? settings.themes.light : "github-light",
-		dark: theme(settings.themes.dark) ? settings.themes.dark : "github-dark",
+		light: theme(settings.themes.light) ? settings.themes.light : DEFAULT_CODE_THEMES.light,
+		dark: theme(settings.themes.dark) ? settings.themes.dark : DEFAULT_CODE_THEMES.dark,
 	};
 	const highlighter = await createHighlighterCore({
 		engine: createJavaScriptRegexEngine({ forgiving: true }),
-		themes: [theme(themes.light)(), theme(themes.dark)()],
+		themes: [theme(themes.light)() as never, theme(themes.dark)() as never],
 		langs: (lazy ? [] : settings.languages)
 			.map((name) => bundledLanguages[name as keyof typeof bundledLanguages])
 			.filter((load) => load !== undefined)
