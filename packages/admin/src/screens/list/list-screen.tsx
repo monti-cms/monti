@@ -53,13 +53,16 @@ import { type KeyboardEvent, type ReactNode, useEffect, useMemo, useRef, useStat
 import { useRequest, useScreenContext } from "../../assistant/use-assistant";
 import { useImport } from "../../data/use-import";
 import { saveBackup } from "../../download";
+import { fullTime, shortDate } from "../../format/date";
+import { useLanguageName } from "../../format/language";
+import { endsClosed, fieldCell } from "../../format/names";
 import { chooseFiles } from "../../media/choose-files";
 import { useAdmin } from "../../operations/admin-context";
 import { type Refusal, reasonOf, useOperation, useRead } from "../../operations/use-operation";
 import { href, type Route } from "../../route";
 import { useTrashMove } from "../../trash/use-trash";
 import { useArchive } from "../entry/use-archive";
-import { ColumnMenu, useLanguageName } from "./column-menu";
+import { ColumnMenu } from "./column-menu";
 import { countedWhere } from "./counted-where";
 import {
 	FolderMenuItems,
@@ -70,7 +73,6 @@ import {
 	useFolders,
 	useRemoveFolder,
 } from "./folders";
-import { endsClosed, fieldCell, shortDate, widthsAfter } from "./format";
 import { ImportSheet } from "./import-sheet";
 import { ListPages } from "./list-pages";
 import { filterColumn, headOf, type ListState, readState, toQuery, withFilter, writeState } from "./list-query";
@@ -85,6 +87,7 @@ import {
 	RowsMenuItems,
 } from "./row-menu";
 import { TaxonomyScreen } from "./taxonomy-screen";
+import { widthsAfter } from "./use-column-widths";
 import { useSearchWords } from "./use-search-words";
 
 type Columns = { columns: ListColumn[]; pageSize: number };
@@ -600,8 +603,8 @@ function DocumentListScreen({
 							: filter.range === "30d"
 								? t("list.last30")
 								: filter.range.from === filter.range.to
-									? shortDate(`${filter.range.from}T00:00`)
-									: `${shortDate(`${filter.range.from}T00:00`)} – ${shortDate(`${filter.range.to}T00:00`)}`,
+									? shortDate(`${filter.range.from}T00:00`, language)
+									: `${shortDate(`${filter.range.from}T00:00`, language)} – ${shortDate(`${filter.range.to}T00:00`, language)}`,
 				]);
 			case "relation":
 				return named;
@@ -645,14 +648,13 @@ function DocumentListScreen({
 					</TableCell>
 				);
 			case "date": {
-				const day = shortDate(
-					column.id === "publishedAt" ? row.publishedAt : column.id === "createdAt" ? row.createdAt : row.updatedAt,
-				);
+				const at =
+					column.id === "publishedAt" ? row.publishedAt : column.id === "createdAt" ? row.createdAt : row.updatedAt;
 				return (
-					<TableCell key={column.id} align="end" truncate title={day || undefined}>
+					<TableCell key={column.id} align="end" truncate short title={at ? fullTime(at, language) : undefined}>
 						{check}
 						<Text mono variant="meta" tone="muted">
-							{day}
+							{shortDate(at, language)}
 						</Text>
 					</TableCell>
 				);
@@ -674,7 +676,7 @@ function DocumentListScreen({
 				);
 			}
 			default: {
-				const text = fieldCell(row, column);
+				const text = fieldCell(row, column, t);
 				return (
 					<TableCell key={column.id} tone="subtle" truncate title={text || undefined}>
 						{check}

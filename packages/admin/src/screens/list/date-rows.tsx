@@ -9,11 +9,9 @@ import {
 	MenuValue,
 } from "@monti-cms/ui";
 import { useState } from "react";
+import { isoDay as iso, shortDate } from "../../format/date";
 import { useAdmin } from "../../operations/admin-context";
-import { shortDate } from "./format";
 
-const iso = (date: Date) =>
-	`${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 const fromIso = (value: string) => {
 	const [year, month, day] = value.split("-").map(Number);
 	return new Date(year ?? 0, (month ?? 1) - 1, day ?? 1);
@@ -71,7 +69,7 @@ export function DateRows({
 			<DropdownMenuSub>
 				<DropdownMenuSubTrigger>
 					{t("list.pickDay")}
-					{day && <MenuValue>{shortDate(fromIso(day))}</MenuValue>}
+					{day && <MenuValue>{shortDate(fromIso(day), language)}</MenuValue>}
 				</DropdownMenuSubTrigger>
 				<DropdownMenuSubContent bare>
 					<Calendar
@@ -88,7 +86,9 @@ export function DateRows({
 			<DropdownMenuSub>
 				<DropdownMenuSubTrigger>
 					{t("list.pickRange")}
-					{span && <MenuValue>{`${shortDate(fromIso(span.from))} – ${shortDate(fromIso(span.to))}`}</MenuValue>}
+					{span && (
+						<MenuValue>{`${shortDate(fromIso(span.from), language)} – ${shortDate(fromIso(span.to), language)}`}</MenuValue>
+					)}
 				</DropdownMenuSubTrigger>
 				<DropdownMenuSubContent bare>
 					<Calendar

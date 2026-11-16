@@ -577,7 +577,7 @@ describe("uploading", () => {
 			new File([new TextEncoder().encode("%PDF-1.7")], "price-list.pdf"),
 		]);
 		await expect.element(tile("price-list.pdf")).toBeVisible();
-		await expect.element(main().getByText(/8 B · 사용 안 함/)).toBeVisible();
+		await expect.element(main().getByText(/1 KB · 사용 안 함/)).toBeVisible();
 	});
 });
 
@@ -1041,6 +1041,13 @@ describe("the library's states (components/list.md)", () => {
 		await expect.element(going).toHaveAttribute("aria-busy", "true");
 		letGo();
 		await expect.element(question).not.toBeInTheDocument();
+	});
+});
+
+describe("a file's facts", () => {
+	it("[MD-44] the panel says the day a file went up with its year", async () => {
+		await FilePanel.run();
+		await expect.element(page.getByRole("complementary").getByText(/^\d{4}\. \d{2}\. \d{2}$/)).toBeVisible();
 	});
 });
 

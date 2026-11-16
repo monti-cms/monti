@@ -16,9 +16,9 @@ import {
 } from "@monti-cms/ui";
 import { useEffect, useId, useMemo, useState } from "react";
 import { useUndo } from "../../activity/use-undo";
+import { endsClosed, endsDirectionClosed } from "../../format/names";
 import { useAdmin } from "../../operations/admin-context";
 import { reasonOf, useOperation } from "../../operations/use-operation";
-import { endsClosed, endsDirectionClosed } from "./format";
 
 export type MergeDialogProps = {
 	collection: string;

@@ -71,7 +71,7 @@
 | 고르기 | `RowCheck`, `ListHead selectAll`, 고른 동안 머리 자리에 `BulkBar colSpan` | 체크는 포인터가 행에 오면 왼쪽 여백에 보인다. 고르는 동안 열 이름 행이 막대가 된다. 그 위에 다른 행은 없다. |
 | 그림 | `RowTitle`의 `thumb`에 `RowThumb` | 이름 열 안에 있다. 파일은 40×30 그림, 폴더 행은 16px 아이콘. |
 | 이름 | `RowTitle`(`TableCell truncate`)과 `RowLink` | 행 어디를 눌러도 열린다(`RowLink`가 행을 덮는다). 옆 패널에 열린 파일의 행은 고른 행과 같다(`selected`). 새 폴더는 표 맨 위 행, `RenameField`(200px)로 이름을 쓴다. 폴더 행은 이름 뒤에 개수(`Count`, `addressTitle`로 그 수). 긴 이름은 …으로 끝나고 다른 열을 밀어내지 않는다. 폴더 행도 폴더 카드처럼 밖에서 끌어 온 파일을 받는다: 파일이 위에 있는 동안 `TableRow dropTarget`이고, 놓으면 연 폴더가 아니라 그 폴더에 올린다. |
-| 사용 · 종류 · 크기 · 치수 · 올린 날 | 모두 `TableCell truncate`(`title`). 사용은 `tone="subtle"`, 종류 · 크기 · 치수는 안에 `Text variant="meta" tone="subtle"`, 날짜는 `align="end"`에 `Text mono variant="meta" tone="muted"` | 글 목록처럼 이름 말고는 회색이고 날짜는 끝에 맞춘다. 치수가 없는 파일은 칸을 비운다. 날짜는 "10. 12". 좁힌 칸은 "…"로 잘리고 가리키면 `title`이 온전히 말한다. |
+| 사용 · 종류 · 크기 · 치수 · 올린 날 | 모두 `TableCell truncate`(`title`). 사용은 `tone="subtle"`, 종류 · 크기 · 치수는 안에 `Text variant="meta" tone="subtle"`, 날짜는 `align="end"`에 `Text mono variant="meta" tone="muted"` | 글 목록처럼 이름 말고는 회색이고 날짜는 끝에 맞춘다. 치수가 없는 파일은 칸을 비운다. 날짜는 "10. 12"이고 올해가 아니면 "25. 10. 12", `title`은 온전한 때다([list.md](list.md)). 좁힌 칸은 "…"로 잘리고 가리키면 `title`이 온전히 말한다. |
 | ⋯ | `RowActions` | 파일 행에만 있다. 폴더로 할 일은 오른쪽 클릭 메뉴에 있다. |
 | 올리는 중 · 끊긴 파일 | `TableRow`: `RowTitle thumb`, 칸 다섯을 합친 `Text variant="note"`, ⋯ 자리 | 파일 행 맨 위에 온다. "올리는 중 · 64%" · "대기". 끊긴 파일은 빨간 "올리기 실패" 옆에 `IconButton` `Renew` "다시 올리기"(`size="xs"`), ⋯ 자리에 `TrashCan` "지우기"(`tone="danger"`). 표 밖에 타일로 두지 않는다(2026-11-09 소유자). |
 
@@ -108,7 +108,7 @@
 | 폴더 | `FormField` + `Select`(`SelectTrigger size="md" width="full"`) | 고른 폴더로 옮긴다(저장으로 적용). |
 | (빠짐, 2026-11-05) 기본 대체 텍스트 | `FormField` + `FormFieldLabel action`(`TextButton tone="proposal" size="micro"` "✦ 채우기") + `Textarea size="md"` | 늘 입력 칸이다. 이미지에만 있다. |
 | (빠짐, 2026-11-05) 기본 캡션 | `FormField` + `Input size="md"`(플레이스홀더 "비어 있음") | 늘 입력 칸이다. 이미지에만 있다. |
-| 종류 · 크기 · 올린 날 | `DescriptionList` + `DescriptionItem` | 크기는 웹용과 원본 두 줄. |
+| 종류 · 크기 · 올린 날 | `DescriptionList` + `DescriptionItem` | 크기는 웹용과 원본 두 줄. 올린 날은 해까지 적는다("2026. 11. 14", MD-44, 만들며 정함 (2026-11-16)). 크기는 "340 KB" · "2.1 MB"로 적고 1 KB가 안 되는 파일은 "1 KB"다(바이트로 적지 않는다, MD-18, 만들며 정함 (2026-11-16)). |
 | 어시스턴트의 이름 제안 | 파일 이름 `Affix`의 `proposal`, 패널 안 `ProposalBubbleDock` + `ProposalBubble` | 분류 패널과 같다. 받거나 버린다. 말풍선은 이 패널이 그리는 제안(이름)만 센다: 폴더로 옮기기와 휴지통 보내기 제안은 대화의 카드와 검토 화면에 있다(T108, 2026-11-13). 이야기: `FilePanelProposedName`. |
 | "쓰는 곳 · 2" | `FormFieldLabel` 아래 `FileUseList`, 행마다 `FileUseRow`(`title`과 `href`는 그 글, `places`는 자리 "대표 이미지") | 쓰는 곳이 없으면 `FileUseList`의 `empty` "없음"(첫 행 자리). 글이 많으면 패널이 스크롤한다. 긴 제목은 …로 잘리고 자리는 한 줄로 남는다(스토리 `FilePanelManyUses`). |
 | 저장 | `SidePanel footer`에 `SidePanelSave`(`changes` "변경 사항 1", "버리기", 알약 "저장") | 분류 패널과 같은 발이다(2026-11-15 소유자: "하나로 맞추세요"). "버리기"는 바뀐 이름과 폴더를 되돌린다. 바뀐 것이 있을 때만 있다(원칙 7). 이미지와 파일이 같다. 저장하지 않은 바뀜이 있는 채 다른 파일이나 폴더를 열거나 ×로 닫으면 분류 패널처럼 묻는다("저장하고 나가기"가 있다). 올라가는 파일은 라이브러리 안의 이동이라 묻지 않는다([05번 문서](../../features/05-changes-and-proposals.md), 만들며 정함 (2026-11-15)). "파일 바꾸기" · "휴지통으로"는 둘 다 ⋯ 안에 있고 발에 두지 않는다(2026-11-05). |

@@ -9,11 +9,11 @@ import {
 } from "@monti-cms/core";
 import { Del, Ins } from "@monti-cms/ui";
 import { type ReactNode, useEffect, useMemo, useState } from "react";
+import { endsClosed } from "../format/names";
 import { useAdmin } from "../operations/admin-context";
 import { useRead } from "../operations/use-operation";
 import { codeChanges, type ShownBlock, shownBlocks } from "../screens/entry/compare-entries";
 import { useBlockNames } from "../screens/entry/use-block-names";
-import { endsClosed } from "../screens/list/format";
 import type { SchemaRead } from "../screens/settings/schema-draft";
 import type { DiffRun } from "./diff";
 

@@ -29,8 +29,9 @@ import {
 } from "@monti-cms/ui";
 import { Add, Close } from "@monti-cms/ui/icons";
 import { type ComponentProps, useState } from "react";
+import { languageName } from "../../format/language";
 import { useAdmin } from "../../operations/admin-context";
-import { findLanguages, languageName } from "./language-catalog";
+import { findLanguages } from "./language-catalog";
 import { at, type DraftLocale, type LocaleRow } from "./schema-draft";
 import type { SettingsDraft } from "./use-settings-draft";
 

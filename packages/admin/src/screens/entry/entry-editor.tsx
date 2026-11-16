@@ -96,6 +96,8 @@ import {
 import { anchorRequest, type PickedText, releaseRequest, requestWords } from "../../editor/request-marks";
 import { type PairedRows, pairedSource } from "../../editor/translation";
 import { docLength, useBodyCatalogs } from "../../editor/use-body-editor";
+import { clock, fullDate, shortTime } from "../../format/date";
+import { useLanguageName } from "../../format/language";
 import { useFieldUploads } from "../../media/use-field-uploads";
 import { useAdmin } from "../../operations/admin-context";
 import { useOperation, useRead } from "../../operations/use-operation";
@@ -104,10 +106,8 @@ import { EditorBack } from "../frame/editor-back";
 import { focusText, toWhatStands, useFocusHandOff } from "../frame/focus-hand-off";
 import { ReadFailedBanner } from "../frame/read-failed";
 import { SessionEndedBanner } from "../frame/session-ended";
-import { useLanguageName } from "../list/column-menu";
 import type { SchemaRead } from "../settings/schema-draft";
 import { type CompareMode, CompareView } from "./compare-view";
-import { clock, day, dayTime } from "./dates";
 import { DocumentToolRows, DocumentViewPane, useDocumentTools } from "./document-tools";
 import { EntryProperties, fieldInputId, fieldPath, panelFields, panelLayout } from "./entry-properties";
 import {
@@ -258,7 +258,7 @@ export function EntryEditor({
 	const today = useToday();
 	// The menu holds the other way to publish, and there is one only when today is another day than the entry's date: published today, both rows
 	// would give the same date, so the pill is the plain one, as for a first publish (button.md; TB-04).
-	const otherDate = publishedAt !== null && day(publishedAt, language) !== day(today, language);
+	const otherDate = publishedAt !== null && fullDate(publishedAt, language) !== fullDate(today, language);
 	// The pill and the plain button take each other's place (published again with today's date; midnight passed): the one that had the focus is
 	// gone with it, and the one that stands there now takes it, so the focus does not fall to the page. Whether it had the focus is looked at
 	// as the swap is drawn, not kept from earlier: a focus the person has since taken elsewhere, or dropped on the page, is not brought back.
@@ -1197,13 +1197,13 @@ export function EntryEditor({
 						<>
 							<DropdownMenuItem
 								onClick={() => void publish.publish("keep")}
-								caption={publishedAt ? t("entry.publishKeep", { date: day(publishedAt, language) }) : undefined}
+								caption={publishedAt ? t("entry.publishKeep", { date: fullDate(publishedAt, language) }) : undefined}
 							>
 								{t("entry.publish")}
 							</DropdownMenuItem>
 							<DropdownMenuItem
 								onClick={() => void publish.publish("today")}
-								caption={t("entry.publishTodayDate", { date: day(today, language) })}
+								caption={t("entry.publishTodayDate", { date: fullDate(today, language) })}
 							>
 								{t("entry.publishToday")}
 							</DropdownMenuItem>
@@ -1270,7 +1270,7 @@ export function EntryEditor({
 							title={t("entry.browserCopy")}
 							meta={
 								[
-									editor.browserCopy.savedAt ? dayTime(editor.browserCopy.savedAt, language) : null,
+									editor.browserCopy.savedAt ? shortTime(editor.browserCopy.savedAt, language) : null,
 									// Proposals taken into the kept changes are the assistant's, not the person's own typing (AS-20).
 									editor.browserCopy.proposals > 0
 										? t("entry.browserCopyProposals", { count: editor.browserCopy.proposals })

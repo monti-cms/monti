@@ -1,3 +1,5 @@
+import { languageName } from "../../format/language";
+
 /**
  * The language codes "+ Add a language" offers (doc 12, 2026-11-11): the two-letter codes of the languages sites are written in, and the script and
  * region forms that are languages of their own on the web (`zh-Hans`, `pt-BR`). The names are not kept here: the browser knows each language's own
@@ -102,15 +104,6 @@ const CODES = [
 
 /** A language to add: its code, its name written in itself (what the schema keeps) and its name in the admin's language. */
 export type CatalogLanguage = { code: string; name: string; label: string };
-
-/** A language's name in `language`, or its code where the browser knows none. */
-export function languageName(code: string, language: string): string {
-	try {
-		return new Intl.DisplayNames([language], { type: "language" }).of(code) ?? code;
-	} catch {
-		return code;
-	}
-}
 
 /**
  * The languages to offer for `query`, without the ones the site has: a code that starts with it comes first, then a name that holds it (in

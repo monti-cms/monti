@@ -26,6 +26,7 @@ import {
 } from "@monti-cms/ui";
 import { ChevronLeft } from "@monti-cms/ui/icons";
 import { type ReactNode, useState } from "react";
+import { recentTime } from "../format/date";
 import { useAdmin } from "../operations/admin-context";
 import { href, type Route, reachedFromInside } from "../route";
 import { toWhatStands, useFocusHandOff } from "../screens/frame/focus-hand-off";
@@ -36,7 +37,6 @@ import { ProposalState } from "./proposal-state";
 import { useAssistant } from "./use-assistant";
 import { standingOf, useProposal } from "./use-proposal";
 import { useRemake } from "./use-remake";
-import { clock } from "./words";
 
 /**
  * A proposal to look through before it is applied (doc 10; screens/assistant.md): the request, then each kind of change as a titled list of the
@@ -44,7 +44,7 @@ import { clock } from "./words";
  * row of state stands at the foot of the proposal's card in the conversation.
  */
 export function ReviewScreen({ id, go }: { id: string; go: (route: Route) => void }) {
-	const { t } = useAdmin();
+	const { t, language } = useAdmin();
 	const assistant = useAssistant();
 	// Left with the keyboard (discard, the way back): the page goes, and the focus goes to the panel's box beside the screen that
 	// takes its place, two frames on, when that is drawn.
@@ -124,7 +124,7 @@ export function ReviewScreen({ id, go }: { id: string; go: (route: Route) => voi
 		<PageColumn ref={leaving} width="content">
 			<PageHeader
 				title={t("review.title")}
-				meta={clock(view.createdAt)}
+				meta={recentTime(view.createdAt, language)}
 				trail={
 					// The way back as the editor's and the templates' are: a quiet text button with the chevron icon before its name.
 					<TextButton variant="quiet" onClick={back}>

@@ -8,6 +8,7 @@ import {
 	DropdownMenuSeparator,
 } from "@monti-cms/ui";
 import { type ReactNode, useState } from "react";
+import { useLanguageName } from "../../format/language";
 import { useAdmin } from "../../operations/admin-context";
 import { useRead } from "../../operations/use-operation";
 import { DateRows } from "./date-rows";
@@ -150,19 +151,6 @@ function LocaleMenu({ state, query, setFilter, onHide, countedWhere }: MenuProps
 			<HideRow onHide={onHide} />
 		</>
 	);
-}
-
-/** A language's name in the admin's language ("en" reads "English" in English and its Korean name in Korean), its code when the browser has no name for it. */
-export function useLanguageName() {
-	const { language } = useAdmin();
-	const names = new Intl.DisplayNames([language], { type: "language" });
-	return (code: string) => {
-		try {
-			return names.of(code) ?? code.toUpperCase();
-		} catch {
-			return code.toUpperCase();
-		}
-	};
 }
 
 /** A relation or select column: "None", then each value with its count; a relation searches its values on top (components/list.md, column menu). */

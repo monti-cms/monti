@@ -516,12 +516,15 @@ function TableCell({
 	filler,
 	style,
 	title,
+	short,
 	children,
 	...props
 }: Omit<React.ComponentProps<"td">, "align" | "title"> &
 	CellOptions & {
 		/** What the cell says whole while it is cut (`CutWords`): its value in words. Not the HTML attribute. */
 		title?: string;
+		/** The cell writes a short form of `title` (a date without its year and time): it says `title` whenever it is pointed at, cut or not. */
+		short?: boolean;
 	}) {
 	const cell = (
 		<td
@@ -566,7 +569,7 @@ function TableCell({
 					)}
 		</td>
 	);
-	return title === undefined ? cell : <CutWords render={cell} whole={title} />;
+	return title === undefined ? cell : <CutWords render={cell} whole={title} partial={short} />;
 }
 
 export {

@@ -29,12 +29,13 @@ import {
 import { Chat, OverflowMenuHorizontal, Renew, Undo } from "@monti-cms/ui/icons";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { useOpenConversation } from "../../assistant/use-assistant";
+import { shortTime } from "../../format/date";
+import { useLanguageName } from "../../format/language";
 import { useAdmin } from "../../operations/admin-context";
 import { reasonOf, useOperation, useRead } from "../../operations/use-operation";
 import { linkTo, type Route } from "../../route";
 import { useCoverCorner } from "../frame/admin-frame";
 import { holdsKeyboardFocus, nextStop, useFocusHandOff } from "../frame/focus-hand-off";
-import { shortTime } from "../list/format";
 
 /**
  * One receiver's delivery in the panel: its facts, and what can be done about it under them. Its buttons go once it is canceled or has
@@ -154,7 +155,8 @@ export function ActivityPanel({
 	onUndo: (whenGone: () => HTMLElement | null) => void;
 	go: (route: Route) => void;
 }) {
-	const { t, wrote } = useAdmin();
+	const { t, language, wrote } = useAdmin();
+	const languageName = useLanguageName();
 	const openConversation = useOpenConversation();
 	const read = useRead<ActivityDetail>("activity.get", { id }, { quiet: true });
 	const schema = useRead<{ adminValues: Record<string, { label?: string }> }>("schema.read");
@@ -309,11 +311,11 @@ export function ActivityPanel({
 					{/* The first group has no heading, as in the other panels: the head names the line. */}
 					<DescriptionList>
 						<DescriptionItem label={t("activity.column.at")} mono>
-							{shortTime(line.at)}
+							{shortTime(line.at, language)}
 						</DescriptionItem>
 						{line.undo.state === "done" && (
 							<DescriptionItem label={t("activity.undoneAt")} mono>
-								{shortTime(line.undo.at)}
+								{shortTime(line.undo.at, language)}
 							</DescriptionItem>
 						)}
 					</DescriptionList>
@@ -393,8 +395,8 @@ export function ActivityPanel({
 									</DescriptionItem>
 								)}
 								{only.locale && (
-									<DescriptionItem label={t("activity.locale")} mono>
-										{`${only.locale.toUpperCase()}${only.version === null ? "" : ` · v${only.version}`}`}
+									<DescriptionItem label={t("activity.locale")}>
+										{`${languageName(only.locale)}${only.version === null ? "" : ` · v${only.version}`}`}
 									</DescriptionItem>
 								)}
 								{only.address && (
@@ -438,7 +440,7 @@ export function ActivityPanel({
 											)}
 											{delivery.nextAttemptAt && !isSending(delivery) && (
 												<DescriptionItem label={t("activity.nextAttempt")} mono>
-													{shortTime(delivery.nextAttemptAt)}
+													{shortTime(delivery.nextAttemptAt, language)}
 												</DescriptionItem>
 											)}
 											{/* The id the receiver got the event under (`Monti-Event-Id`, and `id` in the body): to find it in the receiver's own log. */}

@@ -44,8 +44,11 @@ import { type ReactNode, useCallback, useMemo, useRef, useState } from "react";
 import { useLeaveGuard } from "../../draft/leave-guard";
 import { type Path, useDraft } from "../../draft/use-draft";
 import type { ProposalItem } from "../../draft/use-proposals";
+import { bytes } from "../../format/bytes";
+import { fullDate } from "../../format/date";
+import { extensionLabel } from "../../format/names";
 import { chooseFiles } from "../../media/choose-files";
-import { extensionLabel, formatBytes, previewUrl, sizeLabel } from "../../media/file-text";
+import { previewUrl, sizeLabel } from "../../media/file-text";
 import { putFile } from "../../media/put-file";
 import { useAcceptFiles } from "../../media/upload-problem";
 import { useAdmin } from "../../operations/admin-context";
@@ -54,7 +57,6 @@ import { linkTo, type Route } from "../../route";
 import { DaysLeftFact } from "../../trash/days-left";
 import { useCoverCorner } from "../frame/admin-frame";
 import type { Folders } from "../list/folders";
-import { shortDate } from "../list/format";
 import type { SchemaRead } from "../settings/schema-draft";
 
 const TOP = "~top";
@@ -192,7 +194,7 @@ function ReplaceDialog({ item, file, onClose }: { item: MediaDetail; file: File;
 
 /** What a file is: its type, its sizes and the day it came (flow 6·16). `children` are rows before them: what the trash only reads, its name and its folder. */
 function FileFacts({ item, children }: { item: MediaDetail; children?: ReactNode }) {
-	const { t } = useAdmin();
+	const { t, language } = useAdmin();
 	return (
 		<DescriptionList>
 			{children}
@@ -203,13 +205,13 @@ function FileFacts({ item, children }: { item: MediaDetail; children?: ReactNode
 					<span>
 						{item.web
 							? t("library.sizeOriginal", {
-									size: `${item.original.width}×${item.original.height} · ${formatBytes(item.size)}`,
+									size: `${item.original.width}×${item.original.height} · ${bytes(item.size)}`,
 								})
-							: [sizeLabel(item), formatBytes(item.size)].filter(Boolean).join(" · ")}
+							: [sizeLabel(item), bytes(item.size)].filter(Boolean).join(" · ")}
 					</span>
 				</Stack>
 			</DescriptionItem>
-			<DescriptionItem label={t("library.uploadedAt")}>{shortDate(item.uploadedAt)}</DescriptionItem>
+			<DescriptionItem label={t("library.uploadedAt")}>{fullDate(item.uploadedAt, language)}</DescriptionItem>
 		</DescriptionList>
 	);
 }

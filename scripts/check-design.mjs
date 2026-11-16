@@ -57,6 +57,9 @@
  *   button-title        No `title` attribute on `Button`, `TextButton` or `IconButton`: a button's tooltip is a `Tooltip`.
  *   chevron-off         No `chevron={false}`: a row that opens a second level keeps its › and shows its value in `MenuValue`.
  *   forbidden-cursor    No `cursor-not-allowed`: what is off takes no pointer, and what is at work keeps the plain cursor (tokens.md).
+ *   format-only         Dates, times, file sizes and the names of languages are written by `packages/admin/src/format/` alone: no
+ *                       `Intl.DateTimeFormat` or `Intl.DisplayNames`, no `padStart`, no date part in a template and no `toUpperCase()` in
+ *                       the admin's other sources. `check-format.mjs` says what it cannot see. A `design-allow` marker does not skip it.
  *   design-allow        A `design-allow` marker without a reason.
  *
  * A value that is measured or computed at runtime (a position under the pointer, a width the user dragged) ends its line with
@@ -67,6 +70,7 @@ import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { problems as bannerPlaces } from "./check-banner-place.mjs";
+import { checked as formatChecked, problems as formatProblems } from "./check-format.mjs";
 import { problems as typedMarks } from "./check-typed-marks.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -1358,6 +1362,18 @@ function checkTypedMarks() {
 }
 checkTypedMarks();
 
+/** Dates, sizes and names are written by the admin's `format/` folder (`check-format.mjs`). */
+function checkFormat() {
+	const read = files
+		.filter(({ file }) => inTargets(file))
+		.map(({ file }) => rel(file))
+		.filter((file) => formatChecked(file));
+	const sources = Object.fromEntries(read.map((file) => [file, readFileSync(path.join(root, file), "utf8")]));
+	for (const { file, line, message } of formatProblems(sources))
+		add(path.join(root, file), line, "format-only", message);
+}
+checkFormat();
+
 const HINTS = {
 	"css-file": "Admin UI is styled with token utilities, not stylesheets.",
 	"admin-css-rule": "admin.css holds document-wide base rules only; style the element with token utilities.",
@@ -1384,6 +1400,8 @@ const HINTS = {
 	"chevron-off": "A row that opens a second level keeps its ›; its current value goes in a MenuValue.",
 	"forbidden-cursor":
 		"What is off takes no pointer (`pointer-events-none`); a button at work shows the plain cursor (`cursor-default`).",
+	"format-only":
+		"A screen asks packages/admin/src/format/ for a date, a time, a file's size or a language's name; it builds none itself.",
 	"design-allow": "A marker states why the value cannot be a token.",
 };
 

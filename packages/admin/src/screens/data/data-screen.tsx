@@ -14,21 +14,12 @@ import {
 } from "@monti-cms/ui";
 import { type ReactNode, useState } from "react";
 import { saveBackup } from "../../download";
-import { formatBytes } from "../../media/file-text";
+import { bytes } from "../../format/bytes";
+import { recentDay } from "../../format/date";
 import { useAdmin } from "../../operations/admin-context";
 import { reasonOf, useOperation, useRead } from "../../operations/use-operation";
 
 type Status = { lastBackup: string | null; mediaFiles: number; mediaBytes: number; storage: boolean };
-
-/** When a backup was taken, as the page says it: the time today, else the day. */
-function when(at: string, language: string): string {
-	const date = new Date(at);
-	const today = new Date();
-	const sameDay = date.toDateString() === today.toDateString();
-	return sameDay
-		? new Intl.DateTimeFormat(language, { hour: "2-digit", minute: "2-digit", hour12: false }).format(date)
-		: `${String(date.getMonth() + 1).padStart(2, "0")}. ${String(date.getDate()).padStart(2, "0")}`;
-}
 
 /**
  * Tools › data (tools.md, doc 14): the backup. What goes into it is chosen before the pill that takes it; the pill makes the file at once and
@@ -88,7 +79,7 @@ export function DataScreen({ tabs }: { tabs: ReactNode }) {
 									/>
 									{t("data.backup.media")}
 									<Text variant="meta" tone="subtle">
-										{formatBytes(status.data.mediaBytes)}
+										{bytes(status.data.mediaBytes)}
 									</Text>
 								</Option>
 							) : null}
@@ -99,7 +90,7 @@ export function DataScreen({ tabs }: { tabs: ReactNode }) {
 								<Text as="span" variant="note" tone="subtle">
 									{t("data.backup.last")}{" "}
 									{status.data.lastBackup ? (
-										<Text mono>{when(status.data.lastBackup, language)}</Text>
+										<Text mono>{recentDay(status.data.lastBackup, language)}</Text>
 									) : (
 										t("data.backup.never")
 									)}

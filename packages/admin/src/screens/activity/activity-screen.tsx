@@ -46,14 +46,13 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useSendAgain } from "../../activity/use-send-again";
 import { useUndo } from "../../activity/use-undo";
 import { useOpenConversation } from "../../assistant/use-assistant";
+import { clock, fullTime, shortDate, shortTime } from "../../format/date";
 import { useAdmin } from "../../operations/admin-context";
 import { useRead } from "../../operations/use-operation";
 import { href, type Route } from "../../route";
-import { clock } from "../entry/dates";
 import { nextStop, useFocusHandOff } from "../frame/focus-hand-off";
 import { DateRows } from "../list/date-rows";
 import { toggled, ValueRow } from "../list/filter-rows";
-import { shortDate, shortTime } from "../list/format";
 import { ListPages } from "../list/list-pages";
 import { NoMatchRow } from "../list/no-match-row";
 import { HandedRowActions, HandedRowLink, listStartOf } from "../list/row-hand-off";
@@ -155,7 +154,7 @@ export function ActivityScreen({
 	/** Reads the sidebar's counts again: a delivery can fail after its write answered, when nothing else tells the frame. */
 	recount: () => void;
 }) {
-	const { t, reads } = useAdmin();
+	const { t, language, reads } = useAdmin();
 	const state = useMemo(() => readActivityState(params), [params]);
 	const setState = (next: ActivityState, options?: { replace?: boolean }) =>
 		go({ screen: "activity", params: writeActivityState(next) }, options);
@@ -386,7 +385,7 @@ export function ActivityScreen({
 					ref={bannerHandOff}
 					tone="danger"
 					title={t(failed === 1 ? "activity.failedBannerOne" : "activity.failedBanner", { count: failed })}
-					meta={counts.data?.since ? t("activity.since", { date: shortDate(counts.data.since) }) : undefined}
+					meta={counts.data?.since ? t("activity.since", { date: shortDate(counts.data.since, language) }) : undefined}
 				>
 					{!failedOnly && (
 						// Exactly what the banner counts: every failed delivery, with nothing else narrowing the list.
@@ -486,9 +485,9 @@ export function ActivityScreen({
 											<DeliveryMark delivery={line.delivery} sending={isSending(line)} />
 										</TableCell>
 									)}
-									<TableCell align="end" truncate title={shortTime(line.at)}>
+									<TableCell align="end" truncate short title={fullTime(line.at, language)}>
 										<Text mono variant="meta" tone="muted">
-											{shortTime(line.at)}
+											{shortTime(line.at, language)}
 										</Text>
 									</TableCell>
 									<TableCell align="end">

@@ -510,3 +510,13 @@ describe("a source with saved changes not published (TR-24 to TR-26)", () => {
 		await expect.element(page.getByRole("textbox", { name: "제목" })).toHaveValue("고치는 중인 원문 제목");
 	});
 });
+
+describe("side by side", () => {
+	it("[TR-09] the head row says what each date is: the day each side was last changed, '수정'", async () => {
+		await SideBySide.run();
+		await expect
+			.element(page.getByText("The editor follows the same rule", { exact: false }), { timeout: 15000 })
+			.toBeVisible();
+		expect(page.getByText(/^\d{2}\. \d{2} 수정$/).elements()).toHaveLength(2);
+	});
+});

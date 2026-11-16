@@ -62,7 +62,9 @@ import { type NodeViewProps, NodeViewWrapper, type ReactNodeViewProps } from "@t
 import { type ComponentType, useContext, useEffect, useId, useRef, useState } from "react";
 import { FillAction, FillFailed } from "../assistant/fill-action";
 import { isUndoKey } from "../assistant/use-fill";
-import { extensionLabel, formatBytes, previewUrl } from "../media/file-text";
+import { bytes } from "../format/bytes";
+import { extensionLabel } from "../format/names";
+import { previewUrl } from "../media/file-text";
 import { RetryButton } from "../media/upload-problem";
 import { useAdmin } from "../operations/admin-context";
 import { AltFields } from "./alt-fields";
@@ -1191,11 +1193,7 @@ function FileBlockView({ node, updateAttributes, getPos, selected, editor }: Nod
 					name={shownName.value || item?.name || ""}
 					tone={file.missing ? "danger" : "default"}
 					meta={
-						file.missing
-							? t("editor.image.notFound")
-							: item
-								? `${extensionLabel(item.name)} · ${formatBytes(item.size)}`
-								: ""
+						file.missing ? t("editor.image.notFound") : item ? `${extensionLabel(item.name)} · ${bytes(item.size)}` : ""
 					}
 				/>
 			</BlockBox>

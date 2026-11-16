@@ -28,13 +28,13 @@ import {
 } from "@monti-cms/ui";
 import { ChevronLeft } from "@monti-cms/ui/icons";
 import { useMemo } from "react";
+import { clock, shortTime } from "../../format/date";
 import { useAdmin } from "../../operations/admin-context";
 import { useRead } from "../../operations/use-operation";
 import { ReadFailedBanner } from "../frame/read-failed";
 import { SessionEndedBanner } from "../frame/session-ended";
 import type { SchemaRead } from "../settings/schema-draft";
 import { compareBodies, type Part, wordDiff } from "./compare-entries";
-import { clock, dayTime } from "./dates";
 import { useBlockNames } from "./use-block-names";
 import type { EntryEditorModel, EntryRead } from "./use-entry-editor";
 
@@ -420,10 +420,10 @@ export function CompareView({
 				<Compare>
 					{mode === "conflict"
 						? side(mine, "mine", t("compare.mine"))
-						: side(mine, "mine", t("compare.browser", { at: savedAt ? dayTime(savedAt, language) : "" }))}
+						: side(mine, "mine", t("compare.browser", { at: savedAt ? shortTime(savedAt, language) : "" }))}
 					{mode === "conflict"
 						? side(server, "server", t("compare.latest", { version: latest.data.entry.version, at: clock(updatedAt) }))
-						: side(server, "server", t("compare.server", { at: dayTime(updatedAt, language) }))}
+						: side(server, "server", t("compare.server", { at: shortTime(updatedAt, language) }))}
 				</Compare>
 			</Stack>
 		</StandalonePage>

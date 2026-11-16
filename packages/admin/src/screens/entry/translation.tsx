@@ -44,10 +44,10 @@ import { liveDom } from "../../editor/live-view";
 import { findBlock } from "../../editor/proposal-marks";
 import { nodeName } from "../../editor/schema";
 import { linkOf, type PairedRows, type PairedSourceBlock } from "../../editor/translation";
+import { shortDate } from "../../format/date";
 import { useAdmin } from "../../operations/admin-context";
 import { useOperation, useRead } from "../../operations/use-operation";
 import { type BlockNames, type Part, readableWordDiff, shownBlocks } from "./compare-entries";
-import { day } from "./dates";
 import { useBlockNames } from "./use-block-names";
 import type { EntryEditorModel, EntryRead } from "./use-entry-editor";
 
@@ -492,8 +492,8 @@ export function PairedView({
 	titleChange?: ReactNode;
 	children: ReactNode;
 }) {
-	const { language } = useAdmin();
-	const updated = (at: string | null) => (at ? day(new Date(at), language) : "");
+	const { t, language } = useAdmin();
+	const updated = (at: string | null) => (at ? t("translation.updated", { date: shortDate(at, language) }) : "");
 	return (
 		<Stack gap={0}>
 			<CompareRows>
@@ -538,7 +538,7 @@ export function SourceChangedBanner({
 	const { t, language } = useAdmin();
 	const count = compared.marks.length + compared.fields.length;
 	if (count === 0) return null;
-	const at = compared.source.publishedAt ? day(new Date(compared.source.publishedAt), language) : "";
+	const at = compared.source.publishedAt ? shortDate(compared.source.publishedAt, language) : "";
 	return (
 		<Banner ref={ref} title={t("translation.changedTitle")} meta={t("translation.changedMeta", { date: at, count })}>
 			{compared.fields.length > 0 || compared.marks.some((mark) => mark.kind !== "added") ? (

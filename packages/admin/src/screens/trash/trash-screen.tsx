@@ -45,6 +45,7 @@ import {
 import { OverflowMenuHorizontal, TrashCan, Undo } from "@monti-cms/ui/icons";
 import { type KeyboardEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useOpenConversation } from "../../assistant/use-assistant";
+import { useLanguageName } from "../../format/language";
 import { useAdmin } from "../../operations/admin-context";
 import { useRead } from "../../operations/use-operation";
 import { href, type Route } from "../../route";
@@ -52,7 +53,6 @@ import { URGENT_DAYS } from "../../trash/days-left";
 import { usePurge, useRestore } from "../../trash/use-trash";
 import type { FrameCounts } from "../frame/admin-frame";
 import { firstStop } from "../frame/focus-hand-off";
-import { useLanguageName } from "../list/column-menu";
 import { FilterRows } from "../list/filter-rows";
 import { searchScopes } from "../list/folders";
 import { ListPages } from "../list/list-pages";

@@ -16,9 +16,9 @@ import {
 import { Tag } from "@monti-cms/ui/icons";
 import { useState } from "react";
 import { useUndo } from "../../activity/use-undo";
+import { endsClosed } from "../../format/names";
 import { useAdmin } from "../../operations/admin-context";
 import { reasonOf, useOperation, useRead } from "../../operations/use-operation";
-import { endsClosed } from "./format";
 
 /** The radio values of "none" and of rows that hold different values: no group id looks like these. */
 const NONE = "\u0000none";

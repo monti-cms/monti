@@ -52,12 +52,12 @@ import {
 import { Add, Edit, List, Merge, OverflowMenuHorizontal, TrashCan } from "@monti-cms/ui/icons";
 import { useMemo, useRef, useState } from "react";
 import { useLeaveGuard, usePanelMove } from "../../draft/leave-guard";
+import { useLanguageName } from "../../format/language";
 import { useAdmin } from "../../operations/admin-context";
 import { reasonOf, useRead } from "../../operations/use-operation";
 import { linkTo, type Route } from "../../route";
 import { useTrashMove } from "../../trash/use-trash";
 import { useCoverCorner } from "../frame/admin-frame";
-import { useLanguageName } from "./column-menu";
 import { ValueRow } from "./filter-rows";
 import { MergeDialog } from "./merge-dialog";
 import { NoMatchRow } from "./no-match-row";

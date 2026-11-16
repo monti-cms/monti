@@ -27,6 +27,7 @@ import {
 } from "@monti-cms/ui";
 import { Add, Copy, Edit, RecentlyViewed, Renew } from "@monti-cms/ui/icons";
 import { type ReactNode, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { recentTime } from "../format/date";
 import { useAdmin } from "../operations/admin-context";
 import { byName, levelsOf, modelName, modelTitle, picksThinking } from "../operations/models";
 import { holdsKeyboardFocus, useFocusHandOff } from "../screens/frame/focus-hand-off";
@@ -35,7 +36,7 @@ import { History, HistoryFoot } from "./history";
 import { ProposalCardOf } from "./proposal-card";
 import { Prose } from "./prose";
 import { type Part, type Turn, useAssistant } from "./use-assistant";
-import { clock, groupOf, sameRead, sentValue, type ToolPart, toolWords } from "./words";
+import { groupOf, sameRead, sentValue, type ToolPart, toolWords } from "./words";
 
 /** For how many frames after "save and open" a focus that fell to the page is put back where it belongs (the panel may be drawn anew). */
 const FOCUS_FRAMES = 30;
@@ -83,7 +84,7 @@ function segmentsOf(parts: Part[]): Segment[] {
  * the page as the other side panels do and stays open from screen to screen. `onOpen` opens a place of the admin that an answer's link names.
  */
 export function AssistantPanel({ onOpen }: { onOpen: (address: string) => void }) {
-	const { t } = useAdmin();
+	const { t, language } = useAdmin();
 	const assistant = useAssistant();
 	const { view, state, turns, busy } = assistant;
 	const [menuOpen, setMenuOpen] = useState(false);
@@ -338,7 +339,7 @@ export function AssistantPanel({ onOpen }: { onOpen: (address: string) => void }
 				<ChatMessage author="user" context={turn.chips.length > 0 ? turn.chips.join(" · ") : undefined}>
 					{turn.request}
 				</ChatMessage>
-				<ChatMessageActions author="user" time={clock(turn.at)}>
+				<ChatMessageActions author="user" time={recentTime(turn.at, language)}>
 					<IconButton label={t("panel.copy")} onClick={() => void copy(turn.request)}>
 						<Copy />
 					</IconButton>

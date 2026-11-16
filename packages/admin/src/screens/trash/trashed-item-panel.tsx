@@ -16,12 +16,12 @@ import {
 	Stack,
 } from "@monti-cms/ui";
 import { OverflowMenuHorizontal, TrashCan } from "@monti-cms/ui/icons";
+import { useLanguageName } from "../../format/language";
 import { useAdmin } from "../../operations/admin-context";
 import { useRead } from "../../operations/use-operation";
 import { linkTo, type Route } from "../../route";
 import { DaysLeftFact } from "../../trash/days-left";
 import { useCoverCorner } from "../frame/admin-frame";
-import { useLanguageName } from "../list/column-menu";
 
 /**
  * An item in the trash, beside the trash's list (flow 5·19): its collection, its name and address in each language, and the entries that point at it, which show it

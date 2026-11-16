@@ -1,7 +1,5 @@
 import { useEffect, useState } from "react";
-
-/** The local day a moment is in. */
-const dayOf = (date: Date) => `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+import { isoDay } from "../../format/date";
 
 /**
  * Today, as the person's clock has it, kept while the screen stays open: it changes at the next local midnight (a timer), and is looked at again
@@ -20,7 +18,7 @@ export function useToday(): Date {
 		};
 		const look = () => {
 			const now = new Date();
-			setToday((was) => (dayOf(was) === dayOf(now) ? was : now));
+			setToday((was) => (isoDay(was) === isoDay(now) ? was : now));
 			wait();
 		};
 		wait();
