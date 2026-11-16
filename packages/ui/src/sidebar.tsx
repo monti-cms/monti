@@ -558,7 +558,7 @@ function SidebarMenuSub({ className, ...props }: React.ComponentProps<"ul">) {
 			data-slot="sidebar-menu-sub"
 			data-sidebar="menu-sub"
 			className={cn(
-				"m-0 flex list-none flex-col gap-monti-4 pt-monti-4 pr-0 pb-monti-6 pl-0 text-monti-body text-monti-muted group-data-[rail]/rail:hidden",
+				"isolate m-0 flex list-none flex-col gap-monti-4 pt-monti-4 pr-0 pb-monti-6 pl-0 text-monti-body text-monti-muted group-data-[rail]/rail:hidden",
 				className,
 			)}
 			{...props}

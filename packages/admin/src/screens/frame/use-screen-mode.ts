@@ -53,6 +53,13 @@ export function useApplyScreenMode() {
 		dark.addEventListener("change", apply);
 		return () => dark.removeEventListener("change", apply);
 	}, [mode]);
+	// When the admin goes (a move from the admin to the site in the same page), its mode goes with it: the site's own blocks follow the site's mode.
+	useEffect(
+		() => () => {
+			delete document.documentElement.dataset.theme;
+		},
+		[],
+	);
 }
 
 const RAIL = "monti.sidebarRail";

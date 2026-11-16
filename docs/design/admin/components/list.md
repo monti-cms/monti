@@ -9,7 +9,7 @@
 ### 열 정렬과 행 높이 (2026-11-16 만들며 정함)
 
 - 글자는 왼쪽에, 숫자와 날짜와 크기는 오른쪽 끝에 둔다. 열 이름도 그 열과 같은 쪽이다(`ListHeadColumn align="end"`, 셀의 `TableCell align="end"`, 오른쪽 정렬은 `tabular-nums`를 함께 준다). 그래야 자릿수가 다른 값(9와 10, 12KB와 1.2MB)이 같은 줄에서 끝난다. 글 목록의 날짜, 태그의 사용 개수, 미디어의 크기와 치수가 그렇다. 첫 열과 이름은 왼쪽이다.
-- 행 높이는 내용이 아니라 표가 정한다. 한 줄 행은 41px(위아래 10px + 20px 줄 + 구분선 1px)이고 소수 높이가 없다. 한 행의 칸들은 같은 글자 바닥선에 서고(칸의 조각은 `align-baseline`, 줄 가운데에 놓으면 줄이 20px보다 소수만큼 길어져 행이 42.28px가 된다), 가운데가 1px 안쪽으로 맞는다. 사진이 든 미디어 파일 행은 51px, 둘째 줄이 있는 행은 41px에 둘째 줄을 더한 높이다. 행 높이의 종류는 이 셋이며, 이름 붙은 토큰으로 만들지 않는다(행마다 내용이 정하는 높이라서 한 값이 아니다). `layout.browser.test.tsx`가 한 표의 행이 모두 같은 높이임을 잰다.
+- 행 높이는 내용이 아니라 표가 정한다. 한 줄 행은 41px이고 소수 높이가 없다. 칸이 제 높이(`h-[41px]`, 구분선 1px 포함)를 갖고 위아래 안쪽 여백이 없어서(`py-0`), 칸 안의 줄이 20px보다 소수만큼 길어져도(줄 가운데에 놓은 조각이 그렇다: 42.28px) 행이 그대로 41px이다. 칸의 조각은 줄 가운데에 서고(`align-middle`), 한 행의 칸들의 가운데가 1.5px 안쪽으로 맞는다. 그림이 든 칸과 줄을 바꾸는 칸(`wrap`)은 제 높이를 내용에서 받고 위아래 10px를 둔다. 사진이 든 미디어 파일 행은 51px, 둘째 줄이 있는 행은 41px에 둘째 줄을 더한 높이다. 행 높이의 종류는 이 셋이며, 이름 붙은 토큰으로 만들지 않는다(행마다 내용이 정하는 높이라서 한 값이 아니다). `layout.browser.test.tsx`가 한 표의 행이 모두 같은 높이임을 잰다.
 - 표 머리의 선과 첫 행 선은 같은 색(`border-muted`)이다. 머리가 고정될 때만 머리 선을 `inset` 그림자로 그리는 것은 그 선만 스크롤하는 행 위에 남기려는 것이고, 색과 두께는 같다(LX-05: 이유가 있는 둘이라 하나로 합치지 않는다).
 
 ### 열 이름 행
@@ -244,7 +244,7 @@
 
 ### 코드
 
-`Pagination`(`PaginationContent`, `PaginationItem`, `PaginationLink`, `PaginationPrevious`, `PaginationNext`, `PaginationEllipsis`와 함께)은 표 아래 행 오른쪽 끝의 페이지 넘기기다. 첫 페이지의 이전과 마지막 페이지의 다음은 .45로 흐려지고, 따라갈 수 없으며 키보드로도 닿지 않는다. `ListFooter`는 표 아래 행이다. 왼쪽에 보이는 범위("1–25 / 148", `Count`), 오른쪽에 페이지 나누기가 있고, 행처럼 안쪽 12px, 행 아래 12px이다. `PageSizeMenu`는 범위 옆의 mono "25 per page ▾"다(`TextButton variant="quiet" size="caption"`와 `Caret`). 메뉴는 위로 열리고, 크기를 고르면 적용하고 메뉴를 닫는다.
+`Pagination`(`PaginationContent`, `PaginationItem`, `PaginationLink`, `PaginationPrevious`, `PaginationNext`, `PaginationEllipsis`와 함께)은 표 아래 행 오른쪽 끝의 페이지 넘기기다. 첫 페이지의 이전과 마지막 페이지의 다음은 .45로 흐려지고, 따라갈 수 없으며 키보드로도 닿지 않는다. `ListFooter`는 표 아래 행이다. 왼쪽에 보이는 범위("1–25 / 148", `Count`), 오른쪽에 페이지 나누기가 있고, 행처럼 안쪽 12px, 행 아래 12px이다. `PageSizeMenu`는 범위 옆의 sans "25 per page ▾"다(`TextButton variant="quiet" size="caption"`와 `Caret`). 메뉴는 위로 열리고, 크기를 고르면 적용하고 메뉴를 닫는다.
 
 ## 제목 있는 표 (도구 › API 키)
 

@@ -64,7 +64,7 @@ describe("the editor body's headings and code (ET-01, ET-02, ET-04, ET-06, ET-07
 });
 
 describe("Korean words are sans; values are mono where they say so (LX-02, UX-02, EH-05, PP-47, PP-52)", () => {
-	it("the small roles (`meta`, `micro`) draw words in the sans stack", async () => {
+	it("the small roles (`caption`, `micro`) draw words in the sans stack", async () => {
 		render(
 			<>
 				<Text variant="micro">발행 전에 고칠 것</Text>
@@ -107,11 +107,24 @@ describe("Korean words are sans; values are mono where they say so (LX-02, UX-02
 		expect(style("제목").fontFamily).toContain("Pretendard");
 	});
 
-	it("the mono stack names a face with Hangul after Plex Mono, so Korean in a mono place has one font", async () => {
-		render(<Text mono>한국어 코드</Text>);
+	it("the mono stack takes Hangul from a Hangul-only face after the monospace fonts, so Latin stays mono", async () => {
+		render(
+			<>
+				<Text mono>한국어 코드</Text>
+				<Text mono>iiiiiiii</Text>
+				<Text mono>WWWWWWWW</Text>
+			</>,
+		);
 		await expect.element(page.getByText("한국어 코드")).toBeVisible();
 		const family = style("한국어 코드").fontFamily;
-		expect(family.indexOf("Plex Mono")).toBeLessThan(family.indexOf("Pretendard"));
+		expect(family.indexOf("Plex Mono")).toBeLessThan(family.indexOf("monospace"));
+		expect(family.indexOf("monospace")).toBeLessThan(family.indexOf("Pretendard Hangul"));
+		// The plain Pretendard is not in the mono stack: the Hangul alias is the only way to it.
+		expect(family).not.toMatch(/"Monti Pretendard"/);
+		await document.fonts.load('16px "Monti Pretendard Hangul"', "한국어");
+		expect(document.fonts.check('16px "Monti Pretendard Hangul"', "한국어")).toBe(true);
+		// Latin stays mono: the same width for a narrow and a wide letter.
+		expect(box(page.getByText("iiiiiiii").element()).width).toBe(box(page.getByText("WWWWWWWW").element()).width);
 	});
 });
 

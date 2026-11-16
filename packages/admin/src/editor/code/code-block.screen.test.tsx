@@ -83,6 +83,8 @@ describe("the code block in the editor (doc 17)", () => {
 			(row) => row.hasAttribute("data-highlighted") || row.getAttribute("data-selected") === "true",
 		);
 		expect(current).toHaveLength(1);
+		// One row is lit, and it is the current one: a list with nothing lit would pass `every` and say nothing.
+		expect(lit, `lit: ${lit.map((row) => row.textContent).join(", ")}`).toHaveLength(1);
 		expect(
 			lit.every((row) => current.includes(row)),
 			`lit: ${lit.map((row) => row.textContent).join(", ")}; current: ${current[0]?.textContent}`,

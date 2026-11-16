@@ -164,7 +164,7 @@
 	--monti-text-editor-code-tracking: 0em;
 	--monti-font-sans: "Monti Pretendard", "Noto Sans KR", "Apple SD Gothic Neo", system-ui, sans-serif;
 	--monti-font-mono:
-		"Monti Plex Mono", "Monti Pretendard", "Noto Sans KR", "Apple SD Gothic Neo", ui-monospace, Menlo, monospace;
+		"Monti Plex Mono", ui-monospace, Menlo, monospace, "Monti Pretendard Hangul", "Noto Sans KR", "Apple SD Gothic Neo";
 }
 
 :where(html:is(.dark, [data-theme="dark"]):has(.monti-admin)) {
@@ -199,7 +199,7 @@
 	--monti-fg-on-emphasis: var(--monti-gray-2);
 	--monti-border-contrast: var(--monti-gray-11);
 	--monti-bg-backdrop: rgba(10, 9, 8, 0.55);
-	--monti-shadow-floating: none;
+	--monti-shadow-floating: 0 0 #0000;
 	--monti-shadow-overlay: 0 24px 60px rgba(0, 0, 0, 0.6);
 	--monti-shadow-sheet: -20px 0 50px rgba(0, 0, 0, 0.5);
 }

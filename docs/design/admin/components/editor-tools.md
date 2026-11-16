@@ -157,7 +157,7 @@
 - **줄 번호(`CodeNumber`).** 누르는 곳이라 손가락 커서와 `bg-selected` 바탕이 있고, 읽기 전용(`readOnly`)에서는 없다. 사이트가 줄 번호를 숨기면(`numbersOff`) 번호가 `fg-faint`다. 번호 뒤 한 글자 칸에 그 줄의 표시(`+` · `−` · `›`). 블록에 접기가 있으면 번호 앞에 접기 칸이 있고, 접기의 첫 줄에 단추(펼침 `ChevronDown`, 접힘 `ChevronRight`), 열린 접기의 나머지 줄에는 **범위 선**(`edge`: 첫 줄에서 끝 줄까지 세로선, 끝 줄에서 꺾임)이 선다. 단추를 가리키는 동안 선이 진해지고(`foldLit`) 그 줄들의 바탕이 `bg-block`이 된다.
 - **줄 바탕(`CodeGround`).** 강조 `bg-highlight`, 추가 `bg-success-muted`, 삭제 `bg-danger-muted`, 줄 번호로 고른 줄 `bg-selection`, 코드 링크나 접기 단추를 가리키는 동안 `bg-block`(`lit`). 코드 링크가 가리키는 줄에는 늘 서 있는 표시가 없다.
 - **닫힌 접기(`CodeAside`).** 첫 줄만 남고, 그 줄 오른쪽 끝에 `TextButton size="caption"` "접힌 n줄"(누르면 펼친다. 이웃 줄 위에 서서 누르는 곳이 24px 그대로다). 읽기용 행은 `CodeLine`의 `aside`로 같은 자리에 둔다. 커서가 숨은 곳에 들어가면 그동안 펼쳐 보인다.
-- **읽기용 행(`CodeLine`).** 비교 화면과 기준 화면이 쓰는 한 줄: 번호 칸은 편집기와 같은 `CodeNumber`(접기 단추와 범위 선, 표시), 글자, 바탕(위와 같은 색). 비교에서는 `changed`가 번호 앞에 `ChangeDot`(효과가 다른 줄)을 둔다(빈 글자면 점 자리만). `CodeToken`은 두 테마의 색을 가진 조각, `CodeMark`는 코드 안의 표시(`tip` 점선 밑줄, `fold` 점선 테두리, `picked`, `bold`).
+- **읽기용 행(`CodeLine`).** 비교 화면과 기준 화면이 쓰는 한 줄(비교는 `compact`: `text-code` 12px의 20px 줄. 편집기의 24px 줄이 아니다): 번호 칸은 편집기와 같은 `CodeNumber`(접기 단추와 범위 선, 표시), 글자, 바탕(위와 같은 색). 비교에서는 `changed`가 번호 앞에 `ChangeDot`(효과가 다른 줄)을 둔다(빈 글자면 점 자리만). `CodeToken`은 두 테마의 색을 가진 조각, `CodeMark`는 코드 안의 표시(`tip` 점선 밑줄, `fold` 점선 테두리, `picked`, `bold`).
 - **본문의 코드 링크.** `CodeRefText`(편집기에서는 `EditorBody`가 같은 모양을 입힌다): 점선 밑줄(링크의 실선과 다르게), 가리키던 줄이 없으면 빨간 점선, 링크를 만드는 동안 먼저 고른 글자는 `bg-selected`.
 
 `CodeBlock`은 다른 부품이다. 안쪽 상자(`bg-muted`, `radius-lg`, 테두리 없음)에 글자를 있는 그대로(고정폭, 줄바꿈 유지) 보이며, JSON 값, 오류의 세부 내용, 모델의 답에 쓴다.

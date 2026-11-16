@@ -1468,6 +1468,10 @@ const HINTS = {
 		"The heading roles step down (display, page, heading, subheading) and the editor's h2, h3, h4 are not smaller than the text.",
 	"type-merge":
 		"Add the role to the font-size group in packages/ui/src/cn.ts, or tailwind-merge takes text-monti-<role> for a colour.",
+	"screen-mode-root":
+		"The screen mode is put on the page by use-screen-mode.ts, applied once by MontiAdmin in app.tsx, so every screen has it (the editor and the login outside the frame too).",
+	"token-contrast":
+		"Text 4.5:1, border-strong and the field underline 3:1, the dark pill not the brightest block, the picked row's bar: read from tokens.json (check-type-colour.mjs).",
 	tabular:
 		"Digits are tabular: admin.css says font-variant-numeric: tabular-nums on .monti-admin and the body, and nothing takes it back.",
 	"design-allow": "A marker states why the value cannot be a token.",
@@ -1476,10 +1480,12 @@ const HINTS = {
 if (findings.length > 0) {
 	findings.sort((a, b) => a.file.localeCompare(b.file) || a.line - b.line);
 	console.error(`check-design: ${findings.length} finding(s) that break the admin design system.\n`);
-	for (const [rule, hint] of Object.entries(HINTS)) {
+	// Every rule that found something is listed, with its hint when it has one: a rule added without a hint is still told.
+	const rules = [...new Set([...Object.keys(HINTS), ...findings.map((finding) => finding.rule)])];
+	for (const rule of rules) {
 		const group = findings.filter((finding) => finding.rule === rule);
 		if (group.length === 0) continue;
-		console.error(`${rule} (${group.length}): ${hint}`);
+		console.error(`${rule} (${group.length}): ${HINTS[rule] ?? "(no hint written for this rule)"}`);
 		for (const { file, line, message } of group) console.error(`  ${file}:${line}: [${rule}] ${message}`);
 		console.error("");
 	}

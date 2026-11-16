@@ -127,6 +127,7 @@ function CodeCompared({ block }: { block: ReturnType<typeof compareBodies>["mine
 							key={line}
 							number={line + 1}
 							readOnly
+							compact
 							changed={changedLines.size ? (changedLines.has(line) ? t("compare.codeEffects") : "") : undefined}
 							tone={look.tone}
 							mark={look.mark}

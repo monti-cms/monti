@@ -35,7 +35,11 @@ const LIGHT = ":where(html:has(.monti-admin))";
 const DARK = ':where(html:is(.dark, [data-theme="dark"]):has(.monti-admin))';
 
 /** The admin bundle ships its fonts under these names (`fontFaces` in `packages/ui/.storybook/fonts.ts`), so they never collide with a site's own copy. */
-const BUNDLED_FACES = { Pretendard: '"Monti Pretendard"', '"IBM Plex Mono"': '"Monti Plex Mono"' };
+const BUNDLED_FACES = {
+	Pretendard: '"Monti Pretendard"',
+	'"IBM Plex Mono"': '"Monti Plex Mono"',
+	'"Pretendard Hangul"': '"Monti Pretendard Hangul"',
+};
 
 /**
  * A height class carries its token's name whole (`height-control-md` is `h-monti-control-md`), so a 32px button size (`size-monti-control-md`) can never

@@ -50,12 +50,16 @@ describe("the numbers' column (EC-08)", () => {
 		await expect.element(page.getByText("const a = 1;", { exact: false })).toBeVisible();
 		const numbers = [...document.querySelectorAll("[data-slot=code-number]")];
 		const text = document.querySelector("[data-slot=code-text]") as HTMLElement;
-		const range = document.createRange();
-		range.selectNodeContents(numbers[0] as Element);
-		const digits = range.getBoundingClientRect();
-		const gap = box(text).left + 8 - digits.right;
+		/** Where the digits of a number end, from its own glyphs (not the box of the cell they stand in). */
+		const inkRight = (number: Element) => {
+			const walker = document.createTreeWalker(number, NodeFilter.SHOW_TEXT);
+			const range = document.createRange();
+			range.selectNodeContents(walker.nextNode() as Node);
+			return range.getBoundingClientRect().right;
+		};
+		const gap = box(text).left + 8 - inkRight(numbers[0] as Element);
 		expect(gap).toBeLessThanOrEqual(24);
 		for (const number of numbers) expect(box(number).height).toBe(24);
-		expect(new Set(numbers.map((number) => Math.round(number.getBoundingClientRect().right))).size).toBe(1);
+		expect(new Set(numbers.map((number) => Math.round(inkRight(number)))).size, "the numbers end at one x").toBe(1);
 	});
 });

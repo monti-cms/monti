@@ -30,6 +30,7 @@ import {
 	TabsList,
 	TabsTrigger,
 } from "./index";
+import { HELD } from "./sortable";
 
 /** Parts the audit found to differ in the middle of a screen, measured on their own (PP-18, PP-24, LB-06, EB-04, MD-20, ST-39). */
 
@@ -251,5 +252,28 @@ describe("a question's two buttons (TL-03)", () => {
 		expect(Math.round(box(content).right - box(safe).right)).toBe(
 			24 + Number.parseFloat(getComputedStyle(content).borderRightWidth),
 		);
+	});
+});
+
+describe("a thing in hand, in dark (floating shadow: a transparent one)", () => {
+	it("draws a 1px border-emphasis edge inside its box, and its shadow is valid: a ring written beside it still draws", async () => {
+		document.documentElement.dataset.theme = "dark";
+		try {
+			render(<div className={`${HELD} h-10 w-40 ring-2 ring-monti-contrast`}>들고 있는 것</div>);
+			await expect.element(page.getByText("들고 있는 것")).toBeVisible();
+			const held = getComputedStyle(page.getByText("들고 있는 것").element());
+			const probe = document.createElement("i");
+			probe.style.color = "var(--monti-border-emphasis)";
+			document.body.append(probe);
+			const wanted = getComputedStyle(probe).color;
+			probe.remove();
+			expect([held.outlineStyle, held.outlineWidth, held.outlineColor]).toEqual(["solid", "1px", wanted]);
+			expect(held.borderTopWidth).toBe("0px");
+			// A shadow list with `none` in it is void whole: the ring and the floating shadow are both there.
+			expect(held.boxShadow).not.toBe("none");
+			expect(held.boxShadow).toContain("2px");
+		} finally {
+			delete document.documentElement.dataset.theme;
+		}
 	});
 });

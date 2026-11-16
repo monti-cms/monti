@@ -151,7 +151,7 @@
 글꼴 계열은 둘이다. 글은 Pretendard, 주소와 식별자와 코드는 IBM Plex Mono다. 두 글꼴의 `@font-face`와 파일은 `scripts/build-styles.mjs`가 `@monti-cms/admin/styles.css`를 만들 때 넣는다(파일은 그 옆 `fonts/`). `tokens.css`에는 `@font-face`가 없다. Noto Sans KR은 대체 글꼴이고, Pretendard를 불러올 수 없을 때만 쓴다. 전체 글꼴 목록은 다음과 같다.
 
 - `sans`: `Pretendard, "Noto Sans KR", "Apple SD Gothic Neo", system-ui, sans-serif`
-- `mono`: `"IBM Plex Mono", Pretendard, "Noto Sans KR", "Apple SD Gothic Neo", ui-monospace, Menlo, monospace`. 한글 대체 글꼴을 Plex Mono 뒤에 두었다: 앞서는 한글이 시스템이 고른 글꼴로 그려져 글자 폭이 고르지 않았다(만들며 정함 (2026-11-16), EC-06, MD-43, TG-16, TP-07).
+- `mono`: `"IBM Plex Mono", ui-monospace, Menlo, monospace, "Pretendard Hangul", "Noto Sans KR", "Apple SD Gothic Neo"`. `Pretendard Hangul`은 Pretendard의 같은 파일을 한글(U+AC00–D7AF, U+1100–11FF, U+3130–318F)로만 한정해 다시 이름 붙인 `@font-face`다(`packages/ui/.storybook/fonts.ts`). 모노스페이스 글꼴 뒤에 두므로 라틴 · 키릴 · 그리스 문자와 기호는 Plex Mono와 시스템 모노에 남고(Plex가 올라오기 전에도 비례폭 Pretendard로 그려지지 않는다), 한글만 늘 같은 글꼴로 그려진다. 앞서는 한글이 시스템이 고른 글꼴이라 글자 폭이 고르지 않았다(만들며 정함 (2026-11-16), EC-06, MD-43, TG-16, TP-07).
 
 역할은 그 글자가 무엇인지로 고른다. 크기 단위는 px다.
 
@@ -167,9 +167,9 @@
 | `text-prose` | sans | 14 / 24 | 400 | – | 여러 줄로 이어지는 UI 글: 어시스턴트의 답과 관리자의 말풍선, 대화상자 설명, 여러 줄 입력 칸. |
 | `text-label` | sans | 13 / 18 | 500 | – | 탭, 필터, 작은 버튼. |
 | `text-note` | sans | 13 / 20 | 400 | – | 행 제목 아래의 보조 줄, 피할 수 없는 힌트. |
-| `text-caption` | sans | 12 / 16 | 400 | – | 줄 안의 작은 말과 숫자: 캡션, 시각, 개수, 파일 크기, 이름 아래의 세부, 상태 표시줄 칸, 필드 라벨. 적힌 그대로의 값(주소, 식별자)에는 `font-mono`를 더한다. 앞서 `text-caption`가 같은 12 / 16 / 400이었고 이름만 달라 하나로 합쳤다(만들며 정함 (2026-11-16)). |
+| `text-caption` | sans | 12 / 16 | 400 | – | 줄 안의 작은 말과 숫자: 캡션, 시각, 개수, 파일 크기, 이름 아래의 세부, 상태 표시줄 칸, 필드 라벨. 적힌 그대로의 값(주소, 식별자)에는 `font-mono`를 더한다. 앞서 `text-meta`가 `text-caption`과 같은 12 / 16 / 400이었고 이름만 달라 하나로 합쳤다(만들며 정함 (2026-11-16)). |
 | `text-micro` | sans | 11 / 14 | 400 | – | 메뉴와 패널의 묶음 라벨, 행 끝의 짧은 덧말. 필드 라벨은 `text-caption`(sans 12)을 쓴다(만들며 정함 (2026-11-16)). |
-| `text-code` | mono | 12 / 20 | 400 | – | 여러 줄 코드와 JSON: 비교와 변경 보기의 코드. |
+| `text-code` | mono | 12 / 20 | 400 | – | 여러 줄 코드와 JSON: 비교와 변경 보기의 코드(`CodeLine compact`). 편집기 본문의 코드는 `text-editor-code`다. |
 | `text-editor-code` | mono | 14 / 24 | 400 | – | 편집기 본문의 코드 블록과 인라인 코드(소유자 (2026-11-16)). 다른 코드는 `text-code`(12)다. |
 
 글자 규칙:
@@ -278,7 +278,7 @@
 
 | 토큰 | 밝음 | 어두움 | 쓰임 |
 |---|---|---|---|
-| `shadow-floating` | `0 12px 32px rgba(40, 32, 20, 0.14)` | 없음(`none`) | 메뉴, 팝오버, 선택 카드, 말풍선. 어두운 테마에서는 `border-emphasis` 테두리가 가장자리를 그리고, 그림자를 더하면 가장자리가 두꺼워 보인다(LC-10, 만들며 정함 (2026-11-16)). |
+| `shadow-floating` | `0 12px 32px rgba(40, 32, 20, 0.14)` | 없음(`0 0 #0000`) | 메뉴, 팝오버, 선택 카드, 말풍선. 어두운 테마에서는 `border-emphasis` 테두리가 가장자리를 그리고, 그림자를 더하면 가장자리가 두꺼워 보인다(LC-10, 만들며 정함 (2026-11-16)). 값이 `none`이 아니라 투명한 그림자인 것은 `none`이 한 box-shadow 목록 안에서 목록 전체를 무효로 만들어 곁의 고리까지 지우기 때문이다. 끌고 있는 것(`HELD`)은 이 그림자와 `border-emphasis` 1px 안쪽 윤곽선(`outline`)을 함께 갖는다. 윤곽선은 어두운 테마에서 끌고 있는 것의 하나뿐인 가장자리이고, 자리를 옮기지 않으며 행의 `border-0`과 다투지 않는다. 끌 수 있는 모든 것이 같다(`sortable.tsx`의 `HELD`, 목록 머리의 `data-held`). |
 | `shadow-overlay` | `0 24px 60px rgba(30, 24, 14, 0.18)` | `0 24px 60px rgba(0, 0, 0, 0.6)` | 대화상자. |
 | `shadow-sheet` | `-20px 0 50px rgba(30, 24, 14, 0.12)` | `-20px 0 50px rgba(0, 0, 0, 0.5)` | 오른쪽 가장자리에서 나오는 시트. |
 

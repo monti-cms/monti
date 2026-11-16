@@ -361,7 +361,7 @@
 	letter-spacing: var(--monti-text-micro-tracking);
 }
 
-/* 12px/20px 400. Code and JSON over several lines: code blocks in the body and in comparisons. Meta's size on a 20px line. */
+/* 12px/20px 400. Code and JSON over several lines: comparisons and diffs. The editor body's code is `text-editor-code`. A 20px line. */
 @utility text-monti-code {
 	font-family: var(--monti-font-mono);
 	font-size: var(--monti-text-code-size);

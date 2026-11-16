@@ -8,7 +8,8 @@ const lineOf = (source, index) => source.slice(0, index).split("\n").length;
  * mono, so every word in them was). A file may use them only if it is named here with the reason, and the reason says which values stay mono. A name whose
  * file no longer uses any of them fails too, so the list is only what is true. The small role `micro` is sans now; `font-mono` on a span says "this is a value".
  *
- * Cannot see: whether a given child of a listed file is a number or a word. The reason carries that, and a person reading the diff of this list sees a new
+ * Cannot see: mono set through props (`<Text mono>`, `metaMono`, `ofMono`, `Input mono`): they are not these words, so a word set that way is missed.
+ * Nor whether a given child of a listed file is a number or a word. The reason carries that, and a person reading the diff of this list sees a new
  * place. A mono face set by another word (a `style` or `font-family` of its own) is the `off-system` rule's.
  */
 export const MONO_OK = new Map([
@@ -282,7 +283,10 @@ export function screenModeRoot(sources) {
 	const root = sources[APP_ROOT_FILE];
 	if (root !== undefined) {
 		const start = root.indexOf("export function MontiAdmin");
-		if (start < 0 || !root.slice(start).includes("useApplyScreenMode()"))
+		// The body of `MontiAdmin` alone: from its line to the first closing brace at the start of a line (a call in a function written after it does not count).
+		const end = start < 0 ? -1 : root.indexOf("\n}\n", start);
+		const body = start < 0 ? "" : root.slice(start, end < 0 ? root.length : end);
+		if (!body.includes("useApplyScreenMode()"))
 			problems.push({
 				file: APP_ROOT_FILE,
 				line: 1,

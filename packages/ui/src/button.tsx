@@ -54,6 +54,8 @@ const buttonVariants = cva(
 				sm: "h-monti-control-sm px-monti-12 text-monti-note",
 				xs: "h-monti-control-xs px-monti-8 text-monti-caption [&_svg:not([class*='size-'])]:size-3.5",
 			},
+			/** A button with `reserve` keeps its width while it works: its spinner stands in the left padding, and neither the padding nor the gap changes. */
+			fixed: { true: "relative data-loading:gap-monti-6", false: "" },
 		},
 		// A loading pill pads by eye, not by a formula: the spinner sits 2px further from the left edge than from the top and bottom, and the right side is
 		// tighter than the resting padding, so the pill does not look empty on the right.
@@ -61,14 +63,15 @@ const buttonVariants = cva(
 			{
 				size: "lg",
 				variant: ["primary", "danger", "outline-danger"],
+				fixed: false,
 				class: "data-loading:pr-[15px] data-loading:pl-[13px]",
 			},
-			{ size: "lg", variant: "secondary", class: "data-loading:pr-[13px] data-loading:pl-[13px]" },
-			{ size: "md", class: "data-loading:pr-[11px] data-loading:pl-[11px]" },
-			{ size: "sm", class: "data-loading:pr-[9px] data-loading:pl-[10px]" },
-			{ size: "xs", class: "data-loading:pr-[7px] data-loading:pl-[7px]" },
+			{ size: "lg", variant: "secondary", fixed: false, class: "data-loading:pr-[13px] data-loading:pl-[13px]" },
+			{ size: "md", fixed: false, class: "data-loading:pr-[11px] data-loading:pl-[11px]" },
+			{ size: "sm", fixed: false, class: "data-loading:pr-[9px] data-loading:pl-[10px]" },
+			{ size: "xs", fixed: false, class: "data-loading:pr-[7px] data-loading:pl-[7px]" },
 		],
-		defaultVariants: { variant: "primary", size: "lg" },
+		defaultVariants: { variant: "primary", size: "lg", fixed: false },
 	},
 );
 
@@ -157,7 +160,11 @@ function Button({
 			// Working is not "cannot be used": the button keeps the focus it was pressed with (`aria-disabled`, not the attribute, which would hand
 			// the focus to the page) and takes no second press.
 			focusableWhenDisabled={held}
-			className={cn(buttonVariants({ variant, size }), width === "full" && "w-full", className)}
+			className={cn(
+				buttonVariants({ variant, size, fixed: reserve !== undefined && reserve.length > 0 }),
+				width === "full" && "w-full",
+				className,
+			)}
 			{...(href === undefined
 				? {}
 				: {
@@ -169,7 +176,17 @@ function Button({
 			{...props}
 			{...(held ? BUSY_GUARD : {})}
 		>
-			{busy && <Spinner className={size === "sm" || size === "xs" ? "size-3" : "size-3.5"} />}
+			{busy && (
+				<Spinner
+					className={
+						reserve !== undefined && reserve.length > 0
+							? "absolute left-[3px] size-3"
+							: size === "sm" || size === "xs"
+								? "size-3"
+								: "size-3.5"
+					}
+				/>
+			)}
 			<ReservedLabel reserve={reserve}>{sending ? pendingLabel : children}</ReservedLabel>
 		</ButtonPrimitive>
 	);

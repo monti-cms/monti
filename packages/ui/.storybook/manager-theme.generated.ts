@@ -26,7 +26,7 @@ export const MANAGER_THEME = {
 		inputTextColor: "#1c1b18",
 		fontBase: '"Monti Pretendard", "Noto Sans KR", "Apple SD Gothic Neo", system-ui, sans-serif',
 		fontCode:
-			'"Monti Plex Mono", "Monti Pretendard", "Noto Sans KR", "Apple SD Gothic Neo", ui-monospace, Menlo, monospace',
+			'"Monti Plex Mono", ui-monospace, Menlo, monospace, "Monti Pretendard Hangul", "Noto Sans KR", "Apple SD Gothic Neo"',
 		appBorderRadius: 8,
 		inputBorderRadius: 6,
 	},
@@ -54,7 +54,7 @@ export const MANAGER_THEME = {
 		inputTextColor: "#ecebe6",
 		fontBase: '"Monti Pretendard", "Noto Sans KR", "Apple SD Gothic Neo", system-ui, sans-serif',
 		fontCode:
-			'"Monti Plex Mono", "Monti Pretendard", "Noto Sans KR", "Apple SD Gothic Neo", ui-monospace, Menlo, monospace',
+			'"Monti Plex Mono", ui-monospace, Menlo, monospace, "Monti Pretendard Hangul", "Noto Sans KR", "Apple SD Gothic Neo"',
 		appBorderRadius: 8,
 		inputBorderRadius: 6,
 	},

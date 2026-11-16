@@ -337,7 +337,7 @@ function ListHead({
 							aria-sort={column.sort === "asc" ? "ascending" : column.sort === "desc" ? "descending" : undefined}
 							// The select-all inside the first name would be read as part of it.
 							aria-label={index === 0 && selectAll ? column.label : undefined}
-							className="relative touch-none select-none font-normal data-held:z-20 data-held:bg-monti-selected data-held:shadow-monti-floating"
+							className="relative touch-none select-none font-normal data-held:z-20 data-held:bg-monti-selected data-held:shadow-monti-floating data-held:outline data-held:outline-1 data-held:outline-monti-emphasis data-held:-outline-offset-1"
 							style={held ? { transform: `translateX(${drag.offset}px)` } : undefined}
 							// A right click on a name opens its menu, as a right click on a row opens the row's.
 							onContextMenu={(event) => {

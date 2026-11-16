@@ -137,10 +137,13 @@ function CodeNumber({
 	numbersOff = false,
 	readOnly = false,
 	changed,
+	compact = false,
 	className,
 	...props
 }: React.ComponentProps<"div"> & {
 	number: number;
+	/** The comparison's code (`text-code`, 20px lines) instead of the editor's (`text-editor-code`, 24px). */
+	compact?: boolean;
 	/** In a comparison: the line's effects differ from the other side's (the change dot's name); `""` keeps the dot's place on a line that did not. */
 	changed?: string;
 	tone?: CodeLineTone;
@@ -157,7 +160,8 @@ function CodeNumber({
 			data-slot="code-number"
 			data-tone={tone}
 			className={cn(
-				"flex h-[24px] shrink-0 items-center gap-monti-2 pr-monti-4 pl-monti-8 font-mono text-monti-editor-code tabular-nums",
+				"flex shrink-0 items-center gap-monti-2 pr-monti-4 pl-monti-8 font-mono tabular-nums",
+				compact ? "h-[20px] text-monti-code" : "h-[24px] text-monti-editor-code",
 				TONES,
 				readOnly ? undefined : "cursor-pointer hover:bg-monti-selected",
 				numbersOff ? "text-monti-faint" : "text-monti-subtle",
@@ -167,7 +171,12 @@ function CodeNumber({
 			{...props}
 		>
 			{folds ? (
-				<span className="relative flex size-[24px] shrink-0 items-center justify-center self-stretch">
+				<span
+					className={cn(
+						"relative flex shrink-0 items-center justify-center self-stretch",
+						compact ? "size-[20px]" : "size-[24px]",
+					)}
+				>
 					{edge && !fold ? (
 						<span
 							aria-hidden
@@ -213,10 +222,13 @@ function CodeLine({
 	readOnly = false,
 	changed,
 	aside,
+	compact = false,
 	children,
 	className,
 	...props
 }: Omit<React.ComponentProps<"div">, "children"> & {
+	/** A comparison's line: `text-code` on a 20px line, as every other code that is not the editor's. */
+	compact?: boolean;
 	number: number;
 	/** What stands at the right end of the line (a closed fold's "n lines folded"), over the lines next to it so its press area is whole. */
 	aside?: React.ReactNode;
@@ -238,7 +250,12 @@ function CodeLine({
 		<div
 			data-slot="code-line"
 			data-tone={tone}
-			className={cn("group/line flex h-[24px] items-stretch font-mono text-monti-editor-code", TONES, className)}
+			className={cn(
+				"group/line flex items-stretch font-mono",
+				compact ? "h-[20px] text-monti-code" : "h-[24px] text-monti-editor-code",
+				TONES,
+				className,
+			)}
 			{...props}
 		>
 			<CodeNumber
@@ -252,6 +269,7 @@ function CodeLine({
 				readOnly={readOnly}
 				changed={changed}
 				tone={tone}
+				compact={compact}
 				className="select-none"
 			/>
 			<span className="relative flex flex-1 items-center whitespace-pre pr-monti-16 pl-monti-8 text-monti-default">

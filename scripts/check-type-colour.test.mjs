@@ -219,3 +219,12 @@ test("type-merge: cn knows every type role as a font size; a missing role and a 
 	const stale = typeMerge(tokens, cnSource.replace('"monti-code",', '"monti-code",\n"monti-meta",'));
 	assert.match(stale.at(0).message, /names monti-meta, which is not a type role/);
 });
+
+test("screen-mode-root: a call in a function written after MontiAdmin does not count as the root's", () => {
+	const later =
+		modeFiles[APP_ROOT_FILE].replace("useApplyScreenMode();", "") +
+		"\nfunction Later() {\n\tuseApplyScreenMode();\n}\n";
+	const found = screenModeRoot({ ...modeFiles, [APP_ROOT_FILE]: later });
+	assert.equal(found.length, 1);
+	assert.match(found[0].message, /MontiAdmin. must call/);
+});

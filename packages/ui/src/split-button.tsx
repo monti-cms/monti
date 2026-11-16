@@ -94,11 +94,13 @@ function SplitButton({
 				// A leading icon ("+" of "New post") is 16px and pulled 2px into the left padding, as on a `Button`; while it works the spinner takes its place.
 				className={cn(
 					HALF,
-					"gap-monti-6 rounded-l-monti-full pr-monti-12 pl-[18px] [&>svg:first-child]:-ml-[2px] [&_svg]:size-4 [&_svg]:shrink-0",
-					loading && "gap-[7px] pl-[13px] [&>[data-slot=spinner]+svg]:hidden",
+					"relative gap-monti-6 rounded-l-monti-full pr-monti-12 pl-[18px] [&>svg:first-child]:-ml-[2px] [&_svg]:size-4 [&_svg]:shrink-0",
+					// With `reserve` the pill keeps its width while it works: the spinner stands in the left padding, which does not change.
+					loading && !(reserve && reserve.length > 0) && "gap-[7px] pl-[13px]",
+					loading && "[&>[data-slot=spinner]+svg]:hidden",
 				)}
 			>
-				{loading && <Spinner />}
+				{loading && <Spinner className={reserve && reserve.length > 0 ? "absolute left-[3px] size-3" : undefined} />}
 				<ReservedLabel reserve={reserve}>{children}</ReservedLabel>
 			</ButtonPrimitive>
 			<DropdownMenu open={open && !inert} onOpenChange={setOpen}>

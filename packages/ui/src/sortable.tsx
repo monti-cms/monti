@@ -32,9 +32,11 @@ import { useUiLabels } from "./labels";
 
 /**
  * The look of the thing in hand while it is dragged, the same in every list (a field row, a group, a folder tab, a choice, a language): it lies on
- * the page ground with the floating shadow, over the rows it passes.
+ * the page ground with the floating shadow, over the rows it passes, and a hairline edge of `border-emphasis` drawn inside its box (an outline: no
+ * layout moves and a row's `border-0` is left alone). The edge is the held thing's only one in dark, where the floating shadow is none.
  */
-export const HELD = "relative z-10 bg-monti-page shadow-monti-floating";
+export const HELD_EDGE = "outline outline-1 -outline-offset-1 outline-monti-emphasis";
+export const HELD = `relative z-10 bg-monti-page shadow-monti-floating ${HELD_EDGE}`;
 
 /** The place the thing in hand left in its list while its floating copy follows the pointer: kept as a gap the others move around. */
 export const SLOT = "opacity-0";

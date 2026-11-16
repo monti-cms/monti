@@ -131,11 +131,35 @@ describe("the sidebar's rows (MN-1, MN-2, LS-03, LS-05)", () => {
 		expect(getComputedStyle(element("안내")).fontSize).toBe(getComputedStyle(element("게시글")).fontSize);
 	});
 
-	it("the tree's rule runs under the row's ground, so a row pointed at is not cut by it", async () => {
+	it("the tree's rule is on the screen: under the row's ground, in the folders' own stacking context, and its pixels differ from the rail's", async () => {
 		render(<Tree />);
 		await expect.element(page.getByText("서울")).toBeVisible();
-		const style = getComputedStyle(rowOf("국내"), "::before");
-		expect(Number.parseInt(style.zIndex, 10)).toBeLessThan(0);
+		const row = rowOf("안내");
+		const list = row.closest("[data-slot=sidebar-menu-sub]") as HTMLElement;
+		// The rule sits below the row's own ground, and the folders' list is the stacking context it stays in: the rail's ground cannot cover it.
+		expect(Number.parseInt(getComputedStyle(row, "::before").zIndex, 10)).toBeLessThan(0);
+		expect(getComputedStyle(list).isolation).toBe("isolate");
+		const shot = await page.screenshot({ save: false, base64: true });
+		const image = new Image();
+		image.src = `data:image/png;base64,${typeof shot === "string" ? shot : (shot as { base64: string }).base64}`;
+		await image.decode();
+		const canvas = document.createElement("canvas");
+		canvas.width = image.width;
+		canvas.height = image.height;
+		const context = canvas.getContext("2d") as CanvasRenderingContext2D;
+		context.drawImage(image, 0, 0);
+		const at = box(row);
+		// The screenshot is scaled to the page's size: a pixel of the page is looked for at its scaled place.
+		const scale = image.width / window.innerWidth;
+		const pixel = (x: number, y: number) =>
+			[...context.getImageData(Math.floor(x * scale), Math.floor(y * scale), 1, 1).data].slice(0, 3).join(",");
+		const rail = pixel(at.left - 4, at.top + 16);
+		// The line is 1px: look at the pixels around its place, one of them is its.
+		const around = [20, 21, 22, 23].map((offset) => pixel(at.left + offset, at.top + 16));
+		expect(
+			around.some((colour) => colour !== rail),
+			`pixels at the line: ${around.join(" | ")}; the rail's ${rail}`,
+		).toBe(true);
 	});
 });
 
@@ -157,6 +181,47 @@ describe("a control whose words change keeps its width (TB-02)", () => {
 		await page.getByRole("button").click();
 		await expect.element(page.getByRole("button", { name: "발행됨" })).toBeVisible();
 		expect(widthOf()).toBe(before);
+	});
+
+	it("a pill that works (loading) is as wide as at rest: its spinner stands in the padding", async () => {
+		function Pills({ loading }: { loading: boolean }) {
+			return (
+				<div className="flex flex-col items-start gap-monti-8">
+					<Button reserve={["발행하기", "발행됨"]} loading={loading}>
+						발행하기
+					</Button>
+					<SplitButton
+						menuLabel="발행 방식"
+						reserve={["발행하기", "발행됨"]}
+						loading={loading}
+						menu={<DropdownMenuItem>오늘 날짜로</DropdownMenuItem>}
+					>
+						발행하기
+					</SplitButton>
+				</div>
+			);
+		}
+		function Switcher() {
+			const [loading, setLoading] = useState(false);
+			return (
+				<>
+					<button type="button" onClick={() => setLoading(true)}>
+						시작
+					</button>
+					<Pills loading={loading} />
+				</>
+			);
+		}
+		render(<Switcher />);
+		await expect.element(page.getByRole("button", { name: "시작" })).toBeVisible();
+		const pills = () =>
+			[...document.querySelectorAll("[data-slot=button], [data-slot=split-button]")].filter(
+				(each) => each.textContent?.includes("발행") || each.getAttribute("data-slot") === "split-button",
+			);
+		const rest = pills().map((each) => Math.round(box(each).width * 10) / 10);
+		await page.getByRole("button", { name: "시작" }).click();
+		await expect.poll(() => document.querySelector("[data-slot=spinner]")).not.toBeNull();
+		expect(pills().map((each) => Math.round(box(each).width * 10) / 10)).toEqual(rest);
 	});
 
 	it("a split pill keeps its width and the left edge of its neighbour", async () => {
@@ -270,8 +335,10 @@ describe("a status and a row of a table (LR-04, LR-01, LR-02, LR-14, LT-03)", ()
 		for (const row of document.querySelectorAll("tbody tr")) {
 			const centre = centreY(row);
 			for (const cell of row.querySelectorAll("td")) {
-				const words = cell.querySelector("[data-slot=entry-status], span, p") ?? cell;
-				const at = centreY(words);
+				// The cell's own words, measured from their glyphs: a cell of bare text has no element to measure but the cell.
+				const words = document.createRange();
+				words.selectNodeContents(cell.querySelector("[data-slot=entry-status], span, p") ?? cell);
+				const at = words.getBoundingClientRect().top + words.getBoundingClientRect().height / 2;
 				expect(
 					Math.abs(at - centre),
 					`${cell.textContent} centre ${at} against the row's ${centre}`,
