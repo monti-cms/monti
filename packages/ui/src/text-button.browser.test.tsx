@@ -12,12 +12,12 @@ const ringOf = (element: Element) => {
 		style: style.outlineStyle,
 		width: style.outlineWidth,
 		offset: style.outlineOffset,
-		// The ink's share of the line's colour: "… / 0.5)".
+		// The ink's share of the line's colour: "… / 0.6)".
 		ink: style.outlineColor.match(/\/\s*([\d.]+)\)$/)?.[1],
 	};
 };
 
-it("the keyboard's focus draws a ring around a text button's words: a 2px line at half ink, 2px off them", async () => {
+it("the keyboard's focus draws a ring around a text button's words: a 2px line of ink at 60%, 2px off them", async () => {
 	render(
 		<p>
 			<TextButton variant="underline" quiet size="caption">
@@ -31,12 +31,12 @@ it("the keyboard's focus draws a ring around a text button's words: a 2px line a
 	// A width without a style draws nothing: `outline-none` beside `outline-2` left every text button without a ring.
 	await userEvent.keyboard("{Tab}");
 	await expect.element(button).toHaveFocus();
-	expect(ringOf(button.element())).toEqual({ keyboard: true, style: "solid", width: "2px", offset: "2px", ink: "0.5" });
+	expect(ringOf(button.element())).toEqual({ keyboard: true, style: "solid", width: "2px", offset: "2px", ink: "0.6" });
 
 	const link = page.getByRole("link", { name: "목록에서 보기" });
 	await userEvent.keyboard("{Tab}");
 	await expect.element(link).toHaveFocus();
-	expect(ringOf(link.element())).toEqual({ keyboard: true, style: "solid", width: "2px", offset: "2px", ink: "0.5" });
+	expect(ringOf(link.element())).toEqual({ keyboard: true, style: "solid", width: "2px", offset: "2px", ink: "0.6" });
 });
 
 it("a press with the pointer draws no ring", async () => {

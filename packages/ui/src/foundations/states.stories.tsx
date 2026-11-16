@@ -7,7 +7,7 @@ import { Group, Page, Spec } from "./shared";
 
 /**
  * States (tokens.md, 상태): what cannot be pressed is 0.45 and does not answer the pointer; what stepped back for a moment is 0.6; the keyboard's focus
- * is one ring, 2px at half ink, outside a part that stands alone and inside a row that spans its box.
+ * is one ring, 2px of ink at 60%, outside a part that stands alone and inside a row that spans its box.
  */
 const meta = { title: "Foundations/States" } satisfies Meta;
 export default meta;

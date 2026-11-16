@@ -11,7 +11,7 @@ const CHECK_MARK_PATH = "M2.3 6.9 5.1 9.7 10.7 4.1";
 /**
  * A checkbox: 14px, a ✓ when on and a bar when only some are on (`indeterminate`, the select-all of a list with part of it picked). The mark
  * is drawn, so the state never rests on color alone. The root is a `span`, not a `button`, so a disabled one is dimmed through `data-disabled`.
- * The keyboard's focus is a line around the box, where a ring would be (2px, half ink): a line, not a ring's shadow, so an invalid one can keep its red ring on or off, under the
+ * The keyboard's focus is a line around the box, where a ring would be (2px, ink at 60%): a line, not a ring's shadow, so an invalid one can keep its red ring on or off, under the
  * pointer and the keyboard too, with the focus's line outside it: 4px off, so 2px of paper part the red ring (0 to 2px) from the line (4 to 6px) and the two do
  * not read as one band of two colours. The line is never unset here (no `outline-none`). `proposal` marks a choice the assistant made and nobody has touched: the same mark in blue. A `readOnly` one
  * shows a choice that can no longer change (an applied proposal): gray when on, a light border when off.

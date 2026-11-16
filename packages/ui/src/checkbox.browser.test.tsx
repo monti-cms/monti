@@ -61,7 +61,7 @@ it("a wrong check stays red under the pointer and the keyboard at once, and the 
 	expect(drawn()).toEqual({ line: red, redRing: true, around: "none" });
 });
 
-it("a check's focus is one line around it, 2px at half ink at the box's edge, and a pointer's press draws none", async () => {
+it("a check's focus is one line around it, 2px of ink at 60% at the box's edge, and a pointer's press draws none", async () => {
 	render(
 		<Option>
 			<Checkbox />
