@@ -43,7 +43,7 @@ describe("the entry editor: '✦ fill' for a picture (T104)", () => {
 		await expect.element(page.getByText("80 / 80")).toBeVisible();
 		const [asked] = made.loaded().model.answers;
 		expect(asked?.picture?.mime).toMatch(/^image\//);
-		expect(asked?.prompt).toContain("Text before the picture: 글의 첫 문단이에요.");
+		expect(asked?.prompt).toContain("Text before the picture: 글의 첫 문단입니다.");
 		// Filled, the button offers another try; the words are the block's own, unsaved.
 		await expect.element(button("다시")).toBeVisible();
 		expect((await imageOf(made.loaded())).attrs.alt).toBeUndefined();
@@ -73,7 +73,7 @@ describe("the entry editor: '✦ fill' for a picture (T104)", () => {
 		await userEvent.click(button("채우기"));
 		await expect.element(caption()).toHaveValue("책상에서 시작한 아침");
 		// The caret goes back to the text: the line that can take the fill back stays.
-		await userEvent.click(body().getByText("글의 첫 문단이에요."));
+		await userEvent.click(body().getByText("글의 첫 문단입니다."));
 		await expect.element(button("버리기")).toBeVisible();
 		await userEvent.click(button("버리기"));
 		await expect.element(caption()).toHaveValue("");

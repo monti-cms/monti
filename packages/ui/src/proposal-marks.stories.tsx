@@ -30,7 +30,7 @@ export const InsDel: Story = {
 export const FillEmpty: Story = {
 	render: () => (
 		<Text as="p" variant="reading">
-			<Fill>설정 파일을 열지 않아도 사이트를 고칠 수 있어요.</Fill>
+			<Fill>설정 파일을 열지 않아도 사이트를 고칠 수 있습니다.</Fill>
 		</Text>
 	),
 };

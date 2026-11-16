@@ -12,7 +12,7 @@ type Story = StoryObj<typeof meta>;
 /** Steps without numbers. */
 export const Steps: Story = {
 	args: {
-		title: "아직 글이 없어요",
+		title: "아직 글이 없습니다",
 		children: (
 			<>
 				<EmptyStep>새 글 쓰기</EmptyStep>
@@ -25,8 +25,8 @@ export const Steps: Story = {
 /** Numbered steps, only when the order really matters; a quiet line under the title when the steps cannot say what is missing. */
 export const Ordered: Story = {
 	args: {
-		title: "번역을 시작할 수 없어요",
-		description: "사이트에 두 번째 언어가 없어요.",
+		title: "번역을 시작할 수 없습니다",
+		description: "사이트에 두 번째 언어가 없습니다.",
 		children: (
 			<>
 				<EmptyStep number="01">언어 추가</EmptyStep>

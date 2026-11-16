@@ -39,7 +39,7 @@ export const Pages: Story = {
 			</FolderTabsList>
 			<FolderTabsBody value="content">
 				<FieldTree>
-					<FieldRow name="title !" label="제목" kind="text" />
+					<FieldRow name="title" required label="제목" kind="text" />
 					<FieldRow name="summary" label="요약" kind="textarea" />
 					<FieldRow name="cover" label="표지" kind="image" />
 					<FieldRow name="body" label="본문" kind="markdown" />
@@ -102,7 +102,7 @@ export const Held: Story = {
 				</FolderTabsList>
 				<FolderTabsBody value="content">
 					<FieldTree>
-						<FieldRow name="title !" label="제목" kind="text" />
+						<FieldRow name="title" required label="제목" kind="text" />
 						<FieldRow name="summary" label="요약" kind="textarea" />
 					</FieldTree>
 				</FolderTabsBody>

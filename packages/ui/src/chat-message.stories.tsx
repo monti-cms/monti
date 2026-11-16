@@ -24,7 +24,7 @@ export const UserWithContext: Story = {
 };
 
 export const Assistant: Story = {
-	args: { author: "assistant", children: "요약이 빈 글 11편을 찾았어요. 요약을 채운 제안을 만들었어요." },
+	args: { author: "assistant", children: "요약이 빈 글 11편을 찾았습니다. 요약을 채운 제안을 만들었습니다." },
 };
 
 /** The answer is still coming: a thin blinking caret after the last word. */

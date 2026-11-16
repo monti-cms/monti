@@ -21,7 +21,7 @@ export const Details: Story = {
 				claude-haiku-5-5
 			</DescriptionItem>
 			<DescriptionItem label="때">2026. 11. 3 오후 3:12</DescriptionItem>
-			<DescriptionItem label="결과">503 · 서버가 잠시 응답하지 않아 10분 뒤에 다시 보내요</DescriptionItem>
+			<DescriptionItem label="결과">503 · 서버가 잠시 응답하지 않아 10분 뒤에 다시 보냅니다</DescriptionItem>
 		</DescriptionList>
 	),
 };

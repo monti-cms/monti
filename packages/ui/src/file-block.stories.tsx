@@ -22,7 +22,7 @@ export const File: Story = {};
 export const Selected: Story = { args: { name: "2026 연간 보고서", meta: "PDF · 1.2 MB", selected: true } };
 
 /** A file that cannot be found. */
-export const Missing: Story = { args: { name: "old-brochure.pdf", meta: "찾을 수 없어요", tone: "danger" } };
+export const Missing: Story = { args: { name: "old-brochure.pdf", meta: "찾을 수 없음", tone: "danger" } };
 
 /** Cut off on its way up: the button at the end tries again, and the box stays as tall as any other. */
 export const Retry: Story = {

@@ -11,9 +11,9 @@ type Story = StoryObj<typeof meta>;
 
 const items = (
 	<>
-		<ListItem>글 3개가 휴지통으로 가요</ListItem>
-		<ListItem>번역 2개도 함께 가요</ListItem>
-		<ListItem>30일 뒤에 영구 삭제돼요</ListItem>
+		<ListItem>글 3개가 휴지통으로 갑니다</ListItem>
+		<ListItem>번역 2개도 함께 갑니다</ListItem>
+		<ListItem>30일 뒤에 영구 삭제됩니다</ListItem>
 	</>
 );
 

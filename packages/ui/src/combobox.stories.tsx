@@ -29,7 +29,7 @@ const TAGS = ["공지사항", "개발 노트", "일상", "리뷰", "튜토리얼
 function Popup() {
 	return (
 		<ComboboxContent>
-			<ComboboxEmpty>맞는 태그가 없어요</ComboboxEmpty>
+			<ComboboxEmpty>맞는 태그 없음</ComboboxEmpty>
 			<ComboboxList>
 				{(tag: string) => (
 					<ComboboxItem key={tag} value={tag}>
@@ -146,7 +146,7 @@ function ChipsExample({
 				<ComboboxChipsInput aria-invalid={invalid} placeholder="태그 추가" />
 			</ComboboxChips>
 			<ComboboxContent anchor={anchor}>
-				<ComboboxEmpty>맞는 태그가 없어요</ComboboxEmpty>
+				<ComboboxEmpty>맞는 태그 없음</ComboboxEmpty>
 				<ComboboxList>
 					{(tag: string) => (
 						<ComboboxItem key={tag} value={tag}>
@@ -210,7 +210,7 @@ export const CreateRow: Story = {
 			<Combobox items={["리액트", "성능", "new:사"]} defaultOpen>
 				<ComboboxInput placeholder="태그 고르기" />
 				<ComboboxContent>
-					<ComboboxEmpty>맞는 태그가 없어요</ComboboxEmpty>
+					<ComboboxEmpty>맞는 태그 없음</ComboboxEmpty>
 					<ComboboxList>
 						{(item: string) =>
 							item.startsWith("new:") ? (

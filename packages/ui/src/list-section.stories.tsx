@@ -60,7 +60,7 @@ export const Keys: Story = {
 			<ListSectionRow
 				title="검색 노출"
 				detail="· 검색 키"
-				meta="읽을 수 없어요"
+				meta="읽을 수 없음"
 				metaTone="danger"
 				actions={
 					<Button variant="ghost" size="sm">

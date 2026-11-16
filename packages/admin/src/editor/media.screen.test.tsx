@@ -459,7 +459,7 @@ describe("an image in the text", () => {
 		expect(picked()?.contains(fileBlock())).toBe(true);
 		await userEvent.keyboard("{Backspace}");
 		await expect.poll(() => fileBlock()).toBeNull();
-		await expect.element(paragraph("글의 첫 문단이에요.")).toBeVisible();
+		await expect.element(paragraph("글의 첫 문단입니다.")).toBeVisible();
 	});
 
 	it("T134 three dividers one after the other: the one in the middle stays picked when the pointer moves", async () => {
@@ -1174,7 +1174,7 @@ const selectAll = () =>
 	userEvent.keyboard(navigator.userAgent.includes("Mac") ? "{Meta>}a{/Meta}" : "{Control>}a{/Control}");
 
 describe("selecting, copying and cutting across a picture", () => {
-	const THREE = ["글의 첫 문단이에요.", "picture", "그림 뒤의 문단."];
+	const THREE = ["글의 첫 문단입니다.", "picture", "그림 뒤의 문단."];
 	/** Words, a picture, words: `WithImage` with a paragraph written under its picture. */
 	async function wordsPictureWords() {
 		await WithImage.run();
@@ -1182,7 +1182,7 @@ describe("selecting, copying and cutting across a picture", () => {
 		await userEvent.keyboard("{Enter}그림 뒤의 문단.");
 		await expect.poll(shownBlocks).toEqual(THREE);
 	}
-	const first = () => paragraph("글의 첫 문단이에요.");
+	const first = () => paragraph("글의 첫 문단입니다.");
 
 	it("09-1 T134 the keyboard picks across a picture: Shift+arrow goes over it in one press, and what is copied, cut and pasted is the words and the picture", async () => {
 		await wordsPictureWords();
@@ -1195,7 +1195,7 @@ describe("selecting, copying and cutting across a picture", () => {
 		await userEvent.keyboard("{Home}{Shift>}{ArrowDown}{ArrowDown}{/Shift}");
 		expect(selectedBlocks()).toEqual(THREE);
 		const copied = clip("copy");
-		expect(copied.text).toContain("글의 첫 문단이에요.");
+		expect(copied.text).toContain("글의 첫 문단입니다.");
 		expect(copied.text).toContain("그림 뒤의 문단.");
 		expect(copied.html).toContain('data-block="image"');
 		clip("cut");
@@ -1265,10 +1265,10 @@ describe("selecting, copying and cutting across a picture", () => {
 		const copied = clip("copy");
 		// The picture alone has no words to hand over: what it is goes in the clipboard's own kind.
 		expect(copied.html).toContain('data-block="image"');
-		await userEvent.click(paragraph("글의 첫 문단이에요."));
+		await userEvent.click(paragraph("글의 첫 문단입니다."));
 		await userEvent.keyboard("{End}");
 		pasteClip(copied);
-		await expect.poll(shownBlocks).toEqual(["글의 첫 문단이에요.", "picture", "picture"]);
+		await expect.poll(shownBlocks).toEqual(["글의 첫 문단입니다.", "picture", "picture"]);
 		const sources = () =>
 			[...body().element().querySelectorAll("[data-block=image] img")].map((img) => img.getAttribute("src"));
 		expect(new Set(sources()).size).toBe(1);
@@ -1305,7 +1305,7 @@ describe("opening a body with files", () => {
 	it("09-1 T110 T126 the body's files come with the body: nothing reads them, and every picture's frame stands at its shape from the first draw", async () => {
 		const story = recorded();
 		await story.run();
-		await expect.element(body().getByText("글의 첫 문단이에요.")).toBeVisible();
+		await expect.element(body().getByText("글의 첫 문단입니다.")).toBeVisible();
 		// The text is shown, and the frames hold the pictures' places already: nothing under a picture moves when it comes in.
 		expect(frames().length).toBeGreaterThan(0);
 		expect(frames().filter((frame) => frame.style.aspectRatio === "")).toEqual([]);
@@ -1616,7 +1616,7 @@ describe("a copy this browser kept, with a picture the saved body does not show"
 		await expect.element(banner()).not.toBeInTheDocument();
 		expect(story.stored()).toBeNull();
 		await expect.element(body()).toHaveFocus();
-		await expect.element(paragraph("글의 첫 문단이에요.")).toBeVisible();
+		await expect.element(paragraph("글의 첫 문단입니다.")).toBeVisible();
 	});
 
 	it("02 T135 [flow 1·19] the compare screen's '버리기' throws the copy away while its file is still being read", async () => {
@@ -1626,7 +1626,7 @@ describe("a copy this browser kept, with a picture the saved body does not show"
 		await userEvent.click(button("비교하기"));
 		await expect.element(page.getByText("임시 저장본과 비교")).toBeVisible();
 		await userEvent.click(button("버리기"));
-		await expect.element(paragraph("글의 첫 문단이에요.")).toBeVisible();
+		await expect.element(paragraph("글의 첫 문단입니다.")).toBeVisible();
 		await expect.element(banner()).not.toBeInTheDocument();
 		expect(story.stored()).toBeNull();
 		story.release();
@@ -1663,12 +1663,12 @@ describe("copying a file that is still going up", () => {
 		await selectAll();
 		const copied = clip("copy");
 		// The words go; the picture that is not a file yet says nothing of itself.
-		expect(copied.text).toContain("글의 첫 문단이에요.");
+		expect(copied.text).toContain("글의 첫 문단입니다.");
 		expect(copied.html).not.toContain('data-block="image"');
-		await userEvent.click(paragraph("글의 첫 문단이에요."));
+		await userEvent.click(paragraph("글의 첫 문단입니다."));
 		await userEvent.keyboard("{End}");
 		pasteClip(copied);
-		await expect.poll(() => body().element().textContent).toContain("글의 첫 문단이에요.글의 첫 문단이에요.");
+		await expect.poll(() => body().element().textContent).toContain("글의 첫 문단입니다.글의 첫 문단입니다.");
 		expect(count()).toBe(1);
 	});
 
@@ -2009,7 +2009,7 @@ describe("a save the server refuses", () => {
 			media.default,
 		);
 		await story.run();
-		await userEvent.click(body().getByText("글의 첫 문단이에요."));
+		await userEvent.click(body().getByText("글의 첫 문단입니다."));
 		await userEvent.keyboard("{End} 더");
 		await userEvent.click(page.getByRole("button", { name: "저장", exact: true }));
 		await expect.element(page.getByText("없는 파일입니다.")).toBeVisible();

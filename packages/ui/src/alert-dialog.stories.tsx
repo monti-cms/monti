@@ -28,7 +28,7 @@ export const Danger: Story = {
 				<AlertDialogHeader>
 					<AlertDialogTitle>공개 중인 글을 휴지통으로 옮길까요?</AlertDialogTitle>
 					<AlertDialogDescription>
-						사이트에서 바로 내려가고 번역 2개도 함께 옮겨져요. 복원하면 초안으로 돌아와요.
+						사이트에서 바로 내려가고 번역 2개도 함께 옮겨집니다. 복원하면 초안으로 돌아옵니다.
 					</AlertDialogDescription>
 				</AlertDialogHeader>
 				<AlertDialogFooter>
@@ -46,8 +46,8 @@ export const LeaveUnsaved: Story = {
 		<AlertDialog defaultOpen>
 			<AlertDialogContent>
 				<AlertDialogHeader>
-					<AlertDialogTitle>저장하지 않은 변경이 있어요</AlertDialogTitle>
-					<AlertDialogDescription>나가면 이 화면에서 바꾼 것이 사라져요.</AlertDialogDescription>
+					<AlertDialogTitle>저장하지 않은 변경이 있습니다</AlertDialogTitle>
+					<AlertDialogDescription>나가면 이 화면에서 바꾼 것이 사라집니다.</AlertDialogDescription>
 				</AlertDialogHeader>
 				<AlertDialogFooter>
 					<AlertDialogCancel variant="danger">저장하지 않고 나가기</AlertDialogCancel>

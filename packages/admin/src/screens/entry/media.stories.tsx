@@ -9,7 +9,7 @@ type Loaded = { site: StorySite };
 type Library = Awaited<ReturnType<typeof fillLibrary>> & { icon?: string };
 const wait = { timeout: 15000 };
 
-const paragraph = { id: "p_1", type: "paragraph", content: [{ type: "text", text: "글의 첫 문단이에요." }] };
+const paragraph = { id: "p_1", type: "paragraph", content: [{ type: "text", text: "글의 첫 문단입니다." }] };
 
 /** An entry on the reference library, open in the editor. `body` puts what it holds after the first paragraph. */
 const entry = (
@@ -192,7 +192,7 @@ export const ManyInBody: Story = {
 export const RangeOverPictures: Story = {
 	loaders: ManyInBody.loaders,
 	play: async ({ canvasElement }) => {
-		const words = await within(canvasElement).findByText("글의 첫 문단이에요.", {}, wait);
+		const words = await within(canvasElement).findByText("글의 첫 문단입니다.", {}, wait);
 		await within(canvasElement).findByRole("img", { name: "화면에 뜬 코드" }, wait);
 		await userEvent.click(words);
 		// The caret at the text's end, then Shift+↓ three times, as the keys themselves (the story's keyboard does not move a caret).

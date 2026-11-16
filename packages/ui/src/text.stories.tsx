@@ -44,7 +44,7 @@ export const Truncate: Story = {
 	render: () => (
 		<div className="max-w-xs">
 			<Text as="div" truncate>
-				아주 긴 제목의 글이 한 줄에 다 들어가지 않으면 끝이 말줄임표로 잘려요
+				아주 긴 제목의 글이 한 줄에 다 들어가지 않으면 끝이 말줄임표로 잘립니다
 			</Text>
 		</div>
 	),

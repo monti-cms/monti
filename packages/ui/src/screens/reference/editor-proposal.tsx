@@ -118,7 +118,7 @@ export function EditorProposalScreen() {
 						‘~서다’는 이 글 말투랑 안 맞아. 끝은 원래대로 두고 앞만 줄여 줘.
 					</MemoMessage>
 					<MemoMessage author="어시스턴트" time="10:58" ai>
-						끝은 그대로 두고 “만들기로 한”만 “만든”으로 줄였어요.
+						끝은 그대로 두고 “만들기로 한”만 “만든”으로 줄였습니다.
 					</MemoMessage>
 				</MemoThread>
 			</MemoCardPopover>

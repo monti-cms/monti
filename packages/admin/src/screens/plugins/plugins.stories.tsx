@@ -29,7 +29,7 @@ export const spelling = (checked: Loaded["checked"] = []): Plugin =>
 				checked.push(blocks.map((block) => ({ ...block })));
 				const slips = [
 					["몇일", "며칠"],
-					["안되요", "안 돼요"],
+					["안되요", "안 돼요"], // cms-allow-korean: a spelling check's sample mistake, kept as the mistake it is
 				] as const;
 				return blocks.flatMap((block) =>
 					slips.flatMap(([wrong, right]) => {
@@ -142,7 +142,7 @@ const body = (): Doc => ({
 	blocks: [
 		p("몇일 전에 블로그를 다시 만들기로 했다."),
 		p("목록에는 제목과 주소, 지금 상태만 남겼다."),
-		p("이렇게 하면 안되요 하는 말을 여러 번 들었다."),
+		p("이렇게 하면 안되요 하는 말을 여러 번 들었다."), // cms-allow-korean: a spelling check's sample mistake, kept as the mistake it is
 	],
 });
 

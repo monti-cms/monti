@@ -34,7 +34,7 @@ export const States: Story = {
 				<StoryCaption>filled, grows with content</StoryCaption>
 				<Textarea
 					defaultValue={
-						"검색 결과와 공유 카드에 보이는 요약이에요.\n두 줄이 넘어가면 입력창이 같이 늘어납니다.\n세 번째 줄."
+						"검색 결과와 공유 카드에 보이는 요약입니다.\n두 줄이 넘어가면 입력창이 같이 늘어납니다.\n세 번째 줄."
 					}
 				/>
 			</Stack>

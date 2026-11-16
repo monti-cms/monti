@@ -53,12 +53,12 @@ export const States: Story = {
 			<FormField data-invalid="true">
 				<FormFieldLabel htmlFor="s-bad">이름</FormFieldLabel>
 				<Input id="s-bad" mono aria-invalid defaultValue="2024-post" />
-				<FormFieldError>영문자로 시작해야 해요.</FormFieldError>
+				<FormFieldError>영문자로 시작해야 합니다.</FormFieldError>
 			</FormField>
 			<FormField data-invalid="true">
 				<FormFieldLabel htmlFor="s-many">요약 (오류 여러 개)</FormFieldLabel>
 				<Textarea id="s-many" aria-invalid rows={2} />
-				<FormFieldError errors={[{ message: "비워 둘 수 없어요." }, { message: "10자 이상 적어 주세요." }]} />
+				<FormFieldError errors={[{ message: "비워 둘 수 없습니다." }, { message: "10자 이상 적어 주세요." }]} />
 			</FormField>
 			<FormField data-disabled="true">
 				<FormFieldLabel htmlFor="s-off">작성자</FormFieldLabel>
@@ -313,7 +313,7 @@ export const FormError: Story = {
 	render: () => (
 		<Stack gap={8} className="max-w-sm">
 			<Button width="full">GitHub로 로그인</Button>
-			<FormFieldError className="mt-monti-4">octo-kim은 관리자가 아니에요.</FormFieldError>
+			<FormFieldError className="mt-monti-4">octo-kim은 관리자가 아닙니다.</FormFieldError>
 			<Button variant="ghost" className="self-start">
 				다른 계정으로 로그인
 			</Button>

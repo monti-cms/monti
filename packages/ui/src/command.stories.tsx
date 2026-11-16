@@ -90,7 +90,7 @@ export const NoMatch: Story = {
 			<Command>
 				<CommandInput placeholder="태그 찾기" value="여행" />
 				<CommandList>
-					<CommandEmpty>맞는 태그가 없어요</CommandEmpty>
+					<CommandEmpty>맞는 태그 없음</CommandEmpty>
 					<CommandGroup heading="태그">
 						<CommandItem>회고</CommandItem>
 					</CommandGroup>

@@ -324,7 +324,7 @@ export const ReadOnlyValue: Story = {
 					<FormField>
 						<FormFieldLabel>대표 이미지</FormFieldLabel>
 						<Text variant="note">autumn-trail.jpg</Text>
-						<FormFieldDescription>원문과 함께 써요.</FormFieldDescription>
+						<FormFieldDescription>원문과 함께 씁니다.</FormFieldDescription>
 					</FormField>
 					<TextRow label="요약" multiline fill="empty" />
 				</PropertyGroup>

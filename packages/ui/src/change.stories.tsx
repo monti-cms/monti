@@ -52,7 +52,7 @@ export const EditWithChoices: Story = {
 				<RadioItem value="move" label="새 이름으로 옮기기" hint="148편" />
 				<RadioItem value="empty" label="빈 칸으로 두기" />
 			</RadioGroup>
-			<ChangeNote>148편의 요약이 새 이름으로 옮겨져요.</ChangeNote>
+			<ChangeNote>148편의 요약이 새 이름으로 옮겨집니다.</ChangeNote>
 		</ChangeGroup>
 	),
 };
