@@ -35,7 +35,7 @@ function FolderTabsList({
 		<TabsPrimitive.List
 			data-slot="folder-tabs-list"
 			className={cn(
-				"relative z-1 -mb-px flex items-end gap-monti-4 overflow-x-auto overflow-y-hidden [--folder-tab-floor:calc(var(--folder-tab-grip)+var(--folder-tab-gap)*2+1.4*var(--monti-text-body-size)+0.6*var(--monti-text-caption-size)+1.75rem+2px)] [--folder-tab-gap:0.5rem] [--folder-tab-grip:0.875rem] [&>:has([data-slot=count])]:min-w-(--folder-tab-floor) [&>:not([data-slot=folder-tabs-add])]:shrink",
+				"relative z-1 -mb-px flex items-end gap-monti-4 overflow-x-auto overflow-y-hidden [&>:has([data-digits='2'])]:[--folder-tab-digits:2] [&>:has([data-digits='3'])]:[--folder-tab-digits:3] [&>:has([data-slot=count])]:min-w-[calc(0.875rem_+_1rem_+_1.4*var(--monti-text-body-size)_+_0.6*var(--monti-text-caption-size)*var(--folder-tab-digits,1)_+_1.75rem_+_2px)] [&>:not([data-slot=folder-tabs-add])]:shrink",
 				className,
 			)}
 			onKeyDown={(event) => {
@@ -142,7 +142,7 @@ function FolderTab({
 			<TabName speaks={!locked} floor={count === undefined} cell={nameCell}>
 				{children}
 			</TabName>
-			{count !== undefined && <Count>{count}</Count>}
+			{count !== undefined && <Count data-digits={String(count).length}>{count}</Count>}
 			{locked && <Locked role="img" aria-label={locked} className="size-3 text-monti-faint" />}
 		</TabsPrimitive.Tab>
 	);

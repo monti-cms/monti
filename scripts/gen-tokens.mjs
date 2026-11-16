@@ -508,6 +508,28 @@ function declarations(tokens) {
 }
 
 /**
+ * A code hue is its own: at least 25 degrees of oklch hue from the status colours (danger, warning, success), in each mode, so a type or a number never reads
+ * as an error, a warning or a pass. One line each, naming the token, the mode and the status.
+ */
+export function codeHueProblems(json) {
+	const problems = [];
+	const resolve = colorResolver(json, "code hue");
+	for (const mode of ["light", "dark"]) {
+		for (const { name } of json.color.tokens.filter((token) => token.name.startsWith("code-"))) {
+			const hue = oklchHue(resolve(name, mode));
+			for (const status of ["fg-danger", "fg-warning", "fg-success"]) {
+				const gap = hueGap(hue, oklchHue(resolve(status, mode)));
+				if (gap < 25)
+					problems.push(
+						`${name} (${mode}): hue ${hue.toFixed(0)} is ${gap.toFixed(0)} degrees from ${status}, under 25`,
+					);
+			}
+		}
+	}
+	return problems;
+}
+
+/**
  * What breaks a rule of the design system, one line each, naming the role:
  * - a text role people must read is under 4.5:1 on its ground, in either mode (`NOT_READ` is left out);
  * - a value is declared twice: a name twice in one mode's block (a token written twice in the JSON), or a role repeated in the dark block with the
@@ -549,20 +571,7 @@ export function tokenProblems(json, tokens) {
 		}
 	}
 
-	// A code hue is its own: at least 25 degrees of oklch hue from the status colours, in each mode, so a type or a number never reads as an error, a
-	// warning or a pass.
-	for (const mode of ["light", "dark"]) {
-		for (const { name } of json.color.tokens.filter((token) => token.name.startsWith("code-"))) {
-			const hue = oklchHue(resolve(name, mode));
-			for (const status of ["fg-danger", "fg-warning", "fg-success"]) {
-				const gap = hueGap(hue, oklchHue(resolve(status, mode)));
-				if (gap < 25)
-					problems.push(
-						`${name} (${mode}): hue ${hue.toFixed(0)} is ${gap.toFixed(0)} degrees from ${status}, under 25`,
-					);
-			}
-		}
-	}
+	problems.push(...codeHueProblems(json));
 
 	const blocks = declarations(tokens);
 	const light = new Map();

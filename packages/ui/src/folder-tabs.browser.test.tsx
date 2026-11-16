@@ -39,3 +39,37 @@ it("the ring of the box under the tabs is painted over its rows: a group row wit
 	const top = document.elementFromPoint(panel.getBoundingClientRect().left + 2, row.getBoundingClientRect().top + 4);
 	expect(panel.contains(top) && top !== panel).toBe(true);
 });
+
+it("a shrunk tab with a two-digit count keeps its grip and count whole and one letter of its name before the ellipsis", async () => {
+	render(
+		<div style={{ width: 300 }}>
+			<FolderTabs defaultValue="0">
+				<FolderTabsList>
+					{["아주 긴 이름의 첫 탭", "아주 긴 이름의 둘째 탭", "아주 긴 이름의 셋째 탭", "아주 긴 이름의 넷째 탭"].map(
+						(name, at) => (
+							<FolderTab key={name} value={String(at)} count={10 + at}>
+								{name}
+							</FolderTab>
+						),
+					)}
+				</FolderTabsList>
+			</FolderTabs>
+		</div>,
+	);
+	await expect.element(page.getByRole("tab").first()).toBeVisible();
+	const tabs = page.getByRole("tab").elements() as HTMLElement[];
+	expect(tabs).toHaveLength(4);
+	for (const tab of tabs) {
+		const name = tab.querySelector<HTMLElement>(".truncate") as HTMLElement;
+		expect(name.scrollWidth).toBeGreaterThan(name.clientWidth);
+		const letter = document.createRange();
+		letter.setStart(name.firstChild as Text, 0);
+		letter.setEnd(name.firstChild as Text, 1);
+		expect(letter.getBoundingClientRect().right, tab.textContent ?? "").toBeLessThanOrEqual(
+			name.getBoundingClientRect().right - 4,
+		);
+		const count = tab.querySelector("[data-slot=count]") as HTMLElement;
+		expect(count.getBoundingClientRect().right).toBeLessThanOrEqual(tab.getBoundingClientRect().right);
+		expect(count.scrollWidth).toBeLessThanOrEqual(count.clientWidth + 1);
+	}
+});
