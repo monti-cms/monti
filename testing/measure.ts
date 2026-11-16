@@ -11,7 +11,7 @@
  *   what was on the page before the focus. A ring that is set and unset in one class list (`outline-none` beside `outline-2`) draws nothing.
  *
  * `measure` looks at everything on the page that can be pressed or focused, focuses each in turn, and says what is off, one line each. What is off on
- * purpose is in `ALLOWED`, by the part's `data-slot`, with its reason.
+ * purpose is in `ALLOWED`, by the part's `data-slot` (or, for a site block's own markup, its class), with its reason.
  */
 
 /** What a person presses. */
@@ -24,8 +24,11 @@ const HEIGHTS = [24, 28, 32, 36];
 
 export type Rule = "height" | "hit" | "corner" | "ring" | "focus";
 
-/** What is off on purpose: a part's `data-slot` (or `tag` for a bare element), the rules it is let off, and why. */
-export const ALLOWED: { slot: string; rules: Rule[]; why: string }[] = [
+/**
+ * What is off on purpose: a part's `data-slot` (or `tag` for a bare element), the rules it is let off, and why. `drawn` names the same part where a
+ * site block draws it in its own markup (a read-only body draws the site's blocks live), which carries the site's classes, not the admin's slots.
+ */
+export const ALLOWED: { slot: string; drawn?: string; rules: Rule[]; why: string }[] = [
 	{
 		slot: "status-bar-cell",
 		rules: ["height"],
@@ -38,8 +41,9 @@ export const ALLOWED: { slot: string; rules: Rule[]; why: string }[] = [
 	},
 	{
 		slot: "folder-tab",
+		drawn: ".monti-block-tabs-tab",
 		rules: ["corner"],
-		why: "a folder tab is the top of the card under it and has the card's corner",
+		why: "a folder tab (the admin's, or the site's tabs block drawn the same way) is the top of the card under it and has the card's corner",
 	},
 	...[
 		"resize-corner",
@@ -96,7 +100,11 @@ export function nameOf(element: Element) {
 }
 const slotOf = (element: Element) => element.getAttribute("data-slot") ?? element.tagName.toLowerCase();
 const allowed = (element: Element, rule: Rule) =>
-	ALLOWED.some((each) => each.slot === slotOf(element) && each.rules.includes(rule));
+	ALLOWED.some(
+		(each) =>
+			(each.slot === slotOf(element) || (each.drawn !== undefined && element.matches(each.drawn))) &&
+			each.rules.includes(rule),
+	);
 
 const NOT_A_COLOUR = /^(transparent|rgba\([^)]*,\s*0\)|[a-z-]+\([^)]*\/\s*0%?\))$/;
 /** Whether a computed colour draws nothing. */

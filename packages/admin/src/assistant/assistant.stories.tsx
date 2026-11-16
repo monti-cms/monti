@@ -482,9 +482,9 @@ export const Answered: Story = {
 	loaders: site({ script: found }),
 	play: async ({ canvasElement }) => {
 		const page = await screen(canvasElement);
-		await openPanel(page);
+		const panel = within(await openPanel(page));
 		await say(page, "요약이 비어 있는 글 찾아 줘");
-		await page.findByRole("button", { name: "셋째 글" }, wait);
+		await panel.findByRole("link", { name: "셋째 글" }, wait);
 	},
 };
 
@@ -712,9 +712,9 @@ export const PastConversations: Story = {
 	}),
 	play: async ({ canvasElement }) => {
 		const page = await screen(canvasElement);
-		await openPanel(page);
+		const panel = within(await openPanel(page));
 		await say(page, "요약이 비어 있는 글 찾아 줘");
-		await page.findByRole("button", { name: "셋째 글" }, wait);
+		await panel.findByRole("link", { name: "셋째 글" }, wait);
 		await userEvent.click(page.getByRole("button", { name: "새 대화" }));
 		await say(page, "둘 다 요약 채워 줘");
 		await page.findByRole("button", { name: "2건 적용" }, wait);
