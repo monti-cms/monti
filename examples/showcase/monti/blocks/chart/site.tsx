@@ -176,12 +176,12 @@ function Legend({ spec }: { spec: NormalizedChartSpec }) {
  * A chart (` ```chart `): the old block's text read by its own parser (`dsl.ts`) and drawn on the server as SVG, with no script. Text that does not
  * read stays its source on the page; the editor says why under its field, and the publish to-do list too.
  */
-export function Chart({ attrs }: BlockProps) {
+export function Chart({ attrs, lang }: BlockProps) {
 	const source = typeof attrs.source === "string" ? attrs.source : "";
 	if (source.trim() === "") return null;
 	const { spec } = normalizeChartDsl(parseChartDsl(source));
 	return (
-		<figure className="monti-block-chart" data-kind={spec?.type}>
+		<figure className="monti-block-chart" data-kind={spec?.type} lang={lang}>
 			<style href="monti-block-chart" precedence="monti-blocks">
 				{style}
 			</style>

@@ -91,6 +91,7 @@ export function CodeExplorerView({
 	panels,
 	initial,
 	labels = DEFAULT_LABELS,
+	lang,
 }: {
 	/** The tree built from the paths (`buildTree`). */
 	readonly tree: readonly TreeNode[];
@@ -99,6 +100,8 @@ export function CodeExplorerView({
 	/** `index` of the file shown first, or `null` when no file has code (only the tree is shown). */
 	readonly initial: number | null;
 	readonly labels?: CodeExplorerLabels;
+	/** The source's language, when the explorer keeps the source's words in a translation. */
+	readonly lang?: string;
 }) {
 	const treeId = useId();
 	const root = useRef<HTMLDivElement>(null);
@@ -241,6 +244,7 @@ export function CodeExplorerView({
 		<div
 			ref={root}
 			className="monti-block-code-explorer"
+			lang={lang}
 			data-nav-open={navOpen || undefined}
 			data-tree-only={currentFile ? undefined : ""}
 		>

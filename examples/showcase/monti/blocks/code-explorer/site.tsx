@@ -25,7 +25,7 @@ function fileOf(block: Block): { path: string; code: boolean } | undefined {
  *   path taken already (the first wins) or both a file and a folder, and a folder entry with code. One with no code holds nothing and is dropped.
  * - With no code block that has a path, the children are drawn as they are.
  */
-function CodeExplorerDrawing({ block, attrs, locale, children }: BlockProps & { children?: ReactNode }) {
+function CodeExplorerDrawing({ block, attrs, locale, lang, children }: BlockProps & { children?: ReactNode }) {
 	const items = Children.toArray(children);
 	const files = (block.children ?? []).map(fileOf);
 	const entries = files.flatMap((file, index) => (file ? [{ item: index, ...file }] : []));
@@ -42,7 +42,7 @@ function CodeExplorerDrawing({ block, attrs, locale, children }: BlockProps & { 
 	const rest = items.filter((_, index) => !files[index] || kept.has(index));
 	return (
 		<>
-			<CodeExplorerView tree={nodes} panels={panels} initial={initial} labels={wordsIn(locale)} />
+			<CodeExplorerView lang={lang} tree={nodes} panels={panels} initial={initial} labels={wordsIn(locale)} />
 			{rest}
 		</>
 	);

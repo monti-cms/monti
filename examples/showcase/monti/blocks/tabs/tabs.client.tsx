@@ -10,10 +10,13 @@ export function TabsView({
 	labels,
 	panels,
 	defaultIndex = 0,
+	lang,
 }: {
 	readonly labels: readonly string[];
 	readonly panels: readonly ReactNode[];
 	readonly defaultIndex?: number;
+	/** The source's language, when the tabs keep the source's words in a translation. */
+	readonly lang?: string;
 }) {
 	const id = useId();
 	const [active, setActive] = useState(defaultIndex);
@@ -40,7 +43,7 @@ export function TabsView({
 	};
 
 	return (
-		<div className="monti-block-tabs">
+		<div className="monti-block-tabs" lang={lang}>
 			<div className="monti-block-tabs-list" role="tablist" aria-orientation="horizontal">
 				{labels.map((label, index) => (
 					<button

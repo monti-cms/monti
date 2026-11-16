@@ -32,9 +32,12 @@ type State = { readonly svg: string | null; readonly error: string | null } | nu
  */
 export function MermaidView({
 	source,
+	lang,
 	onError,
 }: {
 	source: string;
+	/** The source's language, when the diagram keeps the source's words in a translation. */
+	lang?: string;
 	/** In the editor: the reason the source does not read (or `null`), said under its field; the last drawing stays meanwhile (the old block's). */
 	onError?: (error: string | null) => void;
 }) {
@@ -72,7 +75,7 @@ export function MermaidView({
 	const svg = state?.svg ?? null;
 	const error = onError ? null : (state?.error ?? null);
 	return (
-		<figure className="monti-block-mermaid" data-state={svg ? "ready" : error ? "error" : "loading"}>
+		<figure className="monti-block-mermaid" lang={lang} data-state={svg ? "ready" : error ? "error" : "loading"}>
 			{svg ? (
 				// biome-ignore lint/security/noDangerouslySetInnerHtml: SVG sanitized by mermaid with `securityLevel: "strict"`
 				<div className="monti-block-mermaid-diagram" dangerouslySetInnerHTML={{ __html: svg }} />

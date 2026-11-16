@@ -15,15 +15,15 @@ export function drawFormula(source: string): { html: string } | { error: string 
  * A formula (` ```math `): drawn on the server by KaTeX, so the page needs no script for it. One that does not read stays its source, with the reason
  * under it. KaTeX's own stylesheet comes with `math.css`.
  */
-function MathBlockDrawing({ attrs }: BlockProps) {
+function MathBlockDrawing({ attrs, lang }: BlockProps) {
 	const source = typeof attrs.source === "string" ? attrs.source : "";
 	if (source.trim() === "") return null;
 	const drawn = drawFormula(source);
 	return "html" in drawn ? (
 		// biome-ignore lint/security/noDangerouslySetInnerHtml: KaTeX's own markup, made from the formula with no HTML of the writer's in it (`trust` is off).
-		<div className="monti-block-math" dangerouslySetInnerHTML={{ __html: drawn.html }} />
+		<div className="monti-block-math" lang={lang} dangerouslySetInnerHTML={{ __html: drawn.html }} />
 	) : (
-		<figure className="monti-block-math" data-state="error">
+		<figure className="monti-block-math" data-state="error" lang={lang}>
 			<pre className="monti-block-math-source">
 				<code>{source}</code>
 			</pre>

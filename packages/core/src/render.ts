@@ -31,6 +31,8 @@ export type BlockProps = {
 	anchor?: string;
 	/** The entry's language (`ko`, `en-US`), when the site gave it: the words a block draws of its own (a callout's kind) are in it. */
 	locale?: string;
+	/** The source's language when this block keeps the source's words in an entry of another language; the component puts it on its root element. */
+	lang?: string;
 };
 /** What a mark's `Site` component gets: the mark, with the text it wraps as `children`, and the entry's language when the site gave it. */
 export type MarkProps = { mark: Mark; locale?: string };
@@ -53,7 +55,7 @@ export type RenderOptions<Node> = {
 	locale?: string;
 	/**
 	 * The site's source language. A translation's block that keeps or follows its source (`link.state` `keepSource`, `followSource`) is the
-	 * source's words in an entry of another language: it is drawn in an element that says so with `lang`, so a screen reader reads it in that
+	 * source's words in an entry of another language: it carries `lang` on its own root element (no element is added around it), so a screen reader reads it in that
 	 * language and the browser picks its fonts and hyphens by it.
 	 */
 	sourceLocale?: string;
@@ -192,7 +194,12 @@ export function renderDocument<Node>(doc: Doc, options: RenderOptions<Node>): (N
 	};
 
 	/** The plain HTML of a core block with no `Site` component of the site's own. */
-	const plain = (block: Block, inner: unknown[]): Node | null | undefined => {
+	const plain = (block: Block, inner: unknown[], lang?: string): Node | null | undefined => {
+		// `lang` goes on the block's own root element (the one keyed by its id), so it adds no element and no selector of the site stops matching.
+		const h: CreateElement<Node> = lang
+			? (type, props, ...children) =>
+					options.createElement(type, props?.key === block.id ? { ...props, lang } : props, ...children)
+			: options.createElement;
 		const attrs = block.attrs ?? {};
 		const key = block.id;
 		// An aligned paragraph or heading says so in its style (doc 03, the block menu's "align"); left is the default and adds nothing.
@@ -224,6 +231,7 @@ export function renderDocument<Node>(doc: Doc, options: RenderOptions<Node>): (N
 					colors: options.code,
 					locale: options.locale,
 					lineClasses: options.code?.lineClasses,
+					lang,
 				});
 			case "divider":
 				return h("hr", { key });
@@ -294,14 +302,8 @@ export function renderDocument<Node>(doc: Doc, options: RenderOptions<Node>): (N
 		source !== options.locale &&
 		block.type !== "footnote" &&
 		(block.link?.state === "keepSource" || block.link?.state === "followSource");
-	// An element of no box of its own around the block: the block's layout, its parent's and its neighbours' stay as they are.
-	const draw = (block: Block): Node | null => {
-		const drawn = drawBlock(block);
-		return drawn !== null && inSource(block)
-			? h("div", { key: block.id, lang: source, style: { display: "contents" } }, drawn)
-			: drawn;
-	};
-	const drawBlock = (block: Block): Node | null => {
+	function draw(block: Block): Node | null {
+		const lang = inSource(block) ? source : undefined;
 		const inner = block.children
 			? block.children.map(draw).filter((node) => node !== null)
 			: (block.content ?? []).map(inline);
@@ -314,14 +316,15 @@ export function renderDocument<Node>(doc: Doc, options: RenderOptions<Node>): (N
 				...(block.type === "image" ? { image: siteImage(attrs, options.media) } : {}),
 				...(block.type === "heading" ? { anchor: anchors.get(block.id) } : {}),
 				...(options.locale ? { locale: options.locale } : {}),
+				...(lang ? { lang } : {}),
 			};
 			return h(Site, { key: block.id, ...props }, ...inner);
 		}
-		const drawn = plain(block, inner);
+		const drawn = plain(block, inner, lang);
 		if (drawn === undefined && process.env.NODE_ENV !== "production")
 			console.warn(`Monti: no block definition for "${block.type}" (${block.id}); it is not drawn.`);
 		return drawn ?? null;
-	};
+	}
 	// The footnotes go together at the end, under a rule, in the order of their numbers; one no text points at goes last.
 	const order = (block: Block) => numbers.get(String(block.attrs?.id)) ?? Number.POSITIVE_INFINITY;
 	const notes = doc.blocks.filter((block) => block.type === "footnote").sort((a, b) => order(a) - order(b));
