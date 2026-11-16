@@ -301,7 +301,7 @@ export function ReviewScreen({ id, go }: { id: string; go: (route: Route) => voi
 																				<CompareRow
 																					key={block.id}
 																					name={t("review.block", { number: index + 1 })}
-																					source={<ReadBody doc={read} />}
+																					source={<ReadBody doc={read} muted ground="tool" />}
 																					translation={
 																						proposed && blockWords(proposed).text !== blockWords(block).text ? (
 																							<BodySide block={proposed} other={null} side="after" />
@@ -372,7 +372,9 @@ export function ReviewScreen({ id, go }: { id: string; go: (route: Route) => voi
 																				<CompareRow
 																					key={key}
 																					name={place.name}
-																					source={<BodySide block={body.before} other={body.after} side="before" />}
+																					source={
+																						<BodySide block={body.before} other={body.after} side="before" source />
+																					}
 																					translation={<BodySide block={body.after} other={body.before} side="after" />}
 																				/>
 																			) : (
@@ -381,14 +383,14 @@ export function ReviewScreen({ id, go }: { id: string; go: (route: Route) => voi
 																					single
 																					name={place.name}
 																					translation={
-																						<>
+																						<Stack gap={20}>
 																							{body.before ? (
 																								<BodySide block={body.before} other={body.after} side="before" />
 																							) : null}
 																							{body.after ? (
 																								<BodySide block={body.after} other={body.before} side="after" />
 																							) : null}
-																						</>
+																						</Stack>
 																					}
 																				/>
 																			);

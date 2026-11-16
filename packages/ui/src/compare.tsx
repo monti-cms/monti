@@ -91,7 +91,10 @@ function CompareTitle({ className, ...props }: React.ComponentProps<"h2">) {
  * The blocks of the entry as they read: the editor's own text looks (`EditorBody` read only), so the plain elements put in (`p`, `h2`, `ul`, `pre`,
  * `table`) are drawn as the editor draws them. The app reads a body with `ReadBody`; this is for what is drawn by hand (a story, a spec).
  */
-function CompareBody({ className, ...props }: React.ComponentProps<"div">) {
+function CompareBody({
+	className,
+	...props
+}: React.ComponentProps<"div"> & { muted?: boolean; ground?: "page" | "tool"; size?: "reading" | "chat" | "card" }) {
 	return <EditorBody readOnly data-slot="compare-body" className={className} {...props} />;
 }
 

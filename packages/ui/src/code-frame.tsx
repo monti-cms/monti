@@ -30,13 +30,18 @@ function CodeFrame({ head, children, className, ...props }: React.ComponentProps
 /**
  * The code being written: the line numbers' column (`gutter`, rows of `CodeNumber`), and the text with the lines' grounds behind it (`grounds`, rows of
  * `CodeGround`, one per line as the text shows it). Every row is one 24px line, so the grounds of lines next to each other meet with no gap. The text is
- * the editor's own (`children`): what the highlighter, a rule or a closed fold put on it is styled here by its `data-` attribute.
+ * the editor's own (`children`): what the highlighter, a rule or a closed fold put on it is styled here by its `data-` attribute. The words take the ink of
+ * the body they stand in (a source read beside its translation is quieter). `compact` is the code read outside the editor (12px, a 20px line: a comparison, a
+ * change, a translation's source, an answer; EC-01): its numbers and grounds are `compact` too.
  */
 function CodeArea({
 	gutter,
 	grounds,
 	aside,
 	picking = false,
+	compact = false,
+	wrap = false,
+	scroll,
 	children,
 }: {
 	gutter: React.ReactNode;
@@ -45,15 +50,20 @@ function CodeArea({
 	aside?: React.ReactNode;
 	/** Lines are picked by their numbers: the text's caret is hidden, the picked lines' ground shows where the action goes. */
 	picking?: boolean;
+	compact?: boolean;
+	/** Long lines wrap instead of scrolling sideways (an answer's code). */
+	wrap?: boolean;
+	/** The code stands at most half the window high and scrolls past it (an answer's code). */
+	scroll?: "half";
 	children: React.ReactNode;
 }) {
 	return (
-		<div data-slot="code-area" className="flex py-monti-8">
+		<div data-slot="code-area" className={cn("flex py-monti-8", scroll === "half" && "max-h-[50vh] overflow-y-auto")}>
 			<div data-slot="code-gutter" contentEditable={false} className="flex shrink-0 select-none flex-col">
 				{gutter}
 			</div>
 			<div className="relative min-w-0 flex-1 overflow-x-auto">
-				<div className="relative w-max min-w-full">
+				<div className={cn("relative", wrap ? "w-full" : "w-max min-w-full")}>
 					<div
 						aria-hidden
 						contentEditable={false}
@@ -65,7 +75,9 @@ function CodeArea({
 						data-slot="code-text"
 						data-picking={picking ? "" : undefined}
 						className={cn(
-							"relative whitespace-pre pr-monti-16 pl-monti-8 font-mono text-monti-default text-monti-editor-code",
+							"relative pr-monti-16 pl-monti-8 font-mono text-inherit",
+							wrap ? "whitespace-pre-wrap break-words" : "whitespace-pre",
+							compact ? "text-monti-code" : "text-monti-editor-code",
 							"data-picking:caret-transparent [&>*]:outline-none [&_.ProseMirror-trailingBreak]:hidden",
 							// The site's two themes colour each piece (`--shiki-light`, `--shiki-dark` set on it by the highlighter).
 							"[&_[data-token]]:text-(--shiki-light) monti-dark:[&_[data-token]]:text-(--shiki-dark)",
@@ -90,14 +102,23 @@ function CodeArea({
 }
 
 /** Something that stands at the right end of a line of the code being written (`row`: the line's place among the lines shown, from 0). */
-function CodeAside({ row, children }: { row: number; children: React.ReactNode }) {
+function CodeAside({
+	row,
+	compact = false,
+	children,
+}: {
+	row: number;
+	/** The lines are 20px (`CodeArea compact`). */
+	compact?: boolean;
+	children: React.ReactNode;
+}) {
 	return (
 		<div
 			data-slot="code-aside"
 			contentEditable={false}
-			className="absolute right-monti-8 z-1 flex h-[24px] select-none items-center"
-			// design-allow: the line's place, from its row among the lines shown (24px each)
-			style={{ top: row * 24 }}
+			className={cn("absolute right-monti-8 z-1 flex select-none items-center", compact ? "h-[20px]" : "h-[24px]")}
+			// design-allow: the line's place, from its row among the lines shown (24px each, 20px when compact)
+			style={{ top: row * (compact ? 20 : 24) }}
 		>
 			{children}
 		</div>
@@ -114,8 +135,14 @@ const TONES =
 	"data-[tone=highlight]:bg-monti-highlight data-[tone=minus]:bg-monti-danger-muted data-[tone=plus]:bg-monti-success-muted data-[tone=lit]:bg-monti-block data-[tone=picked]:bg-monti-selection";
 
 /** One line's ground behind the text being written: one 24px row, so picked lines next to each other are one ground. */
-function CodeGround({ tone }: { tone?: CodeLineTone }) {
-	return <div data-slot="code-ground" data-tone={tone} className={cn("h-[24px] shrink-0", TONES)} />;
+function CodeGround({ tone, compact = false }: { tone?: CodeLineTone; compact?: boolean }) {
+	return (
+		<div
+			data-slot="code-ground"
+			data-tone={tone}
+			className={cn("shrink-0", compact ? "h-[20px]" : "h-[24px]", TONES)}
+		/>
+	);
 }
 
 /** Where a line stands in a fold that spans lines: its first line, a line inside it, its last line. The fold's column draws the extent as a bracket. */

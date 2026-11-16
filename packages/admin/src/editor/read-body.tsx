@@ -1,4 +1,4 @@
-import type { Block, CodeBlockSettings, Doc } from "@monti-cms/core";
+import type { Block, CodeBlockSettings, Doc, MediaQueryResult } from "@monti-cms/core";
 import { languageName, lineStarts } from "@monti-cms/core/code";
 import {
 	CHECK_MARK_PATH,
@@ -16,15 +16,27 @@ import {
 	IconButton,
 	Inline,
 	Ins,
+	StreamCaret,
 	Text,
 	TextButton,
 } from "@monti-cms/ui";
 import { ChevronDown, ChevronRight } from "@monti-cms/ui/icons";
 import { getSchema } from "@tiptap/core";
 import type { DOMOutputSpec, Mark as MarkOf, Node as NodeOf, Schema } from "@tiptap/pm/model";
-import { createElement, Fragment, type ReactNode, useContext, useEffect, useMemo, useState } from "react";
+import {
+	Component,
+	createElement,
+	Fragment,
+	type ReactNode,
+	useCallback,
+	useContext,
+	useEffect,
+	useMemo,
+	useRef,
+	useState,
+} from "react";
 import { type AdminBlockDefinition, useAdmin } from "../operations/admin-context";
-import { useRead } from "../operations/use-operation";
+import { useOperation, useRead } from "../operations/use-operation";
 import {
 	type BlockNames,
 	blockWords,
@@ -214,6 +226,7 @@ function ReadCode({
 	change,
 	kind,
 	streaming = false,
+	chat = false,
 }: {
 	code: string;
 	data: CodeData;
@@ -226,6 +239,8 @@ function ReadCode({
 	change?: CodeChange;
 	kind: ReadMark;
 	streaming?: boolean;
+	/** In an answer: words wrap, at most half the window high, with no numbers, effects or folds (the answer's code is its words). */
+	chat?: boolean;
 }) {
 	const { t } = useAdmin();
 	const [folds, setFolds] = useState<ReadonlyMap<string, boolean>>(new Map());
@@ -235,8 +250,8 @@ function ReadCode({
 	const effects = data.lines ?? [];
 	const changedLines = new Set(change?.lines ?? []);
 	const blockId = String(node?.attrs.blockId ?? "");
-	const blockFolds = node ? foldsOf(node, folds) : [];
-	const hidden = node ? hiddenLines(node, folds) : new Set<number>();
+	const blockFolds = node && !chat ? foldsOf(node, folds) : [];
+	const hidden = node && !chat ? hiddenLines(node, folds) : new Set<number>();
 	const rows = starts.map((_, line) => line).filter((line) => !hidden.has(line));
 	const toggle = (start: number, open: boolean) => setFolds((was) => new Map(was).set(foldKey(blockId, start), open));
 	const ranges: CodeRange[] = [
@@ -254,78 +269,92 @@ function ReadCode({
 		return line === effect.start ? "start" : line === effect.end - 1 ? "end" : "middle";
 	};
 	return (
-		<CodeFrame
-			head={
-				<Inline gap={8} minWidth={0}>
-					<Text variant="caption" tone="muted">
-						{language ? languageName(language) : t("editor.code.plain")}
-					</Text>
-					{data.title && !inExplorer ? (
-						<Text variant="caption" mono truncate>
-							{data.title}
+		<div data-block="codeBlock">
+			<CodeFrame
+				head={
+					<Inline gap={8} minWidth={0}>
+						<Text variant="caption" tone="muted">
+							{language ? languageName(language) : t("editor.code.plain")}
 						</Text>
-					) : null}
-					{change?.language || change?.title ? <ChangeDot label={t("compare.codeHead")} /> : null}
-				</Inline>
-			}
-		>
-			<CodeArea
-				aside={blockFolds
-					// A closed fold inside another closed fold has its first line hidden too: only the outer one says what it hides.
-					.filter(({ shown, effect }) => !shown && rows.includes(effect.start))
-					.map(({ effect }) => (
-						<CodeAside key={effect.start} row={rows.indexOf(effect.start)}>
-							<TextButton size="caption" onClick={() => toggle(effect.start, true)}>
-								{t("editor.code.folded", { n: effect.end - effect.start - 1 })}
-							</TextButton>
-						</CodeAside>
-					))}
-				gutter={rows.map((line) => {
-					const look = settings ? looksOf(settings, effects, line) : { tone: undefined, mark: undefined };
-					const fold = blockFolds.find(({ effect }) => effect.start === line);
-					return (
-						<CodeNumber
-							key={line}
-							data-line={line}
-							number={line + 1}
-							tone={look.tone}
-							mark={look.mark}
-							numbersOff={!data.lineNumbers}
-							readOnly
-							folds={blockFolds.length > 0}
-							edge={edgeOf(line)}
-							changed={changedLines.size ? (changedLines.has(line) ? t("compare.codeEffects") : "") : undefined}
-							fold={
-								fold ? (
-									<IconButton
-										size="xs"
-										label={t(fold.open ? "editor.code.foldFrom" : "editor.code.unfoldFrom", { n: line + 1 })}
-										aria-expanded={fold.open}
-										onClick={() => toggle(line, !fold.open)}
-									>
-										{fold.open ? <ChevronDown aria-hidden /> : <ChevronRight aria-hidden />}
-									</IconButton>
-								) : undefined
-							}
-						/>
-					);
-				})}
-				grounds={rows.map((line) => (
-					<CodeGround key={line} tone={settings ? looksOf(settings, effects, line).tone : undefined} />
-				))}
+						{data.title && !inExplorer ? (
+							<Text variant="caption" mono truncate>
+								{data.title}
+							</Text>
+						) : null}
+						{change?.language || change?.title ? <ChangeDot label={t("compare.codeHead")} /> : null}
+					</Inline>
+				}
 			>
-				{all.map((stretch) => {
-					const text: ReactNode = code.slice(stretch.from, stretch.to);
-					const marked = stretch.changed ? <Marked kind={kind}>{text}</Marked> : text;
-					const { style, ...attrs } = stretch.attrs;
-					return createElement(
-						"span",
-						{ key: `${stretch.from}:${stretch.to}`, ...attrs, ...(style ? { style: colourStyle(style) } : {}) },
-						stretch.wrap ? stretch.wrap(marked) : marked,
-					);
-				})}
-			</CodeArea>
-		</CodeFrame>
+				<CodeArea
+					compact
+					wrap={chat}
+					scroll={chat ? "half" : undefined}
+					aside={blockFolds
+						// A closed fold inside another closed fold has its first line hidden too: only the outer one says what it hides.
+						.filter(({ shown, effect }) => !shown && rows.includes(effect.start))
+						.map(({ effect }) => (
+							<CodeAside key={effect.start} row={rows.indexOf(effect.start)} compact>
+								<TextButton size="caption" onClick={() => toggle(effect.start, true)}>
+									{t("editor.code.folded", { n: effect.end - effect.start - 1 })}
+								</TextButton>
+							</CodeAside>
+						))}
+					gutter={
+						chat
+							? null
+							: rows.map((line) => {
+									const look = settings ? looksOf(settings, effects, line) : { tone: undefined, mark: undefined };
+									const fold = blockFolds.find(({ effect }) => effect.start === line);
+									return (
+										<CodeNumber
+											compact
+											key={line}
+											data-line={line}
+											number={line + 1}
+											tone={look.tone}
+											mark={look.mark}
+											numbersOff={!data.lineNumbers}
+											readOnly
+											folds={blockFolds.length > 0}
+											edge={edgeOf(line)}
+											changed={changedLines.size ? (changedLines.has(line) ? t("compare.codeEffects") : "") : undefined}
+											fold={
+												fold ? (
+													<IconButton
+														size="xs"
+														label={t(fold.open ? "editor.code.foldFrom" : "editor.code.unfoldFrom", { n: line + 1 })}
+														aria-expanded={fold.open}
+														onClick={() => toggle(line, !fold.open)}
+													>
+														{fold.open ? <ChevronDown aria-hidden /> : <ChevronRight aria-hidden />}
+													</IconButton>
+												) : undefined
+											}
+										/>
+									);
+								})
+					}
+					grounds={
+						chat
+							? null
+							: rows.map((line) => (
+									<CodeGround compact key={line} tone={settings ? looksOf(settings, effects, line).tone : undefined} />
+								))
+					}
+				>
+					{all.map((stretch) => {
+						const text: ReactNode = code.slice(stretch.from, stretch.to);
+						const marked = stretch.changed ? <Marked kind={kind}>{text}</Marked> : text;
+						const { style, ...attrs } = stretch.attrs;
+						return createElement(
+							"span",
+							{ key: `${stretch.from}:${stretch.to}`, ...attrs, ...(style ? { style: colourStyle(style) } : {}) },
+							stretch.wrap ? stretch.wrap(marked) : marked,
+						);
+					})}
+				</CodeArea>
+			</CodeFrame>
+		</div>
 	);
 }
 
@@ -386,6 +415,9 @@ type Context = {
 	current: string | null | undefined;
 	footnotes: number;
 	streaming: boolean;
+	chat: boolean;
+	/** The last words of the body, where an answer still arriving has its caret. */
+	caretAt: NodeOf | null;
 };
 
 /** What an element says, with `content` where its hole is. The one place a block's element is made: the editor's own `renderHTML`. */
@@ -444,7 +476,12 @@ function drawText(node: NodeOf, context: Context, key: number) {
 			});
 		cursor.at = to;
 	}
-	return <span key={key}>{drawMarks(node, inner, context)}</span>;
+	return (
+		<span key={key}>
+			{drawMarks(node, inner, context)}
+			{context.caretAt === node ? <StreamCaret /> : null}
+		</span>
+	);
 }
 
 /** The box at a checklist item's start, a mark only (the body is read). */
@@ -469,6 +506,21 @@ const checkOf = (checked: boolean, label: string) =>
 			),
 		),
 	);
+
+/** What a block the admin does not know says: its type after "Unknown block", or only that when it has none. */
+const unknownLabel = (t: Context["t"], type: string) =>
+	type ? t("editor.unknownBlock", { type }) : t("editor.unknownBlock.bare");
+
+/** A block that cannot be drawn (its drawing threw) is its box, and the rest of the body stands. */
+class Guard extends Component<{ fallback: ReactNode; children: ReactNode }, { failed: boolean }> {
+	state = { failed: false };
+	static getDerivedStateFromError() {
+		return { failed: true };
+	}
+	render() {
+		return this.state.failed ? this.props.fallback : this.props.children;
+	}
+}
 
 /** Whether a block is drawn as a box with its name and values (no drawing of the admin's own for it): then its name line is in the box. */
 function isBox(block: CatalogBlock, context: Context) {
@@ -516,7 +568,7 @@ function drawNode(node: NodeOf, context: Context, key: number, parent: NodeOf): 
 	}
 	try {
 		if (name === UNKNOWN) {
-			const label = context.t("editor.unknownBlock", { type: String(node.attrs.block?.type ?? "") });
+			const label = unknownLabel(context.t, String(node.attrs.block?.type ?? ""));
 			return <Box key={key} type={String(node.attrs.block?.type ?? "")} id={id} label={label} context={context} />;
 		}
 		if (name === "hardBreak" && context.cursor) context.cursor.at += 1;
@@ -592,6 +644,7 @@ function drawBlock(
 				change={context.marks?.code.get(id)}
 				kind={context.kind}
 				streaming={context.streaming}
+				chat={context.chat}
 			/>
 		);
 	}
@@ -617,7 +670,11 @@ function drawBlock(
 		const whole: Block = context.blocks.get(id) ?? { id, type: block.type, attrs: data };
 		const attrs = whole.attrs ?? data;
 		const children = block.holds === "nothing" ? undefined : drawChildren(node, context);
-		const drawn = createElement(Site, { block: whole, attrs }, children);
+		const drawn = (
+			<Guard fallback={<Box type={block.type} id={id} label={context.t(block.label)} context={context} />}>
+				{createElement(Site, { block: whole, attrs }, children)}
+			</Guard>
+		);
 		return (
 			<div key={key} data-block={block.type}>
 				{drawn}
@@ -629,6 +686,7 @@ function drawBlock(
 						parts={words}
 						kind={context.kind}
 						streaming={context.streaming}
+						chat={context.chat}
 					/>
 				) : null}
 			</div>
@@ -642,6 +700,26 @@ function drawBlock(
 }
 
 // --- The body --------------------------------------------------------------------------------------------------------------------------------
+
+/** The ids of the library files the blocks show, at any depth. */
+function mediaOf(blocks: readonly Block[], found: string[] = []): string[] {
+	for (const block of blocks) {
+		const media = block.attrs?.media;
+		if (typeof media === "string" && media !== "" && !found.includes(media)) found.push(media);
+		if (block.children) mediaOf(block.children, found);
+	}
+	return found;
+}
+
+/** The last words of a body outside its code: where the caret of an answer still arriving stands. */
+function lastWords(body: NodeOf) {
+	let last: NodeOf | null = null;
+	body.descendants((node, _at, parent) => {
+		if (node.isText && parent?.type.name !== nodeName("codeBlock")) last = node;
+		return true;
+	});
+	return last;
+}
 
 /** One schema for the site's blocks, shared by every body read: made once per catalog. */
 const schemas = new WeakMap<Catalog, WeakMap<ReadonlyMap<string, AdminBlockDefinition>, Schema>>();
@@ -663,7 +741,27 @@ function schemaOf(kit: Catalog, definitions: ReadonlyMap<string, AdminBlockDefin
  */
 export function ReadBodies({ children }: { children: ReactNode }) {
 	const kit = useRead<Catalog>("blocks.catalog", {}).data;
-	const value = useMemo(() => ({ kit }), [kit]);
+	const { run } = useOperation<MediaQueryResult>("media.query");
+	const [files, setFiles] = useState<readonly { id: string; name: string }[]>([]);
+	// The files the bodies name, asked in the same moment and read together, each once.
+	const asked = useRef(new Set<string>());
+	const waiting = useRef(new Set<string>());
+	const want = useCallback(
+		(media: string) => {
+			if (asked.current.has(media)) return;
+			asked.current.add(media);
+			waiting.current.add(media);
+			queueMicrotask(async () => {
+				const ids = [...waiting.current];
+				waiting.current.clear();
+				if (ids.length === 0) return;
+				const answer = await run({ ids });
+				if (answer.ok) setFiles((were) => [...were, ...answer.body.items.map(({ id, name }) => ({ id, name }))]);
+			});
+		},
+		[run],
+	);
+	const value = useMemo(() => ({ kit: kit ?? null, files, want }), [kit, files, want]);
 	return (
 		<ReadCatalog.Provider value={value}>
 			{children}
@@ -697,6 +795,7 @@ export function ReadBody({
 	mark = "changed",
 	size = "reading",
 	muted = false,
+	ground = "page",
 	streaming = false,
 	current,
 	files,
@@ -705,13 +804,15 @@ export function ReadBody({
 	doc: Doc;
 	marks?: ReadMarks;
 	mark?: ReadMark;
-	size?: "reading" | "chat";
+	size?: "reading" | "chat" | "card";
 	/** In the quieter ink: a source read beside its translation. */
 	muted?: boolean;
+	/** The ground it stands on: on the tool ground (a source beside its translation) its code and boxes are one step darker. */
+	ground?: "page" | "tool";
 	/** The text is still arriving (an answer being written): its code is not coloured until it is whole. */
 	streaming?: boolean;
 	current?: string | null;
-	/** The library's files the body shows, to name a picture or a file by its name. */
+	/** The library's files the body shows, to name a picture or a file by its name; read here when not given. */
 	files?: readonly { id: string; name: string }[];
 	/** Opens a place of the admin an address in the text names (`#/…`); without it such an address is words. */
 	onOpen?: (address: string) => void;
@@ -720,9 +821,14 @@ export function ReadBody({
 	const shared = useContext(ReadCatalog);
 	const own = useRead<Catalog>("blocks.catalog", {}, { skip: shared !== null }).data;
 	const kit = (shared ? shared.kit : own) ?? undefined;
-	const known = (files ?? []).map((file) => `${file.id}\u0000${file.name}`).join("\u0001");
+	// A picture or a file is named by its file; the files not given with the body are read, as the editor reads them (once for all the bodies under
+	// `ReadBodies`).
+	const wanted = files || shared ? [] : mediaOf(doc.blocks);
+	const read = useRead<MediaQueryResult>("media.query", { ids: wanted }, { skip: wanted.length === 0 }).data?.items;
+	const shown = files ?? (shared ? shared.files : read);
+	const known = (shown ?? []).map((file) => `${file.id}\u0000${file.name}`).join("\u0001");
 	// biome-ignore lint/correctness/useExhaustiveDependencies: the files are followed by what they are (`known`), not by the array's identity
-	const names = useMemo(() => (kit ? blockNamesOf(kit, t, files) : undefined), [kit, t, known]);
+	const names = useMemo(() => (kit ? blockNamesOf(kit, t, shown, shared?.want) : undefined), [kit, t, known]);
 	const drawn = useMemo(() => {
 		if (doc.blocks.length === 0) return null;
 		// Without the catalog (still being read, or it failed) the body is its words, so nothing is left blank.
@@ -767,6 +873,9 @@ export function ReadBody({
 			current,
 			footnotes: 0,
 			streaming,
+			chat: size === "chat",
+			// An answer that ends in code has its caret after the code (below), not in the words above it.
+			caretAt: streaming && body && body.lastChild?.type.name !== nodeName("codeBlock") ? lastWords(body) : null,
 		};
 		const top: ReactNode[] = [];
 		const parent = body ?? ({ type: { name: "doc" } } as NodeOf);
@@ -778,8 +887,16 @@ export function ReadBody({
 			} catch {
 				const type = context.blocks.get(id)?.type ?? "";
 				// biome-ignore lint/suspicious/noArrayIndexKey: the blocks of one body, in order
-				block = <Box key={index} type={type} id={id} label={t("editor.unknownBlock", { type })} context={context} />;
+				block = <Box key={index} type={type} id={id} label={unknownLabel(t, type)} context={context} />;
 			}
+			// An answer that ends in code has its caret after the code: the words it has stand above.
+			if (streaming && index === made.length - 1 && node?.type.name === nodeName("codeBlock"))
+				block = (
+					<Fragment key={id || "last"}>
+						{block}
+						<StreamCaret />
+					</Fragment>
+				);
 			top.push(
 				current === undefined ? (
 					block
@@ -791,12 +908,14 @@ export function ReadBody({
 			);
 		});
 		return top;
-	}, [kit, doc, definitions, names, marks, mark, onOpen, t, current, streaming]);
+	}, [kit, doc, definitions, names, marks, mark, onOpen, t, current, streaming, size]);
 	if (!drawn) return null;
 	return (
-		<EditorBody readOnly muted={muted} size={size}>
-			{drawn}
+		<>
+			<EditorBody readOnly muted={muted} ground={ground} size={size}>
+				{drawn}
+			</EditorBody>
 			{shared ? null : <MarkLooks />}
-		</EditorBody>
+		</>
 	);
 }

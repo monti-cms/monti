@@ -1,134 +1,26 @@
 import type { Block, Doc } from "@monti-cms/core";
 import { describe, expect, it } from "vitest";
+import { userEvent } from "vitest/browser";
 import { scene } from "../../test/scene";
 import * as read from "./read-body.stories";
-
-const text = (value: string) => ({ type: "text" as const, text: value });
-const paragraph = (id: string, ...content: NonNullable<Block["content"]>): Block => ({
-	id,
-	type: "paragraph",
-	content,
-});
-const code = (id: string, lines: string): Block => ({
-	id,
-	type: "codeBlock",
-	attrs: { language: "ts", title: "src/counter.ts", lineNumbers: true, lines: [{ name: "plus", start: 0, end: 1 }] },
-	content: [{ type: "text", text: lines }],
-});
-
-const FOLDED: Block = {
-	id: "c2",
-	type: "codeBlock",
-	attrs: {
-		language: "ts",
-		rules: [{ scope: "document", name: "bold", pattern: "count", flags: "" }],
-		lines: [{ name: "collapse", start: 1, end: 4 }],
-	},
-	content: [
-		{ type: "text", text: "let count = 0;\nfunction reset() {\n  count = 0;\n}\nconst " },
-		{ type: "text", text: "add", marks: [{ type: "codeTip", text: "더하기" }] },
-		{ type: "text", text: " = () => count++;" },
-	],
-};
-
-const MINE: Doc = {
-	type: "doc",
-	blocks: [
-		paragraph(
-			"p1",
-			text("버튼을 누를 때마다 "),
-			{ type: "text", text: "수를 둘 올린다", marks: [{ type: "bold" }] },
-			text(" · "),
-			{ type: "text", text: "문서", marks: [{ type: "link", href: "https://example.dev/docs" }] },
-			text(" "),
-			{ type: "text", text: "npm", marks: [{ type: "code" }] },
-		),
-		{ id: "h1", type: "heading", attrs: { level: 3 }, content: [{ type: "text", text: "새 제목" }] },
-		code("c1", "let count = 0;\nconst add = () => count++;"),
-		{
-			id: "note",
-			type: "callout",
-			attrs: { tone: "tip", title: "알아 두세요" },
-			children: [paragraph("n1", text("콜아웃 본문입니다"))],
-		},
-		{ id: "m1", type: "math", attrs: { source: "a^2 + b^2 = c^2" } },
-		FOLDED,
-	],
-};
-const THEIRS: Doc = {
-	type: "doc",
-	blocks: [
-		paragraph(
-			"p1",
-			text("버튼을 누를 때마다 "),
-			{ type: "text", text: "수를 하나 올린다", marks: [{ type: "bold" }] },
-			text(" · "),
-			{ type: "text", text: "문서", marks: [{ type: "link", href: "https://example.dev/docs" }] },
-			text(" "),
-			{ type: "text", text: "npm", marks: [{ type: "code" }] },
-		),
-		code("c1", "let count = 0;\nconst add = () => count--;"),
-		{
-			id: "note",
-			type: "callout",
-			attrs: { tone: "tip", title: "알아 두세요" },
-			children: [paragraph("n1", text("콜아웃 본문입니다 다르게"))],
-		},
-		{ id: "m1", type: "math", attrs: { source: "a^2 + b^2 = d^2" } },
-		FOLDED,
-	],
-};
+import {
+	BLOCKS,
+	BROKEN,
+	FOLDED,
+	IMAGES,
+	MINE,
+	MOVED_A,
+	MOVED_B,
+	paragraph,
+	THEIRS,
+	TODO,
+	text,
+} from "./test/read-body-docs";
 
 const Compared = scene<read.Loaded>({ loaders: read.read(MINE, THEIRS) }, read.default);
 
-const code2 = (id: string, title: string, text: string): Block => ({
-	id,
-	type: "codeBlock",
-	attrs: { language: "ts", title },
-	content: [{ type: "text", text }],
-});
-const BLOCKS: Doc = {
-	type: "doc",
-	blocks: [
-		{
-			id: "tabs",
-			type: "tabs",
-			children: [
-				{ id: "t1", type: "tab", attrs: { label: "npm" }, children: [paragraph("t1p", text("npm install monti"))] },
-				{ id: "t2", type: "tab", attrs: { label: "pnpm" }, children: [paragraph("t2p", text("pnpm add monti"))] },
-			],
-		},
-		{
-			id: "explorer",
-			type: "codeExplorer",
-			children: [code2("e1", "src/app.ts", "export const app = 1;"), code2("e2", "src/db.ts", "export const db = 2;")],
-		},
-		{
-			id: "columns",
-			type: "columns",
-			children: [
-				{ id: "k1", type: "column", children: [paragraph("k1p", text("왼쪽 단"))] },
-				{ id: "k2", type: "column", children: [paragraph("k2p", text("오른쪽 단"))] },
-			],
-		},
-	],
-};
 const Blocks = scene<read.Loaded>({ loaders: read.read(BLOCKS, null) }, read.default);
 
-const TODO: Doc = {
-	type: "doc",
-	blocks: [
-		{
-			id: "todo",
-			type: "checklist",
-			children: [
-				{ id: "i1", type: "listItem", attrs: { checked: true }, content: [text("초안 쓰기")] },
-				{ id: "i2", type: "listItem", content: [text("발행하기")] },
-			],
-		},
-		paragraph("p", { type: "text", text: "문서", marks: [{ type: "link", href: "#/c/post/abc" }] }),
-	],
-};
 const Todo = scene<read.Loaded>({ loaders: read.read(TODO, null) }, read.default);
 
 const Failed = scene<read.Loaded>({ loaders: read.read(MINE, THEIRS, { failCatalog: true }) }, read.default);
@@ -137,24 +29,45 @@ const Streaming = scene<read.Loaded>(
 	read.default,
 );
 
-const MOVED_A: Doc = { type: "doc", blocks: [paragraph("a", text("첫째 문단")), paragraph("b", text("둘째 문단"))] };
-const MOVED_B: Doc = { type: "doc", blocks: [paragraph("b", text("둘째 문단")), paragraph("a", text("첫째 문단"))] };
 const Moved = scene<read.Loaded>({ loaders: read.read(MOVED_A, MOVED_B) }, read.default);
 
-const BROKEN: Doc = {
-	type: "doc",
-	blocks: [
-		paragraph("ok", text("그려지는 문단")),
-		{ id: "bad", type: "table", attrs: { rows: [null] } } as unknown as Block,
-	],
-};
 const Broken = scene<read.Loaded>({ loaders: read.read(BROKEN, null) }, read.default);
 
-const IMAGES = (alt: string): Doc => ({
-	type: "doc",
-	blocks: [{ id: "img", type: "image", attrs: { media: "m1", alt } }],
-});
 const Pictures = scene<read.Loaded>({ loaders: read.read(IMAGES("빌드 시간"), IMAGES("속도")) }, read.default);
+
+const Chat = scene<read.Loaded>({ loaders: read.read(MINE, null, { size: "chat" }) }, read.default);
+const Lifted = scene<read.Loaded>(
+	{
+		loaders: read.read({ type: "doc", blocks: [...MINE.blocks, ...IMAGES("빌드 시간").blocks] }, null, {
+			muted: true,
+			ground: "tool",
+		}),
+	},
+	read.default,
+);
+const Reading = scene<read.Loaded>({ loaders: read.read(MINE, null) }, read.default);
+const StreamingChat = scene<read.Loaded>(
+	{ loaders: read.read({ type: "doc", blocks: MINE.blocks.slice(0, 2) }, null, { size: "chat", streaming: true }) },
+	read.default,
+);
+const TodoInEditable = scene<read.Loaded>({ loaders: read.read(TODO, null, { inEditable: true }) }, read.default);
+const Thrown = scene<read.Loaded>(
+	{
+		loaders: read.read(
+			{
+				type: "doc",
+				blocks: [paragraph("ok", text("그려지는 문단")), MINE.blocks[3] as Block, { id: "bare", type: "" }] as Block[],
+			} as Doc,
+			null,
+			{ breakSite: "callout" },
+		),
+	},
+	read.default,
+);
+const Named = scene<read.Loaded>(
+	{ loaders: read.read(IMAGES("빌드 시간"), null, { media: [{ id: "m1", name: "build.png" }] }) },
+	read.default,
+);
 
 const sides = () => [...document.querySelectorAll<HTMLElement>("[data-slot=compare-side]")];
 const marked = (side: HTMLElement) =>
@@ -297,5 +210,88 @@ describe("a body read without being written draws as the editor draws it", () =>
 		await expect.poll(() => sides()[0]?.querySelectorAll("[data-slot=code-frame]").length).toBe(1);
 		await new Promise((done) => setTimeout(done, 600));
 		expect(sides()[0]?.querySelectorAll("[data-token]")).toHaveLength(0);
+	});
+
+	it("[reach] code read outside the editor is 12px, in the body's own block element, so the body's 20px gap applies and the chat's 8px", async () => {
+		await Reading.run();
+		await expect.poll(() => sides()[0]?.querySelector("[data-block=codeBlock]")).not.toBeNull();
+		const block = sides()[0]?.querySelector("[data-block=codeBlock]") as HTMLElement;
+		expect(getComputedStyle(block.querySelector("[data-slot=code-text]") as Element).fontSize).toBe("12px");
+		expect(getComputedStyle(block.querySelector("[data-slot=code-number]") as Element).fontSize).toBe("12px");
+		expect(getComputedStyle(block).marginBottom).toBe("20px");
+		await Chat.run();
+		await expect.poll(() => sides()[0]?.querySelector("[data-block=codeBlock]")).not.toBeNull();
+		const inChat = sides()[0]?.querySelector("[data-block=codeBlock]") as HTMLElement;
+		expect(getComputedStyle(inChat).marginBottom).toBe("8px");
+		// An answer's code wraps, stands at most half the window high and has no numbers.
+		expect(inChat.querySelector("[data-slot=code-number]")).toBeNull();
+		expect(getComputedStyle(inChat.querySelector("[data-slot=code-text]") as Element).whiteSpace).toBe("pre-wrap");
+		expect(getComputedStyle(inChat.querySelector("[data-slot=code-area]") as Element).maxHeight).toBe(
+			`${window.innerHeight / 2}px`,
+		);
+	});
+
+	it("[reach] a body has no room above its first block or under its last, in the chat too: the gap to what follows is the screen's", async () => {
+		await Chat.run();
+		await expect.poll(() => sides()[0]?.querySelector("[data-slot=editor-body]")).not.toBeNull();
+		const body = sides()[0]?.querySelector("[data-slot=editor-body]") as HTMLElement;
+		expect(getComputedStyle(body.firstElementChild as Element).marginTop).toBe("0px");
+		expect(getComputedStyle(body.lastElementChild as Element).marginBottom).toBe("0px");
+		// The block's own bottom edge is the body's: nothing hangs below it.
+		expect(body.getBoundingClientRect().bottom).toBeCloseTo(
+			(body.lastElementChild as HTMLElement).getBoundingClientRect().bottom,
+			0,
+		);
+	});
+
+	it("[reach] on the tool ground the code and the boxes are one step darker, and a muted body's code takes its quieter ink", async () => {
+		await Lifted.run();
+		await expect.poll(() => sides()[0]?.querySelector("[data-box]")).not.toBeNull();
+		const reference = (name: string) => {
+			const probe = document.createElement("span");
+			probe.className = name;
+			document.body.append(probe);
+			const style = getComputedStyle(probe);
+			const got = { background: style.backgroundColor, color: style.color };
+			probe.remove();
+			return got;
+		};
+		const side = sides()[0] as HTMLElement;
+		const selected = reference("bg-monti-selected").background;
+		expect(getComputedStyle(side.querySelector("[data-slot=code-frame]") as Element).backgroundColor).toBe(selected);
+		expect(getComputedStyle(side.querySelector("[data-box]") as Element).backgroundColor).toBe(selected);
+		expect(getComputedStyle(side.querySelector("[data-slot=code-text]") as Element).color).toBe(
+			reference("text-monti-muted").color,
+		);
+	});
+
+	it("[reach] the caret of an answer still arriving stands inside its last words, not on a line of its own", async () => {
+		await StreamingChat.run();
+		await expect.poll(() => sides()[0]?.querySelector("[data-slot=stream-caret]")).not.toBeNull();
+		const caret = sides()[0]?.querySelector("[data-slot=stream-caret]") as HTMLElement;
+		expect(caret.closest("p, li, h2, h3, h4, td")).not.toBeNull();
+		expect(sides()[0]?.querySelectorAll("[data-slot=stream-caret]")).toHaveLength(1);
+	});
+
+	it("[reach] a to-do's box in a source cell inside written text shows no pointer and no hover ring", async () => {
+		await TodoInEditable.run();
+		await expect.poll(() => sides()[0]?.querySelector("[role=checkbox]")).not.toBeNull();
+		const box = sides()[0]?.querySelector("[role=checkbox]") as HTMLElement;
+		expect(getComputedStyle(box).cursor).not.toBe("pointer");
+		await userEvent.hover(box);
+		expect(getComputedStyle(box.querySelector("[data-check-box]") as Element).boxShadow).toBe("none");
+	});
+
+	it("[reach] a drawing that throws is that block's box while the others are drawn, and a block with no type says only that it is unknown", async () => {
+		await Thrown.run();
+		await expect.poll(() => sides()[0]?.textContent).toContain("그려지는 문단");
+		const boxes = [...(sides()[0]?.querySelectorAll("[data-box]") ?? [])];
+		expect(boxes).toHaveLength(2);
+		expect(boxes.map((box) => box.textContent)).toContain("알 수 없는 블록");
+	});
+
+	it("[reach] pictures are named by their file when the body is not given its files", async () => {
+		await Named.run();
+		await expect.poll(() => sides()[0]?.querySelector("[data-box]")?.textContent).toContain("build.png");
 	});
 });

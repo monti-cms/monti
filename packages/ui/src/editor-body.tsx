@@ -49,7 +49,8 @@ const EDITOR_BODY = cn(
 	"[&_[data-check]]:absolute [&_[data-check]]:top-monti-8 [&_[data-check]]:left-0 [&_[data-check]]:flex [&_[data-check]]:size-3.5 [&_[data-check]]:outline-none [&_[data-check]]:after:absolute [&_[data-check]]:after:top-1/2 [&_[data-check]]:after:left-1/2 [&_[data-check]]:after:size-(--monti-height-control-xs) [&_[data-check]]:after:-translate-x-1/2 [&_[data-check]]:after:-translate-y-1/2 [&_[data-check]]:after:content-['']",
 	"[&_[data-check-box]]:flex [&_[data-check-box]]:size-full [&_[data-check-box]]:items-center [&_[data-check-box]]:justify-center [&_[data-check-box]]:rounded-monti-sm [&_[data-check-box]]:border-[1.5px] [&_[data-check-box]]:border-monti-faint [&_[data-check-box]]:text-monti-on-emphasis [&_[data-check-box]]:transition-colors [&_[data-check]:focus-visible>[data-check-box]]:outline-2 [&_[data-check]:focus-visible>[data-check-box]]:outline-monti-contrast/60 [&_[data-check-box]_svg]:size-3.5 [&_[data-check-box]_svg]:invisible",
 	"[&_li[data-checked]>[data-check]>[data-check-box]]:border-monti-contrast [&_li[data-checked]>[data-check]>[data-check-box]]:bg-monti-emphasis [&_li[data-checked]>[data-check]_svg]:visible",
-	"[&_[contenteditable=true]_[data-check]]:cursor-pointer [&_[contenteditable=true]_[data-check]:hover>[data-check-box]]:shadow-[0_0_0_5px_var(--monti-bg-selected)] [&_[contenteditable=true]_li:not([data-checked])>[data-check]:hover>[data-check-box]]:border-(color:--monti-fg-muted)",
+	// Only where the text is written: a body that is only read (`data-read-only`, `ReadBody`) is inside no `contenteditable`, but the page around it may be, and its boxes are marks.
+	"[&:not([data-read-only])_[contenteditable=true]_[data-check]]:cursor-pointer [&:not([data-read-only])_[contenteditable=true]_[data-check]:hover>[data-check-box]]:shadow-[0_0_0_5px_var(--monti-bg-selected)] [&:not([data-read-only])_[contenteditable=true]_li:not([data-checked])>[data-check]:hover>[data-check-box]]:border-(color:--monti-fg-muted)",
 	// A quote, code, a table and the divider.
 	"[&_blockquote]:mt-0 [&_blockquote]:mb-monti-20 [&_blockquote]:border-l-2 [&_blockquote]:border-monti-strong [&_blockquote]:pl-monti-16 [&_blockquote]:text-monti-muted [&_blockquote>*:last-child]:mb-0",
 	"[&_pre]:mt-0 [&_pre]:mb-monti-20 [&_pre]:overflow-x-auto [&_pre]:rounded-monti-lg [&_pre]:bg-monti-muted [&_pre]:px-monti-16 [&_pre]:py-monti-12 [&_pre]:font-mono [&_pre]:text-monti-editor-code",
@@ -141,19 +142,44 @@ const CHAT = cn(
 );
 
 /**
+ * A body read in a card that hangs by the text (a translation's memo card, a proposal's): the card's own text size (`text-body`) with 8px between blocks,
+ * so the words of a card are drawn one way whichever card it is.
+ */
+const CARD = cn(
+	"text-monti-body",
+	"[&_p]:mb-monti-8! [&_:is(ul,ol,blockquote,table,[data-box],[data-block=codeBlock])]:mb-monti-8!",
+	"[&_:is(h2,h3,h4)]:mt-monti-12! [&_:is(h2,h3,h4)]:mb-monti-4! [&_:is(h2,h3,h4)]:text-monti-body! [&_:is(h2,h3,h4)]:font-semibold!",
+);
+
+/**
+ * A body that is only read: it takes the room its words need, with none above its first block and none under its last (the first and last are named twice
+ * over, so they win against the chat's 8px and the headings' margins that are `!` too). The code and the boxes in it stand on the ground the body is on:
+ * `tool` (a source beside its translation) sets them on `bg-selected`, one step darker, as the tool ground's own blocks are (translation.md).
+ */
+const READ_ONLY = "grow-0 [&>:first-child:first-child]:mt-0! [&>:last-child:last-child]:mb-0!";
+const ON_TOOL = "[&_[data-slot=code-frame]]:bg-monti-selected [&_[data-box]]:bg-monti-selected";
+
+/**
  * The editor's text column: what the editor engine draws goes inside, and takes the body's looks from here. `paired` lays the text out as rows beside
  * its source (a translation side by side). `readOnly` is a body that is only read (`ReadBody`: a comparison, a change, the source of a translation,
  * an answer): it takes the room its words need and has no room above its first line or under its last. `muted` reads it in the quieter ink (a source beside its
- * translation). `size="chat"` reads it in the conversation's column.
+ * translation). `size="chat"` reads it in the conversation's column, `size="card"` in a card's. `ground="tool"`: it stands on the tool ground.
  */
 function EditorBody({
 	paired = false,
 	readOnly = false,
 	muted = false,
+	ground = "page",
 	size = "reading",
 	className,
 	...props
-}: ComponentProps<"div"> & { paired?: boolean; readOnly?: boolean; muted?: boolean; size?: "reading" | "chat" }) {
+}: ComponentProps<"div"> & {
+	paired?: boolean;
+	readOnly?: boolean;
+	muted?: boolean;
+	ground?: "page" | "tool";
+	size?: "reading" | "chat" | "card";
+}) {
 	return (
 		<BodyScope>
 			<div
@@ -163,9 +189,11 @@ function EditorBody({
 				className={cn(
 					EDITOR_BODY,
 					paired && PAIRED,
-					readOnly && "grow-0 [&>*:first-child]:mt-0 [&>*:last-child]:mb-0",
+					readOnly && READ_ONLY,
+					ground === "tool" && ON_TOOL,
 					muted && "text-monti-muted",
 					size === "chat" && CHAT,
+					size === "card" && CARD,
 					className,
 				)}
 				{...props}

@@ -795,6 +795,32 @@ describe("the review page (flow 2, 12–15)", () => {
 		await expect.element(panel().getByText("추가", { exact: true })).toBeVisible();
 	});
 
+	it("10-1 [AS-09] the one-line view stands the proposed block under the current one with the body's 20px gap, and side by side the current one is the quieter, on the tool ground", async () => {
+		const story = on({ script: stories.polished });
+		await story.run();
+		await stories.writeSecond(story.loaded());
+		await openPanel();
+		await say("둘째 글 다듬어 줘");
+		await expect.element(button("1건 적용")).toBeVisible();
+		const [proposal] = await proposalsOf(story.loaded());
+		window.location.hash = `#/ai/review/${proposal?.id}`;
+		await expect.element(page.getByRole("heading", { name: "제안 검토" })).toBeVisible();
+		const main = page.getByRole("main");
+		const bodies = () => [
+			...main.element().querySelectorAll<HTMLElement>("[data-slot=compare-row] [data-slot=editor-body]"),
+		];
+		await expect.poll(() => bodies().length).toBe(2);
+		const [before, after] = bodies() as [HTMLElement, HTMLElement];
+		expect(after.getBoundingClientRect().top - before.getBoundingClientRect().bottom).toBe(20);
+		await userEvent.click(page.getByRole("tab", { name: "나란히" }).first());
+		await expect.poll(() => bodies().length).toBe(2);
+		const quiet = document.createElement("span");
+		quiet.className = "text-monti-muted";
+		document.body.append(quiet);
+		expect(getComputedStyle(bodies()[0] as Element).color).toBe(getComputedStyle(quiet).color);
+		quiet.remove();
+	});
+
 	it("10-1 [flow 2·14, 15] applying from the page shows each change's result and what was not kept in is not applied; undoing puts everything back", async () => {
 		const story = on({ script: stories.proposedKinds });
 		await toReview(story);

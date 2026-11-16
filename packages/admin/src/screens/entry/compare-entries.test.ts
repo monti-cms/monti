@@ -1,6 +1,6 @@
 import type { Block, Doc, Field, Label } from "@monti-cms/core";
 import { describe, expect, it } from "vitest";
-import { type BlockNames, blockWords, readableWordDiff, sideMarks } from "./compare-entries";
+import { type BlockNames, blockWords, hasMarks, readableWordDiff, sideMarks } from "./compare-entries";
 
 const bodyWords = (doc: Doc, names?: BlockNames) => doc.blocks.map((block) => blockWords(block, names));
 
@@ -192,6 +192,30 @@ describe("blocks that hold values, in the comparison (doc 18, T197)", () => {
 		const two = doc(callout("x", p("m", "첫째")), callout("y", p("n", "둘째")));
 		const swap = doc(callout("y", p("n", "둘째")), callout("x", p("m", "첫째")));
 		expect(marked(sideMarks(swap, two, "mine", names).words.get("n") ?? [])).toEqual(["둘째"]);
+	});
+
+	it("10-1 [AS-09] the same words with other marks are marked on the words whose marks differ, and a change with no words to mark says its kind", () => {
+		const bold = (...marks: { type: string }[]): Doc =>
+			doc({
+				id: "p",
+				type: "paragraph",
+				content: [
+					{ type: "text", text: "앞 " },
+					{ type: "text", text: "굵은 말", ...(marks.length ? { marks } : {}) },
+					{ type: "text", text: " 뒤" },
+				],
+			});
+		const was = sideMarks(bold(), bold({ type: "bold" }), "mine", names);
+		const now = sideMarks(bold({ type: "bold" }), bold(), "server", names);
+		expect(marked(was.words.get("p") ?? [])).toEqual(["굵은 말"]);
+		expect(marked(now.words.get("p") ?? [])).toEqual(["굵은 말"]);
+		// Nothing but the alignment changed: no word is marked, so the block's name line is.
+		const aligned = (align?: string): Doc => doc({ ...p("a", "같은 말"), ...(align ? { attrs: { align } } : {}) });
+		const line = sideMarks(aligned("center"), aligned(), "mine", names);
+		expect(marked(line.words.get("a") ?? [])).toEqual([]);
+		expect(marked(line.values.get("a") ?? [])).toEqual(["blocks.paragraph"]);
+		expect(hasMarks(line)).toBe(true);
+		expect(hasMarks(sideMarks(aligned(), aligned(), "mine", names))).toBe(false);
 	});
 
 	it("04-2 a table's rows are as wide as the widest, so a short row reads as the editor draws it", () => {

@@ -524,6 +524,24 @@ describe("writing a translation (owner review, 2026-11-06)", () => {
 		expect(reads.catalog).toBeLessThanOrEqual(3);
 	});
 
+	it("04-1 [TR-05] the words of a memo card are bodies at the card's size, the one before quieter, and the same size in every card", async () => {
+		await open(SourceChanged);
+		await userEvent.click(mark("변경"));
+		const card = () => document.querySelector("[data-slot=memo-diff]") as HTMLElement;
+		await expect.poll(() => card()?.querySelectorAll("[data-slot=editor-body]").length).toBe(2);
+		const [before, after] = [...card().querySelectorAll<HTMLElement>("[data-slot=editor-body]")] as [
+			HTMLElement,
+			HTMLElement,
+		];
+		const probe = document.createElement("span");
+		probe.className = "text-monti-body";
+		document.body.append(probe);
+		expect(getComputedStyle(before).fontSize).toBe(getComputedStyle(probe).fontSize);
+		expect(getComputedStyle(after).fontSize).toBe(getComputedStyle(probe).fontSize);
+		probe.remove();
+		expect(getComputedStyle(before).color).not.toBe(getComputedStyle(after).color);
+	});
+
 	it("04-1 3.05 side by side, a row's translation is written in place, and the row being written is marked on both sides", async () => {
 		await SideBySide.run();
 		const line = page.getByText("The editor follows the same rule", { exact: false });

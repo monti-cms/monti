@@ -23,7 +23,7 @@ export function Prose({
 	const doc = useMemo(() => readMarkdown(text).doc, [text]);
 	if (doc.blocks.length === 0) return streaming ? <ChatMessage author="assistant" streaming /> : null;
 	return (
-		<ChatMessage author="assistant" streaming={streaming}>
+		<ChatMessage author="assistant">
 			<ReadBody doc={doc} size="chat" streaming={streaming} onOpen={onOpen} />
 		</ChatMessage>
 	);

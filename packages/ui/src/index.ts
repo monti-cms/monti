@@ -76,6 +76,7 @@ export const ChatInput = close(open.ChatInput);
 export const ChatMessageActions = close(open.ChatMessageActions);
 export const ChatQueueItem = close(open.ChatQueueItem);
 export const ChatMessage = close(open.ChatMessage);
+export const StreamCaret = close(open.StreamCaret);
 export const ChatThread = close(open.ChatThread);
 export const PropertyGroup = close(open.PropertyGroup);
 export const PropertyPanel = close(open.PropertyPanel);

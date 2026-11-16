@@ -327,6 +327,7 @@ export function SourcePane({
 						marks={changedMarks(compared, names)}
 						mark="source"
 						muted
+						ground="tool"
 						current={current}
 					/>
 				</Box>
@@ -684,7 +685,7 @@ export function TranslationMargin({
 				>
 					<MemoDiff
 						afterLabel={t("translation.source")}
-						after={mark.source ? <ReadBody doc={{ type: "doc", blocks: [mark.source] }} /> : null}
+						after={mark.source ? <ReadBody doc={{ type: "doc", blocks: [mark.source] }} size="card" /> : null}
 					/>
 				</MemoCardPopover>
 			);
@@ -714,10 +715,10 @@ export function TranslationMargin({
 				<MemoDiff
 					beforeLabel={t("translation.before")}
 					afterLabel={t("translation.after")}
-					before={<ReadBody doc={was} marks={sideMarks(was, now, "mine", names)} mark="was" />}
+					before={<ReadBody doc={was} marks={sideMarks(was, now, "mine", names)} mark="was" size="card" muted />}
 					{...(mark.kind === "removed"
 						? { none: t("translation.mark.gone") }
-						: { after: <ReadBody doc={now} marks={sideMarks(now, was, "server", names)} mark="source" /> })}
+						: { after: <ReadBody doc={now} marks={sideMarks(now, was, "server", names)} mark="source" size="card" /> })}
 				/>
 			</MemoCardPopover>
 		);

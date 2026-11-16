@@ -15,7 +15,14 @@ import { useLanguageName } from "../format/language";
 import { endsClosed, fieldName as nameOfField } from "../format/names";
 import { useAdmin } from "../operations/admin-context";
 import { useRead } from "../operations/use-operation";
-import { type BlockNames, type BlockWords, blockWords, codeChanges } from "../screens/entry/compare-entries";
+import {
+	type BlockNames,
+	type BlockWords,
+	blockWords,
+	codeChanges,
+	hasMarks,
+	sideMarks,
+} from "../screens/entry/compare-entries";
 import { useBlockNames } from "../screens/entry/use-block-names";
 import type { SchemaRead } from "../screens/settings/schema-draft";
 import type { DiffRun } from "./diff";
@@ -275,6 +282,13 @@ export function useChangeWords(items: readonly ProposalItemView[] | undefined) {
 
 	const { followers } = followersOf(items ?? []);
 
+	/** Whether the block as proposed differs from the block as it is in a way the review can mark: words, marks, values, a code block's lines. */
+	const markedAgainst = (old: Block, block: Block) => {
+		const was: Doc = { type: "doc", blocks: [old] };
+		const now: Doc = { type: "doc", blocks: [block] };
+		return hasMarks(sideMarks(was, now, "mine", names)) || hasMarks(sideMarks(now, was, "server", names));
+	};
+
 	/** The blocks of a body that change from one text to the next, each as it is and as proposed. */
 	const bodyPlaces = (was: Doc | null, next: Doc): Place[] => {
 		const places: Place[] = [];
@@ -287,7 +301,7 @@ export function useChangeWords(items: readonly ProposalItemView[] | undefined) {
 			const old = was?.blocks.find((each) => each.id === block.id);
 			if (!old)
 				places.push({ name: t("review.newBlock"), before: "", after: said(now), body: { before: null, after: block } });
-			else if (!sameJson(old, block))
+			else if (!sameJson(old, block) && markedAgainst(old, block))
 				places.push({
 					name: named(now, index),
 					...changedWords(old, block, names, t as Parameters<typeof changedWords>[3]),

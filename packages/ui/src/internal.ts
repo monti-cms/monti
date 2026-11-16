@@ -36,7 +36,7 @@ export { ChangeDot } from "./change-dot";
 export { ChangesGroup, type ChangesItem, type ProposalsItem } from "./changes-group";
 export { ChatMessageActions, ChatQueueItem } from "./chat-actions";
 export { ChatInput } from "./chat-input";
-export { ChatMessage } from "./chat-message";
+export { ChatMessage, StreamCaret } from "./chat-message";
 export { ChatThread } from "./chat-thread";
 export { CHECK_MARK_PATH, Checkbox } from "./checkbox";
 export { Chip } from "./chip";

@@ -25,6 +25,7 @@ import {
 	Untranslated,
 } from "../../index";
 import { EntryHeader, still } from "./editor-notion";
+import { RefCallout, RefCode, RefTable } from "./ref-body";
 
 const CODE = "export default function Post({ title }) {\n  // 제목을 그대로 보여 준다\n  return <h1>{title}</h1>;\n}";
 
@@ -130,22 +131,17 @@ export function TranslatePairedScreen() {
 								</Stack>
 							}
 							source={
-								<CompareBody>
-									<div data-box className="flex flex-col gap-monti-8 *:m-0! *:first:font-semibold">
-										<p>버전 안내</p>
-										<p>이 글은 리액트 19 기준이다.</p>
-										<p>예시 코드는 저장소에 있다.</p>
-									</div>
-								</CompareBody>
+								<RefCallout
+									ground="tool"
+									title="버전 안내"
+									lines={["이 글은 리액트 19 기준이다.", "예시 코드는 저장소에 있다."]}
+								/>
 							}
 							translation={
-								<CompareBody>
-									<div data-box className="flex flex-col gap-monti-8 *:m-0! *:first:font-semibold">
-										<p>About versions</p>
-										<p>This post is based on React 19.</p>
-										<p>The example code is in the repository.</p>
-									</div>
-								</CompareBody>
+								<RefCallout
+									title="About versions"
+									lines={["This post is based on React 19.", "The example code is in the repository."]}
+								/>
 							}
 						/>
 						<CompareRow
@@ -185,17 +181,18 @@ export function TranslatePairedScreen() {
 									</Text>
 								</Stack>
 							}
-							source={<pre>{CODE}</pre>}
+							source={<RefCode code={CODE} ground="tool" />}
 							translation={
 								<CompareShared action={<TextButton variant="underline">따로 고치기</TextButton>}>
-									<pre>{CODE}</pre>
+									<RefCode code={CODE} />
 								</CompareShared>
 							}
 						/>
 						<CompareRow
 							name="표"
 							source={
-								<TableOf
+								<RefTable
+									ground="tool"
 									head={["버전", "바뀐 점", "옮길 때"]}
 									rows={[
 										["18", "훅 도입 이후 안정", "그대로"],
@@ -204,7 +201,7 @@ export function TranslatePairedScreen() {
 								/>
 							}
 							translation={
-								<TableOf
+								<RefTable
 									head={["Version", "What changed", "When moving"]}
 									rows={[
 										["18", "Stable since hooks", "Keep as is"],
@@ -253,29 +250,5 @@ export function TranslatePairedScreen() {
 				<StatusBarCell end>912자</StatusBarCell>
 			</StatusBar>
 		</Stack>
-	);
-}
-
-/** A small table as the editor draws one: its head cells bold. */
-function TableOf({ head, rows }: { head: readonly string[]; rows: readonly (readonly string[])[] }) {
-	return (
-		<table>
-			<thead>
-				<tr>
-					{head.map((name) => (
-						<th key={name}>{name}</th>
-					))}
-				</tr>
-			</thead>
-			<tbody>
-				{rows.map((row) => (
-					<tr key={row.join("\t")}>
-						{row.map((value, index) => (
-							<td key={index}>{value}</td>
-						))}
-					</tr>
-				))}
-			</tbody>
-		</table>
 	);
 }

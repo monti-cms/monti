@@ -16,6 +16,7 @@ import {
 	Text,
 	TextButton,
 } from "./index";
+import { RefCode } from "./screens/reference/ref-body";
 
 /**
  * Two versions of one entry side by side: no gap, one rule between, 48px inside each side. Each side has its name in the small mono line, the
@@ -156,10 +157,10 @@ export const TranslationRows: Story = {
 					translation={<Text variant="reading">The list keeps only the title, the address and the status.</Text>}
 				/>
 				<CompareRow
-					source={<pre>{CODE}</pre>}
+					source={<RefCode code={CODE} ground="tool" />}
 					translation={
 						<CompareShared action={<TextButton variant="underline">따로 고치기</TextButton>}>
-							<pre>{CODE}</pre>
+							<RefCode code={CODE} />
 						</CompareShared>
 					}
 				/>

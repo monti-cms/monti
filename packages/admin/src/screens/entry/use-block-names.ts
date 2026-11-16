@@ -10,12 +10,18 @@ export function blockNamesOf(
 	kit: Catalog,
 	t: ReturnType<typeof useAdmin>["t"],
 	files: readonly { id: string; name: string }[] = [],
+	/** Asked of a file the library has not told the name of yet (`ReadBodies` reads it, and the names are made again). */
+	want?: (media: string) => void,
 ): BlockNames {
 	const named = new Map(files.map((file) => [file.id, file.name]));
 	return {
 		block: (type: string) => kit.blocks.find((block) => block.type === type),
 		say: (label) => t(label),
-		file: (media: string) => named.get(media),
+		file: (media: string) => {
+			const name = named.get(media);
+			if (name === undefined) want?.(media);
+			return name;
+		},
 	};
 }
 
@@ -31,6 +37,11 @@ export function useBlockNames(files: readonly { id: string; name: string }[] = [
 	const kit = (shared ? shared.kit : own) ?? undefined;
 	// A picture or a file is named by its file's name, as the media field shows it, not by its library id.
 	const known = files.map((file) => `${file.id}\u0000${file.name}`).join("\u0001");
+	const sharedFiles = shared?.files;
+	const want = shared?.want;
 	// biome-ignore lint/correctness/useExhaustiveDependencies: the files are followed by what they are (`known`), not by the array's identity
-	return useMemo(() => (kit ? blockNamesOf(kit, t, files) : undefined), [kit, t, known]);
+	return useMemo(
+		() => (kit ? blockNamesOf(kit, t, [...files, ...(sharedFiles ?? [])], want) : undefined),
+		[kit, t, known, sharedFiles, want],
+	);
 }

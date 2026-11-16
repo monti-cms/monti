@@ -1,4 +1,4 @@
-import { type Block, type Doc, type Field, type Label, plainText } from "@monti-cms/core";
+import { type Block, type Doc, type Field, type Label, plainText, sameJson } from "@monti-cms/core";
 
 /** A run of words, marked when the other side does not have it. */
 export type Part = { text: string; changed: boolean };
@@ -367,6 +367,39 @@ export function ownText(block: Block, names?: BlockNames): string {
 	return plainText(block.content);
 }
 
+/** Each character of a block's text with the marks it carries, so two blocks with the same words can differ in their marks (bold, a link). */
+function markedChars(block: Block): string[] {
+	const out: string[] = [];
+	for (const inline of block.content ?? []) {
+		if (inline.type === "hardBreak") out.push("");
+		else if (inline.type === "text") {
+			const marks = JSON.stringify([...(inline.marks ?? [])].sort((a, b) => a.type.localeCompare(b.type)));
+			for (const _char of inline.text) out.push(marks);
+		}
+	}
+	return out;
+}
+
+/** The text cut where the marks over it differ between the two sides: the runs whose marks changed are the changed words. */
+function markedParts(text: string, mine: string[], theirs: string[]): Part[] | null {
+	const chars = [...text];
+	if (mine.length !== chars.length || theirs.length !== chars.length) return null;
+	const parts: Part[] = [];
+	chars.forEach((char, at) => {
+		const changed = mine[at] !== theirs[at];
+		const last = parts.at(-1);
+		if (last && last.changed === changed) last.text += char;
+		else parts.push({ text: char, changed });
+	});
+	return parts.some((part) => part.changed) ? parts : null;
+}
+
+/** The kind a block is called, for its name line when nothing in it has words to mark. */
+const kindOf = (block: Block, names: BlockNames | undefined) => {
+	const known = names?.block(block.type);
+	return known && names ? names.say(known.label) : block.type;
+};
+
 /** Every block of a body by id, the blocks inside blocks too, with the top-level block each stands in, the block that holds it and the order of its siblings. */
 function blocksById(doc: Doc | null) {
 	const found = new Map<string, { block: Block; top: string; parent: string; siblings: string[] }>();
@@ -428,9 +461,23 @@ export function sideMarks(
 		const matchText = match ? ownText(match, names) : "";
 		if (text !== "" || matchText !== "")
 			marks.words.set(id, match ? pair(text, matchText) : [{ text, changed: text !== "" }]);
+		// The same words with other marks (bold, a link): the words whose marks differ are the changed ones.
+		if (match && text !== "" && text === matchText) {
+			const formatted = markedParts(text, markedChars(block), markedChars(match));
+			if (formatted) marks.words.set(id, formatted);
+		}
 		const values = valuesOf(block, names);
 		if (values !== undefined)
 			marks.values.set(id, match ? pair(values, valuesOf(match, names) ?? "") : [{ text: values, changed: true }]);
+		// A block whose own values changed in a way no words say (its alignment, its kind) with nothing to mark: its name line says it, as a value does.
+		if (
+			names &&
+			match &&
+			!marks.words.get(id)?.some((part) => part.changed) &&
+			!marks.values.get(id)?.some((part) => part.changed) &&
+			(match.type !== block.type || !sameJson(match.attrs ?? {}, block.attrs ?? {}))
+		)
+			marks.values.set(id, [{ text: kindOf(block, names), changed: true }]);
 		if (block.type === "codeBlock")
 			marks.code.set(id, codeChanges(blockWords(block, names), match ? blockWords(match, names) : undefined));
 	}
@@ -448,7 +495,18 @@ export function sideMarks(
 			marks.words.set(each, [{ text: parts.map((part) => part.text).join(""), changed: true }]);
 		}
 		const line = marks.values.get(id);
-		if (!any && line) marks.values.set(id, [{ text: line.map((part) => part.text).join(""), changed: true }]);
+		if (!any && (line || names))
+			marks.values.set(id, [
+				{
+					text: line ? line.map((part) => part.text).join("") : kindOf(ours.get(id)?.block as Block, names),
+					changed: true,
+				},
+			]);
 	}
 	return marks;
 }
+
+/** Whether anything in a body is marked: a changed word, a changed name line, a code block whose lines or head differ. */
+export const hasMarks = (marks: ReadMarks) =>
+	[...marks.words.values(), ...marks.values.values()].some((parts) => parts.some((part) => part.changed)) ||
+	[...marks.code.values()].some((change) => change.lines.length > 0 || change.language || change.title);

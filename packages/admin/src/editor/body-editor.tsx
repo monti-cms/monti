@@ -302,7 +302,7 @@ export function BodyEditor({
 							return block
 								? [
 										createPortal(
-											<ReadBody doc={block.doc} marks={block.marks} mark="source" muted />,
+											<ReadBody doc={block.doc} marks={block.marks} mark="source" muted ground="tool" />,
 											element,
 											cellKey(element),
 										),
