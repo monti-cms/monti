@@ -5,6 +5,7 @@ import { box, centreY, rightEdge } from "../../../testing/measure";
 import { render } from "../test/render";
 import { Document } from "./icons";
 import {
+	BulkBar,
 	Button,
 	Count,
 	DropdownMenu,
@@ -17,6 +18,8 @@ import {
 	PageHeader,
 	Sidebar,
 	SidebarContent,
+	SidebarFoot,
+	SidebarFooter,
 	SidebarGroup,
 	SidebarGroupContent,
 	SidebarMenu,
@@ -26,6 +29,7 @@ import {
 	SidebarMenuSub,
 	SidebarMenuSubButton,
 	SidebarProvider,
+	SidebarScreenMode,
 	SplitButton,
 	Table,
 	TableBody,
@@ -296,5 +300,64 @@ describe("a page header (LH-02, LH-04)", () => {
 			expect(Math.abs(centreY(button) - title)).toBeLessThanOrEqual(2);
 		const [first, second] = [...document.querySelectorAll("button")].map((button) => box(button));
 		expect(second.left - first.right).toBe(16);
+	});
+});
+
+describe("the screen mode switch and the bulk bar (LS-02, LB-05)", () => {
+	it("the switch's track, with its 2px ring, spans the same edges as a row of the nav above it", async () => {
+		render(
+			<SidebarProvider rail={false} onRailChange={() => {}}>
+				<Sidebar label="관리자 메뉴">
+					<SidebarContent>
+						<SidebarMenu aria-label="콘텐츠">
+							<SidebarMenuItem>
+								<SidebarMenuButton render={<button type="button" />}>
+									<Document />
+									<span>미디어</span>
+								</SidebarMenuButton>
+							</SidebarMenuItem>
+						</SidebarMenu>
+					</SidebarContent>
+					<SidebarFooter>
+						<SidebarFoot>
+							<SidebarScreenMode
+								value="system"
+								labels={{ label: "화면 모드", system: "시스템", light: "밝게", dark: "어둡게" }}
+							/>
+						</SidebarFoot>
+					</SidebarFooter>
+				</Sidebar>
+			</SidebarProvider>,
+		);
+		await expect.element(page.getByText("미디어")).toBeVisible();
+		const row = box(rowOf("미디어"));
+		const track = box(document.querySelector("[data-slot=segmented]") as HTMLElement);
+		expect(track.left - 2).toBe(row.left);
+		expect(track.right + 2).toBe(row.right);
+	});
+
+	it("the bar's groups are the same distance apart: one gap between a count, a divider and a button", async () => {
+		render(
+			<BulkBar
+				label="3개 선택"
+				clearLabel="선택 해제"
+				onClear={() => {}}
+				request={{ label: "요청", onClick: () => {} }}
+				more={{ label: "더 보기", children: null }}
+			>
+				<Button variant="ghost" size="sm">
+					폴더로
+				</Button>
+			</BulkBar>,
+		);
+		await expect.element(page.getByText("3개 선택")).toBeVisible();
+		const bar = document.querySelector("[data-slot=bulk-bar]") as HTMLElement;
+		const parts = [...bar.children]
+			.filter(
+				(child) => !child.matches("[data-slot=select-all]") && !child.matches("[data-slot=text-button]:last-child"),
+			)
+			.map((child) => box(child));
+		const gaps = parts.slice(1).map((part, index) => Math.round(part.left - parts[index].right));
+		expect(new Set(gaps).size, `gaps ${gaps.join(", ")}`).toBe(1);
 	});
 });
