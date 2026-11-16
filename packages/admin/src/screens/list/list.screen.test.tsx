@@ -182,6 +182,16 @@ describe("the row's menu (menu.md)", () => {
 		await expect.poll(errorToast).not.toBeNull();
 	});
 
+	it("02-6 archiving a row takes it out of the list and says so in a toast with its way back: undone, the row is in the list again", async () => {
+		await listAt().run();
+		await rowsShown();
+		await userEvent.click((await rowMenu("가을 사진 정리")).getByRole("menuitem", { name: "보관", exact: true }));
+		await expect.element(page.getByText("보관했습니다")).toBeVisible();
+		await expect.element(main().getByText("가을 사진 정리")).not.toBeInTheDocument();
+		await userEvent.click(page.getByRole("button", { name: "되돌리기" }));
+		await expect.element(main().getByText("가을 사진 정리")).toBeVisible();
+	});
+
 	it("Backspace on a row puts it in the trash, as Delete does; the menu writes the key as a key, not typed", async () => {
 		await listAt().run();
 		await rowsShown();

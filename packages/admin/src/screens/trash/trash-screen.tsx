@@ -378,7 +378,8 @@ export function TrashScreen({
 				</>
 			) : (
 				inTrash > 0 && (
-					<Button variant="ghost-danger" onClick={() => purge.startEmpty(inTrash)}>
+					// A button's shape, as every button that deletes outside a dialog (the collection's "delete"): red words alone read as a link (AT-23).
+					<Button variant="outline-danger" onClick={() => purge.startEmpty(inTrash)}>
 						{t("trash.empty")}
 					</Button>
 				)

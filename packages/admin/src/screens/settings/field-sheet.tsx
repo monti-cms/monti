@@ -264,6 +264,8 @@ function FieldSheetBody({ model, open, onClose }: { model: SettingsDraft; open: 
 	// Saving is never greyed out (README principle 7): pressed with no identifier, the field says so and takes the focus.
 	const [tried, setTried] = useState(false);
 	const nameInput = useRef<HTMLInputElement>(null);
+	// A saved field opens on its label: what a person comes to change, not the identifier the site's code reads, which a stray key would rename (ST-18).
+	const labelInput = useRef<HTMLInputElement>(null);
 	const nameError = !form.name
 		? tried
 			? t("settings.fillIn")
@@ -419,6 +421,7 @@ function FieldSheetBody({ model, open, onClose }: { model: SettingsDraft; open: 
 			<FormField>
 				<FormFieldLabel htmlFor="field-label">{t("settings.field.label")}</FormFieldLabel>
 				<Input
+					ref={labelInput}
 					id="field-label"
 					placeholder={form.name}
 					value={form.label}
@@ -740,7 +743,7 @@ function FieldSheetBody({ model, open, onClose }: { model: SettingsDraft; open: 
 		);
 
 	return (
-		<SheetContent>
+		<SheetContent initialFocus={labelInput}>
 			{head}
 			<SheetBody>{sections}</SheetBody>
 			<SheetFooter>

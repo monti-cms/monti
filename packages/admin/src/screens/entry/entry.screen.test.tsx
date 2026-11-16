@@ -1331,6 +1331,95 @@ describe("the entry editor: a refused publish", () => {
 	});
 });
 
+describe("the entry editor: the publish menu", () => {
+	it("[TB-04] a post published today has no publish menu: both rows would give today's date, so the pill is the plain one", async () => {
+		await on("draft").run();
+		await opened();
+		await userEvent.click(button("발행하기"));
+		await expect.element(button("발행됨")).toBeDisabled();
+		await expect.element(button("발행 방식")).not.toBeInTheDocument();
+		await titleEnd();
+		await userEvent.keyboard(" 다시");
+		await expect.element(button("발행하기")).toBeEnabled();
+		await expect.element(button("발행 방식")).not.toBeInTheDocument();
+		expect(document.querySelector("[data-slot=split-button]")).toBeNull();
+	});
+
+	it("[TB-04] a post published on an earlier day keeps the menu: two rows, each under a date of its own", async () => {
+		await from(entry.RepublishMenu).run();
+		const rows = page.getByRole("menuitem");
+		await expect.poll(() => rows.elements().length).toBe(2);
+		const [keep, today] = rows.elements().map((row) => row.textContent ?? "");
+		expect(keep).toMatch(/^발행하기발행일 .+ 그대로$/);
+		expect(today).toMatch(/^오늘 날짜로 다시 발행발행일 .+$/);
+		const date = (words: string) => words.match(/발행일 ([\d. ]+\d)/)?.[1];
+		expect(date(keep as string)).toBeTruthy();
+		expect(date(keep as string)).not.toBe(date(today as string));
+	});
+});
+
+describe("the entry editor: the to-do list's groups", () => {
+	const list = () => document.querySelector("[data-slot=status-bar-list]") as HTMLElement;
+	const heads = () => [...list().querySelectorAll("[data-slot=status-bar-list-head]")].map((head) => head.textContent);
+
+	it("[TP-04] what stops publishing and what only tells stand in two groups, each with its name and count", async () => {
+		await on("toCheck").run();
+		await opened();
+		await userEvent.click(button("할 일 3"));
+		const tells = page.getByRole("group", { name: "확인할 것 1" });
+		await expect.element(tells).toBeVisible();
+		expect(heads()).toEqual(["발행 전에 고칠 것2", "확인할 것1"]);
+		// The link to a draft is in the second group alone, and every row that stops the publish is above it.
+		await expect.element(tells.getByRole("button", { name: /발행 안 된 글로 가는 링크 1개/ })).toBeVisible();
+		expect(tells.element().querySelectorAll("[data-slot=todo-item]")).toHaveLength(1);
+		expect(tells.element().querySelector("[data-blocking]")).toBeNull();
+		const stops = [...list().querySelectorAll("[data-slot=todo-item]")].filter((row) => !tells.element().contains(row));
+		expect(stops).toHaveLength(2);
+		expect(stops.every((row) => row.querySelector("[data-blocking]") !== null)).toBe(true);
+	});
+
+	it("[TP-04] with nothing that stops publishing, what only tells heads the list under its own name", async () => {
+		await on("toCheckOnly").run();
+		await opened();
+		await userEvent.click(button("할 일 1"));
+		await expect.poll(heads).toEqual(["확인할 것1"]);
+		expect(list().querySelector("[data-blocking]")).toBeNull();
+		await expect.element(page.getByRole("group", { name: /확인할 것/ })).not.toBeInTheDocument();
+	});
+});
+
+describe("the entry editor: archiving", () => {
+	const state = async ({ site, id }: Loaded) =>
+		((await site.monti.run("entries.get", { id }, entry.admin)) as { state: string }).state;
+
+	it("02-6 archiving from ⋯ says so in a toast with its way back: undone, the entry is published again", async () => {
+		const shown = on("published");
+		await shown.run();
+		await opened();
+		await expect.element(button("발행됨")).toBeVisible();
+		await userEvent.click(button("더 보기"));
+		await userEvent.click(page.getByRole("menuitem", { name: "보관", exact: true }));
+		await expect.element(page.getByText("보관했습니다")).toBeVisible();
+		await expect.element(button("보관 풀기")).toBeVisible();
+		expect(await state(shown.loaded())).toBe("archived");
+		await userEvent.click(button("되돌리기"));
+		await expect.element(button("발행됨")).toBeVisible();
+		await expect.element(button("보관 풀기")).not.toBeInTheDocument();
+		expect(await state(shown.loaded())).toBe("published");
+	});
+
+	it("02-6 '보관 풀기' says so in the same toast: undone, the entry is archived again", async () => {
+		const shown = from(entry.Archived);
+		await shown.run();
+		await userEvent.click(button("보관 풀기"));
+		await expect.element(page.getByText("보관을 풀었습니다")).toBeVisible();
+		await expect.element(button("발행하기")).toBeVisible();
+		await userEvent.click(button("되돌리기"));
+		await expect.element(button("보관 풀기")).toBeVisible();
+		expect(await state(shown.loaded())).toBe("archived");
+	});
+});
+
 describe("the entry editor: the property panel's tabs", () => {
 	it("a tab holding a field a publish to-do points at has the orange dot by its name, and loses it once open", async () => {
 		await on("addressInTab").run();

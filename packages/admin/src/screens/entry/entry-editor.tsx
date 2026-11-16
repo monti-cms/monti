@@ -126,6 +126,7 @@ import {
 	usePairedRows,
 	useTranslation,
 } from "./translation";
+import { useArchive } from "./use-archive";
 import { type EntryRead, type SaveState, useEntryEditor } from "./use-entry-editor";
 import { usePublish } from "./use-publish";
 import { useTextChecks } from "./use-text-checks";
@@ -243,9 +244,8 @@ export function EntryEditor({
 	});
 	const preview = useOperation<{ token: string; path: string | null }>("entries.previewLink");
 	const duplicate = useOperation<{ output: { id: string } }>("entries.duplicate");
-	const archive = useOperation("entries.archive");
+	const archiving = useArchive();
 	const uploadsGoing = useUploadsGoing();
-	const unarchive = useOperation("entries.unarchive");
 	const exporter = useOperation<BackupOutput>("data.export");
 	useLeaveGuard({
 		changes: editor.draft.changes,
@@ -958,7 +958,6 @@ export function EntryEditor({
 	// A block new in the source is already a to-do (it stops publishing until decided): the group leaves it out, so it is listed and counted once.
 	const sourceCount =
 		compared && !readOnly ? compared.marks.filter((mark) => mark.kind !== "added").length + compared.fields.length : 0;
-	const sourceOnly = sourceCount > 0 && publish.tasks.length === 0;
 	const sourceRows =
 		compared && sourceCount > 0 ? (
 			<SourceChangeRows
@@ -1085,6 +1084,9 @@ export function EntryEditor({
 			/>
 		) : null;
 	const publishedAt = publish.publishedAt;
+	// The menu holds the other way to publish, and there is one only when today is another day than the entry's date: published today, both rows
+	// would give the same date, so the pill is the plain one, as for a first publish (button.md; TB-04).
+	const otherDate = publishedAt !== null && day(publishedAt, language) !== day(new Date(), language);
 
 	// What acts on the entry waits for the entry: before it is read nothing says whether it is published, archived or in the trash.
 	const head = !read ? null : readOnly ? (
@@ -1102,9 +1104,9 @@ export function EntryEditor({
 		) : archived ? (
 			<Button
 				variant="primary"
-				loading={unarchive.pending}
+				loading={archiving.unarchiving}
 				onClick={async () => {
-					if ((await unarchive.run({ ids: [id] })).ok) await editor.reload();
+					if (await archiving.unarchive([id])) await editor.reload();
 				}}
 			>
 				{t("entry.unarchive")}
@@ -1144,9 +1146,14 @@ export function EntryEditor({
 					{t("entry.preview")}
 				</Button>
 			) : null}
-			{publish.button === "first" ? (
-				<Button variant="primary" loading={publish.publishing} onClick={() => void publish.publish()}>
-					{t("entry.publish")}
+			{publish.button === "first" || !otherDate ? (
+				<Button
+					variant="primary"
+					disabled={publish.button === "done"}
+					loading={publish.publishing}
+					onClick={() => void publish.publish()}
+				>
+					{publish.button === "done" ? t("entry.publishedState") : t("entry.publish")}
 				</Button>
 			) : (
 				<SplitButton
@@ -1176,6 +1183,26 @@ export function EntryEditor({
 			)}
 		</>
 	);
+
+	// What is left in the entry, a group for each kind: what stops publishing, what only tells, what changed in the source. The first group there is
+	// heads the list and the others follow, each under a rule with its own name and count (status-bar.md; TP-04).
+	const todoRows = (tasks: PublishTask[]) =>
+		tasks.map((task, index) => (
+			<TodoItem
+				key={`${task.code}:${task.field ?? ""}:${task.block ?? ""}:${index}`}
+				title={taskTitle(task)}
+				detail={taskDetail(task)}
+				blocking={task.blocking}
+				onOpen={() => goTo(task)}
+			/>
+		));
+	const stops = publish.tasks.filter((task) => task.blocking);
+	const tells = publish.tasks.filter((task) => !task.blocking);
+	const [firstGroup, ...moreGroups] = [
+		{ label: t("entry.todo.label"), count: stops.length, tone: "danger" as const, rows: todoRows(stops) },
+		{ label: t("entry.todo.check"), count: tells.length, tone: "warning" as const, rows: todoRows(tells) },
+		{ label: t("translation.changedTitle"), count: sourceCount, tone: "warning" as const, rows: sourceRows },
+	].filter((group) => group.count > 0);
 
 	return (
 		<StandalonePage
@@ -1336,7 +1363,8 @@ export function EntryEditor({
 													toast(t("leave.uploads.title"));
 													return;
 												}
-												if ((await editor.own(() => archive.run({ ids: [id] }))).ok) await editor.reload();
+												// The toast says it was done and takes it back, as the move to the trash does: unarchiving gives a draft, not what was published.
+												if (await editor.own(() => archiving.archive([id]))) await editor.reload();
 											}}
 										>
 											<Archive aria-hidden />
@@ -1473,7 +1501,7 @@ export function EntryEditor({
 							</StatusBarCell>
 						</StatusBarLive>
 					)}
-					{/* One list of what is left in the entry: what stops publishing, then what changed in the source (translation.md, 2026-11-10 owner). */}
+					{/* One list of what is left in the entry: what stops publishing, then what only tells, then what changed in the source (translation.md, 2026-11-10 owner). */}
 					<StatusBarList
 						trigger={
 							<StatusBarCell tone={publish.blocking > 0 ? "warning" : undefined}>
@@ -1482,32 +1510,19 @@ export function EntryEditor({
 									: t("entry.todo.none")}
 							</StatusBarCell>
 						}
-						label={t(sourceOnly ? "translation.changedTitle" : "entry.todo.label")}
-						count={sourceOnly ? sourceCount : publish.tasks.length}
+						label={firstGroup?.label ?? t("entry.todo.label")}
+						count={firstGroup?.count ?? 0}
+						countTone={firstGroup?.tone}
 						open={todoOpen}
 						onOpenChange={setTodoOpen}
 					>
-						{sourceOnly ? null : (
-							<>
-								{publish.tasks.map((task, index) => (
-									<TodoItem
-										key={`${task.code}:${task.field ?? ""}:${task.block ?? ""}:${index}`}
-										title={taskTitle(task)}
-										detail={taskDetail(task)}
-										blocking={task.blocking}
-										onOpen={() => goTo(task)}
-									/>
-								))}
-								{/* The list holds what is left to do, nothing done beside it (2026-11-10, owner): a row that is done goes. */}
-								{publish.tasks.length === 0 ? <TodoDone>{t("entry.todo.none")}</TodoDone> : null}
-							</>
-						)}
-						{sourceRows && sourceOnly ? sourceRows : null}
-						{sourceRows && !sourceOnly ? (
-							<StatusBarListGroup label={t("translation.changedTitle")} count={sourceCount}>
-								{sourceRows}
+						{/* The list holds what is left to do, nothing done beside it (2026-11-10, owner): a row that is done goes. */}
+						{firstGroup ? firstGroup.rows : <TodoDone>{t("entry.todo.none")}</TodoDone>}
+						{moreGroups.map((group) => (
+							<StatusBarListGroup key={group.label} label={group.label} count={group.count} countTone={group.tone}>
+								{group.rows}
 							</StatusBarListGroup>
-						) : null}
+						))}
 					</StatusBarList>
 					{askedPlaces.length > 0 && !readOnly ? (
 						<StatusBarCell

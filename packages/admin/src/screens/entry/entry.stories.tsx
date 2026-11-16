@@ -1,4 +1,4 @@
-import { type Block, type Doc, defineMark, defineSchema, plainText, type Schema } from "@monti-cms/core";
+import { type Block, type Doc, defineMark, defineSchema, entryLink, plainText, type Schema } from "@monti-cms/core";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, fireEvent, userEvent, waitFor, within } from "storybook/test";
 import { type StorySite, startAt, storySite } from "../../../.storybook/pglite-site";
@@ -252,6 +252,8 @@ type Kind =
 	| "draft"
 	| "new"
 	| "untitled"
+	| "toCheck"
+	| "toCheckOnly"
 	| "published"
 	| "changed"
 	| "archived"
@@ -423,8 +425,8 @@ async function entry(monti: Monti, kind: Kind): Promise<string> {
 			: {
 					collection: "post",
 					locale: "ko",
-					title: kind === "untitled" ? "" : "첫 번째 글",
-					...(kind === "untitled" || kind === "addressInTab" ? {} : { slug: "first-post" }),
+					title: kind === "untitled" || kind === "toCheck" ? "" : "첫 번째 글",
+					...(kind === "untitled" || kind === "toCheck" || kind === "addressInTab" ? {} : { slug: "first-post" }),
 					values: {
 						summary: "리액트로 블로그를 다시 만들며 덜어낸 것과 남긴 것.",
 						...(devCategoryGroup ? { category: devCategoryGroup } : {}),
@@ -459,12 +461,44 @@ async function entry(monti: Monti, kind: Kind): Promise<string> {
 	)) as { output: { id: string } };
 	const id = made.output.id;
 	// Other entries a link can find (T63).
-	for (const title of ["리액트 다시 만들기 1편 · 상태", "리액트 다시 만들기 2편 · 렌더링", "읽을 것"])
-		await monti.run(
+	const others: string[] = [];
+	for (const title of ["리액트 다시 만들기 1편 · 상태", "리액트 다시 만들기 2편 · 렌더링", "읽을 것"]) {
+		const other = (await monti.run(
 			"entries.create",
 			{ collection: title === "읽을 것" ? "memo" : "post", locale: "ko", title },
 			admin,
+		)) as { output: { id: string } };
+		others.push(other.output.id);
+	}
+	// Words that link to a draft: a to-do that only tells and does not stop the publish (doc 02).
+	if (kind === "toCheck" || kind === "toCheckOnly") {
+		const linked = (await monti.run("entries.get", { id: others[0] }, admin)) as {
+			entry: { translationGroup: string };
+		};
+		await monti.run(
+			"entries.save",
+			{
+				id,
+				version: 1,
+				doc: doc(
+					{
+						id: `b_${++count}`,
+						type: "paragraph",
+						content: [
+							{
+								type: "text",
+								text: "앞선 글",
+								marks: [{ type: "link", href: entryLink(linked.entry.translationGroup) }],
+							},
+							{ type: "text", text: "에서 이어진다." },
+						],
+					},
+					p("목록에는 제목과 주소, 지금 상태만 남겼다."),
+				),
+			},
+			admin,
 		);
+	}
 	if (kind === "published" || kind === "changed")
 		await monti.run("entries.publish", { ids: [id], date: "keep" }, admin);
 	if (kind === "changed")
@@ -508,6 +542,13 @@ export const site = (kind: Kind, kept?: { version: number; mine: [string, unknow
 				.updateTable("entries")
 				.set({ values: JSON.stringify({ format: "podcast" }) })
 				.where("id", "=", id)
+				.execute();
+		// Published on an earlier day and changed since: publishing again can keep that date or take today's.
+		if (kind === "changed")
+			await made.db
+				.updateTable("entry_published")
+				.set({ published_at: new Date("2026-10-01T03:00:00.000Z") })
+				.where("entry_id", "=", id)
 				.execute();
 		startAt(`#/c/post/${id}`);
 		if (kept)
@@ -704,6 +745,16 @@ export const PublishBlocked: Story = {
 	},
 };
 
+/** What stops the publish, and under it what only tells (a link to a draft): two groups of one list, each with its name and count (TP-04). */
+export const ToDoGroups: Story = {
+	loaders: site("toCheck"),
+	play: async ({ canvasElement }) => {
+		const { page, all } = await opened(canvasElement);
+		await userEvent.click(await page.findByRole("button", { name: "할 일 3" }, wait));
+		await all.findByRole("group", { name: "확인할 것 1" }, wait);
+	},
+};
+
 /** Published: the toast, with the way to see it on the site (flow 1, steps 13–14). */
 export const Published: Story = {
 	loaders: site("draft"),
@@ -715,7 +766,7 @@ export const Published: Story = {
 	},
 };
 
-/** Changed after publishing: "changed", and the publish menu with the date kept or today's (flow 1, step 15). */
+/** Published on an earlier day and changed since: "changed", and the publish menu with the date kept or today's (flow 1, step 15). */
 export const RepublishMenu: Story = {
 	loaders: site("changed"),
 	play: async ({ canvasElement }) => {
