@@ -1670,6 +1670,29 @@ describe("what the second review of #480 found", () => {
 		expect(loaded.model.turns).toHaveLength(4);
 	});
 
+	it("10-1 [AS-09] a stale card whose stored words have three lines shows three paragraphs, not one run of words", async () => {
+		const story = on({ script: stories.polished });
+		await story.run();
+		const loaded = story.loaded();
+		await stories.writeSecond(loaded, "첫째 줄\n둘째 줄\n셋째 줄");
+		await openPanel();
+		await say("둘째 글 다듬어 줘");
+		await expect.element(button("보내기")).toBeVisible();
+		// The paragraph is written again elsewhere before anyone took the change.
+		await stories.writeSecond(loaded, "고쳐 쓴 문단입니다.");
+		await userEvent.click(page.getByRole("button", { name: "닫기" }));
+		window.location.hash = `#/c/post/${loaded.ids.second}`;
+		await userEvent.click(page.getByRole("button", { name: "그 사이 고쳐짐" }));
+		const card = () => document.querySelector("[data-slot=memo-diff]") as HTMLElement | null;
+		await expect.poll(() => card()?.querySelectorAll("[data-slot=editor-body]").length).toBe(2);
+		const [then] = [...(card()?.querySelectorAll("[data-slot=editor-body]") ?? [])] as HTMLElement[];
+		expect([...(then?.querySelectorAll("p") ?? [])].map((each) => each.textContent)).toEqual([
+			"첫째 줄",
+			"둘째 줄",
+			"셋째 줄",
+		]);
+	});
+
 	it("10-1 each kind of change has its own switch between one line and side by side", async () => {
 		const story = on({
 			script: async (ids, version) => [
