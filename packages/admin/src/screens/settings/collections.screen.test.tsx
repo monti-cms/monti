@@ -413,6 +413,29 @@ describe("settings › collections: what an action does", () => {
 		expect(row.getBoundingClientRect().right).toBeLessThanOrEqual(window.innerWidth);
 		expect(scrollsSideways(row)).toEqual([]);
 	});
+
+	it("[overflow-after-add] seven long-named tabs: the count of each stays whole and the name ends in an ellipsis", async () => {
+		await Fields.run();
+		for (let count = 0; count < 6; count++) {
+			await userEvent.click(page.getByRole("button", { name: "탭 추가" }));
+			await userEvent.fill(page.getByRole("textbox", { name: "탭 이름" }), `아주 긴 이름의 ${count + 3}번째 탭입니다`);
+			await userEvent.keyboard("{Enter}");
+		}
+		await expect.poll(() => page.getByRole("tab").elements().length).toBeGreaterThanOrEqual(7);
+		const tabs = page.getByRole("tab").elements();
+		const cut = tabs.filter((each) => {
+			const name = each.querySelector<HTMLElement>(".truncate");
+			return name ? name.scrollWidth > name.clientWidth : false;
+		});
+		expect(cut.length).toBeGreaterThan(0);
+		for (const each of tabs) {
+			const count = each.querySelector("[data-slot=count]");
+			// The count is whole: inside its tab, with its own width.
+			if (count)
+				expect(count.getBoundingClientRect().right).toBeLessThanOrEqual(each.getBoundingClientRect().right + 0.5);
+			if (count) expect(count.scrollWidth).toBeLessThanOrEqual(count.clientWidth + 1);
+		}
+	});
 });
 
 const { SaveRefused } = composeStories(collections);

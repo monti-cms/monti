@@ -91,12 +91,12 @@ function At({ top, left, right, children }: { top: number; left?: number; right?
 // --- The code -------------------------------------------------------------------------------------------------------------------------------
 
 /** The default code colours (monti-light and monti-dark are made from these tokens), as the highlighter gives them: the token itself, so dark follows. */
-const KEYWORD = "var(--monti-fg-danger)";
-const STRING = "var(--monti-fg-success)";
-const NUMBER = "var(--monti-fg-proposal)";
+const KEYWORD = "var(--monti-code-violet)";
+const STRING = "var(--monti-code-teal)";
+const NUMBER = "var(--monti-code-orange)";
 const NAME = "var(--monti-fg-default)";
-const VARIABLE = "var(--monti-fg-success)";
-const TAG = "var(--monti-fg-danger)";
+const VARIABLE = "var(--monti-fg-default)";
+const TAG = "var(--monti-code-rose)";
 
 type Piece = string | [string, string];
 const CODE: Piece[][] = [

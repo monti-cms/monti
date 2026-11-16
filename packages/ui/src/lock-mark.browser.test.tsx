@@ -137,11 +137,38 @@ it("a locked folder tab names its lock and says why to a pointer on the tab and 
 	await expect.element(tab).toBeVisible();
 	await expect.element(tab.getByRole("img", { name: "SEO 플러그인이 둔 탭" })).toBeVisible();
 	await userEvent.hover(tab);
-	await expect.poll(tip, { timeout: 5000 }).toBe("SEO 플러그인이 둔 탭");
+	await expect.poll(tip, { timeout: 5000 }).toContain("SEO 플러그인이 둔 탭");
 	await userEvent.unhover(tab);
 	await expect.poll(tip).toBe(null);
 	// The keyboard: the tab row is one stop, the arrow keys move in it.
 	await userEvent.keyboard("{Tab}{ArrowRight}");
 	await expect.element(tab).toHaveFocus();
-	await expect.poll(tip, { timeout: 5000 }).toBe("SEO 플러그인이 둔 탭");
+	await expect.poll(tip, { timeout: 5000 }).toContain("SEO 플러그인이 둔 탭");
+});
+
+it("a locked folder tab whose name is cut has one speaker: one tooltip with the whole name and why it is locked", async () => {
+	render(
+		<div style={{ width: 260 }}>
+			<FolderTabs value="a">
+				<FolderTabsList>
+					<FolderTab value="a" count={4}>
+						아주 긴 이름의 첫 번째 탭입니다
+					</FolderTab>
+					<FolderTab value="seo" count={2} locked="SEO 플러그인이 둔 탭" draggable={false}>
+						검색 엔진에 보이는 아주 긴 이름
+					</FolderTab>
+				</FolderTabsList>
+			</FolderTabs>
+		</div>,
+	);
+	const tab = page.getByRole("tab", { name: /검색 엔진/ });
+	await expect.element(tab).toBeVisible();
+	await userEvent.hover(tab);
+	await expect.poll(tip, { timeout: 5000 }).toContain("검색 엔진에 보이는 아주 긴 이름");
+	expect(document.querySelectorAll("[role=tooltip]").length).toBe(1);
+	// The lock and its count stay whole beside the cut name.
+	const box = tab.element().getBoundingClientRect();
+	expect(tab.element().querySelector("[data-slot=count]")?.getBoundingClientRect().right).toBeLessThanOrEqual(
+		box.right,
+	);
 });

@@ -1,6 +1,6 @@
 import type { Block, Doc } from "@monti-cms/core";
 import { describe, expect, it } from "vitest";
-import { page } from "vitest/browser";
+import { page, userEvent } from "vitest/browser";
 import { scene } from "../../../test/scene";
 import * as blocks from "./site-blocks.stories";
 
@@ -44,6 +44,37 @@ describe("the looks of the site's blocks in the editor (doc 18)", () => {
 		expect(Math.abs(under - over)).toBeLessThanOrEqual(2);
 	});
 
+	it("18-4 each kind's title icon and its kind button are one Carbon glyph, and the box is named by its kind only when the title says something else", async () => {
+		const tones = ["note", "tip", "info", "warning", "danger"] as const;
+		const made = on({
+			type: "doc",
+			blocks: tones.map((tone) => ({
+				id: `c_${tone}`,
+				type: "callout",
+				attrs: { tone, ...(tone === "note" ? {} : { title: `제목 ${tone}` }) },
+				children: [p(`p_${tone}`, `본문 ${tone}`)],
+			})),
+		});
+		await made.run();
+		await expect.element(body().getByText("본문 danger")).toBeVisible();
+		await expect
+			.poll(() => body().element().querySelectorAll('[data-slot="block-title"]').length, { timeout: 15_000 })
+			.toBe(5);
+		const paths = (source: string) => [...source.matchAll(/ d=(?:"|')([^"']+)(?:"|')/g)].map((hit) => hit[1]).join("|");
+		for (const tone of tones) {
+			await userEvent.click(body().getByText(`본문 ${tone}`));
+			const box = body().element().querySelector<HTMLElement>(`[data-tone="${tone}"]`) as HTMLElement;
+			const mask = getComputedStyle(box.querySelector(".monti-block-callout-title") as Element, "::before").maskImage;
+			const drawing = decodeURIComponent(mask.slice(mask.indexOf(",") + 1, mask.lastIndexOf('"'))).replaceAll('"', "'");
+			const button = page.getByRole("button", { name: "종류" }).element();
+			expect(paths(drawing), tone).toBe(
+				[...button.querySelectorAll("svg path")].map((path) => path.getAttribute("d")).join("|"),
+			);
+			// Named by its kind when the writer's title says something else; the default title already is that name, so no second reading.
+			expect(box.getAttribute("aria-label") === null, tone).toBe(tone === "note");
+		}
+	});
+
 	it("18-5 the editor's tabs are the folder tabs: the open tab joins the box under it, the box has one frame and its top-left corner is square", async () => {
 		const made = on({
 			type: "doc",
@@ -84,7 +115,7 @@ describe("the looks of the site's blocks in the editor (doc 18)", () => {
 		}
 		// A tab is never wider than its name: "pnpm" is its words and its padding in a row that fits.
 		const words = document.createRange();
-		words.selectNodeContents(other.querySelector("[data-name]") as Element);
+		words.selectNodeContents(other.querySelector(".truncate") as Element);
 		const sides = getComputedStyle(other);
 		expect(other.getBoundingClientRect().width).toBeCloseTo(
 			words.getBoundingClientRect().width +

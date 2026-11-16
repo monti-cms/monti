@@ -34,19 +34,19 @@ export const MONTI_CODE_THEMES = {
 					"keyword.operator.wordlike",
 				],
 				settings: {
-					foreground: "#a8353c",
+					foreground: "#6b3fa0",
 				},
 			},
 			{
 				scope: ["string", "string.regexp", "punctuation.definition.string"],
 				settings: {
-					foreground: "#336a4f",
+					foreground: "#14625c",
 				},
 			},
 			{
 				scope: ["constant", "constant.numeric", "constant.language", "support.constant", "variable.other.constant"],
 				settings: {
-					foreground: "#2f56c8",
+					foreground: "#9c4608",
 				},
 			},
 			{
@@ -59,31 +59,31 @@ export const MONTI_CODE_THEMES = {
 			{
 				scope: ["entity.name.type", "entity.name.class", "support.class", "support.type"],
 				settings: {
-					foreground: "#2f56c8",
+					foreground: "#9c2663",
 				},
 			},
 			{
 				scope: ["entity.name.tag", "markup.deleted"],
 				settings: {
-					foreground: "#a8353c",
+					foreground: "#9c2663",
 				},
 			},
 			{
 				scope: ["entity.other.attribute-name"],
 				settings: {
-					foreground: "#336a4f",
+					foreground: "#14625c",
 				},
 			},
 			{
 				scope: ["markup.inserted"],
 				settings: {
-					foreground: "#336a4f",
+					foreground: "#14625c",
 				},
 			},
 			{
 				scope: ["markup.heading", "entity.name.section"],
 				settings: {
-					foreground: "#2f56c8",
+					foreground: "#6b3fa0",
 					fontStyle: "bold",
 				},
 			},
@@ -104,7 +104,7 @@ export const MONTI_CODE_THEMES = {
 			{
 				scope: ["invalid"],
 				settings: {
-					foreground: "#a8353c",
+					foreground: "#9c2663",
 				},
 			},
 		],
@@ -141,19 +141,19 @@ export const MONTI_CODE_THEMES = {
 					"keyword.operator.wordlike",
 				],
 				settings: {
-					foreground: "#e3918f",
+					foreground: "#c4a5ef",
 				},
 			},
 			{
 				scope: ["string", "string.regexp", "punctuation.definition.string"],
 				settings: {
-					foreground: "#86c09c",
+					foreground: "#7ad6cd",
 				},
 			},
 			{
 				scope: ["constant", "constant.numeric", "constant.language", "support.constant", "variable.other.constant"],
 				settings: {
-					foreground: "#a6b7ea",
+					foreground: "#f0a870",
 				},
 			},
 			{
@@ -166,31 +166,31 @@ export const MONTI_CODE_THEMES = {
 			{
 				scope: ["entity.name.type", "entity.name.class", "support.class", "support.type"],
 				settings: {
-					foreground: "#a6b7ea",
+					foreground: "#f09ac0",
 				},
 			},
 			{
 				scope: ["entity.name.tag", "markup.deleted"],
 				settings: {
-					foreground: "#e3918f",
+					foreground: "#f09ac0",
 				},
 			},
 			{
 				scope: ["entity.other.attribute-name"],
 				settings: {
-					foreground: "#86c09c",
+					foreground: "#7ad6cd",
 				},
 			},
 			{
 				scope: ["markup.inserted"],
 				settings: {
-					foreground: "#86c09c",
+					foreground: "#7ad6cd",
 				},
 			},
 			{
 				scope: ["markup.heading", "entity.name.section"],
 				settings: {
-					foreground: "#a6b7ea",
+					foreground: "#c4a5ef",
 					fontStyle: "bold",
 				},
 			},
@@ -211,7 +211,7 @@ export const MONTI_CODE_THEMES = {
 			{
 				scope: ["invalid"],
 				settings: {
-					foreground: "#e3918f",
+					foreground: "#f09ac0",
 				},
 			},
 		],

@@ -372,19 +372,28 @@ describe("18-2 the diagram's look", () => {
 	it.each([
 		"light",
 		"dark",
-	] as const)("18-2 a pie's labels read on their slices and the slices stand against the page (%s)", async (mode) => {
+	] as const)("18-2 a pie's labels read on their slices and the slices keep their hue (%s)", async (mode) => {
 		const page = draw(doc(diagram('pie title Share\n  "Alpha": 40\n  "Beta": 30\n  "Gamma": 20\n  "Delta": 10')), {
 			mode,
 		});
 		const svg = await drawn(page);
-		const ground = rgbOf(PAGES[mode].ground);
 		const slices = [...svg.querySelectorAll<SVGElement>(".pieCircle")];
 		const labels = [...svg.querySelectorAll<SVGElement>(".slice")];
 		expect(slices.length).toBe(4);
 		expect(labels.length).toBe(4);
+		const hue = ([r, g, b]: Rgb) => {
+			const high = Math.max(r, g, b);
+			const span = high - Math.min(r, g, b);
+			const raw = high === r ? ((g - b) / span) % 6 : high === g ? (b - r) / span + 2 : (r - g) / span + 4;
+			return (raw * 60 + 360) % 360;
+		};
+		const own = (at: number) =>
+			rgbOf(style(page.querySelector("figure") as Element).getPropertyValue(`--chart-${at + 1}`));
 		slices.forEach((slice, at) => {
 			expect(contrastOf(rgbOf(style(labels[at]).fill), fill(slice)), `label ${at}`).toBeGreaterThanOrEqual(4.5);
-			expect(contrastOf(fill(slice), ground), `slice ${at}`).toBeGreaterThanOrEqual(3);
+			// The slice is its series colour's hue, with only its lightness moved: no brown or olive made of a darkening.
+			const gap = Math.abs(hue(fill(slice)) - hue(own(at)));
+			expect(Math.min(gap, 360 - gap), `slice ${at} hue`).toBeLessThanOrEqual(8);
 		});
 	});
 });

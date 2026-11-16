@@ -292,7 +292,7 @@ describe("17-9 the site's code block", () => {
 			{ createElement: html, locale: "ko" },
 		).join("");
 		expect(out).toContain(
-			`<figcaption><span data-code-language="">ts</span><span data-code-name="">src/app.ts</span></figcaption>`,
+			`<figcaption><span data-code-language="">TypeScript</span><span data-code-name="">src/app.ts</span></figcaption>`,
 		);
 		expect(out).toContain('<button type="button" data-code-copy="" data-copied="복사함">복사</button>');
 		expect(out).toContain('data-line-numbers=""');

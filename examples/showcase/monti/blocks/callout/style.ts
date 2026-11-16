@@ -1,3 +1,5 @@
+import { ICON_MASKS } from "./icon-masks.generated";
+
 /** The callout block's look, as CSS its site component loads with React's `<style href precedence>`: the site's own, change it here (doc 18). */
 export const style = `/*
  * What the blocks' looks share: their accent colours, borders and the chart's series colours. 'each block's style starts with them'.
@@ -69,23 +71,23 @@ export const style = `/*
 }
 .monti-block-callout[data-tone="note"] {
 	--monti-block-callout-accent: var(--monti-callout-note);
-	--monti-block-callout-icon: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%20fill='none'%20stroke='currentColor'%20stroke-width='2'%20stroke-linecap='round'%20stroke-linejoin='round'%3E%3Cpath%20d='M6%203h9l4%204v14H6z'/%3E%3Cpath%20d='M9%2012h7M9%2016h7'/%3E%3C/svg%3E");
+	--monti-block-callout-icon: ${ICON_MASKS.note};
 }
 .monti-block-callout[data-tone="tip"] {
 	--monti-block-callout-accent: var(--monti-callout-tip);
-	--monti-block-callout-icon: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%20fill='none'%20stroke='currentColor'%20stroke-width='2'%20stroke-linecap='round'%20stroke-linejoin='round'%3E%3Cpath%20d='M9%2018h6M10%2021h4'/%3E%3Cpath%20d='M12%203a6%206%200%200%200-4%2010.5c.7.7%201%201.5%201%202.5h6c0-1%20.3-1.8%201-2.5A6%206%200%200%200%2012%203z'/%3E%3C/svg%3E");
+	--monti-block-callout-icon: ${ICON_MASKS.tip};
 }
 .monti-block-callout[data-tone="info"] {
 	--monti-block-callout-accent: var(--monti-callout-info);
-	--monti-block-callout-icon: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%20fill='none'%20stroke='currentColor'%20stroke-width='2'%20stroke-linecap='round'%20stroke-linejoin='round'%3E%3Ccircle%20cx='12'%20cy='12'%20r='9'/%3E%3Cpath%20d='M12%2011v6M12%207.5v.01'/%3E%3C/svg%3E");
+	--monti-block-callout-icon: ${ICON_MASKS.info};
 }
 .monti-block-callout[data-tone="warning"] {
 	--monti-block-callout-accent: var(--monti-callout-warning);
-	--monti-block-callout-icon: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%20fill='none'%20stroke='currentColor'%20stroke-width='2'%20stroke-linecap='round'%20stroke-linejoin='round'%3E%3Cpath%20d='M12%203l10%2018H2z'/%3E%3Cpath%20d='M12%2010v5M12%2018v.01'/%3E%3C/svg%3E");
+	--monti-block-callout-icon: ${ICON_MASKS.warning};
 }
 .monti-block-callout[data-tone="danger"] {
 	--monti-block-callout-accent: var(--monti-callout-danger);
-	--monti-block-callout-icon: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%20fill='none'%20stroke='currentColor'%20stroke-width='2'%20stroke-linecap='round'%20stroke-linejoin='round'%3E%3Ccircle%20cx='12'%20cy='12'%20r='9'/%3E%3Cpath%20d='M9%209l6%206M15%209l-6%206'/%3E%3C/svg%3E");
+	--monti-block-callout-icon: ${ICON_MASKS.danger};
 }
 .monti-block-callout-title {
 	display: flex;

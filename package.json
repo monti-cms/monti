@@ -6,6 +6,7 @@
 		"lint": "pnpm exec biome check .",
 		"lint:fix": "pnpm exec biome check . --write",
 		"gen:tokens": "node scripts/gen-tokens.mjs",
+		"gen:callout-icons": "node scripts/gen-callout-icons.mjs",
 		"gen:screen-catalog": "node scripts/gen-screen-catalog.mjs",
 		"check:korean": "node scripts/check-korean.mjs",
 		"check:design": "node scripts/check-design.mjs",

@@ -388,7 +388,7 @@ const CODE_ROLES = [
 	["punctuation", "gray-11", ["punctuation", "meta.brace", "keyword.operator"]],
 	[
 		"keyword",
-		"danger-11",
+		"code-violet",
 		[
 			"keyword",
 			"storage",
@@ -402,26 +402,41 @@ const CODE_ROLES = [
 			"keyword.operator.wordlike",
 		],
 	],
-	["string", "success-11", ["string", "string.regexp", "punctuation.definition.string"]],
+	["string", "code-teal", ["string", "string.regexp", "punctuation.definition.string"]],
 	[
 		"constant",
-		"proposal-11",
+		"code-orange",
 		["constant", "constant.numeric", "constant.language", "support.constant", "variable.other.constant"],
 	],
 	["function", "gray-12", ["entity.name.function", "support.function"], "bold"],
-	["type", "proposal-11", ["entity.name.type", "entity.name.class", "support.class", "support.type"]],
-	["tag", "danger-11", ["entity.name.tag", "markup.deleted"]],
-	["attribute", "success-11", ["entity.other.attribute-name"]],
-	["inserted", "success-11", ["markup.inserted"]],
-	["heading", "proposal-11", ["markup.heading", "entity.name.section"], "bold"],
+	["type", "code-rose", ["entity.name.type", "entity.name.class", "support.class", "support.type"]],
+	["tag", "code-rose", ["entity.name.tag", "markup.deleted"]],
+	["attribute", "code-teal", ["entity.other.attribute-name"]],
+	["inserted", "code-teal", ["markup.inserted"]],
+	["heading", "code-violet", ["markup.heading", "entity.name.section"], "bold"],
 	["emphasis", "gray-12", ["markup.italic"], "italic"],
 	["strong", "gray-12", ["markup.bold"], "bold"],
-	["invalid", "danger-11", ["invalid"]],
+	["invalid", "code-rose", ["invalid"]],
 ];
 
 /** Where the code's colors are read: text on the code box's ground (`bg-muted`, 4.5:1 or more, checked here and by the unit test of the theme). */
 const CODE_GROUND = "bg-muted";
 const CODE_TEXT = "fg-default";
+/** The other surfaces code sits on: the diff lines' tints, the highlighted line and the lit block; a callout's tint (10% of its kind's colour) comes over the code box. */
+const CODE_GROUNDS = [CODE_GROUND, "bg-success-muted", "bg-danger-muted", "bg-highlight", "bg-block"];
+const CALLOUT_STAND_INS = ["fg-success", "fg-danger", "fg-warning", "fg-proposal", "fg-muted"];
+
+/** `amount` of `top` over `ground`, both `#rrggbb`. */
+function mixColors(top, ground, amount) {
+	const channel = (hex, at) => Number.parseInt(hex.slice(at, at + 2), 16);
+	return `#${[1, 3, 5]
+		.map((at) =>
+			Math.round(channel(ground, at) + (channel(top, at) - channel(ground, at)) * amount)
+				.toString(16)
+				.padStart(2, "0"),
+		)
+		.join("")}`;
+}
 
 /** The Shiki themes `monti-light` and `monti-dark`: every syntax role from a color token, resolved to the hex it points at. */
 function codeThemeModule(json) {
@@ -504,12 +519,18 @@ export function tokenProblems(json, tokens) {
 		}
 	}
 
-	for (const [role, token] of [["text", CODE_TEXT], ...CODE_ROLES.map(([name, token]) => [name, token])]) {
-		for (const mode of ["light", "dark"]) {
+	// Every code colour reads on every surface code sits on, in each mode: the code box, the diff lines' tints, the highlighted line, the lit block, and the
+	// box of a callout (its tint over the code box, one stand-in colour for each kind).
+	for (const mode of ["light", "dark"]) {
+		const grounds = [...CODE_GROUNDS.map((name) => [name, resolve(name, mode)])];
+		for (const standIn of CALLOUT_STAND_INS)
+			grounds.push([`callout ${standIn} tint`, mixColors(resolve(standIn, mode), resolve(CODE_GROUND, mode), 0.1)]);
+		for (const [role, token] of [["text", CODE_TEXT], ...CODE_ROLES.map(([name, token]) => [name, token])]) {
 			const color = resolve(token, mode);
-			const ground = resolve(CODE_GROUND, mode);
-			if (/^#[\da-f]{6}$/i.test(color) && contrast(color, ground) < 4.5)
-				problems.push(`code ${role} (${mode}): ${token} ${color} on ${CODE_GROUND} ${ground} is under 4.5:1`);
+			if (!/^#[\da-f]{6}$/i.test(color)) continue;
+			for (const [name, ground] of grounds)
+				if (contrast(color, ground) < 4.5)
+					problems.push(`code ${role} (${mode}): ${token} ${color} on ${name} ${ground} is under 4.5:1`);
 		}
 	}
 

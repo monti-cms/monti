@@ -172,7 +172,7 @@ describe("the blocks on the site (doc 18)", () => {
 				],
 			}),
 		);
-		expect(second).toMatch(/aria-selected="true"[^>]*>pnpm</);
+		expect(second).toMatch(/aria-selected="true"[^>]*>.*?>pnpm</);
 	});
 
 	it("18-2 columns are as wide as widths say, and equal when widths does not fit their number", () => {
@@ -307,7 +307,7 @@ describe("a block that keeps its source's words", () => {
 		const out = renderToStaticMarkup(
 			createElement("div", null, ...renderDocument(body, { createElement: h, blocks, marks, locale: "en" })),
 		).replace(/<style[^>]*>[\s\S]*?<\/style>/g, "");
-		expect(out).toContain('class="monti-block-callout" data-tone="tip" role="note" aria-label="Tip" lang="ko"');
+		expect(out).toContain('class="monti-block-callout" data-tone="tip" role="note" lang="ko"');
 		expect(out).toContain('<details class="monti-block-collapsible" lang="ko">');
 	});
 });

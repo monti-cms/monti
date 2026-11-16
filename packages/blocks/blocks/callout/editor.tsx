@@ -2,17 +2,14 @@
 
 import { BlockBar, BlockBarMenu, BlockContent, BlockFrame, BlockTitle, useBlock } from "@monti-cms/admin/blocks";
 import { Idea, Information, Pen, Warning, WarningAlt } from "@monti-cms/admin/icons";
+import { KIND_ICONS } from "./kind-icons";
 import { TONES, type Tone, toneOf } from "./site";
 import { style } from "./style";
 import { words, wordsIn } from "./words";
 
-const ICONS: Record<Tone, typeof Pen> = {
-	note: Pen,
-	tip: Idea,
-	info: Information,
-	warning: Warning,
-	danger: WarningAlt,
-};
+/** The glyphs by their Carbon names; each kind takes its own by the map of `kind-icons.ts`, which the title icon of `style.ts` is made from too. */
+const GLYPHS = { Pen, Idea, Information, Warning, WarningAlt };
+const ICONS = Object.fromEntries(TONES.map((tone) => [tone, GLYPHS[KIND_ICONS[tone]]])) as Record<Tone, typeof Pen>;
 
 /**
  * The callout in the editor (doc 18): the site's box, its title typed in it (its kind's name in grey while empty, Enter and Esc go to its words), and
@@ -42,7 +39,18 @@ export default function CalloutEditor() {
 			<style href="monti-block-callout" precedence="monti-blocks">
 				{style}
 			</style>
-			<div className="monti-block-callout" data-tone={tone} role="note" aria-label={wordsIn(block.locale)[tone]}>
+			<div
+				className="monti-block-callout"
+				data-tone={tone}
+				role="note"
+				aria-label={
+					typeof block.attrs.title === "string" &&
+					block.attrs.title.trim() !== "" &&
+					block.attrs.title.trim() !== wordsIn(block.locale)[tone]
+						? wordsIn(block.locale)[tone]
+						: undefined
+				}
+			>
 				<div className="monti-block-callout-title" contentEditable={false}>
 					<BlockTitle
 						label={say(words.title)}

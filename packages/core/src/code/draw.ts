@@ -1,6 +1,7 @@
 import type { Block } from "../body/doc";
 import { coreMessages, formatMessage } from "../messages";
 import type { CodeColors, CodeToken } from "./highlight";
+import { languageName } from "./highlight";
 import {
 	ANCHOR,
 	COLLAPSE,
@@ -226,7 +227,7 @@ export function drawCodeBlock<Node>(
 	const children: unknown[] = [];
 	// The head: the language (or "Plain text" for a block with none), then the file name: the words of the editor's head (doc 17).
 	const title = typeof attrs.title === "string" && attrs.title ? attrs.title : undefined;
-	const named = language ? (options.colors?.languageName(language) ?? language) : plainText;
+	const named = language ? languageName(language) : plainText;
 	children.push(
 		h(
 			"figcaption",

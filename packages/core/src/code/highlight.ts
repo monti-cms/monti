@@ -20,8 +20,6 @@ export type CodeToken = {
  */
 export type CodeColors = {
 	lines: (code: string, language: string | undefined) => CodeToken[][];
-	/** The display name of a language (`ts` → `TypeScript`), or the name itself. */
-	languageName: (language: string) => string;
 	/** Whether the language is loaded. */
 	has: (language: string | undefined) => boolean;
 	/** Loads a language Shiki has (the editor loads a block's language when it first draws it); `false` for a name Shiki does not know. */
@@ -57,7 +55,6 @@ export function colorsOf(
 	return {
 		themes,
 		lineClasses,
-		languageName,
 		has,
 		load: (language) => loadLanguage(highlighter, language).catch(() => false),
 		lines(code, language) {
