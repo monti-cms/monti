@@ -99,7 +99,7 @@ const siteAdmin = defineAdminPlugin({
 			<Checkbox
 				id={id}
 				checked={value === "on"}
-				disabled={readOnly}
+				readOnly={readOnly}
 				onCheckedChange={(on) => onChange(on ? "on" : null)}
 			/>
 		),
