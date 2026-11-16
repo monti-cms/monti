@@ -24,7 +24,7 @@ const markVariants = cva("box-border w-[7px] shrink-0 rounded-monti-full bg-curr
 			editing: "h-[7px] bg-monti-warning-emphasis",
 			failed: "h-[7px]",
 			draft: "h-[7px] border-[1.5px] border-current bg-transparent",
-			archived: "h-0.5 rounded-none",
+			archived: "mb-0.5 h-0.5 rounded-none",
 		},
 	},
 });
@@ -54,7 +54,7 @@ function EntryStatus({
 			className={cn(
 				// Whole wherever it stands in a row of things (`shrink-0`). Only a table cell that cuts its words bounds it: there the name ends in "…" and the
 				// mark stays.
-				"inline-flex shrink-0 items-center gap-[7px] whitespace-nowrap text-monti-label",
+				"inline-flex shrink-0 items-baseline gap-monti-6 whitespace-nowrap text-monti-label",
 				quiet ? "font-normal text-monti-subtle" : COLOR[status],
 				className,
 			)}

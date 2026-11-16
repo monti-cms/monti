@@ -549,14 +549,14 @@ function SidebarMenuBadge({
 	);
 }
 
-/** The folders under an open row, 13px muted. Each row keeps its own 38px in from the edge, so its hover ground spans the whole row. Rows are {@link SidebarMenuSubButton}s. */
+/** The folders under an open row, 14px like the rows above them, muted. Each row keeps its own 40px in from the edge, so its hover ground spans the whole row. Rows are {@link SidebarMenuSubButton}s. */
 function SidebarMenuSub({ className, ...props }: React.ComponentProps<"ul">) {
 	return (
 		<ul
 			data-slot="sidebar-menu-sub"
 			data-sidebar="menu-sub"
 			className={cn(
-				"m-0 flex list-none flex-col gap-monti-4 pt-monti-4 pr-0 pb-monti-6 pl-0 text-monti-muted text-monti-note group-data-[rail]/rail:hidden",
+				"m-0 flex list-none flex-col gap-monti-4 pt-monti-4 pr-0 pb-monti-6 pl-0 text-monti-body text-monti-muted group-data-[rail]/rail:hidden",
 				className,
 			)}
 			{...props}
@@ -564,15 +564,15 @@ function SidebarMenuSub({ className, ...props }: React.ComponentProps<"ul">) {
 	);
 }
 
-const SUB_DEPTH = ["pl-[42px]", "pl-[64px]", "pl-[86px]", "pl-[108px]"] as const;
+const SUB_DEPTH = ["pl-[40px]", "pl-[62px]", "pl-[84px]", "pl-[106px]"] as const;
 
 /**
  * The tree line of a folder row: a straight 1px rule down the side of a parent's folders, under the parent's icon (or its parent folder's words),
- * with 4px of air above the first folder, ending 4px above the bottom of the last one, as it starts 4px into the first (2026-11-05 owner). Every folder name stands 20px past its nearest rule.
+ * with 4px of air above the first folder, ending 4px above the bottom of the last one, as it starts 4px into the first (2026-11-05 owner). Every folder name stands 19px to 21px past its nearest rule and exactly where its parent's name stands, one 22px step in per level, so the names of a column line up.
  */
-const SUB_LINE_X = ["before:left-[21px]", "before:left-[43px]", "before:left-[65px]", "before:left-[87px]"] as const;
+const SUB_LINE_X = ["before:left-[21px]", "before:left-[41px]", "before:left-[63px]", "before:left-[85px]"] as const;
 /** Where each folder depth's rule runs, in px from the row's start: under the parent's icon, then under the parent folder's first letter. */
-const SUB_LINE_LEFT = [21, 43, 65, 87] as const;
+const SUB_LINE_LEFT = [21, 41, 63, 85] as const;
 
 /**
  * The tree lines of a flat folder list, from each folder's depth: whether a folder is the first under its parent (its rule starts with some air),
@@ -596,11 +596,11 @@ export function folderTree(depths: readonly number[]) {
 }
 
 const SUB_LINE =
-	"relative before:pointer-events-none before:absolute before:-top-[2px] before:-bottom-[2px] before:border-monti-strong before:border-l before:content-['']";
+	"relative before:pointer-events-none before:absolute before:-z-10 before:-top-[2px] before:-bottom-[2px] before:border-monti-strong before:border-l before:content-['']";
 
 /**
  * A folder under a row: its name and, at the end, its count. The open one is ink and semibold, with no ground of its own; pointing at one gives it
- * the selected ground. A thin straight tree line runs down the side of the folders (`SUB_LINE`). A row starts 42px in from the edge, and `depth` indents a folder inside another by 22px a level; `dropTarget` is the ring while entries are dragged over it. A link by default; `render={<button type="button" />}` makes it a button.
+ * the selected ground. A thin straight tree line runs down the side of the folders (`SUB_LINE`). A row's name starts 40px in from the edge, where a top row's name stands, and its count ends 16px from the edge like a top row's; `depth` indents a folder inside another by 22px a level; `dropTarget` is the ring while entries are dragged over it. A link by default; `render={<button type="button" />}` makes it a button.
  */
 function SidebarMenuSubButton({
 	render,
@@ -627,7 +627,7 @@ function SidebarMenuSubButton({
 		<span
 			key={left}
 			aria-hidden
-			className="pointer-events-none absolute -top-[2px] -bottom-[2px] w-px bg-(--monti-border-strong)"
+			className="pointer-events-none absolute -top-[2px] -bottom-[2px] -z-10 w-px bg-(--monti-border-strong)"
 			style={{ left }} // design-allow: the rule sits under the icon of its depth, from SUB_LINE_LEFT
 		/>
 	));
@@ -636,7 +636,7 @@ function SidebarMenuSubButton({
 		props: mergeProps<"a">(
 			{
 				className: cn(
-					"flex w-full cursor-pointer items-center justify-between gap-monti-8 min-h-monti-control-md rounded-monti-full border-0 bg-transparent py-monti-6 pr-[14px] text-left no-underline outline-none hover:bg-monti-selected hover:text-monti-default focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-monti-contrast/50 data-active:font-semibold data-active:text-monti-default data-droptarget:ring-2 data-droptarget:ring-monti-contrast [&>span:not([data-slot])]:min-w-0 [&>span:not([data-slot])]:truncate",
+					"flex w-full cursor-pointer items-center justify-between gap-monti-8 min-h-monti-control-md rounded-monti-full border-0 bg-transparent py-monti-6 pr-monti-16 text-left no-underline outline-none hover:bg-monti-selected hover:text-monti-default focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-monti-contrast/50 data-active:font-semibold data-active:text-monti-default data-droptarget:ring-2 data-droptarget:ring-monti-contrast [&>span:not([data-slot])]:min-w-0 [&>span:not([data-slot])]:truncate",
 					SUB_DEPTH[depth],
 					SUB_LINE,
 					SUB_LINE_X[depth],

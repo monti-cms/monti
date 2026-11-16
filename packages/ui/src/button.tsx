@@ -72,6 +72,25 @@ const buttonVariants = cva(
 	},
 );
 
+/**
+ * A label that is as wide as the widest of the labels it can take: the others are laid under it, unseen, in the same place. What stands beside a
+ * button whose words change ("Publish", "Published") then stays put when they do.
+ */
+export function ReservedLabel({ children, reserve }: { children: React.ReactNode; reserve?: React.ReactNode[] }) {
+	if (!reserve || reserve.length === 0) return children;
+	return (
+		<span className="inline-grid justify-items-center *:col-start-1 *:row-start-1">
+			<span>{children}</span>
+			{reserve.map((label, index) => (
+				// The labels are a fixed run, never reordered.
+				<span key={index} aria-hidden className="invisible">
+					{label}
+				</span>
+			))}
+		</span>
+	);
+}
+
 function Button({
 	className,
 	variant,
@@ -79,6 +98,7 @@ function Button({
 	loading = false,
 	pendingLabel,
 	width,
+	reserve,
 	disabled,
 	focusableWhenDisabled,
 	href,
@@ -107,6 +127,8 @@ function Button({
 		loading?: boolean;
 		/** `full` spans its container (a stacked form, a narrow panel). */
 		width?: "full";
+		/** The other labels this button takes (the changing words of one action): it is as wide as the widest, so its neighbours do not move when the words change. */
+		reserve?: React.ReactNode[];
 	}) {
 	const own = useRef<HTMLButtonElement>(null);
 	const [sending, setSending] = useState(false);
@@ -150,7 +172,7 @@ function Button({
 			{...(held ? BUSY_GUARD : {})}
 		>
 			{busy && <Spinner className={size === "sm" || size === "xs" ? "size-3" : "size-3.5"} />}
-			{sending ? pendingLabel : children}
+			<ReservedLabel reserve={reserve}>{sending ? pendingLabel : children}</ReservedLabel>
 		</ButtonPrimitive>
 	);
 }

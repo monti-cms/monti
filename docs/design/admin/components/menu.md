@@ -4,7 +4,8 @@
 
 ## 메뉴 카드
 
-뜨는 메뉴 카드다. 종이 바탕, `border-emphasis`, `radius-xl`, `shadow-floating`. 폭은 240px(`width-menu`)이고, 더 긴 행이 있으면 넓어질 수 있다.
+뜨는 메뉴 카드다. 종이 바탕, `border-emphasis`, `radius-xl`, `shadow-floating`. 폭은 240px(`width-menu`)이고, 더 긴 행이 있으면 내용 폭만큼 320px까지 넓어질 수 있다. 폭의 단계는 이 둘과 패널 폭(300px)뿐이다. 항목이 짧은 메뉴도 240px이고(206 · 218 · 226처럼 메뉴마다 다른 폭은 없다), 위로 열리는 메뉴도 같다(LC-09, LH-09, LP-02, 2026-11-16).
+- 찾기 줄(`MENU_SEARCH_ROW`)은 아래 구분선을 포함해 32px이다(`height-control-md`). 어느 메뉴에서나 위 행들과 같은 높이이고, 입력 칸이 20px 줄 하나로 줄어들지 않는다(LT-14, LC-05, 2026-11-16 만들며 정함).
 
 - 그룹 이름은 mono 11px이다. 단축키는 오른쪽에 mono로 둔다.
 - 단축키는 관리자 화면이 도는 시스템에 맞춰 쓴다. Mac에서는 "⇧⌘D"(⌥⇧⌘ 순서의 글리프, 구분자 없음), Windows와 Linux에서는 "Ctrl+Shift+D"다. 툴팁에서도 같은 규칙을 따른다. 화면은 글리프를 직접 쓰지 않는다. 키를 넘기면(`["mod", "shift", "D"]`, `mod`는 ⌘ 또는 Ctrl) `@monti-cms/ui`의 `formatShortcut` / `useShortcut` / `Shortcut`이 쓴다. 그래서 Mac과 Windows 표기를 정하는 곳이 한 군데다. `MenuShortcut keys`와 `TooltipContent shortcut`이 키를 받는다. 지우는 키도 그렇다: 행 메뉴의 "휴지통으로"와 "영구 삭제"는 `MenuShortcut keys={["Delete"]}`이고 "Del"을 치지 않는다. 행과 타일은 Delete와 Backspace를 같이 듣는다(Mac의 delete 키가 Backspace를 보낸다, 만들며 정함 (2026-11-14)). `Delete` 키는 Mac에서 "⌫"로, 다른 시스템에서 "Delete"로 쓴다: Mac 키보드에 있는 지우는 키가 ⌫이고, 행이 Backspace도 듣기 때문이다. `formatShortcut`이 쓰므로 모든 메뉴와 툴팁이 같다(만들며 정함 (2026-11-14)). `pnpm check:design`의 `typed-glyph`가 화면과 말 사전에 친 키("Del", "⌘", "⇧", "⌥"), 라벨 앞에 친 "+ ", 버튼의 글자가 "×" 하나뿐인 것를 막는다.

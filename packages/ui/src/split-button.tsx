@@ -3,6 +3,7 @@
 import { Button as ButtonPrimitive } from "@base-ui/react/button";
 import { type ReactNode, useLayoutEffect, useRef, useState } from "react";
 import { BUSY_GUARD } from "./busy";
+import { ReservedLabel } from "./button";
 import { Caret } from "./caret";
 import { cn } from "./cn";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "./dropdown-menu";
@@ -29,6 +30,7 @@ function SplitButton({
 	loading,
 	menuLabel,
 	menu,
+	reserve,
 	align = "end",
 }: {
 	/** The main action's label, with its leading icon first if it has one (`<Add aria-hidden />`). */
@@ -43,6 +45,8 @@ function SplitButton({
 	menuLabel: string;
 	/** The menu's items. */
 	menu: ReactNode;
+	/** The other labels the main half takes: it is as wide as the widest, so its neighbours do not move when the words change. */
+	reserve?: ReactNode[];
 	/** Which edge of the control the menu lines up with. */
 	align?: "start" | "center" | "end";
 }) {
@@ -95,7 +99,7 @@ function SplitButton({
 				)}
 			>
 				{loading && <Spinner />}
-				{children}
+				<ReservedLabel reserve={reserve}>{children}</ReservedLabel>
 			</ButtonPrimitive>
 			<DropdownMenu open={open && !inert} onOpenChange={setOpen}>
 				<Tooltip>

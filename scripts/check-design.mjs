@@ -1000,7 +1000,6 @@ const OFF_SCALE_SPACE = new Map([
 	["ui/src/chat-message.tsx", "the bubble's sides follow its 14px corner; 3px lines its first line with the avatar"],
 	["ui/src/command.tsx", "menu rows' 9px sides line the words up with the menu's 12px corner and 1px border"],
 	["ui/src/dropdown-menu.tsx", "a caption row 7px tall above and below, measured in the menu board"],
-	["ui/src/entry-status.tsx", "the status dot's 7px gap, measured with the dot's own 1px ring"],
 	["ui/src/field-tree.tsx", "a field nested in a group stands one grip (28px) or grip and name column (44px) in"],
 	["ui/src/floating-bar.tsx", "the bar's 3px ring around its 28px buttons"],
 	["ui/src/heading-icon.tsx", "the level number's 2px pull into the glyph"],

@@ -457,3 +457,18 @@ export async function settled() {
 			.map((animation) => animation.finished.catch(() => {})),
 	);
 }
+
+/** The box of an element on the page, in px: where its edges are and how big it is (fractions kept, so a row that is 41.3px high says so). */
+export function box(element: Element) {
+	const { left, right, top, bottom, width, height } = element.getBoundingClientRect();
+	return { left, right, top, bottom, width, height };
+}
+
+/** The x of an element's right edge. */
+export const rightEdge = (element: Element) => element.getBoundingClientRect().right;
+
+/** The y of the middle of an element's box. */
+export const centreY = (element: Element) => {
+	const { top, height } = element.getBoundingClientRect();
+	return top + height / 2;
+};

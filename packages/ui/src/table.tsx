@@ -537,9 +537,10 @@ function TableCell({
 			data-slot="table-cell"
 			data-truncate={truncate || undefined}
 			className={cn(
-				// Its pieces sit on the middle of the line, not on their letters' baselines: pieces of two sizes on one baseline (a chip, a title) would
-				// make the line taller than either, and the row 2px taller than the design system's 42.
-				"relative whitespace-nowrap px-monti-10 py-monti-10 align-middle *:align-middle first:pl-monti-12 last:pr-monti-12 [&:has([role=checkbox])]:pr-0",
+				// Its pieces stand on the line's baseline, so the words of a row share one baseline whatever their size. Pieces set on "the middle" of the
+				// line (`align-middle`) made the line taller than the 20px one by a fraction (a 42.28px row) and put the centres of a row's cells up to
+				// 1px apart (measured in `layout.browser.test.tsx`).
+				"relative whitespace-nowrap px-monti-10 py-monti-10 align-middle first:pl-monti-12 last:pr-monti-12 [&:has([role=checkbox])]:pr-0",
 				ALIGN[align],
 				// The row's check hangs in the left margin, so its cell does not clip. In a row with a link the cells are static and the check stands on the row
 				// itself: there the cell clips as any other, and a first column dragged narrow keeps its words in.
