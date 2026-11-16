@@ -93,6 +93,7 @@ export {
 	type ListQuery,
 	type ListRow,
 	PAGE_SIZES,
+	sortFacets,
 } from "./entries/list";
 export type { EntryState } from "./entries/operations";
 export { publicPath, slugify } from "./entries/paths";

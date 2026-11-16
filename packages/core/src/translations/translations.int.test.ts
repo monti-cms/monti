@@ -921,6 +921,7 @@ describe("translation status", () => {
 		expect(languages.values).toEqual([
 			{ value: "en", count: 1 },
 			{ value: "ko", count: 1 },
+			{ value: "ja", count: 0 },
 		]);
 	});
 

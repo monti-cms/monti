@@ -130,6 +130,17 @@ export type Facet = {
 	count: number;
 };
 
+/**
+ * The order of a column menu's values, one rule for every menu (components/list.md): the values with the most rows first, the ones with the same count by
+ * name (the label, or the value), and the values with no rows kept, at the end. The clients that build values of their own (the trash's) sort with it too.
+ */
+export function sortFacets<T extends { value: string | null; label?: string; count: number }>(
+	facets: readonly T[],
+): T[] {
+	const name = (facet: T) => facet.label ?? facet.value ?? "";
+	return [...facets].sort((a, b) => b.count - a.count || name(a).localeCompare(name(b)));
+}
+
 const collectionOf = (ctx: OperationContext, collection: string): CollectionDefinition => {
 	const definition = ctx.site.schema().collections[collection];
 	if (!definition) throw new CheckError({ key: "collections.unknown", values: { collection } });
@@ -436,10 +447,9 @@ export async function runFacets(ctx: OperationContext, query: ListQuery, column:
 		const { rows } = await sql<{ state: EntryState; count: string }>`
 			select ${stateSql} as state, count(*) as count from ${from}
 			where ${whereSql(ctx, every, (filter) => filter.on === "status")} group by 1`.execute(ctx.db);
-		return STATES.map((state) => ({
-			value: state,
-			count: Number(rows.find((row) => row.state === state)?.count ?? 0),
-		}));
+		return sortFacets(
+			STATES.map((state) => ({ value: state, count: Number(rows.find((row) => row.state === state)?.count ?? 0) })),
+		);
 	}
 	// Picking a value is a filter, and a filter looks through the folders under the open one (doc 07, T54): each count is the rows the list
 	// shows once that value is picked, the status menu's too (its every-state filter reaches as far).
@@ -464,8 +474,11 @@ export async function runFacets(ctx: OperationContext, query: ListQuery, column:
 			with picked as materialized (select rep.translation_group from ${from} where ${where})
 			select x.locale, count(distinct picked.translation_group) as count from picked
 			join entries x on x.translation_group = picked.translation_group and x.trashed_at is null
-			group by x.locale order by count(distinct picked.translation_group) desc, x.locale`.execute(ctx.db);
-		return rows.map((row) => ({ value: row.locale, count: Number(row.count) }));
+			group by x.locale`.execute(ctx.db);
+		// Every language of the site is a value, the ones no group has too: the menu does not lose a language when the other filters leave none of it.
+		const counts = new Map(rows.map((row) => [row.locale, Number(row.count)]));
+		const codes = new Set([...ctx.site.schema().locales.list.map((locale) => locale.code), ...counts.keys()]);
+		return sortFacets([...codes].map((code) => ({ value: code, count: counts.get(code) ?? 0 })));
 	}
 	const field = fieldOf(definition, column, ["relation", "select", "text", "media"]);
 	if (field.kind === "relation") {
@@ -478,14 +491,14 @@ export async function runFacets(ctx: OperationContext, query: ListQuery, column:
 			select rep.translation_group, rep.title, rep.slug from ${representatives(field.to, ctx.site.schema().locales.source)} rep where rep.status <> 'archived'`.execute(
 			ctx.db,
 		);
-		const facets = targets
-			.map((target) => ({
+		const facets = sortFacets(
+			targets.map((target) => ({
 				value: target.translation_group,
 				label: target.title,
 				slug: target.slug,
 				count: counts.get(target.translation_group) ?? 0,
-			}))
-			.sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
+			})),
+		);
 		return [{ value: null, count: counts.get(null) ?? 0 }, ...facets];
 	}
 	if (field.kind === "select") {
@@ -502,11 +515,13 @@ export async function runFacets(ctx: OperationContext, query: ListQuery, column:
 		const labels = (await adminValues(ctx, query.collection)).fields?.[column]?.optionLabels ?? {};
 		return [
 			{ value: null, count: counts.get(null) ?? 0 },
-			...field.options.map((option) => ({
-				value: option,
-				label: labels[option] ?? option,
-				count: counts.get(option) ?? 0,
-			})),
+			...sortFacets(
+				field.options.map((option) => ({
+					value: option,
+					label: labels[option] ?? option,
+					count: counts.get(option) ?? 0,
+				})),
+			),
 		];
 	}
 	const { rows } = await sql<{

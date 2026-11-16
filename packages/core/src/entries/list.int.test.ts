@@ -277,21 +277,27 @@ describe("the list query", () => {
 				.filter((facet) => facet.value !== null)
 				.every((facet) => typeof facet.slug === "string" && facet.slug !== ""),
 		).toBe(true);
+		// One order for every menu: the most rows first, the same count by name, the values with none kept at the end.
 		expect(await facets("status")).toEqual([
-			{ value: "published", count: 0 },
-			{ value: "changed", count: 1 },
 			{ value: "draft", count: 2 },
 			{ value: "archived", count: 1 },
+			{ value: "changed", count: 1 },
+			{ value: "published", count: 0 },
 		]);
 		expect((await facets("format")).map((facet) => [facet.value, facet.count])).toEqual([
 			[null, 1],
-			["memo", 1],
 			["essay", 1],
+			["memo", 1],
 		]);
 		expect(await facets("summary")).toEqual([{ value: "empty", count: 2 }]);
 		expect(await facets("locale")).toEqual([
 			{ value: "ko", count: 3 },
 			{ value: "en", count: 1 },
+		]);
+		// A language the other filters leave none of stays in the menu, at the end, counted 0.
+		expect(await facets("locale", { filters: [{ on: "status", any: ["published"] }] })).toEqual([
+			{ value: "en", count: 0 },
+			{ value: "ko", count: 0 },
 		]);
 		expect(await titles({ filters: [{ on: "locale", any: ["en"] }] })).toEqual(["첫 번째 글"]);
 	});
