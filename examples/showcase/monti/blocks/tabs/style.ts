@@ -4,7 +4,7 @@ export const style = `/*
  * The dark theme is '.dark' or '[data-theme="dark"]' on 'html', or the system's when the page says neither.
  */
 :where(:root) {
-	--monti-callout-note: var(--monti-fg-muted, var(--muted-foreground));
+	--monti-callout-note: var(--monti-fg-muted, var(--muted-foreground, oklch(0.55 0.02 265)));
 	--monti-callout-tip: oklch(0.6 0.15 155);
 	--monti-callout-info: oklch(0.6 0.14 240);
 	--monti-callout-warning: var(--monti-fg-warning, var(--warning, oklch(0.7 0.16 70)));
@@ -53,36 +53,41 @@ export const style = `/*
 	}
 }
 
-/* The tabs' look. The site's own: change it as the site likes (doc 18). */
+/*
+ * The tabs' look. The site's own: change it as the site likes (doc 18). The open tab is the one with the accent line under it and the full text colour; the
+ * row of tabs scrolls sideways when they do not fit, and the panel is the page's own ground: no box in a box.
+ */
 .monti-block-tabs {
 	margin: 1.5rem 0;
 }
 .monti-block-tabs-list {
 	display: flex;
-	flex-wrap: wrap;
 	gap: 0.25rem;
+	overflow-x: auto;
 	border-bottom: 1px solid var(--monti-block-border);
 }
 .monti-block-tabs-tab {
+	flex: none;
 	margin-bottom: -1px;
 	padding: 0.5rem 0.875rem;
-	border: 1px solid transparent;
-	border-bottom: 0;
-	border-radius: 0.375rem 0.375rem 0 0;
+	border: 0;
+	border-bottom: 2px solid transparent;
+	border-radius: 0;
 	background: none;
 	color: inherit;
 	font: inherit;
-	font-size: 0.875rem;
+	font-size: 0.9375em;
 	font-weight: 500;
-	opacity: 0.65;
+	white-space: nowrap;
+	opacity: 0.7;
 	cursor: pointer;
 }
 .monti-block-tabs-tab:hover {
 	opacity: 1;
 }
 .monti-block-tabs-tab[aria-selected="true"] {
-	border-color: var(--monti-block-border);
-	background-color: var(--monti-block-muted);
+	border-bottom-color: var(--monti-block-accent);
+	font-weight: 600;
 	opacity: 1;
 }
 .monti-block-tabs-tab:focus-visible,
@@ -91,11 +96,7 @@ export const style = `/*
 	outline-offset: -2px;
 }
 .monti-block-tabs-panel {
-	padding: 0.75rem 1rem;
-	border: 1px solid var(--monti-block-border);
-	border-top: 0;
-	border-radius: 0 0 0.5rem 0.5rem;
-	background-color: var(--monti-block-muted);
+	padding: 1rem 0 0;
 }
 .monti-block-tabs-panel[hidden] {
 	display: none;
@@ -124,6 +125,6 @@ export const style = `/*
 	opacity: 0.5;
 }
 .monti-block-tabs-content {
-	padding: 0.75rem 1rem;
+	padding: 1rem 0 0;
 }
 `;

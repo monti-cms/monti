@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import { drawMermaid } from "./draw";
+import { mermaidLook } from "./look";
 
 /** Whether the document is in the dark theme (the `dark` class or `data-theme="dark"` on `html`, else the system setting). */
 const isDarkDocument = () => {
@@ -28,7 +29,8 @@ type State = { readonly svg: string | null; readonly error: string | null } | nu
 
 /**
  * Mermaid diagram (` ```mermaid `). On the server and before loading it shows the source, then loads `mermaid` (optional dependency) in the browser and
- * turns it into a diagram. If loading fails or the syntax is wrong, the source and the error text stay as they are. Redrawn when the theme changes.
+ * turns it into a diagram with the page's own colours and font (`mermaidLook`). If loading fails or the syntax is wrong, the source stays as it is; the
+ * reason goes to the editor (`onError`), never to a reader. Redrawn when the theme changes.
  */
 export function MermaidView({
 	source,
@@ -43,6 +45,7 @@ export function MermaidView({
 }) {
 	const baseId = useId().replace(/[^\w-]/g, "");
 	const counter = useRef(0);
+	const figure = useRef<HTMLElement>(null);
 	const dark = useDarkTheme();
 	const [state, setState] = useState<State>(null);
 
@@ -52,7 +55,11 @@ export function MermaidView({
 		(async () => {
 			try {
 				const { default: mermaid } = await import("mermaid");
-				mermaid.initialize({ startOnLoad: false, securityLevel: "strict", theme: dark ? "dark" : "default" });
+				mermaid.initialize({
+					startOnLoad: false,
+					securityLevel: "strict",
+					...(figure.current ? mermaidLook(figure.current, dark) : { theme: "base" as const }),
+				});
 				counter.current += 1;
 				const svg = await drawMermaid(mermaid, `cms-mermaid-${baseId}-${counter.current}`, source);
 				if (!disposed) {
@@ -73,9 +80,14 @@ export function MermaidView({
 	}, [source, dark, baseId, onError]);
 
 	const svg = state?.svg ?? null;
-	const error = onError ? null : (state?.error ?? null);
+	const error = state?.error ?? null;
 	return (
-		<figure className="monti-block-mermaid" lang={lang} data-state={svg ? "ready" : error ? "error" : "loading"}>
+		<figure
+			ref={figure}
+			className="monti-block-mermaid"
+			lang={lang}
+			data-state={svg ? "ready" : error ? "error" : "loading"}
+		>
 			{svg ? (
 				// biome-ignore lint/security/noDangerouslySetInnerHtml: SVG sanitized by mermaid with `securityLevel: "strict"`
 				<div className="monti-block-mermaid-diagram" dangerouslySetInnerHTML={{ __html: svg }} />
@@ -84,7 +96,6 @@ export function MermaidView({
 					<code>{source}</code>
 				</pre>
 			)}
-			{error ? <figcaption className="monti-block-mermaid-error">{error}</figcaption> : null}
 		</figure>
 	);
 }

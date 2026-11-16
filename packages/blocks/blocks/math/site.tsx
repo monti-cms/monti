@@ -5,15 +5,27 @@ import { style } from "./style";
 /** A formula drawn by KaTeX, or the reason it is not one. */
 export function drawFormula(source: string): { html: string } | { error: string } {
 	try {
-		return { html: katex.renderToString(source, { displayMode: true, throwOnError: true, output: "mathml" }) };
+		return { html: katex.renderToString(source, { displayMode: true, throwOnError: true, output: "htmlAndMathml" }) };
 	} catch (error) {
 		return { error: error instanceof Error ? error.message.replace(/^KaTeX parse error: /, "") : String(error) };
 	}
 }
 
+/** KaTeX's own stylesheet (the letters' fonts and the layout of its boxes), by the version of the `katex` the site installed. */
+export function KatexStyle() {
+	const version = (katex as unknown as { version?: string }).version ?? "0.16";
+	return (
+		<link
+			rel="stylesheet"
+			href={`https://cdn.jsdelivr.net/npm/katex@${version}/dist/katex.min.css`}
+			precedence="monti-blocks"
+		/>
+	);
+}
+
 /**
- * A formula (` ```math `): drawn on the server by KaTeX, so the page needs no script for it. One that does not read stays its source, with the reason
- * under it. KaTeX's own stylesheet comes with `math.css`.
+ * A formula (` ```math `): drawn on the server by KaTeX, so the page needs no script for it. One that does not read stays its source: the reason is
+ * for the person writing it and shows in the editor only, never to a reader (`drawFormula`).
  */
 function MathBlockDrawing({ attrs, lang }: BlockProps) {
 	const source = typeof attrs.source === "string" ? attrs.source : "";
@@ -27,7 +39,6 @@ function MathBlockDrawing({ attrs, lang }: BlockProps) {
 			<pre className="monti-block-math-source">
 				<code>{source}</code>
 			</pre>
-			<figcaption className="monti-block-math-error">{drawn.error}</figcaption>
 		</figure>
 	);
 }
@@ -39,6 +50,7 @@ export function MathBlock(props: Parameters<typeof MathBlockDrawing>[0]) {
 			<style href="monti-block-math" precedence="monti-blocks">
 				{style}
 			</style>
+			<KatexStyle />
 			<MathBlockDrawing {...props} />
 		</>
 	);

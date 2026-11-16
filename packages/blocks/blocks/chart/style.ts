@@ -4,7 +4,7 @@ export const style = `/*
  * The dark theme is '.dark' or '[data-theme="dark"]' on 'html', or the system's when the page says neither.
  */
 :where(:root) {
-	--monti-callout-note: var(--monti-fg-muted, var(--muted-foreground));
+	--monti-callout-note: var(--monti-fg-muted, var(--muted-foreground, oklch(0.55 0.02 265)));
 	--monti-callout-tip: oklch(0.6 0.15 155);
 	--monti-callout-info: oklch(0.6 0.14 240);
 	--monti-callout-warning: var(--monti-fg-warning, var(--warning, oklch(0.7 0.16 70)));

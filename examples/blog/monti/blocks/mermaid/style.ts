@@ -4,7 +4,7 @@ export const style = `/*
  * The dark theme is '.dark' or '[data-theme="dark"]' on 'html', or the system's when the page says neither.
  */
 :where(:root) {
-	--monti-callout-note: var(--monti-fg-muted, var(--muted-foreground));
+	--monti-callout-note: var(--monti-fg-muted, var(--muted-foreground, oklch(0.55 0.02 265)));
 	--monti-callout-tip: oklch(0.6 0.15 155);
 	--monti-callout-info: oklch(0.6 0.14 240);
 	--monti-callout-warning: var(--monti-fg-warning, var(--warning, oklch(0.7 0.16 70)));
@@ -81,10 +81,5 @@ export const style = `/*
 	background-color: var(--monti-block-muted);
 	font-size: 0.8125rem;
 	line-height: 1.5;
-}
-.monti-block-mermaid-error {
-	margin-top: 0.5rem;
-	font-size: 0.875rem;
-	color: var(--monti-callout-danger, oklch(0.58 0.22 27));
 }
 `;
