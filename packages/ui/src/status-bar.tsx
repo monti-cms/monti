@@ -116,13 +116,15 @@ function StatusBarSpacer() {
 
 /**
  * The place of a cell whose changes are said aloud, politely: the save state, which a person does not look down to read. It wraps the cell
- * and takes no room of its own, so the words stand in the page once, seen and said from the same place, and a cell that is not drawn says
+ * and adds no room to it, so the words stand in the page once, seen and said from the same place, and a cell that is not drawn says
  * nothing. The place stays while the cell in it changes (a cell that states turning into one that is pressed), which is what makes the change
  * heard. For the bar's cell rules it counts as the cell it holds.
  */
 function StatusBarLive({ children }: { children: React.ReactNode }) {
 	return (
-		<span data-slot="status-bar-live" aria-live="polite" aria-atomic="true" className="contents">
+		// A box of its own, not `display: contents`: a browser that drops such an element from what it tells a screen reader would drop the
+		// region with it. It stretches to the bar's height and shrinks as a cell does, so the cell inside stands as it would alone.
+		<span data-slot="status-bar-live" aria-live="polite" aria-atomic="true" className="flex min-w-0 items-stretch">
 			{children}
 		</span>
 	);

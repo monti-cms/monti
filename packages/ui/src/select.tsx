@@ -18,8 +18,21 @@ function Select<Value, Multiple extends boolean | undefined = false>(
 		items: NonNullable<SelectPrimitive.Root.Props<Value, Multiple>["items"]>;
 	},
 ) {
-	// A `readOnly` select is a value to read: its list does not open (Base UI's own would open to be looked through).
-	return <SelectPrimitive.Root {...props} open={props.readOnly ? false : props.open} />;
+	return (
+		<SelectPrimitive.Root
+			{...props}
+			// A `readOnly` select is a value to read: its list does not open (Base UI's own would open to be looked through). The opening is
+			// refused, and `open` is left as it was given: whether it is held from outside is settled on the first drawing, so a select that
+			// turns read-only, or stops being it, would keep the wrong one.
+			onOpenChange={(next, details) => {
+				if (props.readOnly && next) {
+					details.cancel();
+					return;
+				}
+				props.onOpenChange?.(next, details);
+			}}
+		/>
+	);
 }
 
 function SelectGroup({ className, ...props }: SelectPrimitive.Group.Props) {

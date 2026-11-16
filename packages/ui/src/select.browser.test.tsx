@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { expect, it } from "vitest";
 import { page, userEvent } from "vitest/browser";
 import { settled } from "../../../testing/measure";
@@ -129,4 +130,67 @@ it("[AT-29] a read-only select is a value to read: full ink with no caret, the k
 	await expect.element(trigger).toHaveAttribute("aria-expanded", "false");
 	await expect.element(trigger).toHaveTextContent("공지사항");
 	expect(changed).toEqual([]);
+});
+
+it("[AT-29] a select that becomes read-only stops opening, and one that stops being read-only opens again", async () => {
+	function Field({ name, first }: { name: string; first: boolean }) {
+		const [readOnly, setReadOnly] = useState(first);
+		return (
+			<>
+				<button type="button" onClick={() => setReadOnly(!readOnly)}>
+					{name} 바꾸기
+				</button>
+				<Select items={ITEMS} defaultValue="notice" readOnly={readOnly}>
+					<SelectTrigger aria-label={name}>
+						<SelectValue />
+					</SelectTrigger>
+					<SelectContent>
+						<SelectItem value="notice">공지사항</SelectItem>
+					</SelectContent>
+				</Select>
+			</>
+		);
+	}
+	render(
+		<div className="flex gap-monti-16">
+			<Field name="읽던 값" first />
+			<Field name="고치던 값" first={false} />
+		</div>,
+	);
+	const options = () => page.getByRole("option").elements().length;
+	// First drawn read-only, then not: it opens.
+	const was = page.getByRole("combobox", { name: "읽던 값" });
+	await userEvent.click(was);
+	await expect.element(was).toHaveAttribute("aria-expanded", "false");
+	await userEvent.click(page.getByRole("button", { name: "읽던 값 바꾸기" }));
+	await expect.element(was).not.toHaveAttribute("aria-readonly");
+	await userEvent.click(was);
+	await expect.poll(options).toBeGreaterThan(0);
+	await userEvent.keyboard("{Escape}");
+	await expect.element(was).toHaveAttribute("aria-expanded", "false");
+	// First drawn open to change, then read-only: neither a press nor the arrow opens it.
+	const now = page.getByRole("combobox", { name: "고치던 값" });
+	await userEvent.click(page.getByRole("button", { name: "고치던 값 바꾸기" }));
+	await expect.element(now).toHaveAttribute("aria-readonly", "true");
+	await userEvent.click(now);
+	await userEvent.keyboard("{ArrowDown}");
+	await expect.element(now).toHaveAttribute("aria-expanded", "false");
+});
+
+it("[AT-29] the words of a read-only select can be picked with the pointer, to copy", async () => {
+	render(
+		<Select items={ITEMS} value="notice" readOnly>
+			<SelectTrigger aria-label="읽는 값">
+				<SelectValue />
+			</SelectTrigger>
+			<SelectContent>
+				<SelectItem value="notice">공지사항</SelectItem>
+			</SelectContent>
+		</Select>,
+	);
+	const trigger = page.getByRole("combobox", { name: "읽는 값" });
+	await expect.element(trigger).toHaveTextContent("공지사항");
+	window.getSelection()?.removeAllRanges();
+	await userEvent.dblClick(page.getByText("공지사항"));
+	expect(window.getSelection()?.toString()).toBe("공지사항");
 });

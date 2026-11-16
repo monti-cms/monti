@@ -17,8 +17,18 @@ import { MENU_CARD, MENU_EMPTY, MENU_ITEM, MENU_LABEL, MENU_MOTION, MENU_SEPARAT
  * picked and copied, and nothing changes it (no typing, no list, no clear, no × on a chip).
  */
 const Combobox = ((props: ComboboxPrimitive.Root.Props<unknown, boolean | undefined>) => (
-	// Base UI's own read-only list opens to be looked through: here it stays shut.
-	<ComboboxPrimitive.Root {...props} open={props.readOnly ? false : props.open} />
+	<ComboboxPrimitive.Root
+		{...props}
+		// Base UI's own read-only list opens to be looked through: here the opening is refused. `open` is left as it was given: whether it is
+		// held from outside is settled on the first drawing, so a field that turns read-only, or stops being it, would keep the wrong one.
+		onOpenChange={(next, details) => {
+			if (props.readOnly && next) {
+				details.cancel();
+				return;
+			}
+			props.onOpenChange?.(next, details);
+		}}
+	/>
 )) as typeof ComboboxPrimitive.Root;
 
 function ComboboxValue({ ...props }: ComboboxPrimitive.Value.Props) {
@@ -215,6 +225,9 @@ function ComboboxSeparator({ className, ...props }: ComboboxPrimitive.Separator.
 	);
 }
 
+/** The words of the chips of one field, by their ids: what a read-only field's input is described by. */
+const ChipLabels = React.createContext<{ ids: string[]; add: (id: string) => () => void } | null>(null);
+
 function ComboboxChips({
 	size = "default",
 	proposal = false,
@@ -230,6 +243,34 @@ function ComboboxChips({
 		 */
 		proposal?: boolean;
 	}) {
+	const [ids, setIds] = React.useState<string[]>([]);
+	// One `add` for the field's life: a chip puts its id in once, and takes it out when it goes.
+	const add = React.useCallback((id: string) => {
+		// In the order the chips stand in the field, whenever each came: the values are said as they are read.
+		const inOrder = (all: string[]) =>
+			[...all].sort((a, b) => {
+				const [first, second] = [document.getElementById(a), document.getElementById(b)];
+				if (!first || !second) return 0;
+				return first.compareDocumentPosition(second) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1;
+			});
+		setIds((was) => inOrder([...was, id]));
+		return () => setIds((was) => was.filter((each) => each !== id));
+	}, []);
+	const labels = React.useMemo(() => ({ ids, add }), [ids, add]);
+	return (
+		<ChipLabels.Provider value={labels}>
+			<ComboboxChipsField size={size} proposal={proposal} className={className} {...props} />
+		</ChipLabels.Provider>
+	);
+}
+
+function ComboboxChipsField({
+	size,
+	proposal,
+	className,
+	...props
+}: React.ComponentPropsWithRef<typeof ComboboxPrimitive.Chips> &
+	ComboboxPrimitive.Chips.Props & { size: "sm" | "md" | "default"; proposal: boolean }) {
 	return (
 		<ComboboxPrimitive.Chips
 			data-slot="combobox-chips"
@@ -259,6 +300,9 @@ function ComboboxChip({
 	showRemove?: boolean;
 }) {
 	const labels = useUiLabels();
+	const id = React.useId();
+	const add = React.useContext(ChipLabels)?.add;
+	React.useEffect(() => add?.(id), [add, id]);
 	return (
 		<ComboboxPrimitive.Chip
 			data-slot="combobox-chip"
@@ -275,7 +319,7 @@ function ComboboxChip({
 			)}
 			{...props}
 		>
-			{children}
+			<span id={id}>{children}</span>
 			{showRemove && (
 				<ComboboxPrimitive.ChipRemove className={CHIP_REMOVE} data-slot="combobox-chip-remove">
 					<Close className="pointer-events-none size-3" aria-hidden />
@@ -287,7 +331,26 @@ function ComboboxChip({
 }
 
 function ComboboxChipsInput({ className, ...props }: ComboboxPrimitive.Input.Props) {
-	return <ComboboxPrimitive.Input data-slot="combobox-chip-input" className={cn(CHIPS_INPUT, className)} {...props} />;
+	const chips = React.useContext(ChipLabels)?.ids ?? [];
+	return (
+		<ComboboxPrimitive.Input
+			data-slot="combobox-chip-input"
+			className={cn(CHIPS_INPUT, className)}
+			// In a field that is only read the keyboard stops on this input, which holds nothing, and does not walk the chips: the values
+			// are said with it, as its description.
+			render={(given, state) => (
+				<input
+					{...given}
+					aria-describedby={
+						state.readOnly && chips.length > 0
+							? [given["aria-describedby"], ...chips].filter(Boolean).join(" ")
+							: given["aria-describedby"]
+					}
+				/>
+			)}
+			{...props}
+		/>
+	);
 }
 
 function useComboboxAnchor() {

@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { describe, expect, it } from "vitest";
 import { page, userEvent } from "vitest/browser";
 import { render } from "../test/render";
@@ -101,6 +102,88 @@ describe("Combobox", () => {
 		await userEvent.click(many);
 		expect(document.querySelector("[role=listbox]")).toBeNull();
 		expect(changed).toEqual([]);
+	});
+
+	it("[AT-29] a read-only field of many says its values with its input: the keyboard stops on the input, which is described by the chips' words", async () => {
+		render(
+			<div style={{ width: 280 }}>
+				{[true, false].map((readOnly) => (
+					<Combobox
+						key={String(readOnly)}
+						items={["리액트", "성능"]}
+						multiple
+						value={["리액트", "성능"]}
+						readOnly={readOnly}
+					>
+						<ComboboxChips>
+							<ComboboxChip>리액트</ComboboxChip>
+							<ComboboxChip>성능</ComboboxChip>
+							<ComboboxChipsInput aria-label={readOnly ? "읽는 태그" : "태그"} />
+						</ComboboxChips>
+					</Combobox>
+				))}
+			</div>,
+		);
+		await expect.element(page.getByRole("combobox", { name: "읽는 태그" })).toHaveAccessibleDescription("리액트 성능");
+		// A field that can be changed walks its chips with the arrows: its input is not described by them.
+		await expect.element(page.getByRole("combobox", { name: "태그", exact: true })).toHaveAccessibleDescription("");
+	});
+
+	it("[AT-29] a combobox that becomes read-only stops opening, and one that stops being read-only opens again", async () => {
+		function Field({ multiple }: { multiple: boolean }) {
+			const [readOnly, setReadOnly] = useState(!multiple);
+			const name = multiple ? "여럿" : "하나";
+			const list = (
+				<ComboboxContent>
+					<ComboboxList>{(item: string) => <ComboboxItem value={item}>{item}</ComboboxItem>}</ComboboxList>
+				</ComboboxContent>
+			);
+			return (
+				<>
+					<button type="button" onClick={() => setReadOnly(!readOnly)}>
+						{name} 바꾸기
+					</button>
+					{multiple ? (
+						<Combobox items={["리액트", "성능"]} multiple defaultValue={["리액트"]} readOnly={readOnly}>
+							<ComboboxChips>
+								<ComboboxChip>리액트</ComboboxChip>
+								<ComboboxChipsInput aria-label={name} />
+							</ComboboxChips>
+							{list}
+						</Combobox>
+					) : (
+						<Combobox items={["리액트", "성능"]} defaultValue="리액트" readOnly={readOnly}>
+							<ComboboxInput aria-label={name} />
+							{list}
+						</Combobox>
+					)}
+				</>
+			);
+		}
+		render(
+			<div style={{ width: 280 }}>
+				<Field multiple={false} />
+				<Field multiple />
+			</div>,
+		);
+		const options = () => page.getByRole("option").elements().length;
+		// First drawn read-only, then not: the list opens, to the pointer and to the keyboard.
+		const one = page.getByRole("combobox", { name: "하나" });
+		await userEvent.click(one);
+		expect(options()).toBe(0);
+		await userEvent.click(page.getByRole("button", { name: "하나 바꾸기" }));
+		await expect.element(one).not.toHaveAttribute("readonly");
+		await userEvent.click(one);
+		await expect.poll(options).toBeGreaterThan(0);
+		await userEvent.keyboard("{Escape}");
+		await expect.poll(options).toBe(0);
+		// First drawn open to change, then read-only: neither a press nor the arrow opens it.
+		const many = page.getByRole("combobox", { name: "여럿" });
+		await userEvent.click(page.getByRole("button", { name: "여럿 바꾸기" }));
+		await expect.element(many).toHaveAttribute("readonly");
+		await userEvent.click(many);
+		await userEvent.keyboard("{ArrowDown}");
+		expect(options()).toBe(0);
 	});
 
 	it("[AT-29] a field of many values that is off looks off like a field of one: dimmed once, with or without a × on its chips", async () => {
