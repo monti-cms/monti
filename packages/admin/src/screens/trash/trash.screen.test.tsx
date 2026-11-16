@@ -417,6 +417,26 @@ describe("an entry in the trash with its other languages (doc 11, one row per en
 		await expect.element(title()).toHaveValue("리액트 19 마이그레이션");
 	});
 
+	it("11-1 an entry opened from its row of the trash says so in its address: its other language keeps that, and restoring it drops it", async () => {
+		await Top.run();
+		await userEvent.click(row("리액트 19 마이그레이션").getByRole("link", { name: "리액트 19 마이그레이션" }));
+		await expect.element(title()).toHaveValue("리액트 19 마이그레이션");
+		expect(window.location.hash).toMatch(/^#\/c\/post\/[^?]+\?from=trash$/);
+		const korean = window.location.hash;
+		// The other language of it in the trash is another entry, opened from the trash as well: the way back stays the trash.
+		await expect.poll(() => languages().getByRole("button").elements().length).toBe(2);
+		await userEvent.click(page.elementLocator(languages().getByRole("button").elements()[1] as HTMLElement));
+		await expect.element(title()).toHaveValue("React 19 migration");
+		expect(window.location.hash).toMatch(/^#\/c\/post\/[^?]+\?from=trash$/);
+		expect(window.location.hash).not.toBe(korean);
+		await expect.element(page.getByRole("banner").getByRole("button", { name: "휴지통" })).toBeVisible();
+		// Restored, it is an entry of its collection: the address stops saying it came from the trash, and the way back is its list.
+		await userEvent.click(page.getByRole("button", { name: "복원" }));
+		await expect.element(page.getByText("휴지통에 있는 글입니다")).not.toBeInTheDocument();
+		await expect.poll(() => window.location.hash).toMatch(/^#\/c\/post\/[^?]+$/);
+		await expect.element(page.getByRole("banner").getByRole("button", { name: "휴지통" })).not.toBeInTheDocument();
+	});
+
 	it("11-1 an entry whose other languages are not in the trash has its own tab alone", async () => {
 		await TrashedEntry.run();
 		await userEvent.keyboard("{Escape}");
