@@ -1,6 +1,6 @@
 import { blocks, marks } from "@monti-cms/blocks";
 import type { Doc } from "@monti-cms/core";
-import { Compare, CompareSide, EditorBody } from "@monti-cms/ui";
+import { Compare, CompareSide, EditorBody, useBarScope } from "@monti-cms/ui";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { StorySite } from "../../.storybook/pglite-site";
 import { type AdminBlockDefinition, type AdminMarkDefinition, AdminProvider } from "../operations/admin-context";
@@ -21,6 +21,8 @@ type Options = {
 	inEditable?: boolean;
 	/** A site block whose drawing throws when it is drawn (its type). */
 	breakSite?: string;
+	/** A site block whose drawing only says the bar scope it is drawn in (`data-scope`): where the body stands. */
+	probeSite?: string;
 	/** The library's files, as `media.query` answers them. */
 	media?: { id: string; name: string }[];
 };
@@ -96,6 +98,11 @@ function Both({
 	);
 }
 
+/** A drawing that says where it is drawn. */
+function Probe() {
+	return <div data-scope={useBarScope()} />;
+}
+
 /** A drawing that cannot be drawn. */
 function Broken(): never {
 	throw new Error("a drawing that throws");
@@ -113,7 +120,11 @@ const meta = {
 				streams={made.streams}
 				siteName="example.dev"
 				blocks={(blocks as unknown as AdminBlockDefinition[]).map((block) =>
-					block.type === options.breakSite ? { ...block, Site: Broken } : block,
+					block.type === options.breakSite
+						? { ...block, Site: Broken }
+						: block.type === options.probeSite
+							? { ...block, Site: Probe }
+							: block,
 				)}
 				marks={marks as unknown as AdminMarkDefinition[]}
 			>

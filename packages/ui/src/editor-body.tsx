@@ -86,13 +86,14 @@ const EDITOR_BODY = cn(
 	// A site block's own margin (its look on the site: 1.5rem) gives way to the body's plain gap; it is unlayered, so it takes `!` to: one reading rhythm.
 	// A picture and a file stand off the next block as a paragraph does (2026-11-10, owner: 20px above them, none under, read as stuck to what follows).
 	"[&_[data-block=image]]:mb-monti-20 [&_[data-block=file]]:mb-monti-20 [&_[data-slot=block-box]>[class*=monti-block-]]:mt-0! [&_[data-slot=block-box]>[class*=monti-block-]]:mb-monti-20! [&_[data-block]>[class*=monti-block-]]:mt-0! [&_[data-block]>[class*=monti-block-]]:mb-monti-20! [&_[data-block=codeBlock]]:relative [&_[data-block=codeBlock]]:mb-monti-20",
-	// A container block (callout, tabs, collapsible, columns) holds its blocks one level deeper, in the editor's content holder: the first block in it has no room over it and
+	// A container block (callout, tabs, collapsible, columns) holds its blocks one level deeper, in the editor's content holder (in a body that is only read, the
+	// blocks `ReadBody` marks `data-first-in-container` / `data-last-in-container`: one rule for both): the first block in it has no room over it and
 	// the last none under it, whatever kind it is (a paragraph, or a site block whose own margin the rule above makes 0 / 20px, which is why these take `!` too).
-	"[&_[data-node-view-content-react]>:first-child]:mt-0 [&_[data-node-view-content-react]>:last-child]:mb-0",
-	"[&_[data-node-view-content-react]>:first-child>[class*=monti-block-]]:mt-0! [&_[data-node-view-content-react]>:first-child>[data-block]>[class*=monti-block-]]:mt-0! [&_[data-node-view-content-react]>:first-child>[data-whole]>[data-block]>[class*=monti-block-]]:mt-0! [&_[data-node-view-content-react]>:first-child>[data-slot=block-box]>[class*=monti-block-]]:mt-0! [&_[data-node-view-content-react]>:first-child>[data-whole]>[data-slot=block-box]>[class*=monti-block-]]:mt-0!",
-	"[&_[data-node-view-content-react]>:last-child>[class*=monti-block-]]:mb-0! [&_[data-node-view-content-react]>:last-child>[data-block]>[class*=monti-block-]]:mb-0! [&_[data-node-view-content-react]>:last-child>[data-whole]>[data-block]>[class*=monti-block-]]:mb-0! [&_[data-node-view-content-react]>:last-child>[data-slot=block-box]>[class*=monti-block-]]:mb-0! [&_[data-node-view-content-react]>:last-child>[data-whole]>[data-slot=block-box]>[class*=monti-block-]]:mb-0!",
+	"[&_:is([data-node-view-content-react]>:first-child,[data-first-in-container])]:mt-0 [&_:is([data-node-view-content-react]>:last-child,[data-last-in-container])]:mb-0",
+	"[&_:is([data-node-view-content-react]>:first-child,[data-first-in-container])>[class*=monti-block-]]:mt-0! [&_:is([data-node-view-content-react]>:first-child,[data-first-in-container])>[data-block]>[class*=monti-block-]]:mt-0! [&_:is([data-node-view-content-react]>:first-child,[data-first-in-container])>[data-whole]>[data-block]>[class*=monti-block-]]:mt-0! [&_:is([data-node-view-content-react]>:first-child,[data-first-in-container])>[data-slot=block-box]>[class*=monti-block-]]:mt-0! [&_:is([data-node-view-content-react]>:first-child,[data-first-in-container])>[data-whole]>[data-slot=block-box]>[class*=monti-block-]]:mt-0!",
+	"[&_:is([data-node-view-content-react]>:last-child,[data-last-in-container])>[class*=monti-block-]]:mb-0! [&_:is([data-node-view-content-react]>:last-child,[data-last-in-container])>[data-block]>[class*=monti-block-]]:mb-0! [&_:is([data-node-view-content-react]>:last-child,[data-last-in-container])>[data-whole]>[data-block]>[class*=monti-block-]]:mb-0! [&_:is([data-node-view-content-react]>:last-child,[data-last-in-container])>[data-slot=block-box]>[class*=monti-block-]]:mb-0! [&_:is([data-node-view-content-react]>:last-child,[data-last-in-container])>[data-whole]>[data-slot=block-box]>[class*=monti-block-]]:mb-0!",
 	// A site block whose own view is a source box (a formula, a diagram, a chart) stands the same plain gap under it as the site block's own root does, and none when it is a container's last.
-	"[&_[data-slot=block-box]>[data-slot=source-box]]:mb-monti-20 [&_[data-node-view-content-react]>:last-child>[data-block]>[data-slot=block-box]>[data-slot=source-box]]:mb-0! [&_[data-node-view-content-react]>:last-child>[data-whole]>[data-block]>[data-slot=block-box]>[data-slot=source-box]]:mb-0!",
+	"[&_[data-slot=block-box]>[data-slot=source-box]]:mb-monti-20 [&_:is([data-node-view-content-react]>:last-child,[data-last-in-container])>[data-block]>[data-slot=block-box]>[data-slot=source-box]]:mb-0! [&_:is([data-node-view-content-react]>:last-child,[data-last-in-container])>[data-whole]>[data-block]>[data-slot=block-box]>[data-slot=source-box]]:mb-0!",
 	// Doc 17: words pointing at code lines (a dotted line under them), one whose lines are gone (red), the words picked first while a link is made.
 	"[&_[data-monti-mark=codeRef]]:underline [&_[data-monti-mark=codeRef]]:decoration-(--monti-fg-subtle) [&_[data-monti-mark=codeRef]]:decoration-dotted [&_[data-monti-mark=codeRef]]:underline-offset-4",
 	"[&_[data-code-ref-broken]]:underline [&_[data-code-ref-broken]]:decoration-(--monti-fg-danger) [&_[data-code-ref-broken]]:decoration-dotted [&_[data-code-ref-broken]]:underline-offset-4 [&_[data-code-ref-picking]]:rounded-monti-sm [&_[data-code-ref-picking]]:bg-monti-selected",
@@ -181,26 +182,26 @@ function EditorBody({
 	ground?: "page" | "tool";
 	size?: "reading" | "chat" | "card";
 }) {
-	return (
-		<BodyScope>
-			<div
-				data-slot="editor-body"
-				data-paired={paired || undefined}
-				data-read-only={readOnly || undefined}
-				className={cn(
-					EDITOR_BODY,
-					paired && PAIRED,
-					readOnly && READ_ONLY,
-					ground === "tool" && ON_TOOL,
-					muted && "text-monti-muted",
-					size === "chat" && CHAT,
-					size === "card" && CARD,
-					className,
-				)}
-				{...props}
-			/>
-		</BodyScope>
+	const body = (
+		<div
+			data-slot="editor-body"
+			data-paired={paired || undefined}
+			data-read-only={readOnly || undefined}
+			className={cn(
+				EDITOR_BODY,
+				paired && PAIRED,
+				readOnly && READ_ONLY,
+				ground === "tool" && ON_TOOL,
+				muted && "text-monti-muted",
+				size === "chat" && CHAT,
+				size === "card" && CARD,
+				className,
+			)}
+			{...props}
+		/>
 	);
+	// Only the editor's own body is the body that scrolls under the editor header: a body that is only read (an answer, a card, a comparison) takes the scope of where it stands.
+	return readOnly ? body : <BodyScope>{body}</BodyScope>;
 }
 
 export { EditorBody };

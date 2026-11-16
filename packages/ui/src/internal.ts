@@ -26,6 +26,7 @@ export { AssistantSlot } from "./assistant-slot";
 export { Banner } from "./banner";
 export { BlockBarPlace, BlockBox, ResizeCorner } from "./block-bar";
 export { Block, BlockHandle, PickBox } from "./block-handle";
+export { useBarScope } from "./body-scope";
 export { Box } from "./box";
 export { BulkBar } from "./bulk-bar";
 export { Button } from "./button";

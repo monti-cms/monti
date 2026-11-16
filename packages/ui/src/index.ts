@@ -433,6 +433,7 @@ export {
 	Toaster,
 	textVariants,
 	toast,
+	useBarScope,
 	useComboboxAnchor,
 	useIsMobile,
 	useShortcut,

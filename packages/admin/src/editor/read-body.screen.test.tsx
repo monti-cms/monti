@@ -77,6 +77,38 @@ const StreamingInCallout = scene<read.Loaded>(
 	},
 	read.default,
 );
+const EndsInTabs = scene<read.Loaded>(
+	{
+		loaders: read.read(
+			{
+				type: "doc",
+				blocks: [
+					{
+						id: "note",
+						type: "callout",
+						attrs: { tone: "note" },
+						children: [BLOCKS.blocks[0] as Block],
+					},
+					paragraph("after", text("뒤의 문단")),
+				],
+			},
+			null,
+		),
+	},
+	read.default,
+);
+const Scoped = scene<read.Loaded>(
+	{
+		loaders: read.read(
+			{ type: "doc", blocks: [{ id: "note", type: "callout", children: [paragraph("w", text("안"))] }] },
+			null,
+			{
+				probeSite: "callout",
+			},
+		),
+	},
+	read.default,
+);
 const StreamingPlain = scene<read.Loaded>(
 	{
 		loaders: read.read({ type: "doc", blocks: MINE.blocks.slice(0, 2) }, null, {
@@ -364,5 +396,21 @@ describe("a body read without being written draws as the editor draws it", () =>
 		const caret = carets[0] as HTMLElement;
 		expect(caret.closest("[data-slot=code-text]")).not.toBeNull();
 		expect(caret.parentElement?.textContent).toContain("const last = 1;");
+	});
+
+	it("[reach] a site block that ends a container has no room under it, in a body read only as in the editor, and one that does not keeps its 20px", async () => {
+		await EndsInTabs.run();
+		await expect.poll(() => sides()[0]?.querySelector("[data-block=tabs] > [class*=monti-block-]")).not.toBeNull();
+		const inner = sides()[0]?.querySelector("[data-block=tabs] > [class*=monti-block-]") as HTMLElement;
+		expect(getComputedStyle(inner).marginBottom).toBe("0px");
+		// A site block that does not end its container keeps the body's plain gap.
+		const outer = sides()[0]?.querySelector("[data-block=callout] > [class*=monti-block-]") as HTMLElement;
+		expect(getComputedStyle(outer).marginBottom).toBe("20px");
+	});
+
+	it("[reach] a body read only stands in the scope of where it is drawn, not the editor's body", async () => {
+		await Scoped.run();
+		await expect.poll(() => sides()[0]?.querySelector("[data-scope]")).not.toBeNull();
+		expect(sides()[0]?.querySelector("[data-scope]")?.getAttribute("data-scope")).toBe("page");
 	});
 });

@@ -228,6 +228,7 @@ function ReadCode({
 	streaming = false,
 	chat = false,
 	caret = false,
+	edge,
 }: {
 	code: string;
 	data: CodeData;
@@ -244,6 +245,8 @@ function ReadCode({
 	chat?: boolean;
 	/** The caret of an answer still arriving, after the code's last character. */
 	caret?: boolean;
+	/** The marks of a first or last block of a container. */
+	edge?: Record<string, string> | null;
 }) {
 	const { t } = useAdmin();
 	const [folds, setFolds] = useState<ReadonlyMap<string, boolean>>(new Map());
@@ -272,7 +275,7 @@ function ReadCode({
 		return line === effect.start ? "start" : line === effect.end - 1 ? "end" : "middle";
 	};
 	return (
-		<div data-block="codeBlock">
+		<div data-block="codeBlock" {...edge}>
 			<CodeFrame
 				head={
 					<Inline gap={8} minWidth={0}>
@@ -420,12 +423,20 @@ type Context = {
 	footnotes: number;
 	streaming: boolean;
 	chat: boolean;
+	/** The marks the block about to be drawn takes as the first or the last of a container's blocks (`data-first-in-container`, `data-last-in-container`). */
+	edge: Record<string, string> | null;
 	/** The last words of the body, where an answer still arriving has its caret. */
 	caretAt: NodeOf | null;
 };
 
 /** What an element says, with `content` where its hole is. The one place a block's element is made: the editor's own `renderHTML`. */
-function elementOf(spec: DOMOutputSpec, content: ReactNode, context: Context, key?: string | number): ReactNode {
+function elementOf(
+	spec: DOMOutputSpec,
+	content: ReactNode,
+	context: Context,
+	key?: string | number,
+	extra?: Record<string, string> | null,
+): ReactNode {
 	if (typeof spec === "string") return spec;
 	if (!Array.isArray(spec)) return null;
 	const [tag, ...rest] = spec as [string, ...unknown[]];
@@ -434,7 +445,7 @@ function elementOf(spec: DOMOutputSpec, content: ReactNode, context: Context, ke
 		given !== null && typeof given === "object" && !Array.isArray(given)
 			? (rest.shift() as Record<string, unknown>)
 			: {};
-	const props: Record<string, unknown> = { key };
+	const props: Record<string, unknown> = { key, ...extra };
 	for (const [name, value] of Object.entries(own)) {
 		if (value === null || value === undefined || value === false) continue;
 		if (name === "style" && typeof value === "string") props.style = styleOf(value);
@@ -549,7 +560,17 @@ function Box({ type, id, label, context }: { type: string; id: string; label: st
 
 function drawChildren(node: NodeOf, context: Context): ReactNode[] {
 	const out: ReactNode[] = [];
+	// The blocks of a site's container (a callout, tabs, columns) are marked as its first and last, as the editor's content holder is read by the body's rule.
+	const known = context.byType.get(node.type.name);
+	const container = Boolean(
+		known && known.holds === "blocks" && !CORE_BLOCKS.has(known.type) && context.definitions.get(known.type)?.Site,
+	);
 	node.forEach((child, _, index) => {
+		if (container && !child.isText)
+			context.edge = {
+				...(index === 0 ? { "data-first-in-container": "" } : {}),
+				...(index === node.childCount - 1 ? { "data-last-in-container": "" } : {}),
+			};
 		const cursor = context.cursor;
 		// A table's words are its cells in order: " | " between the cells of a row, a line between its rows (`ownText`).
 		if (cursor && index > 0) {
@@ -565,6 +586,8 @@ function drawChildren(node: NodeOf, context: Context): ReactNode[] {
 function drawNode(node: NodeOf, context: Context, key: number, parent: NodeOf): ReactNode {
 	const name = node.type.name;
 	const id = String(node.attrs.blockId ?? "");
+	const edge = context.edge;
+	context.edge = null;
 	const outer = context.cursor;
 	if (id) {
 		const parts = context.marks?.words.get(id);
@@ -595,7 +618,7 @@ function drawNode(node: NodeOf, context: Context, key: number, parent: NodeOf): 
 					<Words parts={values} kind={context.kind} />
 				</CompareValues>
 			) : null;
-		const drawn = drawBlock(node, block, spec, context, key, parent);
+		const drawn = drawBlock(node, block, spec, context, key, parent, edge);
 		return line ? (
 			<Fragment key={key}>
 				{line}
@@ -630,6 +653,7 @@ function drawBlock(
 	context: Context,
 	key: number,
 	parent: NodeOf,
+	edge: Record<string, string> | null,
 ) {
 	const id = String(node.attrs.blockId ?? "");
 	const data = (node.attrs.data ?? {}) as Record<string, unknown>;
@@ -650,6 +674,7 @@ function drawBlock(
 				streaming={context.streaming}
 				chat={context.chat}
 				caret={context.caretAt === node}
+				edge={edge}
 			/>
 		);
 	}
@@ -681,7 +706,7 @@ function drawBlock(
 			</Guard>
 		);
 		return (
-			<div key={key} data-block={block.type}>
+			<div key={key} data-block={block.type} {...edge}>
 				{drawn}
 				{block.fence && words?.some((part) => part.changed) ? (
 					<ReadCode
@@ -700,8 +725,8 @@ function drawBlock(
 	const children = drawChildren(node, context);
 	// A list item of a checklist has its box before its words.
 	if (block.type === "listItem" && parent.type.name === nodeName("checklist"))
-		return elementOf(spec, [checkOf(Boolean(data.checked), node.textContent), ...children], context, key);
-	return elementOf(spec, children, context, key);
+		return elementOf(spec, [checkOf(Boolean(data.checked), node.textContent), ...children], context, key, edge);
+	return elementOf(spec, children, context, key, edge);
 }
 
 // --- The body --------------------------------------------------------------------------------------------------------------------------------
@@ -888,6 +913,7 @@ export function ReadBody({
 			footnotes: 0,
 			streaming,
 			chat: size === "chat",
+			edge: null,
 			// The caret of an answer still arriving: after the last character of its last words, in the code when it ends in code.
 			caretAt: streaming && body ? lastWords(body) : null,
 		};
