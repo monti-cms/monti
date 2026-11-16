@@ -165,6 +165,14 @@ describe("the activity log (doc 13, flow 12)", () => {
 		await expect.element(sidebarLog()).toHaveTextContent("1");
 	});
 
+	it("[AT-25] the panel says the entry's language by its name, not by its code in capitals", async () => {
+		await draw(stories.Log).run();
+		await userEvent.click(row(FAILED).getByText("post/react-19"));
+		await expect.element(panel().getByRole("heading", { name: FAILED })).toBeVisible();
+		await expect.element(panel()).toHaveTextContent(/언어한국어 · v\d+/);
+		await expect.element(panel()).not.toHaveTextContent("KO · v");
+	});
+
 	it("[flow 12·03] a press on a row opens its details beside the list: when, the entry as it was, each receiver's delivery by its name; the row is picked, and × closes it", async () => {
 		await draw(stories.Log).run();
 		await userEvent.click(row(FAILED).getByText("post/react-19"));
@@ -647,12 +655,12 @@ describe("the activity log (doc 13, flow 12)", () => {
 		await expect.element(banner()).toHaveTextContent("전송 3건 실패");
 	});
 
-	it("a time's cell says the same day and hour when pointed at, in the lists' own form", async () => {
+	it("[TC-03] a time's cell says the same moment whole when pointed at: the year with the day and hour", async () => {
 		await draw(stories.Log).run();
 		await expect.element(row(FAILED)).toBeVisible();
 		const cell = row(FAILED).element().querySelectorAll("td")[2];
 		expect(cell?.textContent).toMatch(/^\d\d\. \d\d \d\d:\d\d$/);
-		expect(cell?.getAttribute("data-cut-words")).toBe(cell?.textContent);
+		expect(cell?.getAttribute("data-cut-words")).toBe(`${new Date().getFullYear()}. ${cell?.textContent}`);
 	});
 	it("[flow 12·03] the details closed with the keyboard give focus back to the row that opened them", async () => {
 		await draw(stories.Log).run();

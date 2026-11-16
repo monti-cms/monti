@@ -28,6 +28,7 @@ import { useRef, useState } from "react";
 import { FillAction, FillFailed } from "../../assistant/fill-action";
 import { type Fills, isUndoKey } from "../../assistant/use-fill";
 import { ALT_MAX } from "../../editor/alt-fields";
+import { fieldName } from "../../format/names";
 import type { FieldUploads } from "../../media/use-field-uploads";
 import { useAdmin } from "../../operations/admin-context";
 import type { EntryView } from "../../plugins";
@@ -270,7 +271,7 @@ export function EntryProperties({
 			fills?.forget(at);
 			editor.set(at, next);
 		};
-		const name = values[key]?.label ?? key;
+		const name = fieldName(key, values[key]?.label, t);
 		const fillButton =
 			fills && fillTask && fillState ? (
 				<FillAction
@@ -312,7 +313,7 @@ export function EntryProperties({
 					label: t("ui.proposal"),
 					tone: "proposal" as const,
 					undoLabel: t("settings.discard"),
-					undoName: t("entry.proposal.discard", { field: values[key]?.label ?? key }),
+					undoName: t("entry.proposal.discard", { field: fieldName(key, values[key]?.label, t) }),
 					onUndo: () => void editor.draft.discard(proposed.item.id),
 				}
 			: undefined;
@@ -377,14 +378,14 @@ export function EntryProperties({
 			if (def.kind === "media")
 				return (
 					<FormField key={key}>
-						<FormFieldLabel action={sourceNote}>{values[key]?.label ?? key}</FormFieldLabel>
+						<FormFieldLabel action={sourceNote}>{fieldName(key, values[key]?.label, t)}</FormFieldLabel>
 						<SharedMediaValue value={shared[key]} empty={empty} />
 					</FormField>
 				);
 			if (def.kind === "relation") {
 				return (
 					<FormField key={key}>
-						<FormFieldLabel action={sourceNote}>{values[key]?.label ?? key}</FormFieldLabel>
+						<FormFieldLabel action={sourceNote}>{fieldName(key, values[key]?.label, t)}</FormFieldLabel>
 						<SharedRelationValue
 							collection={collection}
 							field={key}
@@ -402,7 +403,7 @@ export function EntryProperties({
 					: pickNames(shared[key], values[key]?.optionLabels);
 			return (
 				<FormField key={key}>
-					<FormFieldLabel action={sourceNote}>{values[key]?.label ?? key}</FormFieldLabel>
+					<FormFieldLabel action={sourceNote}>{fieldName(key, values[key]?.label, t)}</FormFieldLabel>
 					<Text variant="note" tone={shown ? undefined : "faint"}>
 						{shown || empty}
 					</Text>
@@ -418,7 +419,7 @@ export function EntryProperties({
 					uploads={uploads}
 					card={altCard === key}
 					onCard={(open) => onAltCard(open ? key : null)}
-					label={values[key]?.label ?? key}
+					label={fieldName(key, values[key]?.label, t)}
 					required={marksRequired && required(key)}
 					accept={def.accept}
 					change={change}
@@ -481,7 +482,7 @@ export function EntryProperties({
 						<Inline minHeight="control-md" align="center" justify="between" gap={12}>
 							<Inline gap={8} align="center">
 								<Label htmlFor={id} size="body" tone="default">
-									{values[key]?.label ?? key}
+									{fieldName(key, values[key]?.label, t)}
 								</Label>
 								<ChangeDot tone="proposal" label={t("ui.proposal")} />
 							</Inline>
@@ -500,7 +501,7 @@ export function EntryProperties({
 						</Inline>
 					) : (
 						<Option spread height="md">
-							{values[key]?.label ?? key}
+							{fieldName(key, values[key]?.label, t)}
 							{toggle}
 						</Option>
 					)}
@@ -587,7 +588,7 @@ export function EntryProperties({
 						)
 					}
 				>
-					{values[key]?.label ?? key}
+					{fieldName(key, values[key]?.label, t)}
 				</FormFieldLabel>
 				{input()}
 				{was}
@@ -632,7 +633,7 @@ export function EntryProperties({
 					{t("entry.clearedOnSave", {
 						option:
 							field.control === "toggle"
-								? (values[key]?.label ?? key)
+								? fieldName(key, values[key]?.label, t)
 								: left.map((each) => labels[each.option] ?? each.option).join(", "),
 						count: left.reduce((sum, each) => sum + each.count, 0),
 					})}
@@ -652,7 +653,9 @@ export function EntryProperties({
 				<Text variant="caption" tone="warning">
 					{t("entry.clearedOnTake", {
 						option:
-							field.control === "toggle" ? (values[key]?.label ?? key) : (labels[String(chosen)] ?? String(chosen)),
+							field.control === "toggle"
+								? fieldName(key, values[key]?.label, t)
+								: (labels[String(chosen)] ?? String(chosen)),
 						count: wouldGo,
 					})}
 				</Text>

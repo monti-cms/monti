@@ -410,11 +410,9 @@ export function EntryEditor({
 			for (const event of events) bodyEditor.off(event, sync);
 		};
 	}, [bodyEditor, translation.isTranslation]);
-	const sourceName = (code: string) =>
-		schema.data?.schema.locales.list.find((locale) => locale.code === code)?.name ?? code;
 	const beside =
 		compared && view === "side" ? (
-			<SourcePane compared={compared} localeName={sourceName(compared.source.locale)} current={pair} />
+			<SourcePane compared={compared} localeName={languageName(compared.source.locale)} current={pair} />
 		) : null;
 	const paired = Boolean(compared) && view === "paired";
 	const pairedRows = usePairedRows(paired ? compared : null, catalogs);
@@ -440,7 +438,6 @@ export function EntryEditor({
 		read && translation.multilingual && schema.data ? (
 			<Inline minHeight="control-md" justify="between" gap={12}>
 				<LocaleTabs
-					schema={schema.data.schema}
 					group={trashed ? trashedGroup : translation.group}
 					current={id}
 					onOpen={onOpen}

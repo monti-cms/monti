@@ -1,27 +1,21 @@
 // A language's name comes from here: `check:design` (`format-only`) keeps `Intl.DisplayNames` and upper-cased codes out of the screens.
 import { useAdmin } from "../operations/admin-context";
 
-/** A language's name in `language`, or its code where the browser knows none. */
+/** A language's name in `language` ("en" reads "English" in English), or its code in capitals where the browser knows none. */
 export function languageName(code: string, language: string): string {
 	try {
-		return new Intl.DisplayNames([language], { type: "language" }).of(code) ?? code;
+		return new Intl.DisplayNames([language], { type: "language" }).of(code) ?? code.toUpperCase();
 	} catch {
-		return code;
+		return code.toUpperCase();
 	}
 }
 
 /**
- * A language's name in the admin's language ("en" reads "English" in English and its Korean name in Korean), its code in capitals when the browser
- * has no name for it.
+ * A language's name in the admin's language: what every screen calls a language (owner, 2026-11-16: the admin-language name everywhere, the tabs
+ * of an entry's languages too). The one place that writes each language in itself is the picker of the admin's own language, which asks
+ * {@link languageName} with the language as its own.
  */
 export function useLanguageName() {
 	const { language } = useAdmin();
-	const names = new Intl.DisplayNames([language], { type: "language" });
-	return (code: string) => {
-		try {
-			return names.of(code) ?? code.toUpperCase();
-		} catch {
-			return code.toUpperCase();
-		}
-	};
+	return (code: string) => languageName(code, language);
 }

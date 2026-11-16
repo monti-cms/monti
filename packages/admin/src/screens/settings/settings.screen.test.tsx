@@ -129,28 +129,28 @@ describe("settings › languages", () => {
 
 	it("12-1 [flow 11·06] a language picked is a row at once; taken out again before the save, it leaves no change behind", async () => {
 		await LanguageAdded.run();
-		expect(languages()).toEqual(["한국어", "English", "日本語", "Deutsch"]);
+		expect(languages()).toEqual(["한국어", "영어", "일본어", "독일어"]);
 		await expect.element(saveGroup()).toBeVisible();
-		await userEvent.click(page.getByRole("button", { name: "Deutsch 빼기" }));
-		await expect.poll(languages).toEqual(["한국어", "English", "日本語"]);
+		await userEvent.click(page.getByRole("button", { name: "독일어 빼기" }));
+		await expect.poll(languages).toEqual(["한국어", "영어", "일본어"]);
 		await expect.element(saveGroup()).not.toBeInTheDocument();
 	});
 
 	it("12-1 [flow 11·07b] another source picked stands first; the old source gets its handle and ×, the new one loses them", async () => {
 		await SourceChanged.run();
-		expect(languages()).toEqual(["English", "한국어", "日本語"]);
+		expect(languages()).toEqual(["영어", "한국어", "일본어"]);
 		await expect.element(page.getByRole("button", { name: "한국어 옮기기" })).toBeVisible();
 		await expect.element(page.getByRole("button", { name: "한국어 빼기" })).toBeVisible();
-		await expect.element(page.getByRole("button", { name: "English 빼기" })).not.toBeInTheDocument();
-		await expect.element(page.getByRole("button", { name: "English 옮기기" })).not.toBeInTheDocument();
+		await expect.element(page.getByRole("button", { name: "영어 빼기" })).not.toBeInTheDocument();
+		await expect.element(page.getByRole("button", { name: "영어 옮기기" })).not.toBeInTheDocument();
 	});
 
 	it("12-1 [flow 11·08] a language taken out stays as a struck row; its undo puts it back and the save group goes", async () => {
 		await LanguageRemoved.run();
-		expect(languages()).toEqual(["한국어", "English", "日本語"]);
-		await expect.element(page.getByRole("button", { name: "English 빼기" })).not.toBeInTheDocument();
+		expect(languages()).toEqual(["한국어", "영어", "일본어"]);
+		await expect.element(page.getByRole("button", { name: "영어 빼기" })).not.toBeInTheDocument();
 		await userEvent.click(page.getByRole("list", { name: "콘텐츠 언어" }).getByRole("button", { name: "되돌리기" }));
-		await expect.element(page.getByRole("button", { name: "English 빼기" })).toBeVisible();
+		await expect.element(page.getByRole("button", { name: "영어 빼기" })).toBeVisible();
 		await expect.element(saveGroup()).not.toBeInTheDocument();
 	});
 
@@ -200,7 +200,7 @@ describe("settings › languages", () => {
 		await expect.element(page.getByText("적용했습니다")).toBeVisible();
 		expect(codes(await settingsOf(shown.loaded()))).toEqual(["ko", "ja"]);
 		expect(await inEnglish()).toEqual({ working: [], onSite: [] });
-		await expect.poll(languages).toEqual(["한국어", "日本語"]);
+		await expect.poll(languages).toEqual(["한국어", "일본어"]);
 	});
 
 	it("12-1 the old source taken out in the save that makes another the source: the review promises the drafts, and they are there after", async () => {
@@ -231,7 +231,7 @@ describe("settings › languages", () => {
 		const shown = withSite(stories.OneReview);
 		await shown.run();
 		const sheet = page.getByRole("dialog");
-		for (const title of ["Deutsch", "English", "주소에 언어 표시", "kicker"])
+		for (const title of ["독일어", "영어", "주소에 언어 표시", "kicker"])
 			await expect.element(sheet.getByText(title, { exact: true }).first()).toBeVisible();
 		await expect.element(page.getByRole("button", { name: "지우고 적용" })).not.toBeInTheDocument();
 		await userEvent.click(page.getByRole("button", { name: "적용", exact: true }));
@@ -267,12 +267,12 @@ describe("settings › languages", () => {
 				);
 			},
 		}).run();
-		(page.getByRole("button", { name: "English 옮기기" }).element() as HTMLElement).focus();
+		(page.getByRole("button", { name: "영어 옮기기" }).element() as HTMLElement).focus();
 		await userEvent.keyboard(" ");
-		await expect.poll(said).toContain("English");
+		await expect.poll(said).toContain("영어");
 		await userEvent.keyboard("{ArrowDown}");
 		await userEvent.keyboard(" ");
-		await expect.poll(languages).toEqual(["한국어", "日本語", "English"]);
+		await expect.poll(languages).toEqual(["한국어", "일본어", "영어"]);
 		await userEvent.click(saveGroup());
 		await userEvent.click(tab(/^사이트/));
 		await userEvent.fill(page.getByRole("textbox", { name: "사이트 이름" }), "새 이름");
@@ -286,12 +286,12 @@ describe("settings › languages", () => {
 	it("[keys-move] 12-1 languages reordered with the keyboard alone, and an order change by itself is saved without a review", async () => {
 		const shown = withSite(stories.Languages);
 		await shown.run();
-		(page.getByRole("button", { name: "English 옮기기" }).element() as HTMLElement).focus();
+		(page.getByRole("button", { name: "영어 옮기기" }).element() as HTMLElement).focus();
 		await userEvent.keyboard(" ");
-		await expect.poll(said).toContain("English");
+		await expect.poll(said).toContain("영어");
 		await userEvent.keyboard("{ArrowDown}");
 		await userEvent.keyboard(" ");
-		await expect.poll(languages).toEqual(["한국어", "日本語", "English"]);
+		await expect.poll(languages).toEqual(["한국어", "일본어", "영어"]);
 		await userEvent.click(saveGroup());
 		await expect.element(page.getByText("적용했습니다")).toBeVisible();
 		await expect.element(page.getByRole("dialog")).not.toBeInTheDocument();
@@ -300,31 +300,31 @@ describe("settings › languages", () => {
 
 	it("[dragging] [dropped] a language held by its handle is under the pointer while the next one makes room; let go, it stays after it, and the source never moves", async () => {
 		await Languages.run();
-		const before = { source: topOf("한국어"), english: topOf("English"), japanese: topOf("日本語") };
-		const from = middleOf(page.getByRole("button", { name: "English 옮기기" }).element());
+		const before = { source: topOf("한국어"), english: topOf("영어"), japanese: topOf("일본어") };
+		const from = middleOf(page.getByRole("button", { name: "영어 옮기기" }).element());
 		const down = before.japanese - before.english;
 		await dragPath([from, { x: from.x, y: from.y + down }], { hold: true });
 		// The row in hand follows the pointer; the one it passes moved up into its place; the source stays put.
-		await expect.poll(() => topOf("English")).toBe(before.english + down);
-		await expect.poll(() => topOf("日本語")).toBe(before.english);
+		await expect.poll(() => topOf("영어")).toBe(before.english + down);
+		await expect.poll(() => topOf("일본어")).toBe(before.english);
 		expect(topOf("한국어")).toBe(before.source);
 		await dropDrag();
-		await expect.poll(languages).toEqual(["한국어", "日本語", "English"]);
+		await expect.poll(languages).toEqual(["한국어", "일본어", "영어"]);
 		// Dragged back to where it was saved, nothing is left to save.
-		const again = middleOf(page.getByRole("button", { name: "English 옮기기" }).element());
+		const again = middleOf(page.getByRole("button", { name: "영어 옮기기" }).element());
 		await dragPath([again, { x: again.x, y: again.y - down }]);
-		await expect.poll(languages).toEqual(["한국어", "English", "日本語"]);
+		await expect.poll(languages).toEqual(["한국어", "영어", "일본어"]);
 		await expect.element(saveGroup()).not.toBeInTheDocument();
 	});
 
 	it("12-3 [flow 11·16] on the live site the languages are read-only: a lock on every row, and nothing to move, take out, change or add", async () => {
 		await LanguagesLive.run();
-		expect(languages()).toEqual(["한국어", "English", "日本語"]);
-		for (const name of ["English 옮기기", "English 빼기", "바꾸기", "언어 추가"])
+		expect(languages()).toEqual(["한국어", "영어", "일본어"]);
+		for (const name of ["영어 옮기기", "영어 빼기", "바꾸기", "언어 추가"])
 			await expect.element(page.getByRole("button", { name })).not.toBeInTheDocument();
 		// The address mark of the site tab is the file's too: text with its lock, no select.
 		await userEvent.click(tab(/사이트/));
-		await expect.element(page.getByText("원문 언어만 빼고")).toBeVisible();
+		await expect.element(page.getByText("번역만")).toBeVisible();
 		await expect.element(page.getByRole("combobox", { name: "주소에 언어 표시" })).not.toBeInTheDocument();
 		// What lives in the database is still an input.
 		await expect.element(nameField()).toBeEnabled();
@@ -349,7 +349,7 @@ describe("settings: a save that is refused", () => {
 		expect(partly.schema.locales.prefix).toBe("exceptSource");
 		await expect.poll(siteName).toBe("example.blog");
 		await expect.element(page.getByRole("button", { name: /변경 사항/ })).toHaveTextContent("1");
-		await expect.element(page.getByRole("combobox", { name: "주소에 언어 표시" })).toHaveTextContent("항상");
+		await expect.element(page.getByRole("combobox", { name: "주소에 언어 표시" })).toHaveTextContent("모든 언어");
 		// It does not go by itself: moving to another tab and back, the line is still there.
 		await userEvent.click(tab(/언어/));
 		await userEvent.click(tab(/사이트/));
@@ -474,7 +474,7 @@ describe("settings: a language problem can be seen and undone", () => {
 		await userEvent.click(page.getByRole("button", { name: /변경 사항/ }));
 		await userEvent.click(page.getByRole("menuitem", { name: /원문 변경/ }).getByRole("button", { name: "되돌리기" }));
 		await userEvent.keyboard("{Escape}");
-		await expect.poll(languages).toEqual(["한국어", "English", "日本語"]);
+		await expect.poll(languages).toEqual(["한국어", "영어", "일본어"]);
 		// The save is not offered as if nothing were wrong: the review names the problem, with no pill to apply.
 		await userEvent.click(saveGroup());
 		const sheet = page.getByRole("dialog");
@@ -593,15 +593,15 @@ describe("settings › collections inside the one draft", () => {
 	it("12-1 a new language moved above the saved ones is saved where it was put", async () => {
 		const shown = withSite(stories.LanguageAdded);
 		await shown.run();
-		(page.getByRole("button", { name: "Deutsch 옮기기" }).element() as HTMLElement).focus();
+		(page.getByRole("button", { name: "독일어 옮기기" }).element() as HTMLElement).focus();
 		await userEvent.keyboard(" ");
-		await expect.poll(said).toContain("Deutsch");
+		await expect.poll(said).toContain("독일어");
 		await userEvent.keyboard("{ArrowUp}");
-		await expect.poll(said).toContain("日本語");
+		await expect.poll(said).toContain("일본어");
 		await userEvent.keyboard("{ArrowUp}");
-		await expect.poll(said).toContain("English");
+		await expect.poll(said).toContain("영어");
 		await userEvent.keyboard(" ");
-		await expect.poll(languages).toEqual(["한국어", "Deutsch", "English", "日本語"]);
+		await expect.poll(languages).toEqual(["한국어", "독일어", "영어", "일본어"]);
 		await userEvent.click(saveGroup());
 		await userEvent.click(page.getByRole("button", { name: "적용", exact: true }));
 		await expect.element(page.getByText("적용했습니다")).toBeVisible();
@@ -611,18 +611,18 @@ describe("settings › collections inside the one draft", () => {
 	it("12-1 a language added, moved and then taken back from the changes list leaves no change: its row and the order it changed go together", async () => {
 		await LanguageAdded.run();
 		// Deutsch moved above English, then its line of the changes list undone.
-		(page.getByRole("button", { name: "Deutsch 옮기기" }).element() as HTMLElement).focus();
+		(page.getByRole("button", { name: "독일어 옮기기" }).element() as HTMLElement).focus();
 		await userEvent.keyboard(" ");
-		await expect.poll(said).toContain("Deutsch");
+		await expect.poll(said).toContain("독일어");
 		await userEvent.keyboard("{ArrowUp}");
-		await expect.poll(said).toContain("日本語");
+		await expect.poll(said).toContain("일본어");
 		await userEvent.keyboard("{ArrowUp}");
-		await expect.poll(said).toContain("English");
+		await expect.poll(said).toContain("영어");
 		await userEvent.keyboard(" ");
-		await expect.poll(languages).toEqual(["한국어", "Deutsch", "English", "日本語"]);
+		await expect.poll(languages).toEqual(["한국어", "독일어", "영어", "일본어"]);
 		await userEvent.click(page.getByRole("button", { name: /변경 사항/ }));
-		await userEvent.click(page.getByRole("menuitem", { name: /Deutsch/ }).getByRole("button", { name: "되돌리기" }));
-		await expect.poll(languages).toEqual(["한국어", "English", "日本語"]);
+		await userEvent.click(page.getByRole("menuitem", { name: /독일어/ }).getByRole("button", { name: "되돌리기" }));
+		await expect.poll(languages).toEqual(["한국어", "영어", "일본어"]);
 		await expect.element(saveGroup()).not.toBeInTheDocument();
 	});
 });
@@ -790,7 +790,7 @@ describe("settings: the assistant's proposals", () => {
 		await userEvent.click(page.getByRole("button", { name: "모두 되돌리기" }));
 		// The proposal was not used up by the save that failed: it is pending, and the bubble offers it again.
 		await expect.element(page.getByRole("button", { name: "모두 받기" })).toBeVisible();
-		expect(languages()).toEqual(["한국어", "English", "日本語", "Deutsch"]);
+		expect(languages()).toEqual(["한국어", "영어", "일본어", "독일어"]);
 		const pending = (await monti.run("proposals.forTarget", { kind: "schema", id: "current" }, admin)) as unknown[];
 		expect(pending).toHaveLength(1);
 	});
@@ -826,7 +826,7 @@ describe("settings: the assistant's proposals", () => {
 
 	it("12-1 a proposed language is a row of the language tab until it is taken; from another tab the language tab carries the blue dot", async () => {
 		await LanguageProposal.run();
-		expect(languages()).toEqual(["한국어", "English", "日本語", "Deutsch"]);
+		expect(languages()).toEqual(["한국어", "영어", "일본어", "독일어"]);
 		await expect.element(saveGroup()).not.toBeInTheDocument();
 		await userEvent.click(tab(/관리자/));
 		await expect.element(tab(/언어/).getByRole("img", { name: "제안" })).toBeVisible();
@@ -1249,5 +1249,20 @@ describe("settings › admin", () => {
 		await expect.element(page.getByRole("button", { name: "로그인", exact: true })).toBeVisible();
 		await expect.element(page.getByText("저장한 이름")).toBeVisible();
 		await expect.element(page.getByRole("alertdialog")).not.toBeInTheDocument();
+	});
+});
+
+describe("settings › site", () => {
+	it("[ST-07] the language mark's values say which addresses carry it: '모든 언어' · '번역만' · '안 함'", async () => {
+		await SiteChanged.run();
+		await userEvent.click(page.getByRole("combobox", { name: "주소에 언어 표시" }));
+		await expect
+			.poll(() =>
+				page
+					.getByRole("option")
+					.elements()
+					.map((option) => option.textContent),
+			)
+			.toEqual(["모든 언어", "번역만", "안 함"]);
 	});
 });

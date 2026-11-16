@@ -25,11 +25,11 @@ test.describe("settings", () => {
 
 		// The address mark and the languages are the schema file's: text with a lock, nothing to change them with.
 		await expect(admin.getByRole("combobox", { name: "주소에 언어 표시" })).toBeHidden();
-		await expect(admin.getByText("원문 언어만 빼고")).toBeVisible();
+		await expect(admin.getByText("번역만")).toBeVisible();
 		await tab(admin, "언어").click();
 		await expect(admin.getByRole("list", { name: "콘텐츠 언어" }).getByRole("listitem")).toHaveCount(3);
 		await expect(admin.getByRole("img", { name: "운영 사이트에서는 잠김" })).toHaveCount(3);
-		for (const button of ["언어 추가", "바꾸기", "English 빼기"])
+		for (const button of ["언어 추가", "바꾸기", "영어 빼기"])
 			await expect(admin.getByRole("button", { name: button })).toBeHidden();
 
 		// The same door the screen saves through refuses a structure value, with the admin value sent beside it.

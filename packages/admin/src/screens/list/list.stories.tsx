@@ -440,7 +440,7 @@ export const FolderRemoveConfirm: Story = {
 	}),
 	play: async ({ canvasElement }) => {
 		await rightClick(canvasElement, "시리즈 원고");
-		await userEvent.click(await body().findByRole("menuitem", { name: "폴더 지우기" }, wait));
+		await userEvent.click(await body().findByRole("menuitem", { name: "휴지통으로" }, wait));
 		await waitFor(() => expect(body().getByRole("alertdialog")).toBeTruthy(), wait);
 	},
 };
@@ -458,7 +458,7 @@ export const FolderRemoved: Story = {
 	}),
 	play: async ({ canvasElement }) => {
 		await rightClick(canvasElement, "임시");
-		await userEvent.click(await body().findByRole("menuitem", { name: "폴더 지우기" }, wait));
+		await userEvent.click(await body().findByRole("menuitem", { name: "휴지통으로" }, wait));
 		await waitFor(() => expect(body().getByRole("button", { name: "되돌리기" })).toBeTruthy(), wait);
 	},
 };

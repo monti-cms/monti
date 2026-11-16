@@ -21,6 +21,7 @@ import {
 	TextButton,
 } from "@monti-cms/ui";
 import { useEffect, useRef, useState } from "react";
+import { useLanguageName } from "../../format/language";
 import { useAdmin } from "../../operations/admin-context";
 import { holdsKeyboardFocus } from "../frame/focus-hand-off";
 import { type AddressPlace, addressOfProblem } from "./basics-tab";
@@ -195,7 +196,8 @@ function Body({
 	const { t } = useAdmin();
 	// What must be fixed before the change can be applied: told here, when saving, each line opening its field (flow 4, step 09).
 	const problems = model.problems;
-	const languageName = (code: string | undefined) => model.locales.find((row) => row.code === code)?.name ?? code ?? "";
+	const nameOf = useLanguageName();
+	const languageName = (code: string | undefined) => (code ? nameOf(code) : "");
 	const fixFirst = problems.map((problem) => {
 		// A problem of the languages (the source is not in the list): its line opens the language tab, where the row can be put back.
 		if (!ofCollection(problem))

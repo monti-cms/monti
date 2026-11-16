@@ -221,7 +221,10 @@ function FileUses({ uses, go }: { uses: ReturnType<typeof useUseRows>; go: (rout
 	const { t } = useAdmin();
 	return (
 		<FormField>
-			<FormFieldLabel>{t("library.usesCount", { count: uses.length })}</FormFieldLabel>
+			{/* The count only when there is something to count: a zero says nothing the empty list does not (MD-46). */}
+			<FormFieldLabel>
+				{uses.length > 0 ? t("library.usesCount", { count: uses.length }) : t("library.uses")}
+			</FormFieldLabel>
 			<FileUseList empty={t("library.usesNone")}>
 				{uses.map((use) => (
 					<FileUseRow

@@ -646,13 +646,15 @@ export const keyOperations = [
 			if (!key || !model) throw new CheckError({ key: "models.unknown" });
 			// Tried when a person picks it, a proposal of the assistant's taken included; not while the assistant writes the proposal (the
 			// model would be called, and paid for, before anyone said yes). A site without a plugin that tries models picks it untried.
-			if (!ctx.site.tryModel || ctx.actor === "assistant") return { ms: null, version: key.version };
+			// What the log calls the model: the name its service gives it, as the model menu shows it (doc 10); its id when it has none.
+			const name = model.label ?? model.id;
+			if (!ctx.site.tryModel || ctx.actor === "assistant") return { ms: null, version: key.version, name };
 			const open = await openKey(ctx.db, ctx.site.secret, key.id);
 			if (!open) throw new CheckError({ key: "models.unknown" });
 			const started = Date.now();
 			await ctx.site.tryModel({ for: input.for, key: open, model });
 			// How long the answer took: the screen says it, so a slow model is seen as one when it is picked (AS-42). `null`: it was not tried.
-			return { ms: Date.now() - started, version: key.version };
+			return { ms: Date.now() - started, version: key.version, name };
 		},
 		async run(input, ctx, tried) {
 			// The key may have gone, or been changed (another key, another address), while the model answered: the choice goes with its key, and
@@ -671,11 +673,11 @@ export const keyOperations = [
 				.values({ role: input.for, key_id: input.keyId, model: input.model })
 				.onConflict((conflict) => conflict.column("role").doUpdateSet({ key_id: input.keyId, model: input.model }))
 				.execute();
-			return { for: input.for, keyId: input.keyId, model: input.model, ms: tried.ms };
+			return { for: input.for, keyId: input.keyId, model: input.model, name: tried.name, ms: tried.ms };
 		},
 		log: "settings",
 		where: () => ({ key: "activity.where.keys" }),
-		summary: (input) => ({ key: `models.choose.${input.for}`, values: { model: input.model } }),
+		summary: (input, output) => ({ key: `models.choose.${input.for}`, values: { model: output.name } }),
 	}),
 ];
 

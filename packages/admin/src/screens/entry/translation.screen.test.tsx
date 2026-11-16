@@ -69,7 +69,8 @@ async function blockMenu(words: string) {
 describe("the language tabs", () => {
 	it("[overflow-after-add] with five languages the tabs and '+ 언어' still fit the writing column, and nothing scrolls sideways", async () => {
 		await open(siteOf(stories.site("all", "korean", fiveLanguages)));
-		await expect.element(tab("Português (Brasil)")).toBeVisible();
+		// The tabs name each language in the admin's language (TR-01).
+		await expect.element(tab("포르투갈어")).toBeVisible();
 		const column = body().element().getBoundingClientRect();
 		const row = tabs().element().getBoundingClientRect();
 		expect(row.left).toBeGreaterThanOrEqual(column.left - 1);
@@ -77,12 +78,19 @@ describe("the language tabs", () => {
 		expect(scrollsSideways(tabs().element())).toEqual([]);
 	});
 
+	it("[TR-01] the tabs call each language by its name in the admin's language, not by the name the schema keeps", async () => {
+		await open(LanguageMenu);
+		await expect.element(tab("영어")).toBeVisible();
+		await expect.element(tab("한국어")).toBeVisible();
+		await expect.element(tabs().getByText("English")).not.toBeInTheDocument();
+	});
+
 	it("T68 an entry of a two-language site shows its languages as tabs, its own pressed, and '+ 언어' after them", async () => {
 		await open(LanguageMenu);
-		await expect.element(page.getByRole("menuitem", { name: /日本語/ })).toBeVisible();
+		await expect.element(page.getByRole("menuitem", { name: /일본어/ })).toBeVisible();
 		await userEvent.keyboard("{Escape}");
 		await expect.element(tab("한국어")).toHaveAttribute("aria-current", "page");
-		await expect.element(tab("English")).not.toHaveAttribute("aria-current");
+		await expect.element(tab("영어")).not.toHaveAttribute("aria-current");
 		await expect.element(addLanguage()).toBeVisible();
 		expect(addLanguage().element().querySelector("svg")).not.toBeNull();
 	});
@@ -90,8 +98,8 @@ describe("the language tabs", () => {
 	it("T68 a tab opens that language's entry of the group", async () => {
 		await open(LanguageMenu);
 		await userEvent.keyboard("{Escape}");
-		await userEvent.click(tab("English"));
-		await expect.element(tab("English")).toHaveAttribute("aria-current", "page");
+		await userEvent.click(tab("영어"));
+		await expect.element(tab("영어")).toHaveAttribute("aria-current", "page");
 		await expect.element(page.getByRole("textbox", { name: "제목" })).toHaveValue("The first post");
 		await expect.element(page.getByText("/en/posts/first-post")).toBeVisible();
 	});
@@ -108,7 +116,7 @@ describe("flow 3, a translation", () => {
 		await expect.element(page.getByRole("menuitem").first()).toBeVisible();
 		const rows = await page.getByRole("menuitem").all();
 		// After the languages to translate into, the way to the site's languages (editor.md).
-		expect(rows.map((row) => row.element().textContent)).toEqual(["日本語ja", "언어 관리"]);
+		expect(rows.map((row) => row.element().textContent)).toEqual(["일본어ja", "언어 관리"]);
 	});
 
 	it("T92 '언어 관리' in the '+ 언어' menu goes to settings › languages", async () => {
@@ -120,7 +128,7 @@ describe("flow 3, a translation", () => {
 
 	it("T92 with every language already there, '+ 언어' has one row that goes to settings › languages, where a language is added", async () => {
 		await open(siteOf(stories.site("all", "korean")));
-		await expect.element(tab("日本語")).toBeVisible();
+		await expect.element(tab("일본어")).toBeVisible();
 		await userEvent.click(addLanguage());
 		const rows = await page.getByRole("menuitem").all();
 		expect(rows.map((row) => row.element().textContent)).toEqual(["언어 추가 · 설정"]);
@@ -131,8 +139,8 @@ describe("flow 3, a translation", () => {
 
 	it("04-1 3.02 picking a language opens the new translation: every block faint, the address copied, one to-do open", async () => {
 		await open(LanguageMenu);
-		await userEvent.click(page.getByRole("menuitem", { name: /日本語/ }));
-		await expect.element(tab("日本語")).toHaveAttribute("aria-current", "page");
+		await userEvent.click(page.getByRole("menuitem", { name: /일본어/ }));
+		await expect.element(tab("일본어")).toHaveAttribute("aria-current", "page");
 		await expect.element(page.getByText("/ja/posts/first-post")).toBeVisible();
 		// Four blocks with words, faint; the code follows the source.
 		await expect.poll(faint).toBe(4);
@@ -222,7 +230,7 @@ describe("flow 3, a translation", () => {
 	it("04-1 3.08 after the source is published again, the English tab has a dot", async () => {
 		await open(LanguageMenu);
 		await userEvent.keyboard("{Escape}");
-		await expect.element(tab("English").getByLabelText("원문 변경")).toBeInTheDocument();
+		await expect.element(tab("영어").getByLabelText("원문 변경")).toBeInTheDocument();
 		await expect.element(tab("한국어").getByLabelText("원문 변경")).not.toBeInTheDocument();
 	});
 
@@ -375,7 +383,7 @@ describe("writing a translation (owner review, 2026-11-06)", () => {
 
 	it("04-2 T111 the source's new title and summary mark the translation: the tab's dot, the count, the banner, and a mark on each", async () => {
 		await FieldsChanged.run();
-		await expect.element(tab("English").getByLabelText("원문 변경")).toBeInTheDocument();
+		await expect.element(tab("영어").getByLabelText("원문 변경")).toBeInTheDocument();
 		await expect.element(page.getByRole("button", { name: "할 일 2" })).toBeVisible();
 		const title = page.getByRole("textbox", { name: "제목" });
 		await expect.poll(() => document.querySelector("[data-field-mark=title]")).not.toBeNull();
@@ -425,7 +433,7 @@ describe("writing a translation (owner review, 2026-11-06)", () => {
 		await expect.element(page.getByRole("textbox", { name: "요약" })).toHaveFocus();
 		await userEvent.click(page.getByRole("button", { name: "모두 번역 유지" }));
 		await expect.element(page.getByRole("button", { name: "할 일 없음" })).toBeVisible();
-		await expect.element(tab("English").getByLabelText("원문 변경")).not.toBeInTheDocument();
+		await expect.element(tab("영어").getByLabelText("원문 변경")).not.toBeInTheDocument();
 	});
 
 	it("04-2 T111 side by side the title's mark stands in its row", async () => {

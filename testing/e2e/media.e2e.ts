@@ -715,9 +715,9 @@ test.describe("a translation's cover", () => {
 
 		// On the site with no cover, and the cover only saved: a translation follows what the site shows (doc 04, principle 5).
 		await admin.getByRole("button", { name: "언어", exact: true }).click();
-		await admin.getByRole("menuitem", { name: /English/ }).click();
+		await admin.getByRole("menuitem", { name: /영어/ }).click();
 		await expect(admin).toHaveURL(/#\/c\/post\//);
-		await expect(admin.getByRole("button", { name: "English" })).toBeVisible();
+		await expect(admin.getByRole("button", { name: "영어" })).toBeVisible();
 		await panel();
 		await expect(cover).toHaveText(/비어 있음/);
 		await expect(admin.getByText("원문 따름", { exact: true })).toBeVisible();
@@ -728,7 +728,7 @@ test.describe("a translation's cover", () => {
 		await expect(cover).toHaveText(new RegExp(name));
 		await admin.getByRole("button", { name: "발행하기" }).click();
 		await expect(admin.getByRole("button", { name: "발행됨" })).toBeVisible();
-		await admin.getByRole("button", { name: "English" }).click();
+		await admin.getByRole("button", { name: "영어" }).click();
 		await panel();
 		await expect(cover).toHaveText(new RegExp(name));
 		await card();

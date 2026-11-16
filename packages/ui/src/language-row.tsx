@@ -5,8 +5,8 @@ import { LockMark } from "./lock-mark";
 import { HELD } from "./sortable";
 
 /**
- * One content language in Settings › Languages. Its name written in itself leads, then the code in mono and, when it differs, the display name in the admin
- * language ("English en · display name"). Names come from the code and are never edited, so a row has no input. At the end of the row sits `children`: the × icon button that
+ * One content language in Settings › Languages. Its name as every screen calls it (in the admin's language) leads, then the code in mono and, when
+ * it differs, its name written in itself ("Japanese ja · 日本語"). Names come from the code and are never edited, so a row has no input. At the end of the row sits `children`: the × icon button that
  * takes the language out, or the {@link LanguageSource} mark on the source row. `handle` is the drag handle (a {@link DragHandle}); a list whose rows can
  * be moved sets `handled` on every row, so a row without a handle (the source) keeps its column. `dot` is the name of the change dot ("new", "source changed");
  * `dotTone="proposal"` makes it the assistant's blue one. `locked` is the name of the lock after the language's name, on a list that cannot be changed here.
@@ -26,10 +26,10 @@ function LanguageRow({
 	children,
 	...props
 }: Omit<React.ComponentProps<"li">, "children"> & {
-	/** The language's name written in itself. */
+	/** The language's name as the screens call it: in the admin's language. */
 	name: React.ReactNode;
 	code: string;
-	/** The display name; shown only when it differs from `name`. */
+	/** The language's name written in itself; shown only when it differs from `name`. */
 	label?: string;
 	dot?: string;
 	/** `proposal`: the change is the assistant's and nobody has taken it yet. */

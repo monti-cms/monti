@@ -91,10 +91,10 @@ function AddLanguage({ taken, onAdd }: { taken: string[]; onAdd: (code: string, 
 									setQuery("");
 								}}
 							>
-								{each.name}
+								{each.label}
 								{each.label !== each.name ? (
 									<Text variant="note" tone="subtle">
-										{each.label}
+										{each.name}
 									</Text>
 								) : null}
 								<MenuShortcut>{each.code}</MenuShortcut>
@@ -153,7 +153,8 @@ export function LocalesTab({ model }: { model: SettingsDraft }) {
 	};
 
 	const row = (each: LocaleRow) => {
-		const shared = { name: each.name, label: label(each), gone: each.state === "gone", ...mark(each) };
+		// The row is called what every screen calls the language, its name in the admin's language; its own name follows where that differs.
+		const shared = { name: label(each), label: each.name, gone: each.state === "gone", ...mark(each) };
 		if (locked)
 			return (
 				<LanguageRow key={each.code} code={each.code} {...shared} locked={t("settings.locked")}>
@@ -186,7 +187,7 @@ export function LocalesTab({ model }: { model: SettingsDraft }) {
 									>
 										{live.map((option) => (
 											<DropdownMenuRadioItem key={option.code} value={option.code}>
-												{option.name}
+												{label(option)}
 												<MenuShortcut>{option.code}</MenuShortcut>
 											</DropdownMenuRadioItem>
 										))}
@@ -201,7 +202,7 @@ export function LocalesTab({ model }: { model: SettingsDraft }) {
 			<MovableRow
 				key={each.code}
 				code={each.code}
-				moveLabel={t("settings.locales.move", { name: each.name })}
+				moveLabel={t("settings.locales.move", { name: label(each) })}
 				{...shared}
 			>
 				{each.state === "gone" ? (
@@ -209,7 +210,7 @@ export function LocalesTab({ model }: { model: SettingsDraft }) {
 						{t("settings.undo")}
 					</TextButton>
 				) : (
-					<IconButton label={t("settings.locales.remove", { name: each.name })} onClick={() => remove(each)}>
+					<IconButton label={t("settings.locales.remove", { name: label(each) })} onClick={() => remove(each)}>
 						<Close aria-hidden />
 					</IconButton>
 				)}
@@ -221,7 +222,7 @@ export function LocalesTab({ model }: { model: SettingsDraft }) {
 		<Section title={t("settings.locales.section")} last>
 			<Stack gap={0}>
 				<Sortable
-					nameOf={(code) => rows.find((each) => each.code === code)?.name ?? code}
+					nameOf={(code) => languageName(code, language)}
 					onDrop={({ active, over }) => {
 						if (over && active.id !== over.id) move(active.id, over.id);
 					}}

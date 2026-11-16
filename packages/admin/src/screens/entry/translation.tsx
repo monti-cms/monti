@@ -45,6 +45,7 @@ import { findBlock } from "../../editor/proposal-marks";
 import { nodeName } from "../../editor/schema";
 import { linkOf, type PairedRows, type PairedSourceBlock } from "../../editor/translation";
 import { shortDate } from "../../format/date";
+import { useLanguageName } from "../../format/language";
 import { useAdmin } from "../../operations/admin-context";
 import { useOperation, useRead } from "../../operations/use-operation";
 import { type BlockNames, type Part, readableWordDiff, shownBlocks } from "./compare-entries";
@@ -161,14 +162,12 @@ export function useTranslation(id: string, schema: Schema | undefined, editor: E
  * trash with it as its group. With no tab and nothing to add, nothing is drawn.
  */
 export function LocaleTabs({
-	schema,
 	group,
 	current,
 	onOpen,
 	onCreate,
 	onManage,
 }: {
-	schema: Schema;
 	group: GroupStatus | null;
 	current: string;
 	onOpen: (id: string) => void;
@@ -178,7 +177,8 @@ export function LocaleTabs({
 	onManage: () => void;
 }) {
 	const { t } = useAdmin();
-	const name = (code: string) => schema.locales.list.find((locale) => locale.code === code)?.name ?? code;
+	// A language is called by its name in the admin's language on its tab, as everywhere (TR-01).
+	const name = useLanguageName();
 	const missing = group?.missing ?? [];
 	// Nothing to show (the languages of an entry in the trash are not read) and nothing to add: no landmark with nothing in it.
 	if (!onCreate && (group?.locales ?? []).length === 0) return null;

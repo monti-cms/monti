@@ -194,7 +194,8 @@ export function FolderMenuItems({
 			<Separator />
 			<Item variant="danger" onClick={onRemove}>
 				<TrashCan aria-hidden />
-				{t("folders.remove")}
+				{/* The words of every other move to the trash (MD-40). */}
+				{t("trash.toTrash")}
 			</Item>
 		</>
 	);
