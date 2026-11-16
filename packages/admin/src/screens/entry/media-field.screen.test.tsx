@@ -39,12 +39,29 @@ describe("a read-only entry", () => {
 		await expect.element(bar.getByRole("button", { name: "가운데 정렬" })).not.toBeInTheDocument();
 	});
 
-	it("02-6 T131 an archived entry's fields that pick from a list are off for the keyboard too, like its other fields", async () => {
+	it("02-6 T131 [AT-29] an archived entry's fields that pick from a list are read, not off: the keyboard stops on them, and neither it nor the pointer opens a list or changes what they hold", async () => {
 		await ArchivedCover.run();
 		await closeCard();
 		const lists = page.getByRole("complementary").getByRole("combobox");
 		await expect.poll(() => lists.elements().length).toBeGreaterThan(0);
-		for (const field of lists.elements()) await expect.element(page.elementLocator(field)).toBeDisabled();
+		const open = () =>
+			[...document.querySelectorAll<HTMLElement>("[role=listbox], [role=option]")].filter((each) =>
+				each.checkVisibility({ visibilityProperty: true, opacityProperty: true }),
+			);
+		for (const element of lists.elements()) {
+			const field = element as HTMLInputElement;
+			await expect.element(page.elementLocator(field)).toBeEnabled();
+			expect(field.readOnly || field.getAttribute("aria-readonly") === "true").toBe(true);
+			const held = field.value ?? field.textContent;
+			await userEvent.click(page.elementLocator(field));
+			expect(open()).toHaveLength(0);
+			field.focus();
+			expect(document.activeElement).toBe(field);
+			await userEvent.keyboard("x{Backspace}{ArrowDown}{Enter}");
+			expect(open()).toHaveLength(0);
+			expect(field.value ?? field.textContent).toBe(held);
+		}
+		await expect.element(page.getByRole("button", { name: "저장 전 변경사항" })).not.toBeInTheDocument();
 	});
 });
 

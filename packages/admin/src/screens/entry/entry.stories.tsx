@@ -850,7 +850,7 @@ export const Archived: Story = {
 	play: async ({ canvasElement }) => {
 		const { page, title } = await opened(canvasElement);
 		await page.findByRole("button", { name: "보관 풀기" }, wait);
-		await expect(title).toBeDisabled();
+		await expect(title).toHaveAttribute("readonly");
 		await expect(page.queryByRole("button", { name: "발행하기" })).toBeNull();
 	},
 };

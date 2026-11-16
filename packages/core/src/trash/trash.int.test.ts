@@ -428,6 +428,13 @@ describe("restoring", () => {
 			"en",
 			"ko",
 		]);
+		// Each language comes with its entry's id: the editor of one opens the other by it.
+		expect(
+			(await read<TrashedEntry>("trash.get", { id: english })).locales.map((each) => [each.locale, each.id]),
+		).toEqual([
+			["en", english],
+			["ko", source],
+		]);
 		// Either language brings the whole entry back.
 		await restore(entryRow(english));
 

@@ -9,6 +9,8 @@ export type UseRelationFieldOptions = {
 	locale?: string;
 	entryGroup?: string;
 	createMissing?: boolean;
+	/** Reads nothing: the field has no candidates (the settings' preview of a field that is not saved yet). */
+	skip?: boolean;
 };
 
 export type RelationFieldModel = {
@@ -36,11 +38,12 @@ export function useRelationField({
 	locale,
 	entryGroup,
 	createMissing = false,
+	skip = false,
 }: UseRelationFieldOptions): RelationFieldModel {
 	const { t } = useAdmin();
 	const [search, setSearch] = useState("");
 
-	const read = useRead<RelationOptionsResult>("relations.options", { collection, field, locale, entryGroup });
+	const read = useRead<RelationOptionsResult>("relations.options", { collection, field, locale, entryGroup }, { skip });
 
 	const allOptions = useMemo(() => read.data?.options ?? [], [read.data?.options]);
 

@@ -284,7 +284,8 @@ export function TrashedFilePanel({
 		>
 			<Stack gap={32}>
 				{item.kind === "image" ? (
-					<Image src={previewUrl(item)} alt={item.name} ratio="photo" />
+					// The whole picture, not a 4:3 cut of it: a tall one stands in the frame with the grey ground at its sides.
+					<Image src={previewUrl(item)} alt={item.name} ratio="photo" fit="contain" />
 				) : (
 					<FilePreview ext={extensionLabel(item.name)} framed />
 				)}
@@ -450,7 +451,8 @@ export function MediaPanel({
 			{/* Each thing the panel is for stands apart: what the file is, what can be changed, what it is, where it is used. */}
 			<Stack gap={32}>
 				{item.kind === "image" ? (
-					<Image src={url} alt={item.name} ratio="photo" />
+					// The whole picture, not a 4:3 cut of it: a tall one stands in the frame with the grey ground at its sides.
+					<Image src={url} alt={item.name} ratio="photo" fit="contain" />
 				) : (
 					<FilePreview ext={extensionLabel(item.name)} framed />
 				)}

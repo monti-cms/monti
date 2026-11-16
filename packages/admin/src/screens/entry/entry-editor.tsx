@@ -37,10 +37,10 @@ import {
 	Stack,
 	StandalonePage,
 	StatusBar,
-	StatusBarAnnouncer,
 	StatusBarCell,
 	StatusBarList,
 	StatusBarListGroup,
+	StatusBarLive,
 	StatusBarPluginCell,
 	StatusBarSpacer,
 	Text,
@@ -113,6 +113,7 @@ import { EntryProperties, fieldInputId, fieldPath, panelFields, panelLayout } fr
 import {
 	decidedOnly,
 	FieldChange,
+	type GroupStatus,
 	LocaleTabs,
 	PairedView,
 	SourceChangedBanner,
@@ -380,18 +381,38 @@ export function EntryEditor({
 	// With the entry's other controls: before the read, and after one that failed, "+ language" made a translation of an entry nobody had read, and the
 	// tabs stood elsewhere than where they stay.
 	// Drawn once everything below is made: its "✦ translate" reads what the requests further down hold.
+	// An entry in the trash has the languages of it that are in the trash with it, as its row of the trash counts them ("KO +1"): each is a
+	// tab that opens that language, to read. The site's languages in the site's order, so a tab stays where it is as they are opened.
+	const trashedGroup = useMemo((): GroupStatus | null => {
+		if (!inTrash || !schema.data) return null;
+		const order = schema.data.schema.locales.list.map((locale) => locale.code);
+		const rank = (code: string) => (order.includes(code) ? order.indexOf(code) : order.length);
+		return {
+			group: inTrash.id,
+			source: null,
+			locales: [...inTrash.locales]
+				.sort((a, b) => rank(a.locale) - rank(b.locale) || a.locale.localeCompare(b.locale))
+				.map((each) => ({ locale: each.locale, id: each.id, state: "draft", changes: 0, pending: 0 })),
+			missing: [],
+		};
+	}, [inTrash, schema.data]);
 	const languagesRow = () =>
 		read && translation.multilingual && schema.data ? (
 			<Inline minHeight="control-md" justify="between" gap={12}>
 				<LocaleTabs
 					schema={schema.data.schema}
-					group={translation.group}
+					group={trashed ? trashedGroup : translation.group}
 					current={id}
 					onOpen={onOpen}
-					onCreate={async (code) => {
-						const made = await translation.create(code);
-						if (made) onOpen(made);
-					}}
+					// An entry that cannot be changed (archived, in the trash) takes no new translation: the server refuses one (AT-30).
+					onCreate={
+						readOnly
+							? undefined
+							: async (code) => {
+									const made = await translation.create(code);
+									if (made) onOpen(made);
+								}
+					}
 					onManage={onLanguages}
 				/>
 				{translation.isTranslation ? (
@@ -991,7 +1012,8 @@ export function EntryEditor({
 					placeholder={compared?.source.title || t("entry.title")}
 					size={size}
 					appearance="inline"
-					disabled={readOnly}
+					// An entry that cannot be changed is still read: the title stands in full ink like the body, with nothing to type (AT-29).
+					readOnly={readOnly}
 					onChange={(event) => editor.set("title", event.target.value)}
 				/>
 			</FormField>
@@ -1431,17 +1453,19 @@ export function EntryEditor({
 			</Inline>
 			{read ? (
 				<StatusBar>
+					{/* Seen and said from one place: the words are in the page once, and an entry that cannot be changed has no save state to say (TP-10). */}
 					{readOnly ? null : (
-						<StatusBarCell
-							ref={handOff}
-							tone={cell.tone}
-							onClick={cell.press}
-							render={cell.press ? undefined : <span />}
-						>
-							{cell.text}
-						</StatusBarCell>
+						<StatusBarLive>
+							<StatusBarCell
+								ref={handOff}
+								tone={cell.tone}
+								onClick={cell.press}
+								render={cell.press ? undefined : <span />}
+							>
+								{cell.text}
+							</StatusBarCell>
+						</StatusBarLive>
 					)}
-					<StatusBarAnnouncer>{cell.text}</StatusBarAnnouncer>
 					{/* One list of what is left in the entry: what stops publishing, then what changed in the source (translation.md, 2026-11-10 owner). */}
 					<StatusBarList
 						trigger={

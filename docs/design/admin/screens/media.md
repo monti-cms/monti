@@ -50,7 +50,7 @@
 | 자리 | 부품 | 이렇게 쓴다 |
 |---|---|---|
 | 놓을 곳 | `DropArea`(`over`) | 파일을 끌어 오면 지금 폴더 영역 둘레에 잉크 선이 생긴다. 아래 가운데에 `toast.dropHint` "여기에 올리기". |
-| 폴더 타일 행 | `Grid columns="folders"`, 칸마다 `FolderTile`(`name`, `count`) | 누르면 그 폴더로 들어간다. 밖에서 끌어 온 파일이 그 위에 오면 그 타일이 `dropTarget`이 되고 영역 선은 꺼지며, 알림이 "**covers**에 올리기"가 된다. 라이브러리의 타일을 끌어 옮길 때는 타일만 `dropTarget`이 되고 알림은 없다. |
+| 폴더 타일 행 | `Grid columns="folders"`, 칸마다 `FolderTile`(`name`, `count`) | 누르면 그 폴더로 들어간다. 한 번 누르면 열리므로 두 번 누름(더블 클릭)의 둘째 누름은 아무것도 하지 않는다: 그 사이 포인터 밑에 온 파일이나 폴더가 열리지 않는다. 파일 타일, 목록 보기의 행, 미디어 고르기 창의 폴더 카드와 타일도 같다(MD-03, 만들며 정함 (2026-11-16)). 밖에서 끌어 온 파일이 그 위에 오면 그 타일이 `dropTarget`이 되고 영역 선은 꺼지며, 알림이 "**covers**에 올리기"가 된다. 라이브러리의 타일을 끌어 옮길 때는 타일만 `dropTarget`이 되고 알림은 없다. |
 | 새 폴더 · 이름 바꾸기 | `FolderTile` 안 `RenameField fill` | "새 폴더"가 선택된 채 열린다. Enter나 벗어나면 이름을 지키고, Esc는 버린다. |
 | 파일 격자 | `Grid columns="tiles"`, 칸마다 `Tile`(`preview`, `title`, `detail`) | 누르면 옆 패널에 그 파일이 열린다(`current`). ⋯는 `action`이고 포인터가 오면 보인다. 타일은 평평하다. |
 | 고르기 | `Tile`의 `selected`, `picking`, `onSelectedChange` | 하나라도 고르면 모든 타일에 체크가 흐리게 보인다. |
@@ -103,7 +103,7 @@
 |---|---|---|
 | 패널 | `SidePanel width="side"`(`title` 파일 이름, `onClose`, `actions`에 ⋯, `footer`에 "저장") | 격자 옆에 열리고, 열린 동안 ✦ 모서리 버튼은 가려진다. 패널의 필드는 모두 `md`(32px, 원칙 10). 그림 · 이름과 폴더 · 정보 · 쓰는 곳은 구분선 없이 32px로 떨어진다(입력칸의 밑줄이 이미 나누는 선이다, 2026-11-09 소유자). |
 | ⋯ | `IconButton` + `DropdownMenu`("새 탭에서 열기"(`Launch`) · "주소 복사"(`Link`) · "파일 바꾸기"(`Upload`) · "ID 복사"(`Copy`) · "휴지통으로"(`TrashCan`) `variant="danger"`. 한 메뉴의 행은 모두 아이콘이 있다, 만들며 정함 (2026-11-14)) | 이미지와 파일(PDF) 모두 같은 ⋯다. 보드의 메뉴 그림에는 휴지통 행이 빠졌지만 버튼 이름과 [screens.md](../screens.md#media)에 있으므로 둔다. |
-| 미리보기 | `Image`(이미지), `FilePreview framed`(파일) | |
+| 미리보기 | `Image ratio="photo" fit="contain"`(이미지), `FilePreview framed`(파일) | 그림 전체가 4:3 틀 안에 보인다: 세로로 긴 그림은 잘리지 않고 양옆에 틀의 회색 바탕이 남는다. 격자의 타일은 그대로 4:3으로 채워 자른다(MD-14, 만들며 정함 (2026-11-16)). |
 | 파일 이름 | `FormField` + `FormFieldLabel` + `Affix size="md" suffix=".jpg"` | 늘 입력 칸이다. 확장자는 고칠 수 없는 흐린 글자다. |
 | 폴더 | `FormField` + `Select`(`SelectTrigger size="md" width="full"`) | 고른 폴더로 옮긴다(저장으로 적용). |
 | (빠짐, 2026-11-05) 기본 대체 텍스트 | `FormField` + `FormFieldLabel action`(`TextButton tone="proposal" size="micro"` "✦ 채우기") + `Textarea size="md"` | 늘 입력 칸이다. 이미지에만 있다. |

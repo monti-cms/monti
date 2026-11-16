@@ -1,11 +1,13 @@
-import type { Doc } from "@monti-cms/core";
+import { type Doc, defineSchema } from "@monti-cms/core";
 import { toast } from "@monti-cms/ui";
 import { composeStories } from "@storybook/react-vite";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { page, userEvent } from "vitest/browser";
 import { caretAfter, dragPath, dropDrag, middleOf, pickWords } from "../../../../../testing/input";
-import type { StorySite } from "../../../.storybook/pglite-site";
+import { type StorySite, startAt, storySite } from "../../../.storybook/pglite-site";
 import { scene } from "../../../test/scene";
+import { MontiAdmin } from "../../app";
+import { schema } from "../story-schema";
 import * as entry from "./entry.stories";
 
 type Loaded = { site: StorySite; id: string };
@@ -28,7 +30,7 @@ async function opened() {
 	await expect.element(body()).toBeVisible();
 }
 
-/** The save cell says this (a live region repeats its words for screen readers, so the cell is read by its slot). */
+/** The save cell says this. */
 const saveCell = (text: string) =>
 	expect
 		.poll(() => [...document.querySelectorAll("[data-slot=status-bar-cell]")].map((cell) => cell.textContent))
@@ -61,6 +63,41 @@ const notes = () => ({
 });
 
 describe("the entry editor: saving and coming back", () => {
+	it("[TP-10] the save state stands in the status bar once: its cell is seen and said from one place, which stays as the state changes", async () => {
+		await on("draft").run();
+		await opened();
+		await saveCell("저장됨");
+		const bar = () => document.querySelector("[data-slot=status-bar]") as HTMLElement;
+		const times = (words: string) => (bar().textContent ?? "").split(words).length - 1;
+		expect(times("저장됨")).toBe(1);
+		// The cell's own place is the polite region: nothing hidden repeats it.
+		const live = bar().querySelector("[aria-live]") as HTMLElement;
+		expect(live.getAttribute("aria-live")).toBe("polite");
+		expect(live.textContent).toBe("저장됨");
+		expect(bar().querySelectorAll("[aria-live], output")).toHaveLength(1);
+		// The first cell keeps the bar's first room, wrapped or not.
+		expect(getComputedStyle(live.firstElementChild as HTMLElement).paddingLeft).toBe("24px");
+		expect(getComputedStyle(live.nextElementSibling as HTMLElement).paddingLeft).toBe("16px");
+		await titleEnd();
+		await userEvent.keyboard(" 다시");
+		await expect.element(button("저장 전 변경사항")).toBeVisible();
+		// The same region holds the new words (a cell that states became one that is pressed inside it), once.
+		expect(bar().querySelector("[aria-live]")).toBe(live);
+		expect(live.textContent).toBe("저장 전 변경사항");
+		expect(times("저장 전 변경사항")).toBe(1);
+	});
+
+	it("[TP-10] an entry that cannot be changed has no save cell, and nothing says a save state for it", async () => {
+		await from(entry.Archived).run();
+		await expect.element(title()).toBeVisible();
+		const bar = document.querySelector("[data-slot=status-bar]") as HTMLElement;
+		await expect.poll(() => bar.querySelectorAll("[data-slot=status-bar-cell]").length).toBeGreaterThan(0);
+		expect(bar.querySelector("[aria-live], output")).toBeNull();
+		expect(bar.textContent).not.toContain("저장됨");
+		// The first cell there is takes the bar's first room.
+		expect(getComputedStyle(bar.querySelector("[data-slot=status-bar-cell]") as HTMLElement).paddingLeft).toBe("24px");
+	});
+
 	it("the save cell pressed with the keyboard goes away saved, and the focus goes to the text, not to the page; a pointer's press moves none", async () => {
 		await on("draft").run();
 		await opened();
@@ -1466,5 +1503,168 @@ describe("a conditional field in the property panel (doc 19)", () => {
 				Math.round((side.querySelector(`[data-slot=${slot}]`) as HTMLElement).getBoundingClientRect().top),
 			);
 		for (const slot of ["compare-title", "compare-body"]) expect(tops(slot)[0]).toBe(tops(slot)[1]);
+	});
+});
+
+describe("the property panel of an entry that cannot be changed (AT-29)", () => {
+	// A post with a field of every kind the panel draws, each holding a value, archived.
+	const kinds = defineSchema({
+		...schema,
+		collections: {
+			...schema.collections,
+			post: {
+				...schema.collections.post,
+				fields: {
+					...schema.collections.post.fields,
+					note: { kind: "text", multiline: true },
+					mood: { kind: "select", options: ["calm", "loud"] },
+					moods: { kind: "select", options: ["calm", "loud"], many: true },
+					pinned: { kind: "conditional", options: ["on"], control: "toggle", fields: {} },
+					topics: { kind: "relation", to: "category", many: true },
+					series: { kind: "relation", to: "category", many: true, ordered: true },
+				},
+			},
+		},
+	});
+	const archived = () =>
+		scene<Loaded>(
+			{
+				loaders: [
+					async (): Promise<Loaded> => {
+						let id = "";
+						const made = await storySite({
+							schema: kinds,
+							auth: { password: true },
+							signedIn: true,
+							setup: async (monti) => {
+								const groups: string[] = [];
+								for (const [name, slug] of [
+									["개발", "dev"],
+									["일상", "daily"],
+								]) {
+									const saved = (await monti.run(
+										"items.saveGroup",
+										{ collection: "category", locales: { ko: { title: name, slug } } },
+										entry.admin,
+									)) as { output: { group: string } };
+									groups.push(saved.output.group);
+								}
+								const post = (await monti.run(
+									"entries.create",
+									{
+										collection: "post",
+										locale: "ko",
+										title: "읽기만 하는 글",
+										values: {
+											summary: "한 문장 요약",
+											note: "여러 줄 메모",
+											mood: "calm",
+											moods: ["calm", "loud"],
+											pinned: "on",
+											category: groups[0],
+											topics: groups,
+											series: groups,
+										},
+									},
+									entry.admin,
+								)) as { output: { id: string } };
+								id = post.output.id;
+								await monti.run("entries.archive", { ids: [id] }, entry.admin);
+							},
+						});
+						startAt(`#/c/post/${id}`);
+						return { site: made, id };
+					},
+				],
+				render: (_args: unknown, { loaded }: { loaded: unknown }) => {
+					const { site } = loaded as Loaded;
+					return <MontiAdmin transport={site.transport} streams={site.streams} siteName="example.dev" />;
+				},
+			},
+			entry.default,
+		);
+	const panel = () => page.getByRole("complementary");
+	const field = (name: string) => document.getElementById(`monti-entry-${name}`) as HTMLElement;
+	/** Every element from the field up to the panel is in full ink. */
+	const dimmed = (from: HTMLElement) => {
+		for (let at: HTMLElement | null = from; at && at !== panel().element(); at = at.parentElement)
+			if (getComputedStyle(at).opacity !== "1") return true;
+		return false;
+	};
+
+	it("[AT-29] every kind of field is read, not off: full ink, nothing in the panel is disabled, and the keyboard stops on each", async () => {
+		const drawn = archived();
+		await drawn.run();
+		await expect.element(button("보관 풀기")).toBeVisible();
+		if ((await panel().elements()).length === 0) await userEvent.click(button("속성"));
+		await expect.element(panel().getByText("개발").first()).toBeVisible();
+		const names = ["slug", "summary", "note", "mood", "moods", "category", "topics"];
+		// The ordered items are a list to read, in their order.
+		expect(field("series").textContent).toBe("개발일상");
+		expect(dimmed(field("series"))).toBe(false);
+		for (const name of names) {
+			expect(field(name), name).not.toBeNull();
+			expect(dimmed(field(name)), name).toBe(false);
+			expect(field(name).tabIndex, name).toBeGreaterThanOrEqual(0);
+		}
+		expect(panel().element().querySelectorAll(":disabled")).toHaveLength(0);
+		// What each kind holds stands as its value.
+		expect((field("slug") as HTMLInputElement).readOnly).toBe(true);
+		expect((field("summary") as HTMLInputElement).value).toBe("한 문장 요약");
+		expect((field("summary") as HTMLInputElement).readOnly).toBe(true);
+		expect((field("note") as HTMLTextAreaElement).readOnly).toBe(true);
+		expect(field("mood").getAttribute("aria-readonly")).toBe("true");
+		expect(field("mood").textContent).toContain("calm");
+		expect((field("category") as HTMLInputElement).readOnly).toBe(true);
+		await expect.poll(() => (field("category") as HTMLInputElement).value).toBe("개발");
+		// The switch says what it holds and does not turn.
+		const pinned = panel().getByRole("switch", { name: "pinned" });
+		await expect.element(pinned).toBeChecked();
+		expect(dimmed(pinned.element() as HTMLElement)).toBe(false);
+		// No way to take a value out or to move one: no × on a chip, no clear, no caret, no grip.
+		const shown = (selector: string) =>
+			[...panel().element().querySelectorAll<HTMLElement>(selector)].filter((each) => each.checkVisibility());
+		expect(shown("[data-slot=combobox-chip-remove]")).toHaveLength(0);
+		expect(shown("[data-slot=combobox-clear]")).toHaveLength(0);
+		expect(shown("[data-slot=combobox-trigger]")).toHaveLength(0);
+		expect(shown("[data-slot=select-icon]")).toHaveLength(0);
+		expect(shown("[data-slot=drag-handle]")).toHaveLength(0);
+		await expect.element(panel().getByRole("button", { name: "지우기" })).not.toBeInTheDocument();
+	});
+
+	it("[AT-29] neither the keyboard nor the pointer changes a value or opens a list, and what the entry holds is the same after", async () => {
+		const drawn = archived();
+		await drawn.run();
+		await expect.element(button("보관 풀기")).toBeVisible();
+		if ((await panel().elements()).length === 0) await userEvent.click(button("속성"));
+		await expect.element(panel().getByText("개발").first()).toBeVisible();
+		const { site, id } = drawn.loaded();
+		const held = async () =>
+			((await site.monti.run("entries.get", { id }, entry.admin)) as { entry: { values: unknown; slug: string } })
+				.entry;
+		const before = JSON.stringify(await held());
+		const open = () =>
+			[...document.querySelectorAll<HTMLElement>("[role=listbox], [role=option]")].filter((each) =>
+				each.checkVisibility({ visibilityProperty: true, opacityProperty: true }),
+			);
+		for (const name of ["slug", "summary", "note", "mood", "moods", "category", "topics"]) {
+			const was = panel().element().textContent;
+			const value = (field(name) as HTMLInputElement).value;
+			await userEvent.click(page.elementLocator(field(name)));
+			expect(open(), name).toHaveLength(0);
+			field(name).focus();
+			await userEvent.keyboard("x{Backspace}{Backspace}{ArrowDown}{Enter} ");
+			expect(open(), name).toHaveLength(0);
+			expect((field(name) as HTMLInputElement).value, name).toBe(value);
+			expect(panel().element().textContent, name).toBe(was);
+		}
+		const pinned = panel().getByRole("switch", { name: "pinned" });
+		await userEvent.click(pinned);
+		(pinned.element() as HTMLElement).focus();
+		await userEvent.keyboard(" {Enter}");
+		await expect.element(pinned).toBeChecked();
+		// Nothing became a change: no save is offered, and the entry holds what it held.
+		await expect.element(button("저장 전 변경사항")).not.toBeInTheDocument();
+		expect(JSON.stringify(await held())).toBe(before);
 	});
 });

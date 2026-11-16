@@ -31,7 +31,7 @@ const RULE =
 	"bg-[linear-gradient(var(--monti-border-default),var(--monti-border-default))] bg-size-[1px_14px] bg-no-repeat";
 
 const cellVariants = cva(
-	"flex items-center gap-monti-6 whitespace-nowrap border-0 bg-transparent px-monti-16 font-[inherit] text-[length:inherit] text-inherit [&:not([data-slot=status-bar-cell]~*)]:pl-monti-24 outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-monti-contrast/50 [&:is(a,button):hover]:bg-monti-selected data-popup-open:bg-monti-selected data-popup-open:text-monti-default [&:is(a,button):hover]:text-monti-default [&:is(a,button)]:cursor-pointer",
+	"flex items-center gap-monti-6 whitespace-nowrap border-0 bg-transparent px-monti-16 font-[inherit] text-[length:inherit] text-inherit [&:not(:is([data-slot=status-bar-cell],[data-slot=status-bar-live])~*):not(:is([data-slot=status-bar-cell],[data-slot=status-bar-live])~[data-slot=status-bar-live]>*)]:pl-monti-24 outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-monti-contrast/50 [&:is(a,button):hover]:bg-monti-selected data-popup-open:bg-monti-selected data-popup-open:text-monti-default [&:is(a,button):hover]:text-monti-default [&:is(a,button)]:cursor-pointer",
 	{
 		variants: {
 			/** `end` cells sit after the spacer: the rule is on their left, the last one has room at the right edge (the cells are counted, not their neighbors: an open list leaves focus guards beside its trigger), and they hide first on a narrow screen. */
@@ -114,12 +114,17 @@ function StatusBarSpacer() {
 	return <span aria-hidden data-slot="status-bar-spacer" className="grow" />;
 }
 
-/** Says the bar's state aloud, politely, without showing it: for a cell whose text changes in ways that should not be read out each time (a clock time). */
-function StatusBarAnnouncer({ children }: { children: React.ReactNode }) {
+/**
+ * The place of a cell whose changes are said aloud, politely: the save state, which a person does not look down to read. It wraps the cell
+ * and takes no room of its own, so the words stand in the page once, seen and said from the same place, and a cell that is not drawn says
+ * nothing. The place stays while the cell in it changes (a cell that states turning into one that is pressed), which is what makes the change
+ * heard. For the bar's cell rules it counts as the cell it holds.
+ */
+function StatusBarLive({ children }: { children: React.ReactNode }) {
 	return (
-		<output data-slot="status-bar-announcer" aria-live="polite" className="sr-only">
+		<span data-slot="status-bar-live" aria-live="polite" aria-atomic="true" className="contents">
 			{children}
-		</output>
+		</span>
 	);
 }
 
@@ -208,4 +213,4 @@ function StatusBarPluginCell({
 	);
 }
 
-export { StatusBar, StatusBarAnnouncer, StatusBarCell, StatusBarPluginCell, StatusBarSpacer };
+export { StatusBar, StatusBarCell, StatusBarLive, StatusBarPluginCell, StatusBarSpacer };

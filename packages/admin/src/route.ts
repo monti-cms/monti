@@ -69,7 +69,7 @@ export function parseRoute(hash: string): Route {
 
 /**
  * What a link to a screen takes: its address, and a press that goes there in this tab. With a key held that asks for another place (a new tab, a new
- * window) the press is left to the browser, which follows the address.
+ * window) the press is left to the browser, which follows the address. One press goes once: a double click is its first click.
  */
 export function linkTo(route: Route, go: (route: Route) => void) {
 	return {
@@ -77,6 +77,9 @@ export function linkTo(route: Route, go: (route: Route) => void) {
 		onClick: (event: MouseEvent) => {
 			if (event.metaKey || event.ctrlKey || event.shiftKey) return;
 			event.preventDefault();
+			// The second click of a double click goes nowhere: the first already went, and this one is on whatever came under the pointer
+			// (a folder opened from its row puts a file's row there).
+			if (event.detail > 1) return;
 			go(route);
 		},
 	};

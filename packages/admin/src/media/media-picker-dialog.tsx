@@ -6,6 +6,7 @@ import { useRead } from "../operations/use-operation";
 import { searchScopes, useFolders } from "../screens/list/folders";
 import { chooseFiles } from "./choose-files";
 import { FileThumb, useFileDetail } from "./file-shown";
+import { singleClick } from "./single-click";
 
 /** How many more files the window loads at a time. */
 const PAGE = 100;
@@ -108,7 +109,9 @@ export function MediaPickerDialog({
 			onConfirm={() => picked && onPick(picked)}
 			subfolders={
 				subfolders.length > 0
-					? subfolders.map((each) => <FolderTile key={each.id} name={each.name} onClick={() => go(each.id)} />)
+					? subfolders.map((each) => (
+							<FolderTile key={each.id} name={each.name} onClick={singleClick(() => go(each.id))} />
+						))
 					: undefined
 			}
 			notice={
@@ -130,7 +133,8 @@ export function MediaPickerDialog({
 					title={item.name}
 					detail={detail(item)}
 					selected={picked?.id === item.id}
-					onClick={() => setPicked(picked?.id === item.id ? null : item.id)}
+					// The second click of a double click is not another press: it would take the pick back, or pick a file of the folder just opened.
+					onClick={singleClick(() => setPicked(picked?.id === item.id ? null : item.id))}
 					preview={<FileThumb item={item} />}
 				/>
 			))}

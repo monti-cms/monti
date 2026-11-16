@@ -1,3 +1,4 @@
+import { defineBlock, defineSchema } from "@monti-cms/core";
 import { composeStories } from "@storybook/react-vite";
 import { describe, expect, it, onTestFinished } from "vitest";
 import { page, userEvent } from "vitest/browser";
@@ -1060,5 +1061,74 @@ describe("settings: a save takes only what it sent", () => {
 		// The name went; the folders did not, and are still a change of this draft.
 		await expect.element(folders()).toHaveAttribute("aria-checked", before === "true" ? "false" : "true");
 		await expect.element(changes()).toHaveTextContent(/(^|\D)1$/);
+	});
+});
+
+describe("settings › collections: the editor tab with a site's own blocks", () => {
+	it("[ST-01] a block named in each admin language is listed by its Korean name, and turning it off is a change under that name", async () => {
+		// A site's block brings its words in each language of the admin (doc 18), as the showcase's blocks do.
+		const note = defineBlock({
+			type: "component:NoteBox",
+			label: { ko: "노트 상자", en: "Note box" },
+			description: "A boxed note.",
+			holds: "nothing",
+			menu: "component",
+		});
+		await scene(
+			{ loaders: collections.site({ blocks: [note] }), play: collections.Editor.play },
+			collections.default,
+		).run();
+		const block = page.getByRole("checkbox", { name: "노트 상자" });
+		await expect.element(block).toBeChecked();
+		// The screen stands: the sidebar and the other blocks with it.
+		await expect.element(page.getByRole("navigation", { name: "관리 메뉴" })).toBeVisible();
+		await userEvent.click(block);
+		await expect.element(block).not.toBeChecked();
+		await userEvent.click(page.getByRole("button", { name: "변경 사항", exact: true }));
+		await expect.element(page.getByRole("menu").getByText("노트 상자")).toBeVisible();
+	});
+});
+
+describe("settings › collections: the property panel preview draws each field as the editor does", () => {
+	const kinds = defineSchema({
+		...schema,
+		collections: {
+			...schema.collections,
+			post: {
+				...schema.collections.post,
+				fields: {
+					...schema.collections.post.fields,
+					mood: { kind: "select", options: ["calm", "loud"] },
+					moods: { kind: "select", options: ["calm", "loud"], many: true },
+					pinned: { kind: "conditional", options: ["on"], control: "toggle", fields: {} },
+					relatedOne: { kind: "relation", to: "post" },
+					relatedMany: { kind: "relation", to: "post", many: true },
+				},
+			},
+		},
+	});
+
+	it("[ST-13] a choice of many is a chips field, a choice by a switch is a switch, a relation of many is a chips field; of one, a single input", async () => {
+		await scene(
+			{ loaders: collections.site({ schema: kinds }), play: collections.Preview.play },
+			collections.default,
+		).run();
+		const panel = page.getByRole("complementary", { name: "미리보기" });
+		await expect.element(panel).toBeVisible();
+		const input = (field: string) => panel.element().querySelector(`#preview-${field}`) as HTMLElement;
+		await expect.poll(() => input("mood")).not.toBeNull();
+		// One value: the select's trigger. Many: the chips field, an input to type in inside it.
+		expect(input("mood").closest("[data-slot=select-trigger]")).not.toBeNull();
+		expect(input("moods").closest("[data-slot=combobox-chips]")).not.toBeNull();
+		const pinned = panel.getByRole("switch", { name: "pinned" });
+		await expect.element(pinned).not.toBeChecked();
+		expect(input("relatedOne").closest("[data-slot=combobox-chips]")).toBeNull();
+		expect(input("relatedOne").getAttribute("role")).toBe("combobox");
+		expect(input("relatedMany").closest("[data-slot=combobox-chips]")).not.toBeNull();
+		// The switch stands at the end of its row, its name before it, as in the editor: no label over it.
+		expect(pinned.element().closest("[data-slot=option]")?.textContent).toContain("pinned");
+		expect(panel.element().querySelector("label[for=preview-pinned][data-slot=form-field-label]")).toBeNull();
+		// A field that is not saved has no candidates to read: nothing is asked of the server, and no read fails.
+		await expect.element(page.getByText("불러오지 못했습니다")).not.toBeInTheDocument();
 	});
 });

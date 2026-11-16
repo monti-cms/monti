@@ -134,6 +134,7 @@ export const site = (
 		more?: (site: StorySite) => Promise<void>;
 		schema?: typeof schema;
 		plugins?: MontiOptions["plugins"];
+		blocks?: MontiOptions["blocks"];
 	} = {},
 ) => [
 	async () => {
@@ -146,6 +147,7 @@ export const site = (
 			setup,
 			files: options.files === undefined ? devFiles : options.files,
 			plugins: options.plugins,
+			blocks: options.blocks,
 		});
 		await options.more?.(made);
 		return { site: made };

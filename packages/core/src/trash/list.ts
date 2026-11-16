@@ -396,8 +396,8 @@ export type TrashedEntry = {
 	collection: string;
 	version: number;
 	daysLeft: number;
-	/** Its own language first, then the others in the trash. */
-	locales: { locale: string; title: string; slug: string; address: string | null }[];
+	/** Its own language first, then the others in the trash. Each has its entry's id: the editor opens a language of it by that. */
+	locales: { id: string; locale: string; title: string; slug: string; address: string | null }[];
 	/** The entries whose relations point at it (doc 08): they show it again once it is restored. */
 	pointing: { id: string; collection: string; title: string; trashed: boolean }[];
 	/** Public paths a permanent delete keeps from every other entry. */
@@ -442,6 +442,7 @@ export async function trashedEntry(ctx: OperationContext, id: string): Promise<T
 		daysLeft: daysLeft(entry.trashed_at, ctx.now()),
 		reserves: paths.flatMap((path) => publicPath(schema, path.collection, path.slug, path.locale) ?? []),
 		locales: members.map((row) => ({
+			id: row.id,
 			locale: row.locale,
 			title: row.title,
 			slug: row.slug,

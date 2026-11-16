@@ -86,3 +86,47 @@ it("a select keeps its error's red line and its proposal's blue line under the p
 	await settled();
 	expect([line(plain.element()), ringed(plain.element())]).toEqual([ink, false]);
 });
+
+it("[AT-29] a read-only select is a value to read: full ink with no caret, the keyboard stops on it with a ring, and neither the keyboard nor the pointer opens its list or changes it", async () => {
+	const changed: unknown[] = [];
+	render(
+		<div className="flex gap-monti-16">
+			<input aria-label="앞" />
+			<Select
+				items={[...ITEMS, { value: "news", label: "소식" }]}
+				value="notice"
+				readOnly
+				onValueChange={(next) => changed.push(next)}
+			>
+				<SelectTrigger aria-label="읽는 값">
+					<SelectValue />
+				</SelectTrigger>
+				<SelectContent>
+					<SelectItem value="notice">공지사항</SelectItem>
+					<SelectItem value="news">소식</SelectItem>
+				</SelectContent>
+			</Select>
+		</div>,
+	);
+	const trigger = page.getByRole("combobox", { name: "읽는 값" });
+	await expect.element(trigger).toHaveTextContent("공지사항");
+	await expect.element(trigger).toBeEnabled();
+	await expect.element(trigger).toHaveAttribute("aria-readonly", "true");
+	expect(getComputedStyle(trigger.element()).opacity).toBe("1");
+	const icon = trigger.element().querySelector("[data-slot=select-icon]") as HTMLElement;
+	expect(getComputedStyle(icon).display).toBe("none");
+	await userEvent.click(page.getByRole("textbox", { name: "앞" }));
+	await userEvent.keyboard("{Tab}");
+	await expect.element(trigger).toHaveFocus();
+	await settled();
+	expect(ringed(trigger.element())).toBe(true);
+	await userEvent.keyboard("{Enter}{ArrowDown} 소");
+	await userEvent.click(trigger);
+	await settled();
+	// Base UI keeps a closed list in the page once it was asked for: what matters is that none is shown.
+	for (const list of document.querySelectorAll<HTMLElement>("[data-slot=select-content]"))
+		expect(list.checkVisibility({ visibilityProperty: true, opacityProperty: true })).toBe(false);
+	await expect.element(trigger).toHaveAttribute("aria-expanded", "false");
+	await expect.element(trigger).toHaveTextContent("공지사항");
+	expect(changed).toEqual([]);
+});

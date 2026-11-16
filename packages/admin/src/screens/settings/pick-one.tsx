@@ -9,6 +9,7 @@ export function PickOne({
 	width = "full",
 	size,
 	disabled,
+	readOnly,
 	label,
 	placeholder,
 	proposal,
@@ -20,6 +21,8 @@ export function PickOne({
 	width?: "full" | "fit";
 	size?: "sm" | "md" | "default";
 	disabled?: boolean;
+	/** A value to read: full ink, and its list does not open. */
+	readOnly?: boolean;
 	/** The name for screen readers when no label points at it. */
 	label?: string;
 	placeholder?: string;
@@ -32,6 +35,7 @@ export function PickOne({
 			value={value}
 			onValueChange={(next) => next !== null && onChange(String(next))}
 			disabled={disabled}
+			readOnly={readOnly}
 		>
 			<SelectTrigger id={id} width={width} size={size} aria-label={label} proposal={proposal}>
 				<SelectValue placeholder={placeholder} />

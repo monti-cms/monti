@@ -1,20 +1,9 @@
 import type { FieldDefinition } from "@monti-cms/core";
-import {
-	Combobox,
-	ComboboxInput,
-	FormField,
-	FormFieldLabel,
-	Input,
-	MediaInput,
-	PropertyGroup,
-	PropertyPanel,
-	Text,
-	Textarea,
-} from "@monti-cms/ui";
+import { FormField, FormFieldLabel, MediaInput, Option, PropertyGroup, PropertyPanel, Text } from "@monti-cms/ui";
 import { useState } from "react";
 import { useAdmin } from "../../operations/admin-context";
 import type { EntryView } from "../../plugins";
-import { PickOne } from "./pick-one";
+import { FieldInput, FieldToggle, isToggle } from "../entry/field-input";
 import { at, type DraftField, type Layout, shownLayout } from "./schema-draft";
 import type { SettingsDraft } from "./use-settings-draft";
 
@@ -81,52 +70,54 @@ export function PreviewPanel({
 		});
 	const marksRequired = defs.some((def) => !def.required);
 
+	/**
+	 * A field's row as the editor's panel draws it, with nothing in it: a choice made by a switch is a row with the switch at its end, every
+	 * other kind its label over its input.
+	 */
+	const fieldRow = (key: string, def: FieldDefinition, label: string, required: boolean) => {
+		const id = `preview-${key}`;
+		if (isToggle(def))
+			return (
+				<FormField key={key}>
+					<Option spread height="md">
+						{label}
+						<FieldToggle def={def} id={id} value={null} onChange={() => {}} readOnly={false} />
+					</Option>
+				</FormField>
+			);
+		return (
+			<FormField key={key}>
+				<FormFieldLabel htmlFor={id} required={required}>
+					{label}
+				</FormFieldLabel>
+				{input(def, id, key)}
+			</FormField>
+		);
+	};
 	const row = (key: string) => {
 		// The title is the editor's heading, not a property (flow 1).
 		if (key === "title") return null;
 		const field = model.shown(at.field(c, key)) as DraftField | null;
 		if (!field) return null;
-		const id = `preview-${key}`;
-		const placeholder = t("settings.preview.empty");
-		return (
-			<FormField key={key}>
-				<FormFieldLabel htmlFor={id} required={marksRequired && Boolean(field.def.required)}>
-					{model.fieldLabel(c, key)}
-				</FormFieldLabel>
-				{input(field.def, id, placeholder, key)}
-			</FormField>
+		return fieldRow(key, field.def, model.fieldLabel(c, key), marksRequired && Boolean(field.def.required));
+	};
+	// The kind's input, the one the entry editor's panel draws (field-input.tsx): the two cannot look different. Nothing is held and nothing
+	// kept; a related item has no candidates, since a field that is not saved has none to read.
+	const input = (def: FieldDefinition, id: string, key: string) =>
+		def.kind === "media" ? (
+			<MediaInput id={id} size="md" placeholder={t("settings.preview.empty")} />
+		) : (
+			<FieldInput
+				def={def}
+				id={id}
+				value={null}
+				onChange={() => {}}
+				placeholder={t(def.kind === "relation" ? "settings.preview.none" : "settings.preview.empty")}
+				readOnly={false}
+				optionLabels={(model.shown(at.fieldValue(c, key, "optionLabels")) ?? {}) as Record<string, string>}
+				relation={null}
+			/>
 		);
-	};
-	const input = (def: FieldDefinition, id: string, placeholder: string, key: string) => {
-		if (def.kind === "slug") return <Input id={id} size="md" mono placeholder={placeholder} />;
-		if (def.kind === "text")
-			return def.multiline ? (
-				<Textarea id={id} size="md" placeholder={placeholder} />
-			) : (
-				<Input id={id} size="md" placeholder={placeholder} />
-			);
-		// A conditional field (doc 19) is its choice: with nothing chosen, none of its options' fields is the entry's.
-		if (def.kind === "select" || def.kind === "conditional") {
-			const labels = (model.shown(at.fieldValue(c, key, "optionLabels")) ?? {}) as Record<string, string>;
-			return (
-				<PickOne
-					id={id}
-					size="md"
-					items={def.options.map((option) => ({ value: option, label: labels[option] ?? option }))}
-					value={null}
-					onChange={() => {}}
-					placeholder={placeholder}
-				/>
-			);
-		}
-		if (def.kind === "relation")
-			return (
-				<Combobox items={[]}>
-					<ComboboxInput id={id} size="md" placeholder={t("settings.preview.none")} />
-				</Combobox>
-			);
-		return <MediaInput id={id} size="md" placeholder={t("settings.preview.empty")} />;
-	};
 
 	return (
 		<PropertyPanel
@@ -155,24 +146,21 @@ export function PreviewPanel({
 						// the kind's own input when none is brought.
 						const brought = definition.input ? inputs.get(definition.input) : undefined;
 						const Own = brought === undefined ? null : "Input" in brought ? brought.Input : brought;
+						if (!Own) return fieldRow(field.name, definition, field.label ?? field.name, false);
 						return (
 							<FormField key={field.name}>
 								<FormFieldLabel htmlFor={id}>{field.label ?? field.name}</FormFieldLabel>
-								{Own ? (
-									<Own
-										id={id}
-										field={field.name}
-										definition={definition}
-										options={definition.inputOptions ?? {}}
-										value={typed[field.name]}
-										onChange={(next) => setTyped((was) => ({ ...was, [field.name]: next }))}
-										readOnly={false}
-										proposal={false}
-										entry={emptyEntry}
-									/>
-								) : (
-									input(definition, id, t("settings.preview.empty"), field.name)
-								)}
+								<Own
+									id={id}
+									field={field.name}
+									definition={definition}
+									options={definition.inputOptions ?? {}}
+									value={typed[field.name]}
+									onChange={(next) => setTyped((was) => ({ ...was, [field.name]: next }))}
+									readOnly={false}
+									proposal={false}
+									entry={emptyEntry}
+								/>
 							</FormField>
 						);
 					})}

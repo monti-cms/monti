@@ -117,3 +117,45 @@ describe("the frame's banner", () => {
 		await expect.poll(() => document.activeElement).toBe(first);
 	});
 });
+
+describe("a screen that cannot be drawn", () => {
+	it("[ST-01] a screen that throws while it is drawn says so at the top, the sidebar still opens the other screens, and 'try again' draws it once more", async () => {
+		const broken = { now: true };
+		const Page = () => {
+			if (broken.now) throw new Error("a screen that throws");
+			return <p>색인 화면</p>;
+		};
+		await scene(
+			{
+				loaders: frame.signedIn(),
+				render: (_args: unknown, { loaded }: { loaded: unknown }) => (
+					<MontiAdmin
+						transport={(loaded as { site: { transport: Transport } }).site.transport}
+						siteName="example.dev"
+						plugins={[{ name: "search", toolPages: { index: Page } }]}
+					/>
+				),
+			},
+			frame.default,
+		).run();
+		await expect.element(menu()).toBeVisible();
+		const failed = () => page.getByRole("note").filter({ hasText: "불러오지 못했습니다" });
+		const open = () => {
+			window.location.hash = "#/tools/p/search/index";
+		};
+		open();
+		await expect.element(failed()).toBeVisible();
+		// The frame stands: the sidebar opens another screen, and the banner goes with the screen it was about.
+		await expect.element(menu()).toBeVisible();
+		await userEvent.click(menu().getByRole("button", { name: /^휴지통/ }));
+		await expect.element(failed()).not.toBeInTheDocument();
+		await expect.element(page.getByRole("heading", { name: "휴지통" })).toBeVisible();
+		// Back at the screen that throws: still said; once it can be drawn, "try again" draws it.
+		open();
+		await expect.element(failed()).toBeVisible();
+		broken.now = false;
+		await userEvent.click(failed().getByRole("button", { name: "다시 시도" }));
+		await expect.element(page.getByText("색인 화면")).toBeVisible();
+		await expect.element(failed()).not.toBeInTheDocument();
+	});
+});
