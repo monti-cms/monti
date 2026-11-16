@@ -52,20 +52,47 @@ describe("the '/' menu", () => {
 		await expect.element(menu()).not.toBeInTheDocument();
 	});
 
-	it("[no-match] words that no block answers to leave the menu open with one row that says so, and Esc closes it", async () => {
+	it("[no-match] words that no block answers to leave the menu open with one row that says so for two characters, then it closes", async () => {
 		await NewEntry.run();
 		await userEvent.click(body());
-		await userEvent.keyboard("/zzzz");
+		await userEvent.keyboard("/zz");
 		await expect.element(menu()).toBeVisible();
 		await expect.element(menu().getByText("맞는 블록 없음")).toBeVisible();
 		expect(menu().getByRole("option").elements()).toHaveLength(0);
+		await userEvent.keyboard("z");
+		await expect.element(menu()).not.toBeInTheDocument();
+	});
+
+	it("[no-match] Esc closes the row that says nothing matches", async () => {
+		await NewEntry.run();
+		await userEvent.click(body());
+		await userEvent.keyboard("/z");
+		await expect.element(menu().getByText("맞는 블록 없음")).toBeVisible();
 		await userEvent.keyboard("{Escape}");
 		await expect.element(menu()).not.toBeInTheDocument();
 	});
 
-	it("[mid-sentence] [korean] '/' typed after a word in a sentence opens the menu, and '각주' typed in Korean puts a footnote right there", async () => {
+	it("[no-match] [korean] a Korean word no block answers to closes the menu after two characters past the last match", async () => {
+		await NewEntry.run();
+		await userEvent.click(body());
+		await userEvent.keyboard("/");
+		await typeKorean("표ㅋㅋ");
+		await expect.element(menu().getByText("맞는 블록 없음")).toBeVisible();
+		await typeKorean("ㅋ");
+		await expect.element(menu()).not.toBeInTheDocument();
+	});
+
+	it("[inside-a-word] a '/' inside a word (an address, a date) opens no menu", async () => {
+		await NewEntry.run();
+		await userEvent.click(body());
+		await userEvent.keyboard("https://example.com/path 3/4 and/or");
+		await expect.element(body()).toHaveTextContent("https://example.com/path 3/4 and/or");
+		await expect.element(menu()).not.toBeInTheDocument();
+	});
+
+	it("[mid-sentence] [korean] '/' typed after a space in a sentence opens the menu, and '각주' typed in Korean puts a footnote right there", async () => {
 		await Draft.run();
-		await caretAfter("지금 상태만");
+		await caretAfter("지금 ");
 		await userEvent.keyboard("/");
 		await expect.element(menu()).toBeVisible();
 		await typeKorean("각주");
@@ -78,8 +105,8 @@ describe("the '/' menu", () => {
 			.toBe("목록에는 제목과 주소, 지금 상태만 남겼다. 나머지는 필요할 때 꺼내 본다.");
 		// The footnote itself is there too, one of it, not only its number.
 		expect(body().element().querySelectorAll("[data-footnote]")).toHaveLength(1);
-		// The number sits after "지금 상태만", not at the start or the end of the line.
+		// The number sits after "지금 ", not at the start or the end of the line.
 		const ref = line.querySelector("[data-footnote-ref]");
-		expect(ref?.previousSibling?.textContent?.endsWith("지금 상태만")).toBe(true);
+		expect(ref?.previousSibling?.textContent?.endsWith("지금 ")).toBe(true);
 	});
 });

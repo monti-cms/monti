@@ -43,6 +43,9 @@ type Item = {
 	run: (editor: Editor) => void | Promise<void>;
 };
 
+/** How many characters past the last match the menu stays open to say that nothing matches. */
+const NO_MATCH_GRACE = 2;
+
 type Open = { from: number; to: number; query: string; caret: { top: number; bottom: number; left: number } };
 
 /** A new table: three columns, a head row and two rows under it, all empty. */
@@ -96,7 +99,7 @@ const placeBefore =
 	};
 
 /**
- * The "/" menu (doc 03, menu.md): one level, under a "/" typed anywhere in a line, the focus kept in the text (arrows, Enter and Esc work from
+ * The "/" menu (doc 03, menu.md): one level, under a "/" typed at the start of a block or after a space, the focus kept in the text (arrows, Enter and Esc work from
  * there). Its groups are the text blocks, the blocks to insert, the site's components and the templates; typing the word for templates leaves the templates only.
  * Only what the collection's editor offers is in it.
  */
@@ -215,6 +218,21 @@ export function useSlashMenu({
 		);
 	}, [items, open, t]);
 
+	// Nothing matching is said for two more characters past the last words that matched (or past the "/"): then the menu closes and that "/" is let be,
+	// as it was only a slash. What is counted is the characters of the words, so a Korean syllable that is still being composed is one, not several.
+	const matched = useRef({ from: -1, length: 0 });
+	useEffect(() => {
+		if (!open) return;
+		if (matched.current.from !== open.from) matched.current = { from: open.from, length: 0 };
+		if (shownItems.length > 0) {
+			matched.current.length = open.query.length;
+			return;
+		}
+		if (open.query.length - matched.current.length <= NO_MATCH_GRACE || editorRef.current?.view.composing) return;
+		dismissed.current = open.from;
+		setOpen(null);
+	}, [open, shownItems, editorRef]);
+
 	/** Opens the menu while the text before the cursor in its line is "/" and a word; closes it otherwise. */
 	const sync = useCallback((editor: Editor) => {
 		const { selection } = editor.state;
@@ -225,15 +243,15 @@ export function useSlashMenu({
 			$from.parent.type.name !== nodeName("codeBlock") &&
 			$from.parent.type.name !== nodeName("footnote") &&
 			!inTableCell($from)
-				? // A "/" anywhere in the line, with the words typed after it (2026-11-06 owner, as Notion): Esc closes it when a "/" is only a slash.
-					/\/([^\s/]*)$/.exec(text)
+				? // A "/" at the start of a block or after a space, with the words typed after it: a "/" inside a word (an address, a date, "and/or") is only a slash.
+					/(?:^|\s)\/([^\s/]*)$/.exec(text)
 				: null;
 		if (!match) {
 			dismissed.current = null;
 			setOpen(null);
 			return;
 		}
-		const from = $from.pos - match[0].length;
+		const from = $from.pos - ((match[1] ?? "").length + 1);
 		if (dismissed.current === from) return;
 		const caret = editor.view.coordsAtPos($from.pos);
 		setOpen((current) => {

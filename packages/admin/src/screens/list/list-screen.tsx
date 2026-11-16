@@ -85,6 +85,7 @@ import {
 } from "./row-menu";
 import { TaxonomyScreen } from "./taxonomy-screen";
 import { widthsAfter } from "./use-column-widths";
+import { useLastPage } from "./use-last-page";
 import { useSearchWords } from "./use-search-words";
 
 type Columns = { columns: ListColumn[]; pageSize: number };
@@ -187,6 +188,13 @@ function DocumentListScreen({
 
 	const setState = (next: ListState, options?: { replace?: boolean }) =>
 		go({ screen: "list", collection, params: writeState(next) }, options);
+	useLastPage({
+		none: rows?.length === 0,
+		page: state.page,
+		total,
+		pageSize,
+		go: (last) => setState({ ...state, page: last }, { replace: true }),
+	});
 
 	// Emptied, the box starts over on the open folder.
 	const box = useSearchWords(state.search.text, (text) =>
@@ -943,13 +951,10 @@ function DocumentListScreen({
 					resizeLabel: (column) => t("list.resizeColumn", { column }),
 				}}
 				noMatch={
-					rows?.length === 0 && folderLines.every((line) => line === null)
+					rows?.length === 0 && folderLines.every((line) => line === null) && looking
 						? {
 								words: t("list.noMatch"),
-								applied: {
-									search: state.search.text.trim() !== "",
-									filters: state.filters.length + state.ai.length > 0,
-								},
+								applied: { search: searching, filters: state.filters.length > 0 },
 								onClear: () =>
 									setState({ ...state, filters: [], ai: [], page: 1, search: { ...state.search, text: "" } }),
 							}

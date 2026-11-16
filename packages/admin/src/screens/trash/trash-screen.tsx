@@ -57,6 +57,7 @@ import { HandedRowActions, HandedRowLink, listStartOf, rowActionsOf } from "../l
 import { DELETE_KEYS, isDeleteKey } from "../list/row-menu";
 import { SortRows } from "../list/sort-rows";
 import { useColumnWidths } from "../list/use-column-widths";
+import { useLastPage } from "../list/use-last-page";
 import { useSearchWords } from "../list/use-search-words";
 import { TrashedFilePanel } from "../media/media-panel";
 import type { SchemaRead } from "../settings/schema-draft";
@@ -244,6 +245,13 @@ export function TrashScreen({
 	};
 
 	const total = data?.total ?? 0;
+	useLastPage({
+		none: data !== null && rows.length === 0,
+		page: state.page,
+		total,
+		pageSize: TRASH_PAGE_SIZE,
+		go: (last) => setState({ ...state, page: last }, { replace: true }),
+	});
 	const kinds = [...Object.keys(collections), MEDIA_KIND];
 	const sortedBy = (by: TrashState["sort"]["by"]) => (state.sort.by === by ? state.sort.dir : null);
 	const sortBy = (by: TrashState["sort"]["by"]) => (dir: "asc" | "desc") =>
@@ -304,7 +312,6 @@ export function TrashScreen({
 			),
 		},
 	];
-	const _colSpan = head.length + 1;
 
 	const inTrash = counts.data?.trash ?? 0;
 	const header = (

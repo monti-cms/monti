@@ -1139,6 +1139,16 @@ describe("the activity log (doc 13, flow 12)", () => {
 		await expect.element(more()).toHaveFocus();
 	});
 
+	it("[many] a page past the last one goes to the last page; with nothing applied it is no 'nothing matches' with a button", async () => {
+		await draw(stories.Pages).run();
+		await expect.element(main().getByRole("link", { name: "2", exact: true })).toBeVisible();
+		location.hash = "#/activity?page=99";
+		await expect.poll(() => location.hash).not.toContain("page=99");
+		await expect.element(table().getByText("맞는 기록이 없습니다.")).not.toBeInTheDocument();
+		for (const name of ["필터 해제", "검색어 지우기", "모두 지우기"])
+			await expect.element(table().getByRole("button", { name })).not.toBeInTheDocument();
+	});
+
 	it("[many] a page link pressed before a new filter's answer is in carries nothing of the old answer: no place, no count, no boundary", async () => {
 		const drawn = draw(stories.Pages);
 		await drawn.run();

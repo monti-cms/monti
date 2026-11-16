@@ -241,7 +241,7 @@ export const LibraryWindow: Story = {
 		const page = within(document.body);
 		const body = await page.findByRole("textbox", { name: "본문" }, wait);
 		await userEvent.click(body);
-		await userEvent.keyboard("/이미지");
+		await userEvent.keyboard(" /이미지");
 		await userEvent.keyboard("{Enter}");
 		await page.findByRole("dialog", {}, wait);
 	},

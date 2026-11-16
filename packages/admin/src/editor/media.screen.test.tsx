@@ -30,8 +30,11 @@ async function caretAfter(text: string) {
 	await userEvent.keyboard("{End}");
 }
 
+/** Types "/" and the word: after a space, as the menu opens only at the start of a block or after one. */
 async function slash(word = "") {
-	await userEvent.keyboard(`/${word}`);
+	const caret = getSelection();
+	const before = (caret?.anchorNode?.textContent ?? "").slice(0, caret?.anchorOffset ?? 0);
+	await userEvent.keyboard(`${before === "" || /\s$/.test(before) ? "" : " "}/${word}`);
 }
 
 /** Pictures pasted into the focused text, as the browser hands them over (a real ⌘V is L5's). */
@@ -150,6 +153,8 @@ describe("from the library", () => {
 
 		await userEvent.fill(search, "top-level");
 		await expect.element(dialog.getByText("맞는 파일이 없습니다.")).toBeVisible();
+		// The same line as the library's page, with its button named by what is applied: a search.
+		await expect.element(dialog.getByRole("button", { name: "검색어 지우기" })).toBeVisible();
 		await userEvent.click(chip);
 		await userEvent.click(page.getByRole("menuitemradio", { name: "모든 폴더" }));
 		await expect.element(dialog.getByRole("button", { name: /top-level-photo/ })).toBeVisible();
@@ -212,7 +217,7 @@ describe("from the library", () => {
 	it("09-3 [flow 6·37, 6·38] [korean] '/ 파일' finds through composing, shows files only, and the file block says its type and size", async () => {
 		await Draft.run();
 		await userEvent.click(paragraph("글의 첫 문단"));
-		await userEvent.keyboard("{End}/");
+		await userEvent.keyboard("{End} /");
 		await typeKorean("파일");
 		await expect.element(slashRow(/파일/)).toBeVisible();
 		await userEvent.keyboard("{Enter}");

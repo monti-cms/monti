@@ -57,6 +57,7 @@ import { ListPages } from "../list/list-pages";
 import { HandedRowActions, HandedRowLink, listStartOf } from "../list/row-hand-off";
 import { SortRows } from "../list/sort-rows";
 import { useColumnWidths } from "../list/use-column-widths";
+import { useLastPage } from "../list/use-last-page";
 import { useSearchWords } from "../list/use-search-words";
 import { ActivityPanel } from "./activity-panel";
 import {
@@ -353,7 +354,6 @@ export function ActivityScreen({
 			),
 		},
 	];
-	const _colSpan = head.length + 1;
 	const failed = counts.data?.failed ?? 0;
 	const failedOnly = state.deliveries.length === 1 && state.deliveries[0] === "failed";
 	const table = useRef<HTMLTableElement>(null);
@@ -373,6 +373,13 @@ export function ActivityScreen({
 		return listStart() ?? nextStop(banner) ?? (() => requestAnimationFrame(() => listStart()?.focus()));
 	});
 	const total = data?.total ?? 0;
+	useLastPage({
+		none: answered && lines.length === 0,
+		page: state.page,
+		total,
+		pageSize: ACTIVITY_PAGE_SIZE,
+		go: (last) => setState({ ...state, page: last, asOf: null, from: null }, { replace: true }),
+	});
 	// Only of this address's own answer: right after the search and the filters are taken off, the rows are still the old answer's (none),
 	// and a log that has lines would say for a moment that nothing is logged yet, with its table gone.
 	const empty = answered && total === 0 && !looking && state.page === 1;
@@ -451,7 +458,7 @@ export function ActivityScreen({
 						resizeLabel: (column) => t("list.resizeColumn", { column }),
 					}}
 					noMatch={
-						lines.length === 0
+						lines.length === 0 && looking
 							? {
 									words: t("activity.noMatch"),
 									applied: {

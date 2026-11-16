@@ -109,6 +109,7 @@ import { NoMatchLine } from "../list/no-match-row";
 import { isDeleteKey } from "../list/row-menu";
 import { SortRows } from "../list/sort-rows";
 import { useColumnWidths } from "../list/use-column-widths";
+import { useLastPage } from "../list/use-last-page";
 import { MediaPanel, useFileUses } from "./media-panel";
 import {
 	isLooking,
@@ -444,6 +445,13 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 	const items = data?.items ?? [];
 	const storage = data?.storage ?? true;
 	const looking = isLooking(state);
+	useLastPage({
+		none: data !== null && items.length === 0,
+		page: state.page,
+		total: data?.total ?? 0,
+		pageSize: data?.pageSize ?? 1,
+		go: (last) => setState({ ...state, page: last }, { replace: true }),
+	});
 	const here = state.folder ? folders.byId.get(state.folder) : undefined;
 	const childFolders = looking ? [] : folders.children(state.folder);
 	const pickedItems = items.filter((item) => picked.has(item.id));

@@ -76,4 +76,5 @@ export const queryOf = (state: MediaState) => ({
 /**
  * Whether the screen is looking for files rather than sitting in a folder: by a search or a filter. Folders hide (components/list.md, 2026-11-09 owner).
  */
-export const isLooking = (state: MediaState) => state.search !== "" || state.kinds.length > 0 || state.used.length > 0;
+export const isLooking = (state: MediaState) =>
+	state.search.trim() !== "" || state.kinds.length > 0 || state.used.length > 0;

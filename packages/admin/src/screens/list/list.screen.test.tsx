@@ -147,6 +147,35 @@ describe("the list: what is kept, and what comes back", () => {
 		await rowsShown();
 		await expect.poll(() => document.activeElement).toBe(main().element().querySelector("tbody [data-slot=row-link]"));
 	});
+
+	it("the no-match button is named by what is applied: only filters 필터 해제, only a search 검색어 지우기, both 모두 지우기", async () => {
+		await listAt("#/c/post?updatedAt=2000-01-01..2000-01-02").run();
+		await expect.element(main().getByRole("button", { name: "필터 해제" })).toBeVisible();
+		await expect.element(main().getByRole("button", { name: "검색어 지우기" })).not.toBeInTheDocument();
+		await listAt("#/c/post?q=없는말&updatedAt=2000-01-01..2000-01-02").run();
+		await expect.element(main().getByRole("button", { name: "모두 지우기" })).toBeVisible();
+	});
+
+	it("a page past the last one goes to the last page: it is no 'nothing matches' with nothing applied", async () => {
+		await listAt("#/c/post?page=9").run();
+		await expect.poll(() => location.hash).not.toContain("page=9");
+		await expect.element(main().getByRole("row").nth(1)).toBeVisible();
+		for (const name of ["필터 해제", "검색어 지우기", "모두 지우기"])
+			await expect.element(main().getByRole("button", { name })).not.toBeInTheDocument();
+	});
+
+	it("Esc lets go of the rows picked in the list", async () => {
+		await listAt("#/c/post").run();
+		await rowsShown();
+		await userEvent.click(
+			main()
+				.getByRole("checkbox", { name: /고르기/ })
+				.first(),
+		);
+		await expect.element(main().getByRole("toolbar")).toBeVisible();
+		await userEvent.keyboard("{Escape}");
+		await expect.element(main().getByRole("toolbar")).not.toBeInTheDocument();
+	});
 });
 
 describe("the row's menu (menu.md)", () => {

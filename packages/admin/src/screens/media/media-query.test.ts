@@ -27,6 +27,8 @@ describe("the library's address", () => {
 		expect(isLooking(read(search))).toBe(true);
 		expect(isLooking(read("kind=file&used=unused"))).toBe(true);
 		expect(isLooking(read("folder=f1&sort=size"))).toBe(false);
+		// A search of only spaces looks for nothing, here as in the box that shows it.
+		expect(isLooking(read("q=%20%20"))).toBe(false);
 	});
 
 	it("09-1 each order starts its own way and goes the other on request", () => {
