@@ -1,6 +1,7 @@
 import { TextButton } from "@monti-cms/ui";
 import { ChevronLeft } from "@monti-cms/ui/icons";
 import type { ReactNode } from "react";
+import { labelOfCollection } from "../../format/names";
 import { useAdmin } from "../../operations/admin-context";
 import { useRead } from "../../operations/use-operation";
 import type { SchemaRead } from "../settings/schema-draft";
@@ -18,7 +19,7 @@ export function EditorBack({ onBack, children }: { onBack: () => void; children:
 /** The way back to a collection's list, under the collection's name. */
 export function CollectionBack({ collection, onBack }: { collection: string; onBack: () => void }) {
 	const schema = useRead<SchemaRead>("schema.read");
-	return <EditorBack onBack={onBack}>{schema.data?.adminValues[collection]?.label ?? collection}</EditorBack>;
+	return <EditorBack onBack={onBack}>{labelOfCollection(schema.data?.adminValues, collection)}</EditorBack>;
 }
 
 /** The way back to the body templates. */

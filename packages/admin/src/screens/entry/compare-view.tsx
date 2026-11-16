@@ -29,6 +29,7 @@ import {
 import { ChevronLeft } from "@monti-cms/ui/icons";
 import { useMemo } from "react";
 import { clock, shortTime } from "../../format/date";
+import { fieldName } from "../../format/names";
 import { useAdmin } from "../../operations/admin-context";
 import { useRead } from "../../operations/use-operation";
 import { ReadFailedBanner } from "../frame/read-failed";
@@ -297,7 +298,7 @@ export function CompareView({
 			properties={
 				properties.length > 0
 					? properties.flatMap((field) => [
-							<CompareProperty key={field} label={labels[field]?.label ?? field} empty={t("entry.empty")}>
+							<CompareProperty key={field} label={fieldName(field, labels[field]?.label, t)} empty={t("entry.empty")}>
 								{shown(fieldValue(copy, field)) ? (
 									<Words
 										parts={
@@ -307,7 +308,7 @@ export function CompareView({
 								) : undefined}
 							</CompareProperty>,
 							...own(copy, field).map((inner) => (
-								<CompareProperty key={inner} label={labels[inner]?.label ?? inner} empty={t("entry.empty")}>
+								<CompareProperty key={inner} label={fieldName(inner, labels[inner]?.label, t)} empty={t("entry.empty")}>
 									{shown(copy.values[inner]) ? (
 										<Words parts={[{ text: words(inner, copy.values[inner]), changed: true }]} />
 									) : undefined}

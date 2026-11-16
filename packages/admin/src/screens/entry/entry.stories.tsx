@@ -265,6 +265,7 @@ type Kind =
 	| "checklist"
 	| "addressInTab"
 	| "related"
+	| "relatedNames"
 	| "ownFormat"
 	| "proposed"
 	| "proposedFields"
@@ -375,7 +376,7 @@ async function entry(monti: Monti, kind: Kind): Promise<string> {
 					subtitle: { label: "부제" },
 					cover: { label: "대표 이미지" },
 					category: { label: "카테고리" },
-					...(kind === "related" ? { related: { label: "관련 글" } } : {}),
+					...(kind === "related" || kind === "relatedNames" ? { related: { label: "관련 글" } } : {}),
 					...(kind === "nestedChoice"
 						? {
 								videoHost: { label: "영상 위치", optionLabels: { own: "직접 올림", embed: "퍼가기" } },
@@ -470,6 +471,14 @@ async function entry(monti: Monti, kind: Kind): Promise<string> {
 		)) as { output: { id: string } };
 		others.push(other.output.id);
 	}
+	// Posts a relation can point at: one with no title, and two with the same title (told apart by their addresses).
+	if (kind === "relatedNames")
+		for (const [title, slug] of [
+			["", "no-title"],
+			["같은 이름", "same-one"],
+			["같은 이름", "same-two"],
+		] as const)
+			await monti.run("entries.create", { collection: "post", locale: "ko", title, slug }, admin);
 	// Words that link to a draft: a to-do that only tells and does not stop the publish (doc 02).
 	if (kind === "toCheck" || kind === "toCheckOnly") {
 		const linked = (await monti.run("entries.get", { id: others[0] }, admin)) as {
@@ -523,7 +532,7 @@ export const site = (kind: Kind, kept?: { version: number; mine: [string, unknow
 					? withNested
 					: kind === "conditional" || kind === "strayOption"
 						? withFormat
-						: kind === "related"
+						: kind === "related" || kind === "relatedNames"
 							? withRelated
 							: schema,
 			auth: { password: true },
@@ -623,6 +632,16 @@ export const RelationDrafts: Story = {
 		const { page, all } = await opened(canvasElement);
 		await userEvent.click(await page.findByRole("combobox", { name: "관련 글" }, wait));
 		await all.findByRole("option", { name: /리액트 다시 만들기 1편/ }, wait);
+	},
+};
+
+/** A relation to posts, its list open, with a post that has no title and two that share one. */
+export const RelationNames: Story = {
+	loaders: site("relatedNames"),
+	play: async ({ canvasElement }) => {
+		const { page, all } = await opened(canvasElement);
+		await userEvent.click(await page.findByRole("combobox", { name: "관련 글" }, wait));
+		await all.findAllByRole("option", { name: /같은 이름/ }, wait);
 	},
 };
 

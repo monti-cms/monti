@@ -53,7 +53,7 @@ import { Add, Edit, List, Merge, OverflowMenuHorizontal, TrashCan } from "@monti
 import { useMemo, useRef, useState } from "react";
 import { useLeaveGuard, usePanelMove } from "../../draft/leave-guard";
 import { useLanguageName } from "../../format/language";
-import { titleOf } from "../../format/names";
+import { labelOfCollection, titleOf } from "../../format/names";
 import { useAdmin } from "../../operations/admin-context";
 import { reasonOf, useRead } from "../../operations/use-operation";
 import { linkTo, type Route } from "../../route";
@@ -360,7 +360,7 @@ export function TaxonomyScreen({
 	const panelMove = usePanelMove(openGroup);
 	const openPanel = (group: string | null) => panelMove(group, () => setOpenGroup(group));
 
-	const collectionName = schema.data?.adminValues[collection]?.label ?? collection;
+	const collectionName = labelOfCollection(schema.data?.adminValues, collection);
 	const path = schema.data?.schema.collections[collection]?.path;
 	const locales = useMemo(
 		() => schema.data?.schema.locales.list.map((l) => l.code) ?? ["ko"],

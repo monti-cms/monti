@@ -98,6 +98,7 @@ import { type PairedRows, pairedSource } from "../../editor/translation";
 import { docLength, useBodyCatalogs } from "../../editor/use-body-editor";
 import { clock, fullDate, shortTime } from "../../format/date";
 import { useLanguageName } from "../../format/language";
+import { fieldName, labelOfCollection } from "../../format/names";
 import { useFieldUploads } from "../../media/use-field-uploads";
 import { useAdmin } from "../../operations/admin-context";
 import { useOperation, useRead } from "../../operations/use-operation";
@@ -370,7 +371,7 @@ export function EntryEditor({
 		off: readOnly,
 	});
 	const fieldLabels = schema.data?.adminValues[collection]?.fields ?? {};
-	const fieldLabel = (field: string) => fieldLabels[field]?.label ?? field;
+	const fieldLabel = (field: string) => fieldName(field, fieldLabels[field]?.label, t);
 	const slug = String(editor.value("slug") ?? "");
 	const address = schema.data && slug ? publicPath(schema.data.schema, collection, slug, read?.entry.locale) : null;
 
@@ -1309,7 +1310,7 @@ export function EntryEditor({
 			<EditorHeader>
 				<Inline gap={12} minWidth={0} paddingX={12}>
 					<EditorBack onBack={trashed ? onTrash : onBack}>
-						{trashed ? t("frame.trash") : (schema.data?.adminValues[collection]?.label ?? collection)}
+						{trashed ? t("frame.trash") : labelOfCollection(schema.data?.adminValues, collection)}
 					</EditorBack>
 					{address ? (
 						<Text variant="meta" tone="faint" truncate>

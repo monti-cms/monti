@@ -1599,6 +1599,25 @@ describe("the entry editor: the property panel's tabs", () => {
 	});
 });
 
+describe("the names a relation's choices are called by", () => {
+	it("[LR-15] a post with no title is 'Untitled' in the list and once chosen, and two posts of one name each show their address", async () => {
+		await on("relatedNames").run();
+		await opened();
+		await userEvent.click(page.getByRole("combobox", { name: "관련 글" }));
+		await expect.element(page.getByRole("option", { name: /제목 없음/ })).toBeVisible();
+		const same = page.getByRole("option", { name: /같은 이름/ }).elements();
+		expect(same).toHaveLength(2);
+		expect(same.map((each) => each.textContent).sort()).toEqual([
+			"같은 이름same-one · 초안",
+			"같은 이름same-two · 초안",
+		]);
+		// A name that stands alone has no address beside it.
+		expect(page.getByRole("option", { name: /제목 없음/ }).element().textContent).not.toContain("no-title");
+		await userEvent.click(page.getByRole("option", { name: /제목 없음/ }));
+		await expect.element(page.getByRole("combobox", { name: "관련 글" })).toHaveValue("제목 없음");
+	});
+});
+
 describe("a conditional field in the property panel (doc 19)", () => {
 	const field = (name: string) => page.getByRole("textbox", { name });
 	const stored = async ({ site, id }: Loaded) =>

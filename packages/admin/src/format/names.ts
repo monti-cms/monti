@@ -34,6 +34,12 @@ export function fieldName(id: string, label: string | null | undefined, t: Trans
 	return fixed ? t(fixed) : label || id;
 }
 
+/** A collection's name: the label the admin values give it, else its id. Every screen asks here. */
+export const labelOfCollection = (
+	adminValues: Readonly<Record<string, { label?: string }>> | null | undefined,
+	id: string,
+): string => adminValues?.[id]?.label || id;
+
 /** "PDF": what a file's preview says it is, from its name. */
 export const extensionLabel = (name: string) => {
 	const dot = name.lastIndexOf(".");

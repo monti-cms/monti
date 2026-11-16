@@ -1,6 +1,7 @@
 import type { FieldDefinition } from "@monti-cms/core";
 import { FormField, FormFieldLabel, MediaInput, Option, PropertyGroup, PropertyPanel, Text } from "@monti-cms/ui";
 import { useState } from "react";
+import { fieldName } from "../../format/names";
 import { useAdmin } from "../../operations/admin-context";
 import type { EntryView } from "../../plugins";
 import { FieldInput, FieldToggle, isToggle } from "../entry/field-input";
@@ -152,10 +153,10 @@ export function PreviewPanel({
 						// the kind's own input when none is brought.
 						const brought = definition.input ? inputs.get(definition.input) : undefined;
 						const Own = brought === undefined ? null : "Input" in brought ? brought.Input : brought;
-						if (!Own) return fieldRow(field.name, definition, field.label ?? field.name, false);
+						if (!Own) return fieldRow(field.name, definition, fieldName(field.name, field.label, t), false);
 						return (
 							<FormField key={field.name}>
-								<FormFieldLabel htmlFor={id}>{field.label ?? field.name}</FormFieldLabel>
+								<FormFieldLabel htmlFor={id}>{fieldName(field.name, field.label, t)}</FormFieldLabel>
 								<Own
 									id={id}
 									field={field.name}

@@ -14,6 +14,7 @@ const {
 	ListViewNarrowColumns,
 	FilePanel,
 	FilePanelManyUses,
+	FileUsedByUntitled,
 	SearchingInFolder,
 	KindChosenInFolder,
 } = composeStories(media);
@@ -1057,6 +1058,16 @@ describe("the library's words", () => {
 		await openAssets();
 		await expect.element(main().getByText("2400×1600 · 1곳")).toBeVisible();
 		await expect.element(main().getByText(/· 글 \d/)).not.toBeInTheDocument();
+	});
+
+	it("[MD-04] where a file is used calls an entry with no title 'Untitled', as every list does, never by its address", async () => {
+		await FileUsedByUntitled.run();
+		await userEvent.click(folder("Blog Assets"));
+		await userEvent.click(tile("desk-morning.jpg"), { button: "right" });
+		await userEvent.click(page.getByRole("menuitem", { name: "쓰는 곳" }));
+		await expect.element(page.getByRole("menuitem", { name: /제목 없음/ })).toHaveTextContent("대표 이미지");
+		await expect.element(page.getByRole("menuitem", { name: /no-title/ })).not.toBeInTheDocument();
+		await expect.element(page.getByRole("menuitem", { name: /아침 책상/ })).toBeVisible();
 	});
 
 	it("[MD-40] a folder goes to the trash under the words every other move to the trash has, '휴지통으로'", async () => {

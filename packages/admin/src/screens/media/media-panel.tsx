@@ -46,7 +46,7 @@ import { type Path, useDraft } from "../../draft/use-draft";
 import type { ProposalItem } from "../../draft/use-proposals";
 import { bytes } from "../../format/bytes";
 import { fullDate } from "../../format/date";
-import { extensionLabel, titleOf } from "../../format/names";
+import { extensionLabel, fieldName, titleOf } from "../../format/names";
 import { chooseFiles } from "../../media/choose-files";
 import { previewUrl, sizeLabel } from "../../media/file-text";
 import { putFile } from "../../media/put-file";
@@ -71,7 +71,7 @@ function useUseRows(rows: readonly MediaUseRow[]) {
 			const { field } = use.place;
 			const label =
 				use.owner === "entry" ? schema.data?.adminValues[use.collection]?.fields?.[field]?.label : undefined;
-			return label ?? field;
+			return fieldName(field, label, t);
 		},
 		[schema.data, t],
 	);

@@ -16,7 +16,7 @@ import {
 import { Tag } from "@monti-cms/ui/icons";
 import { useState } from "react";
 import { useUndo } from "../../activity/use-undo";
-import { endsClosed, titleOf } from "../../format/names";
+import { endsClosed, fieldName as fieldNameOf, titleOf } from "../../format/names";
 import { useAdmin } from "../../operations/admin-context";
 import { reasonOf, useOperation, useRead } from "../../operations/use-operation";
 
@@ -53,7 +53,7 @@ export function RelationSubmenu({ collection, column, rows, context, icon = fals
 		? options.filter((o) => o.title.toLowerCase().includes(find.trim().toLowerCase()))
 		: options;
 	const entryIds = rows.map((r) => r.id);
-	const fieldLabel = column.label ?? fieldName;
+	const fieldLabel = fieldNameOf(fieldName, column.label, t);
 	const fieldObject = t(endsClosed(fieldLabel) ? "list.objectFinal" : "list.objectOpen", { name: fieldLabel });
 
 	const hasGroup = (r: ListRow, group: string) => {

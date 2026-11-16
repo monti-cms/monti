@@ -46,7 +46,7 @@ import { OverflowMenuHorizontal, TrashCan, Undo } from "@monti-cms/ui/icons";
 import { type KeyboardEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useOpenConversation } from "../../assistant/use-assistant";
 import { useLanguageName } from "../../format/language";
-import { titleOf } from "../../format/names";
+import { labelOfCollection, titleOf } from "../../format/names";
 import { useAdmin } from "../../operations/admin-context";
 import { useRead } from "../../operations/use-operation";
 import { href, type Route } from "../../route";
@@ -141,7 +141,7 @@ export function TrashScreen({
 	// The language menu lists the languages that are in the trash here, in the site's order, and the ones it is filtered by.
 	const languages = siteLocales.filter((code) => (data?.locales[code] ?? 0) > 0 || state.locales.includes(code));
 	const { sized, resize } = useColumnWidths("trash");
-	const collectionLabel = (collection: string) => schema.data?.adminValues[collection]?.label ?? collection;
+	const collectionLabel = (collection: string) => labelOfCollection(schema.data?.adminValues, collection);
 	const kindLabel = (kind: string) => (kind === MEDIA_KIND ? t("trash.kind.media") : collectionLabel(kind));
 	const isDocument = (row: TrashRow) => row.collection !== null && collections[row.collection]?.kind === "document";
 

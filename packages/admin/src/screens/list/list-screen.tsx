@@ -55,7 +55,7 @@ import { useImport } from "../../data/use-import";
 import { saveBackup } from "../../download";
 import { fullTime, shortDate } from "../../format/date";
 import { useLanguageName } from "../../format/language";
-import { endsClosed, fieldCell, titleOf } from "../../format/names";
+import { endsClosed, fieldCell, fieldName, labelOfCollection, titleOf } from "../../format/names";
 import { chooseFiles } from "../../media/choose-files";
 import { useAdmin } from "../../operations/admin-context";
 import { type Refusal, reasonOf, useOperation, useRead } from "../../operations/use-operation";
@@ -128,7 +128,7 @@ function useColumnLabel() {
 		publishedAt: t("list.column.publishedAt"),
 		createdAt: t("list.column.createdAt"),
 	};
-	return (column: ListColumn) => names[column.id] ?? column.label ?? column.id;
+	return (column: ListColumn) => names[column.id] ?? fieldName(column.id, column.label, t);
 }
 
 /**
@@ -389,7 +389,7 @@ function DocumentListScreen({
 		go({ screen: "entry", collection, id });
 	};
 
-	const collectionName = schema.data?.adminValues[collection]?.label ?? collection;
+	const collectionName = labelOfCollection(schema.data?.adminValues, collection);
 	const name = openFolder?.name ?? collectionName;
 	// Items (tags, categories) are live on save: no publishing, no archive (doc 02; components/list.md, bulk bar).
 	const document = schema.data?.schema.collections[collection]?.kind !== "item";
@@ -419,7 +419,7 @@ function DocumentListScreen({
 	const importSheet = (
 		<ImportSheet
 			collection={collection}
-			labelOf={(name) => schema.data?.adminValues[name]?.label ?? name}
+			labelOf={(name) => labelOfCollection(schema.data?.adminValues, name)}
 			go={go}
 			importing={importing}
 		/>

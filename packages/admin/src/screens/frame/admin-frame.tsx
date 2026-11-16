@@ -26,6 +26,7 @@ import {
 } from "@monti-cms/ui";
 import { Document, Image, RecentlyViewed, SettingsAdjust, Spark, Tag, Tools, TrashCan } from "@monti-cms/ui/icons";
 import { createContext, type ReactNode, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { labelOfCollection } from "../../format/names";
 import { FolderFilesProvider, useGiveFolderFiles } from "../../media/folder-files";
 import { useFolderDrop } from "../../media/use-file-drop";
 import { useMoveMedia } from "../../media/use-media-actions";
@@ -243,7 +244,7 @@ export function AdminFrame({
 												place={{ collection: name }}
 												open={open}
 												icon={collection.kind === "item" ? <Tag /> : <Document />}
-												name={state?.adminValues[name]?.label ?? name}
+												name={labelOfCollection(state?.adminValues, name)}
 												count={counts?.collections[name]}
 												onOpen={onOpen}
 											>
