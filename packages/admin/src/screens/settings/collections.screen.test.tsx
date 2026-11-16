@@ -1098,6 +1098,7 @@ describe("settings › collections: the property panel preview draws each field 
 				...schema.collections.post,
 				fields: {
 					...schema.collections.post.fields,
+					note: { kind: "text" },
 					mood: { kind: "select", options: ["calm", "loud"] },
 					moods: { kind: "select", options: ["calm", "loud"], many: true },
 					pinned: { kind: "conditional", options: ["on"], control: "toggle", fields: {} },
@@ -1130,5 +1131,19 @@ describe("settings › collections: the property panel preview draws each field 
 		expect(panel.element().querySelector("label[for=preview-pinned][data-slot=form-field-label]")).toBeNull();
 		// A field that is not saved has no candidates to read: nothing is asked of the server, and no read fails.
 		await expect.element(page.getByText("불러오지 못했습니다")).not.toBeInTheDocument();
+	});
+
+	it("[ST-13] what is typed or switched in the preview stays there while it is open", async () => {
+		await scene(
+			{ loaders: collections.site({ schema: kinds }), play: collections.Preview.play },
+			collections.default,
+		).run();
+		const panel = page.getByRole("complementary", { name: "미리보기" });
+		await expect.poll(() => panel.element().querySelector("#preview-note")).not.toBeNull();
+		await userEvent.type(panel.element().querySelector("#preview-note") as HTMLElement, "봄 소풍");
+		await expect.poll(() => (panel.element().querySelector("#preview-note") as HTMLInputElement).value).toBe("봄 소풍");
+		const pinned = panel.getByRole("switch", { name: "pinned" });
+		await pinned.click();
+		await expect.element(pinned).toBeChecked();
 	});
 });

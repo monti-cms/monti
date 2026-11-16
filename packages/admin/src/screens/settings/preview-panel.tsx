@@ -81,7 +81,13 @@ export function PreviewPanel({
 				<FormField key={key}>
 					<Option spread height="md">
 						{label}
-						<FieldToggle def={def} id={id} value={null} onChange={() => {}} readOnly={false} />
+						<FieldToggle
+							def={def}
+							id={id}
+							value={typed[key] ?? null}
+							onChange={(next) => setTyped((was) => ({ ...was, [key]: next }))}
+							readOnly={false}
+						/>
 					</Option>
 				</FormField>
 			);
@@ -101,8 +107,8 @@ export function PreviewPanel({
 		if (!field) return null;
 		return fieldRow(key, field.def, model.fieldLabel(c, key), marksRequired && Boolean(field.def.required));
 	};
-	// The kind's input, the one the entry editor's panel draws (field-input.tsx): the two cannot look different. Nothing is held and nothing
-	// kept; a related item has no candidates, since a field that is not saved has none to read.
+	// The kind's input, the one the entry editor's panel draws (field-input.tsx): the two cannot look different. What is typed is held while the
+	// preview is open and kept nowhere; a related item has no candidates, since a field that is not saved has none to read.
 	const input = (def: FieldDefinition, id: string, key: string) =>
 		def.kind === "media" ? (
 			<MediaInput id={id} size="md" placeholder={t("settings.preview.empty")} />
@@ -110,8 +116,8 @@ export function PreviewPanel({
 			<FieldInput
 				def={def}
 				id={id}
-				value={null}
-				onChange={() => {}}
+				value={typed[key] ?? null}
+				onChange={(next) => setTyped((was) => ({ ...was, [key]: next }))}
 				placeholder={t(def.kind === "relation" ? "settings.preview.none" : "settings.preview.empty")}
 				readOnly={false}
 				optionLabels={(model.shown(at.fieldValue(c, key, "optionLabels")) ?? {}) as Record<string, string>}
