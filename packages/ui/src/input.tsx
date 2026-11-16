@@ -95,7 +95,8 @@ function Input({
 				width === "short" && "w-monti-menu",
 				width === "number" && "w-24",
 				width === "fit" && "field-sizing-content w-auto min-w-[4ch]",
-				mono && "font-mono",
+				// What is typed is a value, in mono; the placeholder is words, and stays in the sans face (tokens.md).
+				mono && "font-mono placeholder:font-sans",
 				srOnly && "sr-only",
 				align === "center" && "text-center",
 				align === "end" && "text-right",

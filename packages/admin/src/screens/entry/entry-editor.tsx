@@ -1419,6 +1419,7 @@ export function EntryEditor({
 								<DropdownMenuSeparator />
 								{/* The document tools; a view takes the place of the properties beside the text, as a translation's source does. */}
 								<DocumentToolRows tools={tools} onView={(next) => next !== null && setPanel(false)} />
+								<DropdownMenuSeparator />
 								{/* A translation goes alone: its source stays, and the row says so (flow 3·15). */}
 								{translation.isTranslation && schema.data ? (
 									<DropdownMenuItem

@@ -180,7 +180,7 @@
 - 줄 높이는 역할이 정하고 모두 4px의 배수다. 한 줄짜리 UI 글은 `body`(20), 여러 줄로 이어지는 글은 `prose`(24), 코드는 `code`(20)다. 크기의 몇 배(1.6, 1.7)로 줄 높이를 주지 않는다(2026-11-05 소유자: 1.6, 1.65, 1.7배가 섞여 있던 것을 둘로 줄였다).
 - 굵기는 역할을 따른다. 400은 글, 500은 `text-label`에서만, 600은 강조(패널 · 시트 · 구역 제목, 버튼, 고른 탭, 표 묶음 머리), 700은 큰 제목 역할(`display`, `page`, `heading`)과 페이지 툴바의 고른 탭뿐이다. 부품이 `font-bold`나 `font-medium`을 덧붙이지 않는다. 본문 안의 굵은 글과 서식 막대의 B는 굵게 그 자체라 예외다. `check:design`이 막는다.
 - 단계 밖의 크기는 둘뿐이다. 여백의 요청 표시(10px mono)와 제목 아이콘의 단계 숫자(8px)다.
-- `text-caption`과 `text-micro`는 sans 역할이다(만들며 정함 (2026-11-16)). 한글 낱말을 mono로 그리지 않는다. mono는 값에만 쓰고, 값은 그 칸에 `font-mono`(`Text`의 `mono`)를 적는다. `check:design`의 `mono-words`가 `font-mono` · `text-monti-micro`를 쓰는 파일에 `MONO_OK`의 까닭을 요구한다.
+- `text-caption`과 `text-micro`는 sans 역할이다(만들며 정함 (2026-11-16)). 한글 낱말을 mono로 그리지 않는다. mono는 값에만 쓰고, 값은 그 칸에 `font-mono`(`Text`의 `mono`)를 적는다. `check:design`의 `mono-words`가 `font-mono` · `text-monti-micro`를 쓰는 파일에 `MONO_OK`의 까닭을 요구한다. 부품의 옵션으로 mono가 되는 길(`mono`, `metaMono`, `ofMono`)은 `mono-props`가 본다: 그 태그의 자식과 `meta` · `of` · `value`에 한글 글자가 있거나 한글 문구의 `t("키")`가 들어 있으면 막고, 읽을 수 없는 자식(`{address}`)은 `MONO_PROP_VALUES`에 그 파일과 까닭이 있어야 한다. 입력 칸의 자리 글자는 낱말이라 `mono` 입력에서도 sans다(`Input`, `Textarea`가 그렇게 그린다. T276, 만들며 정함 (2026-11-16)).
 - 글자 역할은 모두 `cn`(`packages/ui/src/cn.ts`)의 글자 크기 묶음에 있다(만들며 정함 (2026-11-16)). 없으면 `cn`이 `text-monti-<역할>`을 색으로 읽어 같이 쓴 색과 둘 중 하나를 버린다. `check:design`의 `type-merge`가 `tokens.json`의 역할과 그 묶음이 같은지 본다.
 - 숫자는 전역에서 자리가 같은 숫자(`tabular-nums`)다(만들며 정함 (2026-11-16), `admin.css`의 `.monti-admin`과 body). 9가 10이 될 때 옆의 것이 밀리지 않고, 크기와 날짜의 세로줄이 맞는다. `tabular` 규칙이 그 선언이 있는지 본다. mono가 아닌 숫자도 같다.
 - 숫자와 날짜와 크기를 담은 열은 오른쪽에, 글은 왼쪽에 맞춘다(list.md, "열 정렬과 행 높이").

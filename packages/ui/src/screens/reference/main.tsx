@@ -248,6 +248,7 @@ function PostRowMenu() {
 				<Archive />
 				보관
 			</ContextMenuItem>
+			<ContextMenuSeparator />
 			<ContextMenuItem variant="danger">
 				<TrashCan />
 				휴지통으로

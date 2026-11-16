@@ -153,6 +153,7 @@ export function TemplateEditor({
 								</DropdownMenuItem>
 								<DropdownMenuSeparator />
 								<DocumentToolRows tools={tools} />
+								<DropdownMenuSeparator />
 								<DropdownMenuItem
 									variant="danger"
 									onClick={async () => {

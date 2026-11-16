@@ -90,8 +90,8 @@ export function RowMenuItems({
 					{t("list.archive")}
 				</Item>
 			)}
-			{/* With "Archive" where there is one: what takes a row out of the list (screens/list.md, right click). */}
-			{!document && <Separator />}
+			{/* The row that puts it away stands after a rule, alone or after "Archive" (menu.md). */}
+			<Separator />
 			<Item variant="danger" onClick={() => actions.trash([row])}>
 				<TrashCan aria-hidden />
 				{t("trash.toTrash")}

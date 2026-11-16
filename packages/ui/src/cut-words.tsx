@@ -26,6 +26,8 @@ function cutIn(box: HTMLElement) {
 	const sides = ["paddingLeft", "paddingRight", "borderLeftWidth", "borderRightWidth"] as const;
 	const room = box.getBoundingClientRect().width - sides.reduce((sum, side) => sum + Number.parseFloat(style[side]), 0);
 	if (right - left > room + 0.01) return true;
+	// Cut by lines (`line-clamp`): what holds more than its height shows.
+	if (style.overflow !== "visible" && box.scrollHeight > box.clientHeight + 1) return true;
 	for (const piece of box.querySelectorAll<HTMLElement>("*")) {
 		if (piece.scrollWidth > piece.clientWidth && getComputedStyle(piece).textOverflow === "ellipsis") return true;
 	}

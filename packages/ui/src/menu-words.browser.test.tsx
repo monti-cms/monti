@@ -12,6 +12,7 @@ import {
 	ComboboxItem,
 	ComboboxList,
 } from "./index";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./select";
 
 const LONG = "아주 길고 긴 카테고리 이름이 카드 하나의 폭보다 훨씬 더 길게 이어집니다";
 const tip = () => document.querySelector('[data-slot="tooltip-content"]')?.textContent ?? null;
@@ -113,5 +114,32 @@ describe("a field of many values", () => {
 		expect(field.height).toBe(one.getBoundingClientRect().height);
 		// The chevron is the same mark in both.
 		expect(opener(many).querySelector("[data-slot=caret]")).not.toBeNull();
+	});
+});
+
+describe("a select's value", () => {
+	it("[PP-39] a value wider than the field is cut to its line, and the pointer on it says it whole", async () => {
+		render(
+			<div style={{ width: 160 }}>
+				<Select items={[{ value: "long", label: LONG }]} defaultValue="long">
+					<SelectTrigger aria-label="카테고리" width="full">
+						<SelectValue />
+					</SelectTrigger>
+					<SelectContent>
+						<SelectItem value="long">{LONG}</SelectItem>
+					</SelectContent>
+				</Select>
+			</div>,
+		);
+		await expect.element(page.getByRole("combobox", { name: "카테고리" })).toBeVisible();
+		const value = page
+			.getByRole("combobox", { name: "카테고리" })
+			.element()
+			.querySelector("[data-slot=select-value]") as HTMLElement;
+		await expect
+			.poll(() => value.scrollHeight > value.clientHeight || value.scrollWidth > value.clientWidth)
+			.toBe(true);
+		await userEvent.hover(value, { position: { x: 12, y: 8 } });
+		await expect.poll(tip).toBe(LONG);
 	});
 });
