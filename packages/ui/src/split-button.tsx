@@ -94,14 +94,19 @@ function SplitButton({
 				// A leading icon ("+" of "New post") is 16px and pulled 2px into the left padding, as on a `Button`; while it works the spinner takes its place.
 				className={cn(
 					HALF,
-					"relative gap-monti-6 rounded-l-monti-full pr-monti-12 pl-[18px] [&>svg:first-child]:-ml-[2px] [&_svg]:size-4 [&_svg]:shrink-0",
-					// With `reserve` the pill keeps its width while it works: the spinner stands in the left padding, which does not change.
-					loading && !(reserve && reserve.length > 0) && "gap-[7px] pl-[13px]",
-					loading && "[&>[data-slot=spinner]+svg]:hidden",
+					"gap-monti-6 rounded-l-monti-full pr-monti-12 pl-[18px] [&>svg:first-child]:-ml-[2px] [&_svg]:size-4 [&_svg]:shrink-0",
+					// A pill with `reserve` keeps its padding and gap while it works: the room is the stack's, and the spinner stands in its row.
+					loading && !(reserve && reserve.length > 0) && "gap-[7px] pl-[13px] [&>[data-slot=spinner]+svg]:hidden",
 				)}
 			>
-				{loading && <Spinner className={reserve && reserve.length > 0 ? "absolute left-[3px] size-3" : undefined} />}
-				<ReservedLabel reserve={reserve}>{children}</ReservedLabel>
+				{loading && !(reserve && reserve.length > 0) && <Spinner />}
+				<ReservedLabel
+					reserve={reserve}
+					spinnerSize="size-3.5"
+					spinner={loading && reserve && reserve.length > 0 ? <Spinner /> : undefined}
+				>
+					{children}
+				</ReservedLabel>
 			</ButtonPrimitive>
 			<DropdownMenu open={open && !inert} onOpenChange={setOpen}>
 				<Tooltip>

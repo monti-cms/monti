@@ -183,16 +183,28 @@ describe("a control whose words change keeps its width (TB-02)", () => {
 		expect(widthOf()).toBe(before);
 	});
 
-	it("a pill that works (loading) is as wide as at rest: its spinner stands in the padding", async () => {
+	it("a pill that works (loading) is as wide as at rest, at every size, and its spinner is the size a button without reserve has", async () => {
+		const LABELS = ["발행하기", "발행됨"];
+		const SIZES = ["lg", "md", "sm", "xs"] as const;
 		function Pills({ loading }: { loading: boolean }) {
 			return (
 				<div className="flex flex-col items-start gap-monti-8">
-					<Button reserve={["발행하기", "발행됨"]} loading={loading}>
+					{SIZES.map((size) => (
+						<Button key={size} data-case={size} size={size} reserve={LABELS} loading={loading}>
+							발행하기
+						</Button>
+					))}
+					<Button data-case="secondary" variant="secondary" reserve={LABELS} loading={loading}>
 						발행하기
 					</Button>
+					{SIZES.map((size) => (
+						<Button key={`plain ${size}`} data-case={`plain ${size}`} size={size} loading={loading}>
+							발행하기
+						</Button>
+					))}
 					<SplitButton
 						menuLabel="발행 방식"
-						reserve={["발행하기", "발행됨"]}
+						reserve={LABELS}
 						loading={loading}
 						menu={<DropdownMenuItem>오늘 날짜로</DropdownMenuItem>}
 					>
@@ -214,14 +226,21 @@ describe("a control whose words change keeps its width (TB-02)", () => {
 		}
 		render(<Switcher />);
 		await expect.element(page.getByRole("button", { name: "시작" })).toBeVisible();
-		const pills = () =>
-			[...document.querySelectorAll("[data-slot=button], [data-slot=split-button]")].filter(
-				(each) => each.textContent?.includes("발행") || each.getAttribute("data-slot") === "split-button",
-			);
-		const rest = pills().map((each) => Math.round(box(each).width * 10) / 10);
+		const cases = () => [...document.querySelectorAll("[data-case], [data-slot=split-button]")];
+		const reserved = () => cases().filter((each) => !(each.getAttribute("data-case") ?? "").startsWith("plain"));
+		const width = (each: Element) => Math.round(box(each).width * 10) / 10;
+		const rest = reserved().map(width);
 		await page.getByRole("button", { name: "시작" }).click();
 		await expect.poll(() => document.querySelector("[data-slot=spinner]")).not.toBeNull();
-		expect(pills().map((each) => Math.round(box(each).width * 10) / 10)).toEqual(rest);
+		expect(reserved().map(width), "widths at rest and while working").toEqual(rest);
+		// The spinner is one look: the same box in a reserved button as in a plain one of its size, and in the row of the words, not apart from them.
+		for (const size of SIZES) {
+			const own = document.querySelector(`[data-case="${size}"] [data-slot=spinner]`) as Element;
+			const plain = document.querySelector(`[data-case="plain ${size}"] [data-slot=spinner]`) as Element;
+			expect([box(own).width, box(own).height], `${size} spinner`).toEqual([box(plain).width, box(plain).height]);
+			const words = box(document.querySelector(`[data-case="${size}"]`) as Element);
+			expect(box(own).left).toBeGreaterThanOrEqual(words.left);
+		}
 	});
 
 	it("a split pill keeps its width and the left edge of its neighbour", async () => {

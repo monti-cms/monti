@@ -17,7 +17,7 @@ import { Spinner } from "./spinner";
  * (2px more than from the top and bottom) and 10px at `sm`, with 7px to the words and a tighter right side (15px, 13px for `secondary`, 9px at `sm`). The caller changes the label to say what is happening ("Saving…", "Uploading 64%"); it cannot be pressed again, its cursor says so, and it is `aria-busy`. It keeps the keyboard's focus while it works.
  */
 const buttonVariants = cva(
-	"group/button inline-flex shrink-0 items-center justify-center gap-monti-6 rounded-monti-full whitespace-nowrap outline-none transition-colors select-none focus-visible:ring-2 focus-visible:ring-monti-contrast/50 cursor-pointer disabled:pointer-events-none disabled:opacity-45 aria-disabled:pointer-events-none aria-disabled:opacity-45 data-held:pointer-events-auto data-held:cursor-default data-loading:pointer-events-auto data-loading:cursor-default data-loading:opacity-100 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 [&>svg:first-child]:-ml-[2px] data-loading:gap-[7px] data-loading:[&>[data-slot=spinner]+svg]:hidden",
+	"group/button inline-flex shrink-0 items-center justify-center gap-monti-6 rounded-monti-full whitespace-nowrap outline-none transition-colors select-none focus-visible:ring-2 focus-visible:ring-monti-contrast/50 cursor-pointer disabled:pointer-events-none disabled:opacity-45 aria-disabled:pointer-events-none aria-disabled:opacity-45 data-held:pointer-events-auto data-held:cursor-default data-loading:pointer-events-auto data-loading:cursor-default data-loading:opacity-100 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 [&>svg:first-child]:-ml-[2px] not-data-reserved:data-loading:gap-[7px] data-loading:[&>[data-slot=spinner]+svg]:hidden",
 	{
 		variants: {
 			variant: {
@@ -54,8 +54,6 @@ const buttonVariants = cva(
 				sm: "h-monti-control-sm px-monti-12 text-monti-note",
 				xs: "h-monti-control-xs px-monti-8 text-monti-caption [&_svg:not([class*='size-'])]:size-3.5",
 			},
-			/** A button with `reserve` keeps its width while it works: its spinner stands in the left padding, and neither the padding nor the gap changes. */
-			fixed: { true: "relative data-loading:gap-monti-6", false: "" },
 		},
 		// A loading pill pads by eye, not by a formula: the spinner sits 2px further from the left edge than from the top and bottom, and the right side is
 		// tighter than the resting padding, so the pill does not look empty on the right.
@@ -63,30 +61,60 @@ const buttonVariants = cva(
 			{
 				size: "lg",
 				variant: ["primary", "danger", "outline-danger"],
-				fixed: false,
-				class: "data-loading:pr-[15px] data-loading:pl-[13px]",
+				class: "not-data-reserved:data-loading:pr-[15px] not-data-reserved:data-loading:pl-[13px]",
 			},
-			{ size: "lg", variant: "secondary", fixed: false, class: "data-loading:pr-[13px] data-loading:pl-[13px]" },
-			{ size: "md", fixed: false, class: "data-loading:pr-[11px] data-loading:pl-[11px]" },
-			{ size: "sm", fixed: false, class: "data-loading:pr-[9px] data-loading:pl-[10px]" },
-			{ size: "xs", fixed: false, class: "data-loading:pr-[7px] data-loading:pl-[7px]" },
+			{
+				size: "lg",
+				variant: "secondary",
+				class: "not-data-reserved:data-loading:pr-[13px] not-data-reserved:data-loading:pl-[13px]",
+			},
+			{ size: "md", class: "not-data-reserved:data-loading:pr-[11px] not-data-reserved:data-loading:pl-[11px]" },
+			{ size: "sm", class: "not-data-reserved:data-loading:pr-[9px] not-data-reserved:data-loading:pl-[10px]" },
+			{ size: "xs", class: "not-data-reserved:data-loading:pr-[7px] not-data-reserved:data-loading:pl-[7px]" },
 		],
-		defaultVariants: { variant: "primary", size: "lg", fixed: false },
+		defaultVariants: { variant: "primary", size: "lg" },
 	},
 );
 
 /**
  * A label that is as wide as the widest of the labels it can take: the others are laid under it, unseen, in the same place. What stands beside a
- * button whose words change ("Publish", "Published") then stays put when they do.
+ * button whose words change ("Publish", "Published") then stays put when they do. Each label is also laid once more with the spinner before it (the
+ * row of a button that works: spinner, gap, words), so the width holds while it works too. The spinner is drawn in this stack's own row, at its
+ * normal size, so a reserved button shows loading as any other does.
  */
-export function ReservedLabel({ children, reserve }: { children: React.ReactNode; reserve?: string[] }) {
+export function ReservedLabel({
+	children,
+	reserve,
+	spinner,
+	spinnerSize,
+}: {
+	children: React.ReactNode;
+	reserve?: string[];
+	/** The spinner while the button works: it stands before the words, in the row. */
+	spinner?: React.ReactNode;
+	/** The class that sizes the spinner, so its ghost takes the room the spinner does. */
+	spinnerSize: string;
+}) {
+	const row = (words: React.ReactNode) => (
+		<span className="inline-flex items-center gap-[7px] [&>svg]:hidden">
+			{spinner}
+			{words}
+		</span>
+	);
+	// Without `reserve` the button draws its spinner itself, before its words, in place of its leading icon.
 	if (!reserve || reserve.length === 0) return children;
 	return (
 		<span className="inline-grid justify-items-center *:col-start-1 *:row-start-1">
-			<span>{children}</span>
+			<span>{spinner ? row(children) : children}</span>
 			{reserve.map((label) => (
 				// Drawn by the stylesheet from the attribute, so the words are not in the button's text: a screen reader and a test read the one label.
 				<span key={label} aria-hidden data-label={label} className="invisible after:content-[attr(data-label)]" />
+			))}
+			{reserve.map((label) => (
+				<span key={`working ${label}`} aria-hidden className="invisible inline-flex items-center gap-[7px]">
+					<span className={spinnerSize} />
+					<span data-label={label} className="after:content-[attr(data-label)]" />
+				</span>
 			))}
 		</span>
 	);
@@ -146,6 +174,7 @@ function Button({
 		};
 	}, [pendingLabel]);
 	const busy = loading || sending;
+	const spinnerSize = size === "sm" || size === "xs" ? "size-3" : "size-3.5";
 	// Off, and still holding the focus: working, or turned off by its own press (`focusableWhenDisabled`).
 	const held = (busy && !disabled) || Boolean(disabled && focusableWhenDisabled);
 	return (
@@ -154,17 +183,14 @@ function Button({
 			type={pendingLabel === undefined ? undefined : "submit"}
 			data-slot="button"
 			data-loading={busy || undefined}
+			data-reserved={(reserve !== undefined && reserve.length > 0) || undefined}
 			data-held={(held && !busy) || undefined}
 			aria-busy={busy || undefined}
 			disabled={disabled || busy}
 			// Working is not "cannot be used": the button keeps the focus it was pressed with (`aria-disabled`, not the attribute, which would hand
 			// the focus to the page) and takes no second press.
 			focusableWhenDisabled={held}
-			className={cn(
-				buttonVariants({ variant, size, fixed: reserve !== undefined && reserve.length > 0 }),
-				width === "full" && "w-full",
-				className,
-			)}
+			className={cn(buttonVariants({ variant, size }), width === "full" && "w-full", className)}
 			{...(href === undefined
 				? {}
 				: {
@@ -176,18 +202,14 @@ function Button({
 			{...props}
 			{...(held ? BUSY_GUARD : {})}
 		>
-			{busy && (
-				<Spinner
-					className={
-						reserve !== undefined && reserve.length > 0
-							? "absolute left-[3px] size-3"
-							: size === "sm" || size === "xs"
-								? "size-3"
-								: "size-3.5"
-					}
-				/>
-			)}
-			<ReservedLabel reserve={reserve}>{sending ? pendingLabel : children}</ReservedLabel>
+			{busy && !(reserve !== undefined && reserve.length > 0) && <Spinner className={spinnerSize} />}
+			<ReservedLabel
+				reserve={reserve}
+				spinnerSize={spinnerSize}
+				spinner={busy && reserve !== undefined && reserve.length > 0 ? <Spinner className={spinnerSize} /> : undefined}
+			>
+				{sending ? pendingLabel : children}
+			</ReservedLabel>
 		</ButtonPrimitive>
 	);
 }
