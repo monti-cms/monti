@@ -463,6 +463,16 @@ export const FolderRemoved: Story = {
 	},
 };
 
+/** An entry archived from its row's menu: it leaves the list, and the toast says so with its way back (02-6). */
+export const Archived: Story = {
+	loaders: site(),
+	play: async ({ canvasElement }) => {
+		await rightClick(canvasElement, "가을 사진 정리");
+		await userEvent.click(await body().findByRole("menuitem", { name: "보관" }, wait));
+		await waitFor(() => expect(body().getByRole("button", { name: "되돌리기" })).toBeTruthy(), wait);
+	},
+};
+
 /** A folder renamed in its row: the field over its name, the whole name picked (flow 5, step 04). */
 export const FolderRename: Story = {
 	loaders: site(),

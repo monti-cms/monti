@@ -807,7 +807,7 @@ export function RulesScreen({ state }: { state: "list" | "rule" | "tooltip" | "e
 						</Inline>
 					</FormField>
 					<Inline>
-						<Button variant="ghost-danger" size="sm">
+						<Button variant="outline-danger" size="sm">
 							<TrashCan aria-hidden />
 							규칙 지우기
 						</Button>
