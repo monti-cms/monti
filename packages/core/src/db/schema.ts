@@ -155,7 +155,8 @@ export interface RunTable {
 	status: RunStatus;
 	request: string;
 	context: Json<unknown>;
-	key_id: string | null;
+	/** The key it runs on. A key taken away later leaves its id here: the run then fails for want of it. */
+	key_id: string;
 	model: string;
 	thinking: string;
 	usage: Json<{ input: number; output: number; cached?: number }>;

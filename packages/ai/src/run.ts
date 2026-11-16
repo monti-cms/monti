@@ -188,7 +188,7 @@ export function endOf(stored: unknown): RunEnd | null {
 /** What a run tells the panel as it goes (doc 10, the event stream). */
 export type RunEvent =
 	/** The run opened: its conversation, and the model it runs on (a request at its place names it at its card's foot, AS-06). */
-	| { type: "run"; conversationId: string; runId: string; model: { keyId: string; model: string } | null }
+	| { type: "run"; conversationId: string; runId: string; model: { keyId: string; model: string } }
 	| { type: "text"; delta: string }
 	/** A tool call: when it starts, and when it is done or failed. `count` is how many things a read gave. */
 	| {
@@ -387,7 +387,7 @@ export async function* runAssistant(
 		type: "run",
 		conversationId,
 		runId: run.id,
-		model: run.key_id === null ? null : { keyId: run.key_id, model: run.model },
+		model: { keyId: run.key_id, model: run.model },
 	};
 
 	const stopper = new AbortController();
@@ -459,7 +459,7 @@ export async function* runAssistant(
 	};
 
 	try {
-		const key = run.key_id === null ? null : await monti.keys.open(run.key_id);
+		const key = await monti.keys.open(run.key_id);
 		if (!key) {
 			await finish({ status: "failed", error: { reason: "noKey", keyName: null } });
 			return;
@@ -1006,7 +1006,7 @@ type RunRow = {
 	/** A small run: it gets the small runs' tools (`smallRunTools`). */
 	small: boolean;
 	request: string;
-	key_id: string | null;
+	key_id: string;
 	model: string;
 	thinking: string;
 	usage: Usage;
