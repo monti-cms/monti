@@ -22,7 +22,17 @@ export const MONTI_CODE_THEMES = {
 				},
 			},
 			{
-				scope: ["keyword", "storage", "storage.type", "storage.modifier", "keyword.control"],
+				scope: [
+					"keyword",
+					"storage",
+					"storage.type",
+					"storage.modifier",
+					"keyword.control",
+					"keyword.operator.new",
+					"keyword.operator.expression",
+					"keyword.operator.logical.python",
+					"keyword.operator.wordlike",
+				],
 				settings: {
 					foreground: "#a8353c",
 				},
@@ -40,7 +50,7 @@ export const MONTI_CODE_THEMES = {
 				},
 			},
 			{
-				scope: ["entity.name.function", "support.function", "meta.function-call"],
+				scope: ["entity.name.function", "support.function"],
 				settings: {
 					foreground: "#1c1b18",
 					fontStyle: "bold",
@@ -59,7 +69,7 @@ export const MONTI_CODE_THEMES = {
 				},
 			},
 			{
-				scope: ["entity.other.attribute-name", "variable.parameter", "meta.object-literal.key"],
+				scope: ["entity.other.attribute-name"],
 				settings: {
 					foreground: "#336a4f",
 				},
@@ -119,7 +129,17 @@ export const MONTI_CODE_THEMES = {
 				},
 			},
 			{
-				scope: ["keyword", "storage", "storage.type", "storage.modifier", "keyword.control"],
+				scope: [
+					"keyword",
+					"storage",
+					"storage.type",
+					"storage.modifier",
+					"keyword.control",
+					"keyword.operator.new",
+					"keyword.operator.expression",
+					"keyword.operator.logical.python",
+					"keyword.operator.wordlike",
+				],
 				settings: {
 					foreground: "#e3918f",
 				},
@@ -137,7 +157,7 @@ export const MONTI_CODE_THEMES = {
 				},
 			},
 			{
-				scope: ["entity.name.function", "support.function", "meta.function-call"],
+				scope: ["entity.name.function", "support.function"],
 				settings: {
 					foreground: "#ecebe6",
 					fontStyle: "bold",
@@ -156,7 +176,7 @@ export const MONTI_CODE_THEMES = {
 				},
 			},
 			{
-				scope: ["entity.other.attribute-name", "variable.parameter", "meta.object-literal.key"],
+				scope: ["entity.other.attribute-name"],
 				settings: {
 					foreground: "#86c09c",
 				},

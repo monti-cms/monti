@@ -50,7 +50,9 @@ import { codeBasics, codeLines, codeText, mediaBlocks, tableBlocks, textBlocks }
 const root = fileURLToPath(new URL("..", import.meta.url));
 // The env files the way `monti` and Next read them, before the config reads the environment.
 loadEnvFiles(root, process.env, "development");
-const config = ((await import("../monti.config")) as { default: MontiConfig }).default;
+// Through the loader the `monti` command uses: the config imports the site's blocks, one of which imports a stylesheet that Node cannot read.
+const { createLoader } = await import("@monti-cms/core/load");
+const config = await createLoader(import.meta.url).import<MontiConfig>("../monti.config", { default: true });
 
 // Only the hook that fails on purpose: the dev server that answers `/hooks/ok` is not running while the seed is. Nothing answers
 // `/hooks/broken` either, so the seeded deliveries fail as refused connections; sent again while `pnpm dev` runs, they fail with its 503.

@@ -214,3 +214,9 @@ export function moveLineRules(
 		return now ? [{ ...rule, line: now.start }] : [];
 	});
 }
+
+/** What a piece's font style asks of a page (`CodeToken.fontStyle`, Shiki's flags: 1 italic, 2 bold): the one reading the site's and the editor's drawings share. */
+export const fontStyleCss = (fontStyle: number | undefined): { fontStyle?: "italic"; fontWeight?: 700 } => ({
+	...(fontStyle && fontStyle & 1 ? { fontStyle: "italic" as const } : {}),
+	...(fontStyle && fontStyle & 2 ? { fontWeight: 700 as const } : {}),
+});

@@ -7,7 +7,6 @@ import * as blocks from "./site-blocks.stories";
 const on = (doc: Doc) => scene<blocks.Loaded>({ loaders: blocks.site(doc) }, blocks.default);
 const body = () => page.getByRole("textbox", { name: "본문" });
 const p = (id: string, text: string): Block => ({ id, type: "paragraph", content: [{ type: "text", text }] });
-const px = (value: string) => Number.parseFloat(value);
 
 describe("the looks of the site's blocks in the editor (doc 18)", () => {
 	it("18-4 a callout in the editor is the bar and the icon, its words the body's size, and the space under its words is the space over its title", async () => {
@@ -34,20 +33,18 @@ describe("the looks of the site's blocks in the editor (doc 18)", () => {
 		const title = box.querySelector<HTMLElement>(".monti-block-callout-title") as HTMLElement;
 		const icon = getComputedStyle(title, "::before");
 		expect(icon.maskImage || icon.webkitMaskImage).toContain("svg");
+		// The icon is drawn in the text colour, as on the site.
+		expect(icon.backgroundColor).toBe(getComputedStyle(title).color);
 		// The words are the body's size, not a smaller one of the block's own (EE-06).
 		const outside = text.querySelector("p") as HTMLElement;
 		const inside = box.querySelector<HTMLElement>(".monti-block-callout-body p") as HTMLElement;
 		expect(getComputedStyle(inside).fontSize).toBe(getComputedStyle(outside).fontSize);
-		console.log(
-			"DOM",
-			box.outerHTML.replace(/ class="[^"]*"/g, (m) => (m.includes("monti-block") ? m : "")).slice(0, 1500),
-		);
 		const over = title.getBoundingClientRect().top - box.getBoundingClientRect().top;
 		const under = box.getBoundingClientRect().bottom - inside.getBoundingClientRect().bottom;
 		expect(Math.abs(under - over)).toBeLessThanOrEqual(2);
 	});
 
-	it("18-5 the open tab's panel in the editor has no box of its own", async () => {
+	it("18-5 the editor's tabs are the folder tabs: the open tab joins the box under it, the box has one frame and its top-left corner is square", async () => {
 		const made = on({
 			type: "doc",
 			blocks: [
@@ -63,14 +60,82 @@ describe("the looks of the site's blocks in the editor (doc 18)", () => {
 		});
 		await made.run();
 		await expect.element(body().getByText("npm install monti")).toBeVisible();
-		for (const panel of body()
-			.element()
-			.querySelectorAll<HTMLElement>(".monti-block-tabs-panel, .monti-block-tabs-content")) {
-			const style = getComputedStyle(panel);
-			expect(style.backgroundColor).toBe("rgba(0, 0, 0, 0)");
-			for (const side of ["Top", "Right", "Bottom", "Left"] as const) expect(px(style[`border${side}Width`])).toBe(0);
-			expect(px(style.paddingLeft)).toBe(0);
+		const text = body().element();
+		// The tabs' own view loads the first time they are drawn: until then it is the site's drawing.
+		await expect.poll(() => text.querySelector('[data-slot="folder-tabs-body"]'), { timeout: 15_000 }).not.toBeNull();
+		const open = text.querySelector<HTMLElement>('[data-slot="folder-tab-edit"]') as HTMLElement;
+		const other = text.querySelector<HTMLElement>('[data-slot="folder-tab"]') as HTMLElement;
+		const box = text.querySelector<HTMLElement>('[data-slot="folder-tabs-body"]') as HTMLElement;
+		// No line under the open tab (its bottom edge is its own ground, over the box's top line); the closed tab keeps its line.
+		expect(getComputedStyle(open).borderBottomColor).toBe(getComputedStyle(open).backgroundColor);
+		expect(getComputedStyle(other).borderBottomColor).not.toBe(getComputedStyle(other).backgroundColor);
+		expect(getComputedStyle(open).borderTopLeftRadius).toBe("8px");
+		expect(getComputedStyle(open).borderBottomLeftRadius).toBe("0px");
+		const frame = getComputedStyle(box);
+		for (const side of ["Top", "Right", "Bottom", "Left"] as const) expect(frame[`border${side}Width`]).toBe("1px");
+		expect(frame.borderTopLeftRadius).toBe("0px");
+		expect(frame.borderBottomRightRadius).toBe("8px");
+		expect(Math.round(open.getBoundingClientRect().bottom - box.getBoundingClientRect().top)).toBe(1);
+		// One frame: what is inside the box has no ground or line of its own.
+		for (const inside of box.querySelectorAll(".monti-block-tabs-content, .monti-block-tabs-content *")) {
+			const style = getComputedStyle(inside);
+			expect(style.backgroundColor, inside.className).toBe("rgba(0, 0, 0, 0)");
+			expect(style.borderTopWidth).toBe("0px");
 		}
+		// The row has no scroll of its own up and down.
+		const row = text.querySelector<HTMLElement>('[data-slot="folder-tabs-list"]') as HTMLElement;
+		expect(row.scrollHeight).toBeLessThanOrEqual(row.clientHeight + 1);
+	});
+
+	it("18-4 code in a callout is one grey box with no line of its own, as on the site", async () => {
+		const made = on({
+			type: "doc",
+			blocks: [
+				{
+					id: "callout",
+					type: "callout",
+					attrs: { tone: "tip", title: "알아 두세요" },
+					children: [
+						{
+							id: "k",
+							type: "codeBlock",
+							attrs: { language: "ts" },
+							content: [{ type: "text", text: "const a = 1;" }],
+						},
+					],
+				},
+			],
+		});
+		await made.run();
+		await expect.element(body().getByText("const a")).toBeVisible();
+		const callout = body().element().querySelector<HTMLElement>(".monti-block-callout-body") as HTMLElement;
+		const frame = callout.querySelector<HTMLElement>('[data-slot="code-frame"]') as HTMLElement;
+		for (let at: HTMLElement | null = frame; at && at !== callout; at = at.parentElement)
+			for (const side of ["Top", "Right", "Bottom", "Left"] as const)
+				expect(getComputedStyle(at)[`border${side}Width`], `${at.dataset.slot ?? at.tagName}`).toBe("0px");
+		expect(getComputedStyle(frame).backgroundColor).not.toBe("rgba(0, 0, 0, 0)");
+	});
+
+	it("17-4 a comment is italic and a function's name bold in the editor's code, from the theme's font style", async () => {
+		const made = on({
+			type: "doc",
+			blocks: [
+				{
+					id: "k",
+					type: "codeBlock",
+					attrs: { language: "ts" },
+					content: [{ type: "text", text: "// a note\nfunction add(a: number) {}" }],
+				},
+			],
+		});
+		await made.run();
+		await expect
+			.poll(() => body().element().querySelectorAll("[data-token]").length, { timeout: 15_000 })
+			.toBeGreaterThan(0);
+		const tokens = [...body().element().querySelectorAll<HTMLElement>("[data-token]")];
+		const word = (text: string) => tokens.find((token) => token.textContent?.includes(text)) as HTMLElement;
+		expect(getComputedStyle(word("a note")).fontStyle).toBe("italic");
+		expect(getComputedStyle(word("add")).fontWeight).toBe("700");
 	});
 
 	it("18-4 a footnote's number sits against the word it follows, with no gap of a space", async () => {

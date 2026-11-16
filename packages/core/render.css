@@ -4,15 +4,39 @@
  * `[data-theme="dark"]` or, with neither, a dark system setting. `CodeTools` of `@monti-cms/next` does the pressing (copy, code links).
  */
 
-/* The only colours of this file that are not the reader's own text colour: a site changes them here. */
+/*
+ * The only colours of this file that are not the reader's own text colour. They are Monti's design tokens (`--monti-fg-success` and the rest, which
+ * the admin's page defines) with the tokens' own values as the fallback for a site that does not load them, in light and in dark; a site changes
+ * them here.
+ */
 :where(:root) {
-	--monti-code-plus: #2da44e;
-	--monti-code-minus: #cf222e;
-	--monti-code-warning: #bf8700;
-	--monti-code-lit: #f2cc60;
-	--monti-code-tip-bg: #1c1b18;
-	--monti-code-tip-fg: #faf9f5;
+	--monti-code-plus: var(--monti-fg-success, #336a4f);
+	--monti-code-minus: var(--monti-fg-danger, #a8353c);
+	--monti-code-warning: var(--monti-fg-warning, #9a6200);
+	--monti-code-lit: var(--monti-fg-warning, #9a6200);
+	--monti-code-tip-bg: var(--monti-bg-emphasis, #1c1b18);
+	--monti-code-tip-fg: var(--monti-fg-on-emphasis, #faf9f5);
 	--monti-code-shadow: rgb(0 0 0 / 0.12);
+}
+:where(.dark, [data-theme="dark"]) {
+	--monti-code-plus: var(--monti-fg-success, #86c09c);
+	--monti-code-minus: var(--monti-fg-danger, #e3918f);
+	--monti-code-warning: var(--monti-fg-warning, #d9aa66);
+	--monti-code-lit: var(--monti-fg-warning, #d9aa66);
+	--monti-code-tip-bg: var(--monti-bg-emphasis, #c9c6bd);
+	--monti-code-tip-fg: var(--monti-fg-on-emphasis, #1a1917);
+	--monti-code-shadow: rgb(0 0 0 / 0.5);
+}
+@media (prefers-color-scheme: dark) {
+	:where(:root:not(.light, [data-theme="light"])) {
+		--monti-code-plus: var(--monti-fg-success, #86c09c);
+		--monti-code-minus: var(--monti-fg-danger, #e3918f);
+		--monti-code-warning: var(--monti-fg-warning, #d9aa66);
+		--monti-code-lit: var(--monti-fg-warning, #d9aa66);
+		--monti-code-tip-bg: var(--monti-bg-emphasis, #c9c6bd);
+		--monti-code-tip-fg: var(--monti-fg-on-emphasis, #1a1917);
+		--monti-code-shadow: rgb(0 0 0 / 0.5);
+	}
 }
 
 figure[data-code] {
@@ -268,16 +292,15 @@ figure[data-code] > [data-code-notes] {
 	}
 }
 
-/* Footnotes and file links: the numbers and the "↩" are pressable over 24px, and a file's kind and size are quieter than its name. */
+/*
+ * Footnotes and file links: the number and the "↩" are pressable over 24px, the target grown with padding and taken back with a negative margin so
+ * the number stays against its word; a file's kind and size are quieter than its name.
+ */
 sup > a[href^="#fn-"],
 [data-footnotes] a[href^="#fnref-"] {
 	display: inline-block;
-	min-width: 1.5rem;
-	text-align: center;
-}
-sup > a[href^="#fn-"] {
-	padding: 0.25rem 0;
-	margin: -0.25rem 0;
+	padding: 0.375rem 0.5625rem;
+	margin: -0.375rem -0.5625rem;
 }
 [data-footnotes] a[href^="#fnref-"] {
 	font-size: 1.125em;

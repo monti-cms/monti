@@ -4,6 +4,7 @@ import { linkedGroup } from "./body/links";
 import { codeLineId, drawCodeBlock } from "./code/draw";
 import type { CodeColors } from "./code/highlight";
 import { codeBlocksByRef, resolveCodeRef } from "./code/links";
+import { fileMeta } from "./media/file-words";
 import { imageAlignOf } from "./media/frame";
 import { imageFrameStyle, type SiteImage, type SiteMedia, siteImage } from "./media/site-image";
 
@@ -54,21 +55,6 @@ export type RenderOptions<Node> = {
 	/** The entry's language: handed to the site's block and mark components for the words they draw of their own, and the words the core draws itself (the code block's copy button). */
 	locale?: string;
 };
-
-/** What a file link adds to its name: the kind (the name's extension) and the size, `PDF · 120 KB`; nothing for a file that does not say. */
-export function fileMeta(file: Pick<SiteMedia, "name" | "mime" | "size">): string {
-	const kind = (/\.([a-z0-9]{1,5})$/i.exec(file.name)?.[1] ?? file.mime?.split("/")[1] ?? "").toUpperCase();
-	const size = file.size;
-	const bytes =
-		typeof size !== "number" || size <= 0
-			? ""
-			: size < 1024
-				? `${size} B`
-				: size < 1024 ** 2
-					? `${Math.round(size / 1024)} KB`
-					: `${(size / 1024 ** 2).toFixed(1)} MB`;
-	return [kind, bytes].filter(Boolean).join(" · ");
-}
 
 const text = (value: unknown) => (typeof value === "string" ? value : undefined);
 

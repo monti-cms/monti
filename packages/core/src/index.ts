@@ -154,6 +154,7 @@ export {
 	splitName,
 	WEB_LONGEST_SIDE,
 } from "./media/accept";
+export { fileKind, fileMeta, fileSize } from "./media/file-words";
 export {
 	type ImageAttrs,
 	type ImageCrop,

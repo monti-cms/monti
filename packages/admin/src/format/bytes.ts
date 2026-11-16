@@ -1,6 +1,2 @@
-/** A file's size as a person reads it: "2.1 MB", "340 KB". No bytes: anything under a kilobyte reads "1 KB". */
-export function bytes(size: number): string {
-	const megabyte = 1024 * 1024;
-	if (size >= megabyte) return `${(size / megabyte).toFixed(1)} MB`;
-	return `${Math.max(1, Math.round(size / 1024))} KB`;
-}
+// A file's size as a person reads it ("2.1 MB", "340 KB"; anything under a kilobyte reads "1 KB"): the core's one rule, which the site's file link words too.
+export { fileSize as bytes } from "@monti-cms/core";

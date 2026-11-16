@@ -214,6 +214,34 @@ describe("17-4 Monti's code colours", () => {
 		}
 	});
 
+	it("17-4 the theme's font style reaches the site's drawing: a comment is italic and a function's name bold, and a call's arguments are not", async () => {
+		const colors = await codeHighlighter({ languages: ["ts", "python"] });
+		const italic = colors.lines("// a note", "ts")[0].find((token) => token.text.includes("a note"));
+		expect(italic?.fontStyle).toBe(1);
+		const [def, call] = colors.lines("def add(a):\n    print(a, 1)", "python");
+		expect(def.find((token) => token.text === "add")?.fontStyle).toBe(2);
+		// The arguments of a call are not part of its name.
+		expect(call.filter((token) => token.text === "1" || token.text === "a").every((token) => !token.fontStyle)).toBe(
+			true,
+		);
+		const out = renderDocument(doc(code("// a note\nfunction add() {}")), { createElement: html, code: colors }).join(
+			"",
+		);
+		expect(out).toContain("fontStyle:italic");
+		expect(out).toContain("fontWeight:700");
+	});
+
+	it("17-4 the operators that are words are keywords and parameters and keys are not strings", async () => {
+		const colors = await codeHighlighter({ languages: ["ts"] });
+		const [line] = colors.lines("const o = { key: new Foo(a), p: typeof a }", "ts");
+		const colour = (text: string) => line.find((token) => token.text.trim() === text)?.light;
+		const keyword = colour("const");
+		expect(colour("new")).toBe(keyword);
+		expect(colour("typeof")).toBe(keyword);
+		const string = colors.lines('"s"', "ts")[0][1]?.light;
+		expect(colour("key")).not.toBe(string);
+	});
+
 	it("17-4 a shell sample is coloured by the shell's own grammar, not JavaScript's", async () => {
 		const colors = await codeHighlighter({ languages: ["bash", "ts"] });
 		const sample = "pnpm add katex # install";
@@ -231,7 +259,7 @@ describe("17-4 Monti's code colours", () => {
 });
 
 describe("17-9 the head of the site's code block", () => {
-	it("17-9 the head names the language, then the file; a block with neither has no head", async () => {
+	it("17-9 the head names the language, then the file; a block with no language says Plain text, as the editor's head does", async () => {
 		const colors = await codeHighlighter({ languages: ["ts"] });
 		const drawn = (attrs: Record<string, unknown>) =>
 			renderDocument(doc(code("a", attrs)), { createElement: html, code: colors }).join("");
@@ -241,7 +269,9 @@ describe("17-9 the head of the site's code block", () => {
 		expect(drawn({ language: "ts" })).toContain(
 			'<figcaption><span data-code-language="">TypeScript</span></figcaption>',
 		);
-		expect(drawn({ language: undefined })).not.toContain("<figcaption");
+		expect(drawn({ language: undefined })).toContain(
+			'<figcaption><span data-code-language="">Plain text</span></figcaption>',
+		);
 	});
 });
 

@@ -32,6 +32,7 @@ export {
 	type CodeTextEffect,
 	codeOf,
 	codeProblems,
+	fontStyleCss,
 	type LineEffect,
 	lineStarts,
 	moveLineEffects,
