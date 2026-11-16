@@ -82,6 +82,17 @@ describe("the looks of the site's blocks in the editor (doc 18)", () => {
 			expect(style.backgroundColor, inside.className).toBe("rgba(0, 0, 0, 0)");
 			expect(style.borderTopWidth).toBe("0px");
 		}
+		// A tab is never wider than its name: "pnpm" is its words and its padding in a row that fits.
+		const words = document.createRange();
+		words.selectNodeContents(other.querySelector("[data-name]") as Element);
+		const sides = getComputedStyle(other);
+		expect(other.getBoundingClientRect().width).toBeCloseTo(
+			words.getBoundingClientRect().width +
+				Number.parseFloat(sides.paddingLeft) +
+				Number.parseFloat(sides.paddingRight) +
+				2,
+			0,
+		);
 		// The row has no scroll of its own up and down.
 		const row = text.querySelector<HTMLElement>('[data-slot="folder-tabs-list"]') as HTMLElement;
 		expect(row.scrollHeight).toBeLessThanOrEqual(row.clientHeight + 1);

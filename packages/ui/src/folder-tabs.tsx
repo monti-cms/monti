@@ -35,7 +35,7 @@ function FolderTabsList({
 		<TabsPrimitive.List
 			data-slot="folder-tabs-list"
 			className={cn(
-				"relative z-1 -mb-px flex items-end gap-monti-4 overflow-x-auto overflow-y-hidden [&>:not([data-slot=folder-tabs-add])]:min-w-18 [&>:not([data-slot=folder-tabs-add])]:shrink",
+				"relative z-1 -mb-px flex items-end gap-monti-4 overflow-x-auto overflow-y-hidden [&>:has([data-slot=count])]:min-w-18 [&>:not([data-slot=folder-tabs-add])]:shrink",
 				className,
 			)}
 			onKeyDown={(event) => {
@@ -55,11 +55,19 @@ const FOLDER_TAB =
 	"inline-flex h-monti-control-lg items-center gap-monti-8 whitespace-nowrap rounded-t-monti-lg border border-monti-default pr-monti-16 pl-monti-12 text-monti-body [&_svg]:shrink-0";
 
 /**
- * A tab's name: the tabs of a full row shrink (to 4.5rem), so the name ends in "…" and says itself whole (`CutWords`); only when
+ * A tab's name. A tab is never wider than its name, and a full row shrinks its tabs only down to the least of their own width and 4.5rem: the cell holds the
+ * name (cut by `CutWords`, saying itself whole) and a hidden copy of it that is at most 4.5rem wide, which is the narrowest the cell's column goes. Only when
  * even the shrunk tabs do not fit does the row scroll.
  */
 function TabName({ children }: { children: React.ReactNode }) {
-	return <CutWords render={<span className="min-w-[2ch] truncate" />}>{children}</CutWords>;
+	return (
+		<span
+			data-name={typeof children === "string" ? children : undefined}
+			className="grid after:invisible after:col-start-1 after:row-start-1 after:block after:h-0 after:max-w-18 after:overflow-clip after:whitespace-nowrap after:content-[attr(data-name)] [&>*]:col-start-1 [&>*]:row-start-1"
+		>
+			<CutWords render={<span className="min-w-0 truncate" />}>{children}</CutWords>
+		</span>
+	);
 }
 
 /** What moves a tab while it is dragged, or while the others make room for it. */
@@ -103,7 +111,10 @@ function FolderTab({
 			style={motion}
 			className={cn(
 				FOLDER_TAB,
-				"data-active:border-b-(color:--monti-bg-page) max-w-full cursor-pointer overflow-hidden bg-monti-muted text-monti-muted outline-none transition-colors hover:text-monti-default focus-visible:ring-2 focus-visible:ring-monti-contrast/60 focus-visible:ring-inset data-active:bg-monti-page data-active:font-semibold data-active:text-monti-default",
+				"data-active:border-b-(color:--monti-bg-page) max-w-full cursor-pointer bg-monti-muted text-monti-muted outline-none transition-colors hover:text-monti-default focus-visible:ring-2 focus-visible:ring-monti-contrast/60 focus-visible:ring-inset data-active:bg-monti-page data-active:font-semibold data-active:text-monti-default",
+				// A tab that holds a count (and holds its grip and lock) is clipped by its own box, which the row gives 4.5rem at the least; one with its name only goes
+				// down to its name's own floor (`TabName`).
+				count !== undefined && "overflow-hidden",
 				dragging && SLOT,
 				dropTarget && "bg-monti-selected text-monti-default ring-[1.5px] ring-monti-contrast ring-inset",
 				className,

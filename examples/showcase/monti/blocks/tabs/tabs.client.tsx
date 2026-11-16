@@ -62,8 +62,8 @@ export function TabsView({
 						onClick={() => setActive(index)}
 						onKeyDown={(event) => onKeyDown(event, index)}
 					>
-						<span className="monti-block-tabs-name" title={label}>
-							{label}
+						<span className="monti-block-tabs-name" data-name={label} title={label}>
+							<span className="monti-block-tabs-text">{label}</span>
 						</span>
 					</button>
 				))}

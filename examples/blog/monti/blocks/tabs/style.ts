@@ -58,7 +58,7 @@ export const style = `/*
 /*
  * The tabs' look: the owner's folder tabs (doc 18, the owner: the open tab has no line under it), the same in the editor (FolderTabs of the admin) and on the site. The open tab has the
  * page's own ground and no line under it, so it joins the box under the tabs; the others are closed and grey. The box has one frame (the tab's words are
- * not in a second box), and its top-left corner is square where the open tab joins it. The tabs of a full row shrink first (a name ends in an ellipsis and is said whole by the title), and only when even the shrunk tabs do not fit does the row scroll
+ * not in a second box), and its top-left corner is square where the open tab joins it. The tabs of a full row shrink first, never wider than their names and never under the least of their own width and 4.5rem (a name ends in an ellipsis and is said whole by the title), and only when even the shrunk tabs do not fit does the row scroll
  * sideways, and never up and down. The site's own: change it as the site likes (doc 18); --monti-block-ground is the page's ground, which the open tab and its joint take.
  */
 :where(.dark, [data-theme="dark"]) .monti-block-tabs {
@@ -85,8 +85,6 @@ export const style = `/*
 .monti-block-tabs-tab {
 	display: inline-flex;
 	flex: 0 1 auto;
-	min-width: 4.5rem;
-	overflow: hidden;
 	align-items: center;
 	height: 2.25rem;
 	padding: 0 1rem 0 0.75rem;
@@ -99,8 +97,22 @@ export const style = `/*
 	white-space: nowrap;
 	cursor: pointer;
 }
+/* The name's cell: the name, and a hidden copy at most 4.5rem wide that is the narrowest the cell goes. A tab is never wider than its name. */
 .monti-block-tabs-name {
-	min-width: 2ch;
+	display: grid;
+}
+.monti-block-tabs-name::after {
+	content: attr(data-name);
+	grid-area: 1 / 1;
+	height: 0;
+	max-width: 4.5rem;
+	overflow: clip;
+	visibility: hidden;
+	white-space: nowrap;
+}
+.monti-block-tabs-text {
+	grid-area: 1 / 1;
+	min-width: 0;
 	overflow: hidden;
 	text-overflow: ellipsis;
 }

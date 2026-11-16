@@ -184,13 +184,39 @@ describe.each(["light", "dark"] as const)("18-2 the tabs' look, in the %s page",
 		expect(Math.round(open.getBoundingClientRect().bottom - panel.getBoundingClientRect().top)).toBe(1);
 	});
 
+	it("18-2 a short name keeps its natural width: a tab is never wider than its name, in a row that fits and in a full one", () => {
+		const named = (label: string, at: number): Block => ({
+			id: `t${at}`,
+			type: "tab",
+			attrs: { label },
+			children: [p(`tp${at}`, "Panel")],
+		});
+		const labels = ["npm", "A very long name of a tab", "Another very long name of a tab"];
+		const natural = (tab: HTMLElement) => {
+			const words = document.createRange();
+			words.selectNodeContents(tab.querySelector(".monti-block-tabs-text") as Element);
+			const box = style(tab);
+			return words.getBoundingClientRect().width + px(box.paddingLeft) + px(box.paddingRight) + 2;
+		};
+		for (const width of [900, 320]) {
+			const page = draw(doc({ id: "tabs", type: "tabs", children: labels.map(named) }), { width, mode });
+			const short = page.querySelector<HTMLElement>('[role="tab"]') as HTMLElement;
+			// "npm" is its own width; at 900 nothing is cut, and at 320 the long names give way before it does.
+			expect(short.getBoundingClientRect().width).toBeCloseTo(natural(short), 0);
+			root?.unmount();
+			host?.remove();
+			host = null;
+			root = null;
+		}
+	});
+
 	it("18-2 the tabs of a full row shrink first, their names ending in an ellipsis, and the row does not scroll while they fit", () => {
 		const page = draw(doc(tabs(3)), { width: 320, mode });
 		const list = page.querySelector<HTMLElement>('[role="tablist"]') as HTMLElement;
 		expect(list.scrollWidth).toBeLessThanOrEqual(list.clientWidth + 1);
-		const names = [...page.querySelectorAll<HTMLElement>(".monti-block-tabs-name")];
+		const names = [...page.querySelectorAll<HTMLElement>(".monti-block-tabs-text")];
 		expect(names.some((name) => name.scrollWidth > name.clientWidth)).toBe(true);
-		expect(names.every((name) => name.title !== "")).toBe(true);
+		expect(names.every((name) => (name.parentElement as HTMLElement).title !== "")).toBe(true);
 	});
 
 	it("18-2 tabs that do not fit even shrunk scroll sideways in their row and never up and down, and not the page", () => {
