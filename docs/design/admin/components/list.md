@@ -112,7 +112,7 @@
 
 ### 코드
 
-`RowLink`로 폴더에 들어가면 고른 것은 풀린다. `ListHead`의 이름은 메뉴가 있거나 옮길 수 있으면 버튼이고, 둘 다 없으면 글자다(미디어 목록의 "치수"). `LIST_COLUMN_SIZE`는 열 종류마다 시작 너비이고, `measure`(104px)는 mono로 쓴 그림 크기("3000×2000")의 자리이고, `time`(120px)은 mono로 쓴 날짜와 시각("10. 26 10:58")의 자리다. `ListHead`와 `BulkBar`는 `SelectAll` 타입의 `selectAll` prop을 받는다(`state`는 `none`, `some`, `all`). `SelectAllState`와 함께 `@monti-cms/ui`에서 내보낸다.
+`RowLink`로 폴더에 들어가면 고른 것은 풀린다. 목록 행의 링크는 모두 한 번 누르면 간다(`linkTo`): 두 번 누름(더블 클릭)의 둘째 누름은 아무 데도 가지 않는다. 첫 누름이 이미 갔고, 둘째는 그 사이 포인터 밑에 온 다른 행에 떨어지기 때문이다(폴더 행을 열면 그 안의 파일 행이 그 자리에 온다). 어느 목록이든 같다(MD-03, 만들며 정함 (2026-11-16)). `ListHead`의 이름은 메뉴가 있거나 옮길 수 있으면 버튼이고, 둘 다 없으면 글자다(미디어 목록의 "치수"). `LIST_COLUMN_SIZE`는 열 종류마다 시작 너비이고, `measure`(104px)는 mono로 쓴 그림 크기("3000×2000")의 자리이고, `time`(120px)은 mono로 쓴 날짜와 시각("10. 26 10:58")의 자리다. `ListHead`와 `BulkBar`는 `SelectAll` 타입의 `selectAll` prop을 받는다(`state`는 `none`, `some`, `all`). `SelectAllState`와 함께 `@monti-cms/ui`에서 내보낸다.
 
 ## 일괄 막대 (`.mt-bulk`)
 

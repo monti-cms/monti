@@ -11,49 +11,28 @@ import {
 } from "@monti-cms/core";
 import {
 	ChangeDot,
-	Combobox,
-	ComboboxChip,
-	ComboboxChips,
-	ComboboxChipsInput,
-	ComboboxContent,
-	ComboboxEmpty,
-	ComboboxInput,
-	ComboboxItem,
-	ComboboxList,
-	DragHandle,
 	FormField,
 	FormFieldLabel,
 	FormFieldWas,
 	IconButton,
 	Inline,
-	Input,
 	Label,
-	List,
-	MenuValue,
 	Option,
-	OrderedRow,
 	PropertyGroup,
 	PropertyPanel,
-	Sortable,
-	SortableList,
-	Stack,
-	Switch,
 	Text,
-	Textarea,
 	TextButton,
-	useComboboxAnchor,
-	useSortableItem,
 } from "@monti-cms/ui";
-import { Close, Renew } from "@monti-cms/ui/icons";
-import { useMemo, useRef, useState } from "react";
+import { Renew } from "@monti-cms/ui/icons";
+import { useRef, useState } from "react";
 import { FillAction, FillFailed } from "../../assistant/fill-action";
 import { type Fills, isUndoKey } from "../../assistant/use-fill";
 import { ALT_MAX } from "../../editor/alt-fields";
 import type { FieldUploads } from "../../media/use-field-uploads";
 import { useAdmin } from "../../operations/admin-context";
 import type { EntryView } from "../../plugins";
-import { PickOne } from "../settings/pick-one";
 import { type Layout, type SchemaRead, shownLayout } from "../settings/schema-draft";
+import { FieldInput, FieldToggle, isToggle } from "./field-input";
 import { MediaField, SharedMediaValue } from "./media-field";
 import { FieldChange } from "./translation";
 import type { EntryEditorModel, EntryRead } from "./use-entry-editor";
@@ -119,57 +98,6 @@ function runs(entries: Layout[number]["fields"]) {
 	return out;
 }
 
-/** A select that holds many values: the picked ones as chips, the input after them to add more. */
-function PickMany({
-	id,
-	items,
-	value,
-	onChange,
-	placeholder,
-	disabled,
-	proposal,
-}: {
-	id: string;
-	items: { value: string; label: string }[];
-	value: string[];
-	onChange: (value: string[]) => void;
-	placeholder: string;
-	disabled: boolean;
-	/** The value shown is one the assistant proposed and nobody has taken or changed yet. */
-	proposal?: boolean;
-}) {
-	const { t } = useAdmin();
-	const anchor = useComboboxAnchor();
-	const label = (option: string) => items.find((item) => item.value === option)?.label ?? option;
-	return (
-		<Combobox
-			items={items.map((item) => item.value)}
-			multiple
-			value={value}
-			onValueChange={(next) => onChange(next as string[])}
-			itemToStringLabel={(option: string) => label(option)}
-			disabled={disabled}
-		>
-			<ComboboxChips ref={anchor} size="md" proposal={proposal}>
-				{value.map((option) => (
-					<ComboboxChip key={option}>{label(option)}</ComboboxChip>
-				))}
-				<ComboboxChipsInput id={id} placeholder={value.length === 0 ? placeholder : undefined} />
-			</ComboboxChips>
-			<ComboboxContent anchor={anchor}>
-				<ComboboxEmpty>{t("entry.noOption")}</ComboboxEmpty>
-				<ComboboxList>
-					{(option: string) => (
-						<ComboboxItem key={option} value={option}>
-							{label(option)}
-						</ComboboxItem>
-					)}
-				</ComboboxList>
-			</ComboboxContent>
-		</Combobox>
-	);
-}
-
 /** What a pick shows as: its option's name, a comma between several. */
 function pickNames(value: unknown, labels: Record<string, string> = {}) {
 	return (Array.isArray(value) ? value : value === undefined ? [] : [value])
@@ -201,351 +129,6 @@ function SharedRelationValue({
 		<Text variant="note" tone={shown ? undefined : "faint"}>
 			{shown || empty}
 		</Text>
-	);
-}
-
-function SortableOrderedRow({
-	id,
-	label,
-	onRemove,
-	removeLabel,
-	moveLabel,
-	disabled,
-	proposal,
-}: {
-	id: string;
-	label: string;
-	onRemove: () => void;
-	removeLabel: string;
-	moveLabel: string;
-	disabled?: boolean;
-	/** The row is of a value the assistant proposed: its words are blue, as a proposed input's. */
-	proposal?: boolean;
-}) {
-	const item = useSortableItem(id, { disabled });
-	return (
-		<OrderedRow
-			ref={item.ref}
-			handle={<DragHandle {...item.handle} aria-label={moveLabel} />}
-			drag={{ ...item.motion, active: item.held }}
-			actions={
-				!disabled && (
-					<IconButton size="xs" variant="ghost" label={removeLabel} onClick={onRemove}>
-						<Close aria-hidden />
-					</IconButton>
-				)
-			}
-		>
-			<Text tone={proposal ? "proposal" : undefined}>{label}</Text>
-		</OrderedRow>
-	);
-}
-
-function RelationSingleInput({
-	id,
-	collection,
-	field,
-	locale,
-	entryGroup,
-	createMissing,
-	required,
-	value,
-	onChange,
-	placeholder,
-	disabled,
-	proposal,
-}: {
-	id: string;
-	collection: string;
-	field: string;
-	locale?: string;
-	entryGroup?: string;
-	createMissing?: boolean;
-	required?: boolean;
-	value: string | null;
-	onChange: (value: string | null) => void;
-	placeholder: string;
-	disabled: boolean;
-	/** The value shown is one the assistant proposed and nobody has taken or changed yet. */
-	proposal?: boolean;
-}) {
-	const { t } = useAdmin();
-	const rel = useRelationField({ collection, field, locale, entryGroup, createMissing });
-	// The input shows the chosen item's name, and what the person types while they type: the search alone would leave it empty.
-	const [typing, setTyping] = useState(false);
-
-	const items = useMemo(() => {
-		const list = rel.options.map((o) => o.group);
-		if (rel.createToken) list.push(rel.createToken);
-		return list;
-	}, [rel.options, rel.createToken]);
-
-	return (
-		<Combobox
-			items={items}
-			value={value}
-			onValueChange={(next) => {
-				onChange(next ? String(next) : null);
-				rel.setSearch("");
-				setTyping(false);
-			}}
-			// Empty until the options are read: the name is not known before, and the stored id is no name.
-			inputValue={typing ? rel.search : value && rel.read.data ? rel.labelOf(value) : ""}
-			onInputValueChange={(next) => {
-				setTyping(true);
-				rel.setSearch(next);
-			}}
-			onOpenChange={(open) => {
-				if (open) return;
-				setTyping(false);
-				rel.setSearch("");
-			}}
-			itemToStringLabel={(item) =>
-				item === null ? "" : item === rel.createToken ? (rel.createLabel ?? item) : rel.labelOf(item)
-			}
-			disabled={disabled}
-		>
-			<ComboboxInput
-				id={id}
-				size="md"
-				placeholder={placeholder}
-				showClear={!required && Boolean(value)}
-				proposal={proposal}
-			/>
-			<ComboboxContent>
-				<ComboboxEmpty>{t("entry.noOption")}</ComboboxEmpty>
-				<ComboboxList>
-					{(group: string) => {
-						const isCreate = group === rel.createToken;
-						if (isCreate) {
-							return (
-								<ComboboxItem key={group} value={group}>
-									{rel.createLabel}
-								</ComboboxItem>
-							);
-						}
-						const opt = rel.allOptions.find((o) => o.group === group);
-						const unpublished = rel.targetKind === "document" && opt && !opt.published;
-						return (
-							<ComboboxItem key={group} value={group}>
-								{rel.labelOf(group)}
-								{/* A draft says so at the row's end, as the link card's rows do (menu.md). */}
-								{unpublished && <MenuValue>{t("relations.unpublished")}</MenuValue>}
-							</ComboboxItem>
-						);
-					}}
-				</ComboboxList>
-			</ComboboxContent>
-		</Combobox>
-	);
-}
-
-function RelationManyInput({
-	id,
-	collection,
-	field,
-	locale,
-	entryGroup,
-	createMissing,
-	value,
-	onChange,
-	placeholder,
-	disabled,
-	proposal,
-}: {
-	id: string;
-	collection: string;
-	field: string;
-	locale?: string;
-	entryGroup?: string;
-	createMissing?: boolean;
-	value: string[];
-	onChange: (value: string[]) => void;
-	placeholder: string;
-	disabled: boolean;
-	/** The value shown is one the assistant proposed and nobody has taken or changed yet. */
-	proposal?: boolean;
-}) {
-	const { t } = useAdmin();
-	const anchor = useComboboxAnchor();
-	const rel = useRelationField({ collection, field, locale, entryGroup, createMissing });
-
-	const items = useMemo(() => {
-		const list = rel.options.map((o) => o.group).filter((g) => !value.includes(g));
-		if (rel.createToken && !value.includes(rel.createToken)) list.push(rel.createToken);
-		return list;
-	}, [rel.options, rel.createToken, value]);
-
-	return (
-		<Combobox
-			items={items}
-			multiple
-			value={value}
-			onValueChange={(next) => {
-				onChange(next as string[]);
-				rel.setSearch("");
-			}}
-			inputValue={rel.search}
-			onInputValueChange={rel.setSearch}
-			itemToStringLabel={(item) =>
-				item === null ? "" : item === rel.createToken ? (rel.createLabel ?? item) : rel.labelOf(item)
-			}
-			disabled={disabled}
-		>
-			<ComboboxChips ref={anchor} size="md" proposal={proposal}>
-				{value.map((item) => (
-					// A field that cannot be changed offers no way to take a value out.
-					<ComboboxChip key={item} showRemove={!disabled}>
-						{rel.labelOf(item)}
-					</ComboboxChip>
-				))}
-				<ComboboxChipsInput id={id} placeholder={value.length === 0 ? placeholder : undefined} />
-			</ComboboxChips>
-			<ComboboxContent anchor={anchor}>
-				<ComboboxEmpty>{t("entry.noOption")}</ComboboxEmpty>
-				<ComboboxList>
-					{(group: string) => {
-						const isCreate = group === rel.createToken;
-						if (isCreate) {
-							return (
-								<ComboboxItem key={group} value={group}>
-									{rel.createLabel}
-								</ComboboxItem>
-							);
-						}
-						const opt = rel.allOptions.find((o) => o.group === group);
-						const unpublished = rel.targetKind === "document" && opt && !opt.published;
-						return (
-							<ComboboxItem key={group} value={group}>
-								{rel.labelOf(group)}
-								{/* A draft says so at the row's end, as the link card's rows do (menu.md). */}
-								{unpublished && <MenuValue>{t("relations.unpublished")}</MenuValue>}
-							</ComboboxItem>
-						);
-					}}
-				</ComboboxList>
-			</ComboboxContent>
-		</Combobox>
-	);
-}
-
-function RelationOrderedManyInput({
-	id,
-	collection,
-	field,
-	locale,
-	entryGroup,
-	createMissing,
-	value,
-	onChange,
-	placeholder,
-	disabled,
-	proposal,
-}: {
-	id: string;
-	collection: string;
-	field: string;
-	locale?: string;
-	entryGroup?: string;
-	createMissing?: boolean;
-	value: string[];
-	onChange: (value: string[]) => void;
-	placeholder: string;
-	disabled: boolean;
-	/** The value shown is one the assistant proposed and nobody has taken or changed yet. */
-	proposal?: boolean;
-}) {
-	const { t } = useAdmin();
-	const rel = useRelationField({ collection, field, locale, entryGroup, createMissing });
-
-	const selectableOptions = useMemo(() => {
-		const list = rel.options.map((o) => o.group).filter((g) => !value.includes(g));
-		if (rel.createToken && !value.includes(rel.createToken)) list.push(rel.createToken);
-		return list;
-	}, [rel.options, rel.createToken, value]);
-
-	return (
-		<Stack gap={8}>
-			<Combobox
-				items={selectableOptions}
-				value={null}
-				onValueChange={(next) => {
-					if (next) {
-						onChange([...value, String(next)]);
-						rel.setSearch("");
-					}
-				}}
-				inputValue={rel.search}
-				onInputValueChange={rel.setSearch}
-				itemToStringLabel={(item) =>
-					item === null ? "" : item === rel.createToken ? (rel.createLabel ?? item) : rel.labelOf(item)
-				}
-				disabled={disabled}
-			>
-				<ComboboxInput id={id} size="md" placeholder={placeholder} showClear={false} proposal={proposal} />
-				<ComboboxContent>
-					<ComboboxEmpty>{t("entry.noOption")}</ComboboxEmpty>
-					<ComboboxList>
-						{(group: string) => {
-							const isCreate = group === rel.createToken;
-							if (isCreate) {
-								return (
-									<ComboboxItem key={group} value={group}>
-										{rel.createLabel}
-									</ComboboxItem>
-								);
-							}
-							const opt = rel.allOptions.find((o) => o.group === group);
-							const unpublished = rel.targetKind === "document" && opt && !opt.published;
-							return (
-								<ComboboxItem key={group} value={group}>
-									{rel.labelOf(group)}
-									{/* A draft says so at the row's end, as the link card's rows do (menu.md). */}
-									{unpublished && <MenuValue>{t("relations.unpublished")}</MenuValue>}
-								</ComboboxItem>
-							);
-						}}
-					</ComboboxList>
-				</ComboboxContent>
-			</Combobox>
-			{value.length > 0 && (
-				<Sortable
-					nameOf={(item) => rel.labelOf(String(item))}
-					onDrop={({ active, over }) => {
-						if (!over) return;
-						const from = value.indexOf(String(active.id));
-						const to = value.indexOf(String(over.id));
-						if (from === -1 || to === -1 || from === to) return;
-						const next = [...value];
-						const [moved] = next.splice(from, 1);
-						if (moved) next.splice(to, 0, moved);
-						onChange(next);
-					}}
-					overlay={(active) => (
-						<OrderedRow drag={{ active: true }} handle={<DragHandle aria-hidden tabIndex={-1} />}>
-							<Text>{rel.labelOf(String(active.id))}</Text>
-						</OrderedRow>
-					)}
-				>
-					<SortableList id={id} items={value}>
-						<List marker="none">
-							{value.map((item) => (
-								<SortableOrderedRow
-									key={item}
-									id={item}
-									label={rel.labelOf(item)}
-									moveLabel={t("relations.move", { title: rel.labelOf(item) })}
-									removeLabel={t("relations.remove")}
-									onRemove={() => onChange(value.filter((g) => g !== item))}
-									disabled={disabled}
-									proposal={proposal}
-								/>
-							))}
-						</List>
-					</SortableList>
-				</Sortable>
-			)}
-		</Stack>
 	);
 }
 
@@ -742,8 +325,9 @@ export function EntryProperties({
 					: "";
 		const was = proposed && heldWords ? <FormFieldWas>{heldWords}</FormFieldWas> : null;
 		const count =
-			// Not while a proposal waits in the field: its label row holds the proposal's dot and "discard" (screens/editor.md).
-			def.kind === "text" && def.max !== undefined && focused === key && !proposed ? (
+			// Not while a proposal waits in the field: its label row holds the proposal's dot and "discard" (screens/editor.md). Not in a
+			// field that is only read: nothing is typed there to count.
+			def.kind === "text" && def.max !== undefined && focused === key && !proposed && !readOnly ? (
 				<Text variant="micro" tone="subtle">
 					{t("entry.count", { count: text.length, max: def.max })}
 				</Text>
@@ -764,7 +348,11 @@ export function EntryProperties({
 			proposal,
 			entry: entryView(),
 		});
-		const note = own?.Note ? <own.Note {...ownProps()} /> : count;
+		// A field that is only read has nothing beside its name that is about writing it: no count of its own, and none a plugin's input
+		// brings (the host's rule, so every plugin's field follows it).
+		const note = readOnly ? undefined : own?.Note ? <own.Note {...ownProps()} /> : count;
+		// Only read, an ordered relation with items is a list, which no label can point at with `htmlFor`: the list is named by the label.
+		const listOnly = !own && readOnly && def.kind === "relation" && def.many && def.ordered && hasValue(value);
 		const changeMark = changes?.marks.find((mark) => mark.field === key);
 		const shownInCard = (shownValue: unknown) =>
 			def.kind === "media" ? (
@@ -873,15 +461,15 @@ export function EntryProperties({
 			);
 		// A choice with one option, on or off (doc 19): a switch at the end of the field's row, the way every switch stands. A field that
 		// names an input of its own is drawn with that one instead, as any other kind is.
-		if (!own && def.kind === "select" && def.control === "toggle") {
-			const [on] = def.options;
+		if (!own && isToggle(def)) {
 			const toggle = (
-				<Switch
+				<FieldToggle
+					def={def}
 					id={id}
-					checked={value === on}
-					disabled={readOnly}
+					value={value}
+					onChange={(next) => setField(path, next)}
+					readOnly={readOnly}
 					proposal={proposed !== null}
-					onCheckedChange={(checked) => setField(path, checked ? on : null)}
 				/>
 			);
 			return (
@@ -929,132 +517,30 @@ export function EntryProperties({
 		const input = () => {
 			// The field's own input (doc 14). A media field keeps its own: it is drawn above, with its window and its picture's words.
 			if (own) return <own.Input {...ownProps()} />;
-			if (def.kind === "slug")
-				return (
-					<Input
-						id={id}
-						size="md"
-						mono
-						value={text}
-						placeholder={empty}
-						disabled={readOnly}
-						proposal={proposal}
-						onChange={(event) => setField(path, event.target.value)}
-						action={
-							readOnly || editor.title.trim() === "" ? undefined : (
-								<IconButton label={t("entry.slugAgain")} onClick={() => setField(path, slugify(editor.title))}>
-									<Renew aria-hidden />
-								</IconButton>
-							)
-						}
-					/>
-				);
-			if (def.kind === "text")
-				return def.multiline ? (
-					<Textarea
-						id={id}
-						size="md"
-						value={text}
-						placeholder={empty}
-						maxLength={def.max}
-						disabled={readOnly}
-						proposal={proposal}
-						onChange={(event) => setField(path, event.target.value)}
-						{...focus}
-					/>
-				) : (
-					<Input
-						id={id}
-						size="md"
-						value={text}
-						placeholder={empty}
-						maxLength={def.max}
-						disabled={readOnly}
-						proposal={proposal}
-						onChange={(event) => setField(path, event.target.value)}
-						{...focus}
-					/>
-				);
-			if (def.kind === "select") {
-				const labels = values[key]?.optionLabels ?? {};
-				// A stored word the field no longer lists (older data, a schema file edited by hand) is shown as it is, never as another option.
-				const items = [...def.options, ...strays].map((option) => ({ value: option, label: labels[option] ?? option }));
-				return def.many ? (
-					<PickMany
-						id={id}
-						items={items}
-						value={Array.isArray(value) ? (value as string[]) : []}
-						onChange={(next) => setField(path, next)}
-						placeholder={empty}
-						disabled={readOnly}
-						proposal={proposal}
-					/>
-				) : (
-					<PickOne
-						id={id}
-						size="md"
-						items={items}
-						value={typeof value === "string" ? value : null}
-						onChange={(next) => setField(path, next)}
-						placeholder={empty}
-						disabled={readOnly}
-						proposal={proposal}
-					/>
-				);
-			}
-			if (def.kind === "relation") {
-				if (def.many && def.ordered) {
-					return (
-						<RelationOrderedManyInput
-							id={id}
-							collection={collection}
-							field={key}
-							locale={currentLocale}
-							entryGroup={entryGroup}
-							createMissing={def.createMissing}
-							value={Array.isArray(value) ? (value as string[]) : []}
-							onChange={(next) => setField(path, next)}
-							placeholder={empty}
-							disabled={readOnly}
-							proposal={proposal}
-						/>
-					);
-				}
-				if (def.many) {
-					return (
-						<RelationManyInput
-							id={id}
-							collection={collection}
-							field={key}
-							locale={currentLocale}
-							entryGroup={entryGroup}
-							createMissing={def.createMissing}
-							value={Array.isArray(value) ? (value as string[]) : []}
-							onChange={(next) => setField(path, next)}
-							placeholder={empty}
-							disabled={readOnly}
-							proposal={proposal}
-						/>
-					);
-				}
-				return (
-					<RelationSingleInput
-						id={id}
-						collection={collection}
-						field={key}
-						locale={currentLocale}
-						entryGroup={entryGroup}
-						createMissing={def.createMissing}
-						required={def.required}
-						value={typeof value === "string" ? value : null}
-						onChange={(next) => setField(path, next)}
-						placeholder={empty}
-						disabled={readOnly}
-						proposal={proposal}
-					/>
-				);
-			}
-			return null;
+			// The kind's input, the same one the settings' preview draws (field-input.tsx).
+			return (
+				<FieldInput
+					def={def}
+					id={id}
+					value={value}
+					onChange={(next) => setField(path, next)}
+					placeholder={empty}
+					readOnly={readOnly}
+					proposal={proposal}
+					optionLabels={values[key]?.optionLabels}
+					strays={strays}
+					relation={{ collection, field: key, locale: currentLocale, entryGroup }}
+					labelledBy={listOnly ? `${id}-label` : undefined}
+					slugAction={
+						readOnly || editor.title.trim() === "" ? undefined : (
+							<IconButton label={t("entry.slugAgain")} onClick={() => setField(path, slugify(editor.title))}>
+								<Renew aria-hidden />
+							</IconButton>
+						)
+					}
+					textProps={focus}
+				/>
+			);
 		};
 		return (
 			<FormField
@@ -1085,7 +571,7 @@ export function EntryProperties({
 				}}
 			>
 				<FormFieldLabel
-					htmlFor={id}
+					{...(listOnly ? { id: `${id}-label` } : { htmlFor: id })}
 					required={marksRequired && required(key)}
 					changed={proposedLabel}
 					// While a proposal waits the row is the proposal's alone: no count, no mark of the source's change beside "discard".

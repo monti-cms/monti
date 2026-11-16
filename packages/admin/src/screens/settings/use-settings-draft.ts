@@ -308,7 +308,7 @@ export function useSettingsDraft() {
 						: (() => {
 								const list = place.what === "block" ? catalog.data?.blocks : catalog.data?.marks;
 								const found = list?.find((each) => each.type === place.name);
-								return found ? t(typeof found.label === "string" ? found.label : found.label.key) : place.name;
+								return found ? t(found.label) : place.name;
 							})();
 				add(path, { tab: "collections", collection: c, name: item, tag: t("changes.changed"), tone: "warning" }, path);
 			}

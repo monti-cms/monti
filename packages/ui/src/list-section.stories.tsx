@@ -33,7 +33,7 @@ export const Keys: Story = {
 			<ListSectionRow
 				title="Anthropic 개인"
 				titleCount="··· a1b2"
-				meta="이번 달 1.24M 토큰"
+				meta="1.24M 토큰"
 				actions={
 					<>
 						<Button variant="ghost" size="sm">

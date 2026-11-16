@@ -74,6 +74,8 @@ export default async function Post({ params }: { params: Promise<{ slug: string 
 | `AdminPage` | `@monti-cms/next/admin` | 관리자 화면을 그린다(`siteName`, 사이트의 블록 정의 `blocks`). 관리자 API의 주소는 이 페이지의 주소 아래 `api`다. 화면의 스타일(`@monti-cms/admin/styles.css`)을 싣고, 검색 엔진이 읽지 않게 한다(`noindex`). 화면은 브라우저에서만 그린다 |
 | `entryPage(reader, { collection, slug, locale? })` | `@monti-cms/next` | 글 하나를 읽는다. 없으면 `notFound()`, 옛 주소면 `permanentRedirect()`, 미리보기가 켜져 있으면 고치는 본 |
 | `previewPage(reader, { collection, slug, locale? })` | `@monti-cms/next` | 사이트가 따로 만든 미리보기 페이지가 쓴다. 미리보기를 연 사람에게만 고치는 본을 주고, 그 밖에는 `notFound()` |
+| `languageLinks(locales, page)` · `homePath(locales, locale)` | `@monti-cms/next` | 언어 바꾸기의 링크. 언어마다 같은 글의 그 언어 페이지로 가고, 그 언어로 발행되지 않았으면 그 언어의 첫 화면으로 간다(아래 "언어 바꾸기") |
+| `pageMetadata(page)` | `@monti-cms/next` | 페이지의 메타데이터(`generateMetadata`): 제목, 설명, 대표 주소, 다른 언어(`hreflang`), 공유 값(아래 "검색과 공유 값") |
 | `PreviewBar` | `@monti-cms/next` | 미리보기 중일 때만 보이는 한 줄: "미리보기 · 끝내기". 사이트가 레이아웃에 넣는다(넣지 않아도 미리보기는 된다). 글자는 `labels`로, 관리자 주소는 `admin`으로 준다(기본 `/admin`) |
 
 core가 더 내놓는 것:
@@ -81,6 +83,7 @@ core가 더 내놓는 것:
 | 이름 | 하는 일 |
 |---|---|
 | `SiteEntry.path` | 그 글의 공개 주소. 목록에서 링크를 만들 때 사이트가 주소를 다시 짓지 않는다 |
+| `SiteEntry.translations` | 그 글의 다른 언어 페이지 `{ locale, path }[]`. 발행된 것만 들고(번역이면 발행된 원문도), 그 글의 언어는 빠진다. 사이트의 언어 순서다. 주소가 없는 컬렉션은 빈 목록이다 |
 | `reader.page({ collection, locale, limit, after? })` | 목록을 나눠 읽는다: `{ entries, next }`. `next`를 다음 `after`로 주고, 마지막 쪽이면 `null`이다. `next`는 개수가 아니라 마지막으로 준 글을 가리킨다. 두 쪽 사이에 글이 발행되거나 내려가도 같은 글이 또 나오거나 빠지지 않는다. `reader.entries`는 전부를 준다 |
 | `reader.locales()` | 사이트의 언어: 원문 언어와 주소에 언어를 보이는 규칙 |
 | `createReader`의 `schema` | 값이거나 지금의 구조를 주는 함수다. 개발 서버에서는 구조가 도는 중에 바뀐다 |
@@ -107,6 +110,38 @@ core가 더 내놓는 것:
 - 미리보기 주소의 페이지도 `entryPage`로 읽는다. 초안 모드가 꺼져 있으면(표 없이 온 요청) 그 주소는 404다. 미리보기 주소로는 발행본이 나가지 않는다.
 
 그래서 12번 문서의 "미리보기 경로", "경로에 언어 넣기", "언어 쿼리" 세 값은 없어진다. 사이트 전체의 값 셋 대신 컬렉션마다의 값 하나다.
+
+## 언어 바꾸기
+
+만들며 정함 (2026-11-16). 감사에서 나온 결함(WS-07)을 고치며 정했다: 글을 보다가 언어를 바꾸면 그 언어의 첫 화면으로 갔다.
+
+- 언어 링크는 같은 글의 그 언어 페이지로 간다. 그 언어로 발행된 번역이 없으면 그 언어의 첫 화면으로 간다. 첫 화면과 목록은 그 언어의 같은 페이지로 간다.
+- 글이 제 번역을 안다(`SiteEntry.translations`). 읽는 쪽이 준다: 같은 번역 묶음에서 발행되어 있고 휴지통에 없는 것만이다. 쓰는 중인 번역, 내린 번역은 없다. 제 언어는 넣지 않는다: 그 주소는 `path`에 이미 있다.
+- 머리줄(사이트 이름, 언어)은 레이아웃이 아니라 페이지가 그린다(`SitePage`). 어느 글을 보이는지는 페이지만 알고, Next의 레이아웃은 페이지의 것을 받지 못한다. 브라우저에서 링크를 바꿔 끼우는 길(클라이언트 컨텍스트)은 쓰지 않았다: 서버가 보낸 HTML의 링크가 틀린 채로 나간다.
+- 미리보기 주소의 페이지(`previewPath`)에서 언어 링크는 발행된 번역으로 간다. 고치는 본은 다른 언어의 주소에 없다.
+- 예제 앱 둘(`examples/blog`, `examples/showcase`)에 있다. 블로그에는 머리줄이 없었고 이번에 생겼다.
+
+## 검색과 공유 값
+
+만들며 정함 (2026-11-16). 감사에서 나온 결함(WS-08)을 고치며 정했다.
+
+- `pageMetadata`가 페이지마다 준다: 제목, 설명, 대표 주소(canonical), 다른 언어의 같은 페이지(`hreflang`), `og:title` · `og:description` · `og:url` · `og:image`, 공유 카드(그림이 있으면 큰 카드).
+- 대표 주소는 글쓴이가 적은 것이 있으면 그것이고(SEO 플러그인, 14번 문서), 없으면 그 페이지의 주소다. `og:url`도 같다.
+- `hreflang`은 제 언어와 번역이 있는 언어만 적는다. 번역이 하나도 없으면 적지 않는다. 검색에서 숨긴 페이지(`noindex`)와 대표 주소가 다른 곳인 페이지에는 적지 않는다: 스스로 대표가 아닌 페이지가 낀 묶음은 검색 엔진이 버린다.
+- 주소는 경로로 준다. 사이트의 주소는 사이트가 안다: 레이아웃의 `metadataBase`에 적고(예제 앱은 환경 변수 `SITE_URL`, 쇼케이스는 `SHOWCASE_URL`) Next가 전체 주소로 만든다. Monti는 사이트의 도메인을 값으로 갖지 않는다.
+- 값은 글에서 온다. SEO 플러그인이 있으면 `seoOf(entry)`를 펼쳐 넣고, 없으면 사이트가 제목과 설명을 준다. 그래서 이 함수는 SEO 플러그인이 아니라 어댑터에 있다: 플러그인을 쓰지 않는 사이트도 쓴다.
+- 쇼케이스는 글만이 아니라 태그, 사람, 첫 화면에도 준다. 태그와 사람에는 SEO 탭이 없어 제 필드(설명, 소개, 사진)를 따른다. 제목은 "글 제목 · 사이트 이름"이고 첫 화면은 사이트 이름뿐이다.
+
+## 찾을 수 없는 페이지
+
+만들며 정함 (2026-11-16). 감사에서 나온 결함(WS-09)을 고치며 정했다: 404가 사이트의 머리줄 없이 Next의 기본 화면으로 나왔다. 404인 것은 그대로다(16-7).
+
+- 404도 사이트의 틀 안에 그린다: 머리줄(사이트 이름, 언어)과 제목 한 줄. 설명 글은 두지 않는다.
+- 사이트 레이아웃 둘(`app/(site)`, `app/[locale]`) 옆에 `not-found.tsx`를 둔다. 페이지가 부른 `notFound()`는 그 레이아웃 안에 그려진다.
+- 레이아웃은 주소를 거절하지 않는다. 레이아웃이 부른 `notFound()`는 그 레이아웃의 `not-found.tsx`가 받지 못해 Next의 기본 화면이 된다. 사이트에 없는 언어의 주소는 그 아래 페이지가 거절하고(`localeOf`), 레이아웃은 원문 언어로 문서를 그린다(`frameLocale`).
+- 어느 경로도 받지 않는 주소는 나머지 경로 페이지(`app/[locale]/[...rest]/page.tsx`)가 받아 `notFound()`를 부른다. 루트 레이아웃이 둘이라 `app/not-found.tsx`를 둘 수 없다. Next의 `global-not-found`는 쓰지 않았다: 16.4.6에서 실험 기능이고, 레이아웃을 거치지 않아 틀을 한 번 더 써야 한다.
+- `not-found.tsx`는 주소를 받지 않는다. 머리줄의 언어는 클라이언트 컴포넌트가 주소의 첫 마디에서 읽는다(`useParams`). 사이트의 언어가 아니면 원문 언어다.
+- 원문 언어의 글로 가는 링크는 두지 않았다. `not-found.tsx`가 주소를 받지 않아 서버에서 그 글을 찾을 수 없다. 머리줄의 언어 링크가 각 언어의 첫 화면으로 간다.
 
 ## 캐시 갱신
 
@@ -173,7 +208,7 @@ core가 더 내놓는 것:
 ## 예제 앱
 
 - `examples/blog`. 글(`/posts/:slug`), 메모(`/notes/:slug`), 카테고리(`/categories/:slug`), 언어 둘(한국어 원문, 영어는 주소에 `/en`). 지금 시험용 서버가 쓰는 구조와 같다.
-- 페이지: 첫 화면(최근 글), 글 목록, 글, 메모, 카테고리별 글. 글에는 목차가 있다. 모양은 읽을 수 있을 만큼만 낸다. 디자인을 보이는 곳이 아니다. 언어마다 같은 페이지를 쓴다: 한국어는 주소에 언어가 없고(`app/(site)/…`), 번역은 `app/(site)/[locale]/…`이다. 사이트에 없는 언어와 원문 언어의 주소(`/ko/…`)는 404다.
+- 페이지: 첫 화면(최근 글), 글 목록, 글, 메모, 카테고리별 글. 글에는 목차가 있다. 모양은 읽을 수 있을 만큼만 낸다. 디자인을 보이는 곳이 아니다. 언어마다 같은 페이지를 쓴다: 한국어는 주소에 언어가 없고(`app/(site)/…`), 번역은 `app/[locale]/…`이다. 사이트에 없는 언어와 원문 언어의 주소(`/ko/…`)는 404다. 페이지마다 머리줄(사이트 이름, 언어)이 있고, 404도 그 틀 안에 나온다.
 - 페이지는 처음 열릴 때 그려 두고 쓴다(`generateStaticParams`가 빈 목록). 첫 화면과 글 목록은 빌드할 때 그리므로 빌드에 데이터베이스가 있어야 한다.
 - 저장소는 로컬 폴더다(`localFolderStorage`). 파일은 관리자 API의 파일 경로로 나간다.
 - `pnpm dev`로 뜨고(개발 서버), `pnpm build && pnpm start`로 운영 사이트가 된다.
@@ -196,12 +231,29 @@ export function entryPage(
 ): Promise<PageEntry>; // 없으면 notFound(), 옛 주소면 permanentRedirect()
 export function previewPage(reader: SiteReader, where: { collection: string; slug: string; locale?: string }): Promise<PageEntry>;
 export type PageEntry = SiteEntry & { entryPath: (group: string) => string | undefined; preview: boolean };
+export function homePath(locales: Locales, locale: string): string; // 그 언어의 첫 화면
+export function languageLinks(
+	locales: Locales,
+	page: { locale: string; path?: string | null; translations?: SiteTranslation[] },
+): { locale: string; name: string; href: string; current: boolean }[];
+export function pageMetadata(page: {
+	title: string;
+	description?: string;
+	locale: string;
+	path?: string | null;
+	translations?: SiteTranslation[];
+	image?: { src: string; width: number; height: number; alt?: string };
+	canonical?: string;
+	noindex?: boolean;
+}): Metadata;
 
 // @monti-cms/core
 export type SiteEntry = {
 	// … 지금 있는 것에 더해
 	path: string | null; // 공개 주소. 주소가 없는 컬렉션은 null
+	translations: SiteTranslation[]; // 다른 언어의 발행된 페이지. 제 언어는 빠진다
 };
+export type SiteTranslation = { locale: string; path: string };
 
 // 이벤트
 type: … | "media.replaced"; // 파일을 바꿈
@@ -282,3 +334,6 @@ auth?: { password?: boolean; github?: GitHubAuth | null; devBypass?: boolean }; 
 - **16-7** 옛 주소로 온 요청은 새 주소로 영구 이동하고, 없는 글은 404다. 번역이 없는 언어의 주소는 404다.
 - **16-8** `testing/e2e`의 시험용 서버가 없고, `pnpm test:e2e`가 예제 앱을 띄워 돈다.
 - **16-9** 컬렉션에 미리보기 주소를 적으면 "미리보기"가 그 주소로 가고, 번역은 언어 표시가 붙은 주소로 간다. 그 주소는 표 없이 오면 404다. 설정 › 컬렉션 › 기본 탭에서 고치면 검토를 거쳐 `monti.schema.ts`에 써지고, 항목 컬렉션에는 칸이 없다.
+- **16-10** 언어 링크는 같은 글의 그 언어 페이지로 가고, 그 언어로 발행된 번역이 없으면 그 언어의 첫 화면으로 간다. 글은 발행된 다른 언어 페이지만 알고, 쓰는 중이거나 내렸거나 휴지통에 있는 번역은 모른다.
+- **16-11** 페이지는 대표 주소(적지 않았으면 제 주소), 번역이 있는 언어의 `hreflang`, `og:title`과 `og:url`을 낸다. 숨긴 페이지와 대표 주소가 다른 곳인 페이지는 `hreflang`을 내지 않는다.
+- **16-12** 404는 사이트의 틀 안에 나온다: 번역이 없는 언어의 주소, 없는 글, 사이트에 없는 언어, 어느 경로도 받지 않는 주소 모두 머리줄이 있다.

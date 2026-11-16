@@ -13,14 +13,13 @@ export function EditorTab({ model, collection: c }: { model: SettingsDraft; coll
 	const { t } = useAdmin();
 	const { draft, catalog } = model;
 	if (!catalog) return null;
-	const word = (label: string | { key: string }) => t(typeof label === "string" ? label : label.key);
 	const blocks: Choice[] = listedBlocks(catalog).map((block) => ({
 		path: at.editor(c, "block", block.type),
-		label: word(block.label),
+		label: t(block.label),
 	}));
 	const marks: Choice[] = catalog.marks.map((mark) => ({
 		path: at.editor(c, "mark", mark.type),
-		label: word(mark.label),
+		label: t(mark.label),
 	}));
 	const headings: Choice[] = HEADINGS.map((level) => ({
 		path: at.editor(c, "heading", level),

@@ -84,6 +84,7 @@ import { chooseFiles } from "../../media/choose-files";
 import { FileThumb, useFileDetail } from "../../media/file-shown";
 import { extensionLabel, formatBytes, previewUrl, sizeLabel } from "../../media/file-text";
 import { useTakeFolderFiles } from "../../media/folder-files";
+import { singleClick } from "../../media/single-click";
 import { RetryButton, useAcceptFiles } from "../../media/upload-problem";
 import type { Upload } from "../../media/upload-queue";
 import { MEDIA_DRAG, useFileDrop, useFolderDrop, useKeepFilesInPage } from "../../media/use-file-drop";
@@ -298,7 +299,7 @@ function MediaFolderTile({
 			count={folder.count}
 			selected={selected}
 			dropTarget={drop.target}
-			onClick={onOpen}
+			onClick={singleClick(onOpen)}
 			{...drop.handlers}
 		/>
 	);
@@ -771,7 +772,8 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 											event.dataTransfer.setData(MEDIA_DRAG, JSON.stringify(idsOfDrag(item)));
 											event.dataTransfer.effectAllowed = "move";
 										}}
-										onClick={() => openFile(item.id)}
+										// Not the second click of a double click that opened this folder: the file under the pointer stays shut (MD-03).
+										onClick={singleClick(() => openFile(item.id))}
 										onKeyDown={(event: React.KeyboardEvent) => {
 											if (!isDeleteKey(event.key)) return;
 											event.preventDefault();

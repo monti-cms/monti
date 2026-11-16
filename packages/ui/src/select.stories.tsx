@@ -84,28 +84,50 @@ export const Sizes: Story = {
 	),
 };
 
-/** Disabled, proposal (the assistant picked it: blue), invalid (red underline). */
+/**
+ * Disabled (off: dimmed), read-only (a value to read: full ink, no caret, its list does not open), proposal (the assistant picked it: blue),
+ * invalid (red underline).
+ */
 export const States: Story = {
+	tags: ["visual"],
 	render: () => (
-		<Stack direction="row" gap={16} align="center">
-			<Select items={CATEGORIES} disabled>
-				<SelectTrigger>
-					<SelectValue placeholder="비활성" />
-				</SelectTrigger>
-				<Items />
-			</Select>
-			<Select items={CATEGORIES} defaultValue="notice">
-				<SelectTrigger proposal>
-					<SelectValue />
-				</SelectTrigger>
-				<Items />
-			</Select>
-			<Select items={CATEGORIES} defaultValue="notice">
-				<SelectTrigger aria-invalid>
-					<SelectValue />
-				</SelectTrigger>
-				<Items />
-			</Select>
+		<Stack direction="row" gap={16} align="end">
+			<Stack gap={4}>
+				<StoryCaption>disabled</StoryCaption>
+				<Select items={CATEGORIES} disabled>
+					<SelectTrigger>
+						<SelectValue placeholder="비활성" />
+					</SelectTrigger>
+					<Items />
+				</Select>
+			</Stack>
+			<Stack gap={4}>
+				<StoryCaption>readOnly</StoryCaption>
+				<Select items={CATEGORIES} value="notice" readOnly>
+					<SelectTrigger>
+						<SelectValue />
+					</SelectTrigger>
+					<Items />
+				</Select>
+			</Stack>
+			<Stack gap={4}>
+				<StoryCaption>proposal</StoryCaption>
+				<Select items={CATEGORIES} defaultValue="notice">
+					<SelectTrigger proposal>
+						<SelectValue />
+					</SelectTrigger>
+					<Items />
+				</Select>
+			</Stack>
+			<Stack gap={4}>
+				<StoryCaption>invalid</StoryCaption>
+				<Select items={CATEGORIES} defaultValue="notice">
+					<SelectTrigger aria-invalid>
+						<SelectValue />
+					</SelectTrigger>
+					<Items />
+				</Select>
+			</Stack>
 		</Stack>
 	),
 };

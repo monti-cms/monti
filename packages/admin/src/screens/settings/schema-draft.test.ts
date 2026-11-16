@@ -132,3 +132,15 @@ describe("a conditional field in the draft (doc 19)", () => {
 		expect(placed).not.toContain("videoUrl");
 	});
 });
+
+describe("a place of the draft read back from its path", () => {
+	it("[ST-01] a site's block keeps its whole name, colon and all", async () => {
+		const { at, placeOf } = await import("./schema-draft");
+		expect(placeOf(at.editor("post", "block", "component:NoteBox"))).toEqual({
+			kind: "editor",
+			collection: "post",
+			what: "block",
+			name: "component:NoteBox",
+		});
+	});
+});

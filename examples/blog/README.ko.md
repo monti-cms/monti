@@ -26,8 +26,10 @@ pnpm dev                        # http://localhost:3000, 관리자는 /admin
 | `lib/monti.ts` | Monti를 한 번 연다. `monti`는 관리자 API가, `reader`는 페이지가 쓴다 |
 | `app/admin/page.tsx` | 관리자 화면. 폴더 이름이 주소다 |
 | `app/admin/api/[...path]/route.ts` | 관리자 API, 미디어 파일, 미리보기 켜고 끄기 |
-| `app/(site)/…` | 사이트의 페이지(한국어). 번역은 `app/(site)/[locale]/…` |
-| `site/pages.tsx` | 그 페이지들이 그리는 것 |
+| `app/(site)/…` | 사이트의 페이지(한국어). 번역은 `app/[locale]/…` |
+| `app/(site)/not-found.tsx`, `app/[locale]/not-found.tsx`, `app/[locale]/[...rest]/page.tsx` | 아무것도 없는 주소의 페이지. 사이트의 틀 안에 그린다 |
+| `site/pages.tsx` | 그 페이지들이 그리는 것과 검색 · 공유 값(`generateMetadata`) |
+| `site/frame.tsx` | 문서, 그리고 페이지마다 그리는 머리줄: 사이트 이름과 언어. 언어는 같은 글의 그 언어 페이지로 간다 |
 | `app/site.css` | 사이트의 모양. 관리자 화면에 걸리지 않게 모두 `.site` 아래에 있다 |
 
-미디어 파일은 이 컴퓨터의 `.monti/files`에 둔다(`MONTI_FILES`로 옮긴다). `MONTI_STORAGE=off`면 저장소 없이 돈다. `MONTI_WEBHOOK`에 주소를 적으면 모든 이벤트를 그 주소로 보낸다(검색 색인, 배포 훅). 실패한 전송은 관리자 화면의 활동 기록에 있고 거기서 다시 보낸다. `MONTI_REFRESH_DOWN`은 흐름 테스트만 쓴다: 그 값이 가리키는 파일이 있는 동안 캐시된 페이지를 새로 고치는 일이 실패한다(`lib/monti.ts`).
+`SITE_URL`은 사이트의 웹 주소다. 페이지가 전체 주소로 적는 것(대표 주소, 다른 언어의 주소)이 이 주소로 시작한다. 미디어 파일은 이 컴퓨터의 `.monti/files`에 둔다(`MONTI_FILES`로 옮긴다). `MONTI_STORAGE=off`면 저장소 없이 돈다. `MONTI_WEBHOOK`에 주소를 적으면 모든 이벤트를 그 주소로 보낸다(검색 색인, 배포 훅). 실패한 전송은 관리자 화면의 활동 기록에 있고 거기서 다시 보낸다. `MONTI_REFRESH_DOWN`은 흐름 테스트만 쓴다: 그 값이 가리키는 파일이 있는 동안 캐시된 페이지를 새로 고치는 일이 실패한다(`lib/monti.ts`).

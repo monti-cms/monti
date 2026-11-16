@@ -5,7 +5,7 @@
 .site {
 	max-width: 680px;
 	margin: 0 auto;
-	padding: 48px 20px 96px;
+	padding: 24px 20px 96px;
 	font:
 		17px / 1.75 system-ui,
 		sans-serif;
@@ -38,6 +38,20 @@
 	border: 1px solid #dcd8cf;
 	padding: 6px 10px;
 	text-align: left;
+}
+.site .top,
+.site .top span {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 12px;
+}
+.site .top {
+	justify-content: space-between;
+	margin-bottom: 32px;
+	font-size: 14px;
+}
+.site .top [aria-current] {
+	font-weight: 600;
 }
 .site .meta {
 	display: flex;

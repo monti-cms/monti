@@ -39,12 +39,29 @@ describe("a read-only entry", () => {
 		await expect.element(bar.getByRole("button", { name: "가운데 정렬" })).not.toBeInTheDocument();
 	});
 
-	it("02-6 T131 an archived entry's fields that pick from a list are off for the keyboard too, like its other fields", async () => {
+	it("02-6 T131 [AT-29] an archived entry's fields that pick from a list are read, not off: the keyboard stops on them, and neither it nor the pointer opens a list or changes what they hold", async () => {
 		await ArchivedCover.run();
 		await closeCard();
 		const lists = page.getByRole("complementary").getByRole("combobox");
 		await expect.poll(() => lists.elements().length).toBeGreaterThan(0);
-		for (const field of lists.elements()) await expect.element(page.elementLocator(field)).toBeDisabled();
+		const open = () =>
+			[...document.querySelectorAll<HTMLElement>("[role=listbox], [role=option]")].filter((each) =>
+				each.checkVisibility({ visibilityProperty: true, opacityProperty: true }),
+			);
+		for (const element of lists.elements()) {
+			const field = element as HTMLInputElement;
+			await expect.element(page.elementLocator(field)).toBeEnabled();
+			expect(field.readOnly || field.getAttribute("aria-readonly") === "true").toBe(true);
+			const held = field.value ?? field.textContent;
+			await userEvent.click(page.elementLocator(field));
+			expect(open()).toHaveLength(0);
+			field.focus();
+			expect(document.activeElement).toBe(field);
+			await userEvent.keyboard("x{Backspace}{ArrowDown}{Enter}");
+			expect(open()).toHaveLength(0);
+			expect(field.value ?? field.textContent).toBe(held);
+		}
+		await expect.element(page.getByRole("button", { name: "저장 전 변경사항" })).not.toBeInTheDocument();
 	});
 });
 
@@ -266,5 +283,35 @@ describe("in a translation", () => {
 		await userEvent.click(dialog.getByRole("button", { name: /seoul-night/ }));
 		await userEvent.click(dialog.getByRole("button", { name: "고르기" }));
 		await expect.element(cover()).toHaveTextContent("seoul-night.jpg");
+	});
+});
+
+describe("the file window and a double click (MD-03)", () => {
+	/** The second click of a double click, as the browser sends it to what is under the pointer by then. */
+	const secondClick = (on: Element) =>
+		on.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, detail: 2 }));
+
+	it("[MD-03] a folder opened by a double click picks no file in it, and a double click on a file leaves it picked", async () => {
+		await Draft.run();
+		await properties();
+		await userEvent.click(cover());
+		const dialog = page.getByRole("dialog");
+		const folder = () => document.querySelector<HTMLElement>("[role=dialog] button[data-slot=folder-tile]");
+		await expect.poll(folder).not.toBeNull();
+		// The second click of the pair that opens nothing by itself: the window stays at the top.
+		secondClick(folder() as HTMLElement);
+		await expect.element(dialog.getByRole("button", { name: /desk-morning/ })).not.toBeInTheDocument();
+		await openAssets();
+		const file = dialog.getByRole("button", { name: /desk-morning/ });
+		await expect.element(file).toBeVisible();
+		// The folder is open: the second click lands on the file now under the pointer, and picks nothing.
+		secondClick(file.element());
+		await expect.element(dialog.getByRole("button", { name: "고르기" })).not.toBeInTheDocument();
+		// A double click on a file: the first click picks it, the second does not take the pick back.
+		await userEvent.click(file);
+		secondClick(file.element());
+		await expect.element(dialog.getByRole("button", { name: "고르기" })).toBeVisible();
+		await userEvent.click(dialog.getByRole("button", { name: "고르기" }));
+		await expect.element(cover()).toHaveTextContent("desk-morning.jpg");
 	});
 });

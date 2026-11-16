@@ -18,7 +18,21 @@ function Select<Value, Multiple extends boolean | undefined = false>(
 		items: NonNullable<SelectPrimitive.Root.Props<Value, Multiple>["items"]>;
 	},
 ) {
-	return <SelectPrimitive.Root {...props} />;
+	return (
+		<SelectPrimitive.Root
+			{...props}
+			// A `readOnly` select is a value to read: its list does not open (Base UI's own would open to be looked through). The opening is
+			// refused, and `open` is left as it was given: whether it is held from outside is settled on the first drawing, so a select that
+			// turns read-only, or stops being it, would keep the wrong one.
+			onOpenChange={(next, details) => {
+				if (props.readOnly && next) {
+					details.cancel();
+					return;
+				}
+				props.onOpenChange?.(next, details);
+			}}
+		/>
+	);
 }
 
 function SelectGroup({ className, ...props }: SelectPrimitive.Group.Props) {
@@ -38,13 +52,14 @@ function SelectValue({ className, ...props }: SelectPrimitive.Value.Props) {
  */
 export const SELECT_TRIGGER = cn(
 	FIELD_HOVER,
-	"flex items-center justify-between gap-monti-8 whitespace-nowrap rounded-none border-0 border-monti-default border-b bg-transparent text-left text-monti-body text-monti-default outline-none transition-colors focus-visible:border-monti-contrast aria-expanded:border-monti-contrast disabled:cursor-default disabled:opacity-45 aria-invalid:border-monti-danger aria-invalid:focus-visible:ring-2 aria-invalid:focus-visible:ring-monti-contrast/50 data-[size=default]:h-monti-control-lg data-[size=md]:h-monti-control-md data-[size=sm]:h-monti-control-sm data-[size=sm]:text-monti-note [&_svg]:pointer-events-none [&_svg]:shrink-0",
+	"flex items-center justify-between gap-monti-8 whitespace-nowrap rounded-none border-0 border-monti-default border-b bg-transparent text-left text-monti-body text-monti-default outline-none transition-colors focus-visible:border-monti-contrast aria-expanded:border-monti-contrast disabled:cursor-default disabled:opacity-45 aria-readonly:cursor-default aria-readonly:select-text aria-readonly:focus-visible:border-monti-default aria-readonly:focus-visible:ring-2 aria-readonly:focus-visible:ring-monti-contrast/50 aria-readonly:[&_[data-slot=select-icon]]:hidden aria-invalid:border-monti-danger aria-invalid:focus-visible:ring-2 aria-invalid:focus-visible:ring-monti-contrast/50 data-[size=default]:h-monti-control-lg data-[size=md]:h-monti-control-md data-[size=sm]:h-monti-control-sm data-[size=sm]:text-monti-note [&_svg]:pointer-events-none [&_svg]:shrink-0",
 	FIELD_INSET,
 );
 
 /**
  * The closed select: an underline with a chevron at the end, like `Input`. With many choices (language codes, time zones) use a `Combobox`,
- * which can search. `proposal` marks a value the assistant picked and nobody has touched.
+ * which can search. `proposal` marks a value the assistant picked and nobody has touched. In a `Select readOnly` it is the value to read, in
+ * full ink: no caret at its end, no tint under the pointer, and its list does not open; the keyboard still stops on it, with the focus ring.
  */
 function SelectTrigger({
 	className,
@@ -76,7 +91,7 @@ function SelectTrigger({
 			{...props}
 		>
 			{children}
-			<SelectPrimitive.Icon className="flex">
+			<SelectPrimitive.Icon data-slot="select-icon" className="flex">
 				<Caret solo className="size-3.5" />
 			</SelectPrimitive.Icon>
 		</SelectPrimitive.Trigger>

@@ -12,7 +12,24 @@ import { Input } from "./input";
 import { useUiLabels } from "./labels";
 import { MENU_CARD, MENU_EMPTY, MENU_ITEM, MENU_LABEL, MENU_MOTION, MENU_SEPARATOR, MenuTick } from "./menu-parts";
 
-const Combobox = ComboboxPrimitive.Root;
+/**
+ * The combobox. `readOnly` is a value to read, the same in a field of one and of many: full ink, the keyboard stops on it and its words can be
+ * picked and copied, and nothing changes it (no typing, no list, no clear, no × on a chip).
+ */
+const Combobox = ((props: ComboboxPrimitive.Root.Props<unknown, boolean | undefined>) => (
+	<ComboboxPrimitive.Root
+		{...props}
+		// Base UI's own read-only list opens to be looked through: here the opening is refused. `open` is left as it was given: whether it is
+		// held from outside is settled on the first drawing, so a field that turns read-only, or stops being it, would keep the wrong one.
+		onOpenChange={(next, details) => {
+			if (props.readOnly && next) {
+				details.cancel();
+				return;
+			}
+			props.onOpenChange?.(next, details);
+		}}
+	/>
+)) as typeof ComboboxPrimitive.Root;
 
 function ComboboxValue({ ...props }: ComboboxPrimitive.Value.Props) {
 	return <ComboboxPrimitive.Value data-slot="combobox-value" {...props} />;
@@ -77,7 +94,7 @@ function ComboboxInput({
 			className={cn(
 				cn(
 					FIELD_HOVER,
-					"group/combobox-input flex w-full min-w-0 items-center gap-monti-4 border-monti-default border-b transition-colors focus-within:border-monti-contrast has-[input:disabled]:pointer-events-none has-[[aria-invalid=true]]:border-monti-danger has-data-proposal:border-monti-proposal has-data-proposal:border-b-[1.5px] has-[input:disabled]:opacity-45",
+					"group/combobox-input flex w-full min-w-0 items-center gap-monti-4 border-monti-default border-b transition-colors focus-within:border-monti-contrast has-[input[readonly]]:has-focus-visible:ring-2 has-[input[readonly]]:has-focus-visible:ring-monti-contrast/50 has-[input:disabled]:pointer-events-none has-[[aria-invalid=true]]:border-monti-danger has-data-proposal:border-monti-proposal has-data-proposal:border-b-[1.5px] has-[input:disabled]:opacity-45 has-[input[readonly]]:focus-within:border-monti-default",
 					FIELD_INSET,
 				),
 				size === "sm" ? "h-monti-control-sm" : size === "md" ? "h-monti-control-md" : "h-monti-control-lg",
@@ -107,10 +124,16 @@ function ComboboxInput({
 				<ComboboxTrigger
 					disabled={disabled || undefined}
 					// The field dims everything in it once: its buttons do not dim again.
-					className="disabled:opacity-100 group-has-data-[slot=combobox-clear]/combobox-input:hidden"
+					className="disabled:opacity-100 group-has-[input[readonly]]/combobox-input:hidden group-has-data-[slot=combobox-clear]/combobox-input:hidden"
 				/>
 			)}
-			{showClear && <ComboboxClear disabled={disabled || undefined} className="disabled:opacity-100" />}
+			{showClear && (
+				<ComboboxClear
+					disabled={disabled || undefined}
+					// Nothing clears a value that is only read.
+					className="disabled:opacity-100 group-has-[input[readonly]]/combobox-input:hidden"
+				/>
+			)}
 			{children}
 		</div>
 	);
@@ -202,6 +225,9 @@ function ComboboxSeparator({ className, ...props }: ComboboxPrimitive.Separator.
 	);
 }
 
+/** The words of the chips of one field, by their ids: what a read-only field's input is described by. */
+const ChipLabels = React.createContext<{ ids: string[]; add: (id: string) => () => void } | null>(null);
+
 function ComboboxChips({
 	size = "default",
 	proposal = false,
@@ -217,6 +243,34 @@ function ComboboxChips({
 		 */
 		proposal?: boolean;
 	}) {
+	const [ids, setIds] = React.useState<string[]>([]);
+	// One `add` for the field's life: a chip puts its id in once, and takes it out when it goes.
+	const add = React.useCallback((id: string) => {
+		// In the order the chips stand in the field, whenever each came: the values are said as they are read.
+		const inOrder = (all: string[]) =>
+			[...all].sort((a, b) => {
+				const [first, second] = [document.getElementById(a), document.getElementById(b)];
+				if (!first || !second) return 0;
+				return first.compareDocumentPosition(second) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1;
+			});
+		setIds((was) => inOrder([...was, id]));
+		return () => setIds((was) => was.filter((each) => each !== id));
+	}, []);
+	const labels = React.useMemo(() => ({ ids, add }), [ids, add]);
+	return (
+		<ChipLabels.Provider value={labels}>
+			<ComboboxChipsField size={size} proposal={proposal} className={className} {...props} />
+		</ChipLabels.Provider>
+	);
+}
+
+function ComboboxChipsField({
+	size,
+	proposal,
+	className,
+	...props
+}: React.ComponentPropsWithRef<typeof ComboboxPrimitive.Chips> &
+	ComboboxPrimitive.Chips.Props & { size: "sm" | "md" | "default"; proposal: boolean }) {
 	return (
 		<ComboboxPrimitive.Chips
 			data-slot="combobox-chips"
@@ -224,6 +278,10 @@ function ComboboxChips({
 			data-proposal={proposal || undefined}
 			className={cn(
 				CHIPS_FIELD,
+				// A field that is off looks off, as `ComboboxInput` does: dimmed once, chips and all, and nothing in it answers the pointer.
+				"has-[input:disabled]:pointer-events-none has-[input:disabled]:cursor-default has-[input:disabled]:opacity-45",
+				// Read only: the values in full ink with no × on them, and the keyboard's focus is a ring (nothing is typed, so no caret shows it).
+				"has-[input[readonly]]:has-focus-visible:ring-2 has-[input[readonly]]:has-focus-visible:ring-monti-contrast/50 has-[input[readonly]]:focus-within:border-monti-default has-[input[readonly]]:**:data-[slot=combobox-chip-remove]:hidden",
 				// The proposal's line keeps its color under the pointer and with the focus, as a proposed `Input`'s does.
 				"data-proposal:border-monti-proposal! data-proposal:border-b-[1.5px] data-proposal:**:data-[slot=combobox-chip]:bg-monti-proposal-muted data-proposal:**:data-[slot=combobox-chip-remove]:text-monti-proposal data-proposal:**:data-[slot=combobox-chip]:text-monti-proposal",
 				className,
@@ -242,6 +300,9 @@ function ComboboxChip({
 	showRemove?: boolean;
 }) {
 	const labels = useUiLabels();
+	const id = React.useId();
+	const add = React.useContext(ChipLabels)?.add;
+	React.useEffect(() => add?.(id), [add, id]);
 	return (
 		<ComboboxPrimitive.Chip
 			data-slot="combobox-chip"
@@ -250,12 +311,15 @@ function ComboboxChip({
 				CHIP,
 				CHIP_SM,
 				CHIP_REMOVABLE,
-				"has-disabled:pointer-events-none has-disabled:cursor-default has-disabled:opacity-45",
+				// The field around it dims a field that is off once: its chips do not dim again.
+				"not-aria-readonly:has-disabled:pointer-events-none has-disabled:cursor-default",
+				// A chip that is only read answers the pointer as words do: they can be picked, and it takes no tint.
+				"aria-readonly:cursor-text aria-readonly:select-text aria-readonly:hover:bg-monti-selected",
 				className,
 			)}
 			{...props}
 		>
-			{children}
+			<span id={id}>{children}</span>
 			{showRemove && (
 				<ComboboxPrimitive.ChipRemove className={CHIP_REMOVE} data-slot="combobox-chip-remove">
 					<Close className="pointer-events-none size-3" aria-hidden />
@@ -267,7 +331,26 @@ function ComboboxChip({
 }
 
 function ComboboxChipsInput({ className, ...props }: ComboboxPrimitive.Input.Props) {
-	return <ComboboxPrimitive.Input data-slot="combobox-chip-input" className={cn(CHIPS_INPUT, className)} {...props} />;
+	const chips = React.useContext(ChipLabels)?.ids ?? [];
+	return (
+		<ComboboxPrimitive.Input
+			data-slot="combobox-chip-input"
+			className={cn(CHIPS_INPUT, className)}
+			// In a field that is only read the keyboard stops on this input, which holds nothing, and does not walk the chips: the values
+			// are said with it, as its description.
+			render={(given, state) => (
+				<input
+					{...given}
+					aria-describedby={
+						state.readOnly && chips.length > 0
+							? [given["aria-describedby"], ...chips].filter(Boolean).join(" ")
+							: given["aria-describedby"]
+					}
+				/>
+			)}
+			{...props}
+		/>
+	);
 }
 
 function useComboboxAnchor() {

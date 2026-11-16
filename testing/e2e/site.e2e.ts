@@ -147,7 +147,7 @@ test.describe("the site", () => {
 		expect((await visit(admin, encodeURI(path))).text).toContain(title);
 	});
 
-	test("16-7 an old address goes to the new one for good, a post that is not there is not found, and so is a language it has no translation in", async ({
+	test("16-7 16-12 an old address goes to the new one for good, a post that is not there is not found, and so is a language it has no translation in; the page that says so is the site's own", async ({
 		admin,
 	}) => {
 		const post = await draft(admin, unique("주소가 바뀌는 글"));
@@ -167,9 +167,28 @@ test.describe("the site", () => {
 		// The source language has no prefix, and a language the site does not have is no address.
 		expect((await visit(admin, `/ko/posts/${moved}`)).status).toBe(404);
 		expect((await visit(admin, `/xx/posts/${moved}`)).status).toBe(404);
+		// Each of them on the site's own page, with its top line: a post with no translation, a language the site does not have, an address
+		// no route takes (its first part is no language's code, "no" is one: an underscore is in none).
+		for (const path of [
+			`/en/posts/${moved}`,
+			`/posts/${unique("nothing")}`,
+			`/xx/posts/${moved}`,
+			"/nothing_here/such/page",
+		]) {
+			expect([path, (await visit(admin, path)).status]).toEqual([path, 404]);
+			// Next sends a page that calls `notFound()` as a shell the browser draws, so this is read as a visitor sees it.
+			await admin.goto(path);
+			await expect(admin.getByRole("heading", { name: "페이지를 찾을 수 없습니다" })).toBeVisible();
+			await expect(admin.getByRole("navigation", { name: "사이트" })).toBeVisible();
+		}
+		// In the language of the address, with the way to the others.
+		await admin.goto(`/en/posts/${moved}`);
+		const top = admin.getByRole("navigation", { name: "사이트" });
+		await expect(top.getByRole("link", { name: "English" })).toHaveAttribute("aria-current", "page");
+		await expect(top.getByRole("link", { name: "한국어" })).toHaveAttribute("href", "/");
 	});
 
-	test("16-7 a translation's page is in its language, and a category with no page in that language is linked where it has one", async ({
+	test("16-7 16-10 16-11 a translation's page is in its language, its languages go to the same post, and a category with no page in that language is linked where it has one", async ({
 		admin,
 	}) => {
 		const category = unique("category");
@@ -203,8 +222,27 @@ test.describe("the site", () => {
 		const link = admin.getByRole("link", { name: "개발" });
 		await expect(link).toHaveAttribute("href", `/categories/${category}`);
 		expect((await visit(admin, `/categories/${category}`)).status).toBe(200);
+		// The languages at the top go to this same post where it is published, and to the language's first page where it is not.
+		const top = admin.getByRole("navigation", { name: "사이트" });
+		await expect(top.getByRole("link", { name: "한국어" })).toHaveAttribute("href", `/posts/${slug}`);
+		await expect(top.getByRole("link", { name: "English" })).toHaveAttribute("aria-current", "page");
+		await expect(top.getByRole("link", { name: "日本語" })).toHaveAttribute("href", "/ja");
+		// What search engines and share cards read: the page's own address, the same post in the other language, its title.
+		await expect(admin.locator('link[rel="canonical"]')).toHaveAttribute("href", new RegExp(`/en/posts/${slug}$`));
+		await expect(admin.locator('link[rel="alternate"][hreflang="ko"]')).toHaveAttribute(
+			"href",
+			new RegExp(`[^/]/posts/${slug}$`),
+		);
+		await expect(admin.locator('link[rel="alternate"][hreflang="en"]')).toHaveAttribute(
+			"href",
+			new RegExp(`/en/posts/${slug}$`),
+		);
+		await expect(admin.locator('link[rel="alternate"][hreflang="ja"]')).toHaveCount(0);
+		await expect(admin.locator('meta[property="og:title"]')).toHaveAttribute("content", "Translated");
+		await expect(admin.locator('meta[property="og:url"]')).toHaveAttribute("content", new RegExp(`/en/posts/${slug}$`));
 		await admin.goto(`/posts/${slug}`);
 		expect(await admin.locator("html").getAttribute("lang")).toBe("ko");
+		await expect(top.getByRole("link", { name: "English" })).toHaveAttribute("href", `/en/posts/${slug}`);
 	});
 
 	test("16-6 a post's headings are anchors, and its table of contents goes to them", async ({ admin }) => {

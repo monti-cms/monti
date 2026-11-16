@@ -26,8 +26,10 @@ first page and the list of posts, so it needs the database.
 | `lib/monti.ts` | Opens Monti once: `monti` for the admin API, `reader` for the pages |
 | `app/admin/page.tsx` | The admin. The folder's name is its address |
 | `app/admin/api/[...path]/route.ts` | The admin's API, the media files, the preview's on and off |
-| `app/(site)/…` | The site's pages, for Korean; `app/(site)/[locale]/…` for the translations |
-| `site/pages.tsx` | What those pages draw |
+| `app/(site)/…` | The site's pages, for Korean; `app/[locale]/…` for the translations |
+| `app/(site)/not-found.tsx`, `app/[locale]/not-found.tsx`, `app/[locale]/[...rest]/page.tsx` | The page of an address with nothing at it, inside the site's frame |
+| `site/pages.tsx` | What those pages draw, and their search and share values (`generateMetadata`) |
+| `site/frame.tsx` | The document, and the top line each page draws: the site's name and its languages, each going to the same post in that language |
 | `app/site.css` | The site's looks, all under `.site` so they do not reach the admin's page |
 
-Media files go to `.monti/files` on this machine (`MONTI_FILES` moves it); `MONTI_STORAGE=off` runs the site with no storage. `MONTI_WEBHOOK` names an address every event is posted to (a search index, a deploy hook); a delivery that fails is in the admin's activity log, to send again. `MONTI_REFRESH_DOWN` is the flow tests' own: while the file it names is there, refreshing the cached pages fails (`lib/monti.ts`).
+`SITE_URL` is where the site is on the web: the addresses a page names whole (its canonical one, the other languages') start with it. Media files go to `.monti/files` on this machine (`MONTI_FILES` moves it); `MONTI_STORAGE=off` runs the site with no storage. `MONTI_WEBHOOK` names an address every event is posted to (a search index, a deploy hook); a delivery that fails is in the admin's activity log, to send again. `MONTI_REFRESH_DOWN` is the flow tests' own: while the file it names is there, refreshing the cached pages fails (`lib/monti.ts`).

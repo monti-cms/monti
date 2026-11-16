@@ -229,6 +229,7 @@ describe("reading an entry for a page", () => {
 		title: "글",
 		slug: "hello",
 		path: "/posts/hello",
+		translations: [],
 		values: {},
 		doc: { type: "doc", blocks: [] },
 		publishedAt: new Date("2026-11-01T00:00:00Z"),

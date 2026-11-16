@@ -9,6 +9,7 @@ import {
 	spillingCells,
 	wholeUnderPointer,
 } from "../../../../../testing/input";
+import { scene } from "../../../test/scene";
 import * as stories from "./trash.stories";
 
 const {
@@ -338,6 +339,10 @@ describe("the trash (doc 11, flow 5)", () => {
 		await expect.element(panel).toHaveTextContent("Blog Assets");
 		await expect.element(panel).toHaveTextContent("쓰는 곳 · 0");
 		expect(panel.element().textContent).not.toContain("대체 텍스트");
+		// [MD-15] The whole picture, not a 4:3 cut of it.
+		const shown = panel.getByRole("img", { name: "winter-01.jpg" });
+		await expect.element(shown).toBeVisible();
+		expect(getComputedStyle(shown.element()).objectFit).toBe("contain");
 		await userEvent.click(panel.getByRole("button", { name: "더 보기" }));
 		await userEvent.click(page.getByRole("menuitem", { name: "영구 삭제" }));
 		await userEvent.click(dialog().getByRole("button", { name: "영구 삭제" }));
@@ -356,13 +361,87 @@ describe("the trash (doc 11, flow 5)", () => {
 		await expect.element(page.getByText("23일 남음")).toBeVisible();
 		await expect.element(page.getByRole("menuitem", { name: "영구 삭제" })).toBeVisible();
 		await userEvent.keyboard("{Escape}");
-		await expect.element(page.getByRole("textbox", { name: "제목" })).toBeDisabled();
+		// [AT-29] Read, not written: the title is the text it holds in full ink, as the body is, and takes no typing.
+		const title = page.getByRole("textbox", { name: "제목" });
+		await expect.element(title).toHaveAttribute("readonly");
+		await expect.element(title).toBeEnabled();
+		expect(getComputedStyle(title.element()).opacity).toBe("1");
+		const body = document.querySelector("[contenteditable]") as HTMLElement;
+		expect(body.getAttribute("contenteditable")).toBe("false");
+		expect(getComputedStyle(title.element()).color).toBe(getComputedStyle(body).color);
+		// [AT-30] No translation is made of an entry in the trash: its languages are tabs to read, with no "+ 언어".
+		const languages = page.getByRole("navigation", { name: "언어" });
+		await expect.element(page.getByRole("button", { name: "언어", exact: true })).not.toBeInTheDocument();
 		await userEvent.click(page.getByRole("button", { name: "복원" }));
 		await expect.element(page.getByText("휴지통에 있는 글입니다")).not.toBeInTheDocument();
-		await expect.element(page.getByRole("textbox", { name: "제목" })).toBeEnabled();
+		await expect.element(title).not.toHaveAttribute("readonly");
+		// Restored, it is an entry of its collection: the address does not say it came from the trash.
+		expect(window.location.hash).not.toContain("from=trash");
+		await expect.element(languages.getByRole("button", { name: "언어", exact: true })).toBeVisible();
 		await expect.element(page.getByRole("button", { name: "발행하기" })).toBeVisible();
 		// The tag it points at is still in the trash: the field names it and says so (doc 08).
 		await expect.element(page.getByText("임시 · 휴지통에 있음")).toBeVisible();
+	});
+});
+
+describe("an entry in the trash with its other languages (doc 11, one row per entry)", () => {
+	const languages = () => page.getByRole("navigation", { name: "언어" });
+	const title = () => page.getByRole("textbox", { name: "제목" });
+
+	it("11-1 its editor has a tab for each language of it in the trash, with no '+ 언어'; a tab opens that language, read only too", async () => {
+		// Both languages of this post are in the trash: its row there says "KO +1".
+		await scene<{ ids: { react19: string; react19En: string } }>(
+			{ loaders: stories.trash((ids) => `#/c/post/${ids.react19}`) },
+			stories.default,
+		).run();
+		await expect.element(page.getByText("휴지통에 있는 글입니다")).toBeVisible();
+		await expect.element(title()).toHaveValue("리액트 19 마이그레이션");
+		// The site's languages in the site's order, the open one marked.
+		await expect.poll(() => languages().getByRole("button").elements().length).toBe(2);
+		const [korean, english] = languages().getByRole("button").elements() as [HTMLElement, HTMLElement];
+		expect(korean.getAttribute("aria-current")).toBe("page");
+		expect(english.getAttribute("aria-current")).toBeNull();
+		await expect.element(page.getByRole("button", { name: "언어", exact: true })).not.toBeInTheDocument();
+		// The other language opens in the same place, as read only as the first, with the same two tabs.
+		await userEvent.click(page.elementLocator(english));
+		await expect.element(title()).toHaveValue("React 19 migration");
+		await expect.element(title()).toHaveAttribute("readonly");
+		await expect.element(page.getByText("휴지통에 있는 글입니다")).toBeVisible();
+		await expect.element(page.getByRole("button", { name: "복원" })).toBeVisible();
+		await expect.poll(() => languages().getByRole("button").elements().length).toBe(2);
+		await expect
+			.poll(() => (languages().getByRole("button").elements()[1] as HTMLElement).getAttribute("aria-current"))
+			.toBe("page");
+		// And back.
+		await userEvent.click(page.elementLocator(languages().getByRole("button").elements()[0] as HTMLElement));
+		await expect.element(title()).toHaveValue("리액트 19 마이그레이션");
+	});
+
+	it("11-1 an entry opened from its row of the trash says so in its address: its other language keeps that, and restoring it drops it", async () => {
+		await Top.run();
+		await userEvent.click(row("리액트 19 마이그레이션").getByRole("link", { name: "리액트 19 마이그레이션" }));
+		await expect.element(title()).toHaveValue("리액트 19 마이그레이션");
+		expect(window.location.hash).toMatch(/^#\/c\/post\/[^?]+\?from=trash$/);
+		const korean = window.location.hash;
+		// The other language of it in the trash is another entry, opened from the trash as well: the way back stays the trash.
+		await expect.poll(() => languages().getByRole("button").elements().length).toBe(2);
+		await userEvent.click(page.elementLocator(languages().getByRole("button").elements()[1] as HTMLElement));
+		await expect.element(title()).toHaveValue("React 19 migration");
+		expect(window.location.hash).toMatch(/^#\/c\/post\/[^?]+\?from=trash$/);
+		expect(window.location.hash).not.toBe(korean);
+		await expect.element(page.getByRole("banner").getByRole("button", { name: "휴지통" })).toBeVisible();
+		// Restored, it is an entry of its collection: the address stops saying it came from the trash, and the way back is its list.
+		await userEvent.click(page.getByRole("button", { name: "복원" }));
+		await expect.element(page.getByText("휴지통에 있는 글입니다")).not.toBeInTheDocument();
+		await expect.poll(() => window.location.hash).toMatch(/^#\/c\/post\/[^?]+$/);
+		await expect.element(page.getByRole("banner").getByRole("button", { name: "휴지통" })).not.toBeInTheDocument();
+	});
+
+	it("11-1 an entry whose other languages are not in the trash has its own tab alone", async () => {
+		await TrashedEntry.run();
+		await userEvent.keyboard("{Escape}");
+		await expect.poll(() => languages().getByRole("button").elements().length).toBe(1);
+		await expect.element(languages().getByRole("button")).toHaveAttribute("aria-current", "page");
 	});
 });
 

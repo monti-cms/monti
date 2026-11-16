@@ -1,5 +1,6 @@
 export { attachCodeTools, type CodeToolsLabels } from "./code-tools";
 export { CodeTools } from "./code-tools-client";
+export { homePath, type LanguageLink, languageLinks, type PageMeta, pageMetadata } from "./metadata";
 export { entryPage, type PageEntry, previewPage } from "./page";
 export { PreviewBar } from "./preview-bar";
 export { adminRoute } from "./route";

@@ -23,6 +23,7 @@ type Story = StoryObj<typeof meta>;
 export const Playground: Story = {};
 
 export const States: Story = {
+	tags: ["visual"],
 	render: () => (
 		<Stack gap={16}>
 			<Stack gap={4}>
@@ -40,6 +41,10 @@ export const States: Story = {
 			<Stack gap={4}>
 				<StoryCaption>disabled</StoryCaption>
 				<Textarea disabled defaultValue="수정할 수 없는 요약" />
+			</Stack>
+			<Stack gap={4}>
+				<StoryCaption>readOnly (a value to read: full ink, no tint under the pointer)</StoryCaption>
+				<Textarea readOnly defaultValue="읽기만 하는 요약" />
 			</Stack>
 			<Stack gap={4}>
 				<StoryCaption>proposal (written by the assistant, not yet touched)</StoryCaption>

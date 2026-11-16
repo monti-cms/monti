@@ -426,7 +426,7 @@ const MIGRATIONS: Record<string, Migration> = {
 				)
 				.addColumn("request", "text", (column) => column.notNull())
 				.addColumn("context", "jsonb", (column) => column.notNull())
-				.addColumn("key_id", "text")
+				.addColumn("key_id", "text", (column) => column.notNull())
 				.addColumn("model", "text", (column) => column.notNull())
 				.addColumn("thinking", "text", (column) => column.notNull())
 				.addColumn("usage", "jsonb", (column) => column.notNull())

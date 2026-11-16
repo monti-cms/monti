@@ -146,6 +146,37 @@ describe("the SEO tab in the editor (T84, T75; flow 1·08)", () => {
 		expect(String((await entry(story.loaded())).values.seoTitle).endsWith("!")).toBe(true);
 	});
 
+	it("14-5 [AT-29] in an entry that cannot be changed the plugin's inputs are read, not off: full ink, the keyboard stops on them, and nothing changes what they hold", async () => {
+		const story = open({ loaders: plugins.site({ seoValues: { seoTitle: "검색 제목", seoNoindex: "noindex" } }) });
+		await story.run();
+		// While it can be written, the plugin's count stands at the end of the label row.
+		await userEvent.click(tab(/SEO/));
+		await expect.element(page.getByText("5/60")).toBeVisible();
+		await userEvent.click(button("더 보기"));
+		await userEvent.click(page.getByRole("menuitem", { name: "보관", exact: true }));
+		await expect.element(button("보관 풀기")).toBeVisible();
+		await userEvent.click(tab(/SEO/));
+		const title = field("SEO 제목");
+		await expect.element(title).toHaveValue("검색 제목");
+		// Only read: no count beside the name, the host's rule for every plugin's field.
+		await expect.element(page.getByText("5/60")).not.toBeInTheDocument();
+		await expect.element(title).toBeEnabled();
+		await expect.element(title).toHaveAttribute("readonly");
+		expect(getComputedStyle(title.element()).opacity).toBe("1");
+		await userEvent.click(title);
+		await userEvent.keyboard("x{Backspace}{Backspace}");
+		await expect.element(title).toHaveValue("검색 제목");
+		const hide = page.getByRole("switch", { name: "검색에서 숨기기" });
+		await expect.element(hide).toBeChecked();
+		await expect.element(hide).toBeEnabled();
+		expect(getComputedStyle(hide.element()).opacity).toBe("1");
+		await userEvent.click(hide);
+		hide.element().focus();
+		await userEvent.keyboard(" ");
+		await expect.element(hide).toBeChecked();
+		expect((await entry(story.loaded())).values).toMatchObject({ seoTitle: "검색 제목", seoNoindex: "noindex" });
+	});
+
 	it("14-5 'hide from search' is a switch: on, the preview says so and the value is noindex; off, the value is gone", async () => {
 		const story = open(plugins.SeoTab);
 		await story.run();

@@ -37,10 +37,10 @@ import {
 	Stack,
 	StandalonePage,
 	StatusBar,
-	StatusBarAnnouncer,
 	StatusBarCell,
 	StatusBarList,
 	StatusBarListGroup,
+	StatusBarLive,
 	StatusBarPluginCell,
 	StatusBarSpacer,
 	Text,
@@ -54,7 +54,6 @@ import {
 } from "@monti-cms/ui";
 import {
 	Archive,
-	ChevronLeft,
 	Copy,
 	Export,
 	OverflowMenuHorizontal,
@@ -101,6 +100,7 @@ import { useFieldUploads } from "../../media/use-field-uploads";
 import { useAdmin } from "../../operations/admin-context";
 import { useOperation, useRead } from "../../operations/use-operation";
 import { usePurge, useRestore, useTrashMove } from "../../trash/use-trash";
+import { EditorBack } from "../frame/editor-back";
 import { focusText, toWhatStands, useFocusHandOff } from "../frame/focus-hand-off";
 import { ReadFailedBanner } from "../frame/read-failed";
 import { SessionEndedBanner } from "../frame/session-ended";
@@ -113,6 +113,7 @@ import { EntryProperties, fieldInputId, fieldPath, panelFields, panelLayout } fr
 import {
 	decidedOnly,
 	FieldChange,
+	type GroupStatus,
 	LocaleTabs,
 	PairedView,
 	SourceChangedBanner,
@@ -169,6 +170,7 @@ export function EntryEditor({
 	compare,
 	onBack,
 	onTrash,
+	onLive,
 	onCompare,
 	onOpen,
 	onLanguages,
@@ -181,6 +183,8 @@ export function EntryEditor({
 	onBack: () => void;
 	/** To the trash's screen: where an entry in the trash goes back to, and where one deleted for good leaves for. */
 	onTrash: () => void;
+	/** The entry was opened from the trash and is not in it (restored, here or elsewhere): the address stops saying it is. */
+	onLive?: () => void;
 	onCompare: (mode: CompareMode | null) => void;
 	/** Another entry (a copy just made). */
 	onOpen: (id: string) => void;
@@ -314,6 +318,11 @@ export function EntryEditor({
 	);
 	const archived = read?.state === "archived";
 	const trashed = Boolean(read?.entry.trashedAt);
+	const live = read !== null && !trashed;
+	// biome-ignore lint/correctness/useExhaustiveDependencies: `onLive` is made anew on every draw; only the entry leaving the trash calls it.
+	useEffect(() => {
+		if (live) onLive?.();
+	}, [live]);
 	const readOnly = archived || trashed;
 	// In the trash (doc 11): how long it stays and what a permanent delete keeps, read with it.
 	const inTrash = useRead<TrashedEntry>("trash.get", { id }, { skip: !trashed, quiet: true }).data;
@@ -380,18 +389,38 @@ export function EntryEditor({
 	// With the entry's other controls: before the read, and after one that failed, "+ language" made a translation of an entry nobody had read, and the
 	// tabs stood elsewhere than where they stay.
 	// Drawn once everything below is made: its "✦ translate" reads what the requests further down hold.
+	// An entry in the trash has the languages of it that are in the trash with it, as its row of the trash counts them ("KO +1"): each is a
+	// tab that opens that language, to read. The site's languages in the site's order, so a tab stays where it is as they are opened.
+	const trashedGroup = useMemo((): GroupStatus | null => {
+		if (!inTrash || !schema.data) return null;
+		const order = schema.data.schema.locales.list.map((locale) => locale.code);
+		const rank = (code: string) => (order.includes(code) ? order.indexOf(code) : order.length);
+		return {
+			group: inTrash.id,
+			source: null,
+			locales: [...inTrash.locales]
+				.sort((a, b) => rank(a.locale) - rank(b.locale) || a.locale.localeCompare(b.locale))
+				.map((each) => ({ locale: each.locale, id: each.id, state: "draft", changes: 0, pending: 0 })),
+			missing: [],
+		};
+	}, [inTrash, schema.data]);
 	const languagesRow = () =>
 		read && translation.multilingual && schema.data ? (
 			<Inline minHeight="control-md" justify="between" gap={12}>
 				<LocaleTabs
 					schema={schema.data.schema}
-					group={translation.group}
+					group={trashed ? trashedGroup : translation.group}
 					current={id}
 					onOpen={onOpen}
-					onCreate={async (code) => {
-						const made = await translation.create(code);
-						if (made) onOpen(made);
-					}}
+					// An entry that cannot be changed (archived, in the trash) takes no new translation: the server refuses one (AT-30).
+					onCreate={
+						readOnly
+							? undefined
+							: async (code) => {
+									const made = await translation.create(code);
+									if (made) onOpen(made);
+								}
+					}
 					onManage={onLanguages}
 				/>
 				{translation.isTranslation ? (
@@ -991,7 +1020,8 @@ export function EntryEditor({
 					placeholder={compared?.source.title || t("entry.title")}
 					size={size}
 					appearance="inline"
-					disabled={readOnly}
+					// An entry that cannot be changed is still read: the title stands in full ink like the body, with nothing to type (AT-29).
+					readOnly={readOnly}
 					onChange={(event) => editor.set("title", event.target.value)}
 				/>
 			</FormField>
@@ -1221,10 +1251,9 @@ export function EntryEditor({
 			{purge.dialog}
 			<EditorHeader>
 				<Inline gap={12} minWidth={0} paddingX={12}>
-					<TextButton variant="quiet" onClick={trashed ? onTrash : onBack}>
-						<ChevronLeft aria-hidden />
+					<EditorBack onBack={trashed ? onTrash : onBack}>
 						{trashed ? t("frame.trash") : (schema.data?.adminValues[collection]?.label ?? collection)}
-					</TextButton>
+					</EditorBack>
 					{address ? (
 						<Text variant="meta" tone="faint" truncate>
 							{address}
@@ -1431,17 +1460,19 @@ export function EntryEditor({
 			</Inline>
 			{read ? (
 				<StatusBar>
+					{/* Seen and said from one place: the words are in the page once, and an entry that cannot be changed has no save state to say (TP-10). */}
 					{readOnly ? null : (
-						<StatusBarCell
-							ref={handOff}
-							tone={cell.tone}
-							onClick={cell.press}
-							render={cell.press ? undefined : <span />}
-						>
-							{cell.text}
-						</StatusBarCell>
+						<StatusBarLive>
+							<StatusBarCell
+								ref={handOff}
+								tone={cell.tone}
+								onClick={cell.press}
+								render={cell.press ? undefined : <span />}
+							>
+								{cell.text}
+							</StatusBarCell>
+						</StatusBarLive>
 					)}
-					<StatusBarAnnouncer>{cell.text}</StatusBarAnnouncer>
 					{/* One list of what is left in the entry: what stops publishing, then what changed in the source (translation.md, 2026-11-10 owner). */}
 					<StatusBarList
 						trigger={

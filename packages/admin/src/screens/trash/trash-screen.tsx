@@ -193,12 +193,12 @@ export function TrashScreen({
 		if (row.kind === "folder")
 			return setState({ ...state, folder: row.id, search: "", everywhere: false, page: 1, open: null });
 		if (row.kind === "entry" && isDocument(row) && row.collection)
-			return go({ screen: "entry", collection: row.collection, id: row.id });
+			return go({ screen: "entry", collection: row.collection, id: row.id, from: "trash" });
 		setState({ ...state, open: refOf(row) });
 	};
 	const entryHref = (row: TrashRow) =>
 		row.kind === "entry" && isDocument(row) && row.collection
-			? href({ screen: "entry", collection: row.collection, id: row.id })
+			? href({ screen: "entry", collection: row.collection, id: row.id, from: "trash" })
 			: undefined;
 
 	/** What stands after a row's title, as after a list's: an entry's address, what a folder holds, and where it sat. */

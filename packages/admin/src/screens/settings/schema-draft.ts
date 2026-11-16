@@ -8,6 +8,7 @@ import {
 	fingerprint,
 	type GroupField,
 	inOptionOrder,
+	type Label,
 	type LocalesDefinition,
 	mergeAdminValues,
 	type PluginTab,
@@ -38,10 +39,13 @@ export type SettingsRead = SchemaRead & {
 	admin: { language: AdminLanguage | null; templates: boolean; version: number };
 };
 
-/** The blocks and marks the site's editor has (`blocks.catalog`), the ones a collection's editor tab turns on and off. */
+/**
+ * The blocks and marks the site's editor has (`blocks.catalog`), the ones a collection's editor tab turns on and off. A name is the core's
+ * `Label`: a site's block brings its own words in each admin language, the core's a message key.
+ */
 export type Catalog = {
-	blocks: { type: string; label: string | { key: string }; menu: string | null }[];
-	marks: { type: string; label: string | { key: string } }[];
+	blocks: { type: string; label: Label; menu: string | null }[];
+	marks: { type: string; label: Label }[];
 };
 
 /**
@@ -146,7 +150,9 @@ export function placeOf(path: Path): Place | null {
 	if (head === "field") return { kind: "field", collection, key: a };
 	if (head === "ca") return { kind: "collectionValue", collection, value: a as "label" };
 	if (head === "fa") return { kind: "fieldValue", collection, key: a, value: b as FieldValue };
-	if (head === "ed") return { kind: "editor", collection, what: a as "block", name: b };
+	// A site's block is named with a colon in it (`component:PostCard`): the name is everything after the kind.
+	if (head === "ed")
+		return { kind: "editor", collection, what: a as "block", name: path.split(":").slice(3).join(":") };
 	return null;
 }
 

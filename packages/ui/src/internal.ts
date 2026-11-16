@@ -316,7 +316,7 @@ export { BlockFrameBox, BlockTitleField, SourceBox } from "./source-box";
 export { Spinner } from "./spinner";
 export { SplitButton } from "./split-button";
 export { Inline, Stack, type StackProps, stackVariants } from "./stack";
-export { StatusBar, StatusBarAnnouncer, StatusBarCell, StatusBarPluginCell, StatusBarSpacer } from "./status-bar";
+export { StatusBar, StatusBarCell, StatusBarLive, StatusBarPluginCell, StatusBarSpacer } from "./status-bar";
 export { StatusBarList, StatusBarListGroup } from "./status-bar-list";
 export { Suggest } from "./suggest";
 export { Switch } from "./switch";

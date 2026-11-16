@@ -310,6 +310,50 @@ describe("what the site reads", () => {
 		expect((await reader().entries({ collection: "tag", locale: "ko" })).map((entry) => entry.path)).toEqual([null]);
 	});
 
+	it("16-10 an entry names its pages in the other languages: published ones only, never its own, none for a collection with no page", async () => {
+		const id = await post("안녕", "hello");
+		const ko = async () => {
+			const found = await reader().entry({ collection: "post", locale: "ko", slug: "hello" });
+			return found && "entry" in found ? found.entry.translations : null;
+		};
+		expect(await ko()).toEqual([]);
+		const translation = await write("translations.create", { source: id, locale: "en" });
+		await write("entries.save", { id: translation.id, version: await versionOf(translation.id), title: "Hello" });
+		// A translation being written is not on the site: the source does not name it.
+		expect(await ko()).toEqual([]);
+		await write("entries.publish", { ids: [translation.id] });
+		expect(await ko()).toEqual([{ locale: "en", path: "/en/posts/hello" }]);
+		const en = await reader().entry({ collection: "post", locale: "en", slug: "hello" });
+		expect(en && "entry" in en && en.entry.translations).toEqual([{ locale: "ko", path: "/posts/hello" }]);
+		// The lists give the same.
+		expect((await reader().entries({ collection: "post", locale: "en" })).map((entry) => entry.translations)).toEqual([
+			[{ locale: "ko", path: "/posts/hello" }],
+		]);
+		// A list reads its entries' translations together: each entry gets its own, and one with no translation gets none of another's.
+		await post("혼자", "alone");
+		const listed = (entries: { slug: string; translations: unknown }[]) =>
+			Object.fromEntries(entries.map((entry) => [entry.slug, entry.translations]));
+		const both = { hello: [{ locale: "en", path: "/en/posts/hello" }], alone: [] };
+		expect(listed(await reader().entries({ collection: "post", locale: "ko" }))).toEqual(both);
+		expect(listed((await reader().page({ collection: "post", locale: "ko", limit: 10 })).entries)).toEqual(both);
+		// Taken off the site, or thrown away, it is named no more.
+		await write("entries.archive", { ids: [translation.id] });
+		expect(await ko()).toEqual([]);
+		await write("entries.unarchive", { ids: [translation.id] });
+		await write("entries.publish", { ids: [translation.id] });
+		expect(await ko()).toHaveLength(1);
+		await write("trash.move", { rows: [{ kind: "entry", id: translation.id }] });
+		expect(await ko()).toEqual([]);
+
+		await write("items.saveGroup", {
+			collection: "tag",
+			locales: { ko: { title: "웹", slug: "web" }, en: { title: "Web", slug: "web" } },
+		});
+		expect((await reader().entries({ collection: "tag", locale: "ko" })).map((entry) => entry.translations)).toEqual([
+			[],
+		]);
+	});
+
 	it("16-1 a list is read a page at a time, newest first, each entry once", async () => {
 		for (const day of [1, 2, 3, 4, 5]) {
 			clock = new Date(`2026-10-0${day}T09:00:00Z`);

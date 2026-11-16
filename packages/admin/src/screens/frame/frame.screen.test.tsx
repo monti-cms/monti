@@ -1,9 +1,11 @@
+import { defineSchema } from "@monti-cms/core";
 import { composeStories } from "@storybook/react-vite";
 import { describe, expect, it } from "vitest";
 import { page, userEvent } from "vitest/browser";
 import { scene } from "../../../test/scene";
 import { MontiAdmin } from "../../app";
 import type { Transport } from "../../operations/transport";
+import { schema } from "../story-schema";
 import * as frame from "./frame.stories";
 
 const menu = () => page.getByRole("navigation", { name: "관리 메뉴" });
@@ -115,5 +117,172 @@ describe("the frame's banner", () => {
 		await userEvent.keyboard("{Enter}");
 		await expect.element(again).not.toBeInTheDocument();
 		await expect.poll(() => document.activeElement).toBe(first);
+	});
+});
+
+describe("a screen that cannot be drawn", () => {
+	it("[ST-01] a screen that throws while it is drawn says so at the top, the sidebar still opens the other screens, and 'try again' draws it once more", async () => {
+		const broken = { now: true };
+		const Page = () => {
+			if (broken.now) throw new Error("a screen that throws");
+			return <p>색인 화면</p>;
+		};
+		await scene(
+			{
+				loaders: frame.signedIn(),
+				render: (_args: unknown, { loaded }: { loaded: unknown }) => (
+					<MontiAdmin
+						transport={(loaded as { site: { transport: Transport } }).site.transport}
+						siteName="example.dev"
+						plugins={[{ name: "search", toolPages: { index: Page } }]}
+					/>
+				),
+			},
+			frame.default,
+		).run();
+		await expect.element(menu()).toBeVisible();
+		const failed = () => page.getByRole("note").filter({ hasText: "불러오지 못했습니다" });
+		const open = () => {
+			window.location.hash = "#/tools/p/search/index";
+		};
+		open();
+		await expect.element(failed()).toBeVisible();
+		// The frame stands: the sidebar opens another screen, and the banner goes with the screen it was about.
+		await expect.element(menu()).toBeVisible();
+		await userEvent.click(menu().getByRole("button", { name: /^휴지통/ }));
+		await expect.element(failed()).not.toBeInTheDocument();
+		await expect.element(page.getByRole("heading", { name: "휴지통" })).toBeVisible();
+		// Back at the screen that throws: still said; once it can be drawn, "try again" draws it.
+		open();
+		await expect.element(failed()).toBeVisible();
+		broken.now = false;
+		// Pressed with the keyboard: the banner goes with its button, and the focus it held goes on into the page, not to the document.
+		const again = failed().getByRole("button", { name: "다시 시도" });
+		// The keyboard is what was last used, so a focus set here is the keyboard's.
+		await userEvent.keyboard("{Shift}");
+		(again.element() as HTMLElement).focus();
+		expect(again.element().matches(":focus-visible")).toBe(true);
+		await userEvent.keyboard("{Enter}");
+		await expect.element(page.getByText("색인 화면")).toBeVisible();
+		await expect.element(failed()).not.toBeInTheDocument();
+		await expect.poll(() => document.activeElement !== document.body && document.activeElement !== null).toBe(true);
+	});
+
+	/** An entry whose editor throws while it is drawn (a field's own input that throws), in the trash or not. */
+	const brokenEditor = async (trashed: boolean) => {
+		const Field = () => {
+			throw new Error("a field that throws");
+		};
+		let id = "";
+		await scene(
+			{
+				loaders: frame.signedIn(
+					async (monti) => {
+						const made = (await monti.run(
+							"entries.create",
+							{ collection: "post", locale: "ko", title: "열리지 않는 글", values: {} },
+							{ actor: "admin" },
+						)) as { output: { id: string } };
+						id = made.output.id;
+						if (trashed) await monti.run("trash.move", { rows: [{ kind: "entry", id }] }, { actor: "admin" });
+					},
+					{
+						schema: defineSchema({
+							...schema,
+							collections: {
+								...schema.collections,
+								post: {
+									...schema.collections.post,
+									fields: { ...schema.collections.post.fields, subtitle: { kind: "text", input: "site.broken" } },
+								},
+							},
+						}),
+					},
+				),
+				render: (_args: unknown, { loaded }: { loaded: unknown }) => (
+					<MontiAdmin
+						transport={(loaded as { site: { transport: Transport } }).site.transport}
+						siteName="example.dev"
+						plugins={[{ name: "site", inputs: { "site.broken": Field } }]}
+					/>
+				),
+			},
+			frame.default,
+		).run();
+		await expect.element(menu()).toBeVisible();
+		return id;
+	};
+
+	it("[ST-01] an entry opened from the trash whose editor throws keeps the way back its head has: '휴지통', to the trash", async () => {
+		await brokenEditor(true);
+		// Opened as a person does, from its row of the trash: the address says where it came from.
+		await userEvent.click(menu().getByRole("button", { name: /^휴지통/ }));
+		await userEvent.click(page.getByRole("main").getByRole("link", { name: "열리지 않는 글" }));
+		expect(window.location.hash).toMatch(/^#\/c\/post\/[^?]+\?from=trash$/);
+		const failed = () => page.getByRole("note").filter({ hasText: "불러오지 못했습니다" });
+		await expect.element(failed()).toBeVisible();
+		const back = page.getByRole("banner").getByRole("button", { name: "휴지통" });
+		await expect.element(back).toBeVisible();
+		await expect.element(page.getByRole("banner").getByRole("button", { name: "게시글" })).not.toBeInTheDocument();
+		await userEvent.click(back);
+		await expect.element(failed()).not.toBeInTheDocument();
+		expect(window.location.hash).toBe("#/trash");
+		await expect.element(page.getByRole("heading", { name: "휴지통" })).toBeVisible();
+	});
+
+	it("[ST-01] an editor that throws stands outside the frame, so its place keeps the editor's way back: the banner at the top, and the collection's name goes to its list", async () => {
+		const broken = { now: true };
+		const Field = () => {
+			if (broken.now) throw new Error("a field that throws");
+			return <p>부제 입력</p>;
+		};
+		let id = "";
+		await scene(
+			{
+				loaders: frame.signedIn(
+					async (monti) => {
+						const made = (await monti.run(
+							"entries.create",
+							{ collection: "post", locale: "ko", title: "열리지 않는 글", values: {} },
+							{ actor: "admin" },
+						)) as { output: { id: string } };
+						id = made.output.id;
+					},
+					{
+						schema: defineSchema({
+							...schema,
+							collections: {
+								...schema.collections,
+								post: {
+									...schema.collections.post,
+									fields: { ...schema.collections.post.fields, subtitle: { kind: "text", input: "site.broken" } },
+								},
+							},
+						}),
+					},
+				),
+				render: (_args: unknown, { loaded }: { loaded: unknown }) => (
+					<MontiAdmin
+						transport={(loaded as { site: { transport: Transport } }).site.transport}
+						siteName="example.dev"
+						plugins={[{ name: "site", inputs: { "site.broken": Field } }]}
+					/>
+				),
+			},
+			frame.default,
+		).run();
+		await expect.element(menu()).toBeVisible();
+		window.location.hash = `#/c/post/${id}`;
+		const failed = () => page.getByRole("note").filter({ hasText: "불러오지 못했습니다" });
+		await expect.element(failed()).toBeVisible();
+		// No sidebar here: the editor's own back, under the collection's name, is the way out.
+		await expect.element(menu()).not.toBeInTheDocument();
+		const back = page.getByRole("banner").getByRole("button", { name: "게시글" });
+		await expect.element(back).toBeVisible();
+		await userEvent.click(back);
+		await expect.element(failed()).not.toBeInTheDocument();
+		await expect.element(menu()).toBeVisible();
+		expect(window.location.hash).toBe("#/c/post");
+		await expect.element(page.getByRole("link", { name: "열리지 않는 글" })).toBeVisible();
 	});
 });

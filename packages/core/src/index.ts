@@ -103,6 +103,7 @@ export {
 	type ResolvedRelation,
 	type SiteEntry,
 	type SiteReader,
+	type SiteTranslation,
 } from "./entries/reader";
 export type { Entry } from "./entries/record";
 export type { PublishCheck, PublishTask } from "./entries/tasks";

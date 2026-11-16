@@ -60,24 +60,23 @@ seo({
 ## On the site's pages
 
 ```ts
+import { pageMetadata } from "@monti-cms/next";
 import { seoOf } from "@monti-cms/seo";
 
 export async function generateMetadata({ params }) {
 	const found = await reader.entry({ collection: "post", slug: (await params).slug, locale: "en" });
 	if (!found || !("entry" in found)) return {};
-	const seo = seoOf(found.entry);
-	return {
-		title: seo.title,
-		description: seo.description,
-		alternates: seo.canonical ? { canonical: seo.canonical } : undefined,
-		robots: seo.noindex ? { index: false } : undefined,
-		openGraph: seo.image ? { images: [{ url: seo.image.src, width: seo.image.width, height: seo.image.height }] } : undefined,
-	};
+	const { entry } = found;
+	return pageMetadata({ ...seoOf(entry), locale: entry.locale, path: entry.path, translations: entry.translations });
 }
 ```
 
 `seoOf(entry, follows?)` gives the title (the entry's own when none was written), and the description, the share image, the canonical
 address when there is one, and `noindex`. Give it the same `follows` as the plugin when the plugin was given any.
+
+On a Next.js site `pageMetadata` (`@monti-cms/next`) makes the page's metadata of them: the canonical address (the page's own when the
+author named none), the entry's pages in the other languages (`hreflang`), `og:title`, `og:url` and the share image. A site on another
+framework writes those tags from the same values.
 
 ## Development
 

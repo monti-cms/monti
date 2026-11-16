@@ -73,7 +73,7 @@ export function startTask(
 	input: Record<string, unknown>,
 	on: {
 		onText?: (answer: string) => void;
-		onRun?: (run: string, conversation: string, model: ModelChoice | null) => void;
+		onRun?: (run: string, conversation: string, model: ModelChoice) => void;
 	} = {},
 ): Task {
 	const listening = new AbortController();

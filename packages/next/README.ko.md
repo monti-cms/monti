@@ -98,6 +98,55 @@ export default async function Post({ params }: { params: Promise<{ slug: string 
 - `reader.page({ collection, locale, limit, after })`는 목록을 나눠 읽고, `reader.entries`는 전부 읽는다. 글마다 공개 주소(`path`)가 있다.
 - `tocOf(post.doc)`가 목차를 준다. `renderDocument`가 그리는 제목에 같은 `id`가 붙는다.
 
+### 언어
+
+글은 사이트의 다른 언어에 있는 제 페이지를 안다. `entry.translations`는 `{ locale, path }[]`이고, 발행된 것만 들며 그 글의 언어는
+빠진다.
+
+```tsx
+import { languageLinks } from "@monti-cms/next";
+
+// 언어마다 같은 글의 그 언어 페이지로 간다. 그 언어로 발행되지 않았으면 그 언어의 첫 화면으로 간다.
+languageLinks(reader.locales(), entry).map((link) => (
+	<Link key={link.locale} href={link.href} aria-current={link.current ? "page" : undefined}>
+		{link.name}
+	</Link>
+));
+```
+
+언어 바꾸기는 레이아웃이 아니라 페이지에서 그린다. 어느 글을 보이는지는 페이지만 안다. `homePath(reader.locales(), locale)`이 그
+언어의 첫 화면이다.
+
+### 검색과 공유 값
+
+```ts
+import { pageMetadata } from "@monti-cms/next";
+
+export async function generateMetadata({ params }) {
+	const found = await reader.entry({ collection: "post", slug: (await params).slug, locale: "ko" });
+	if (!found || !("entry" in found)) return {};
+	const { entry } = found;
+	return pageMetadata({ title: entry.title, locale: entry.locale, path: entry.path, translations: entry.translations });
+}
+```
+
+`pageMetadata`는 Next에 제목과 설명, 대표 주소(`canonical`을 주지 않으면 그 페이지의 주소), 다른 언어(`hreflang`. `noindex`인 페이지와
+대표 주소가 다른 곳인 페이지에는 넣지 않는다), `og:title`, `og:url`, `og:image`, 공유 카드를 준다. SEO 플러그인을 쓰면
+`seoOf(entry)`를 펼쳐 넣는다. 주소는 경로다. 사이트의 레이아웃에서 `metadataBase`에 사이트의 주소를 적으면 Next가 전체 주소로 만든다.
+
+### 찾을 수 없는 페이지
+
+`entryPage`는 `notFound()`를 부르고, Next는 그 경로의 레이아웃 안에 가장 가까운 `not-found.tsx`를 그린다. 그래서 사이트의 레이아웃
+옆에 `not-found.tsx`를 두면 그 페이지에도 사이트의 머리줄이 있다. Next가 해 주지 않는 것이 둘 있다.
+
+- 레이아웃이 부른 `notFound()`는 그 레이아웃의 `not-found.tsx`가 그리지 않는다. 주소의 언어는 페이지에서 확인하고, 레이아웃은 어느
+  주소든 그린다.
+- 루트 레이아웃이 둘 이상인 사이트(`app/(site)/layout.tsx`와 `app/[locale]/layout.tsx`)에는 어느 경로도 받지 않는 주소를 맡을
+  `app/not-found.tsx`가 없다. `notFound()`만 부르는 나머지 경로 페이지(`app/[locale]/[...rest]/page.tsx`)를 두면 그런 주소도 같은
+  페이지를 받는다.
+
+`not-found.tsx`는 주소를 받지 않는다. 그 안의 클라이언트 컴포넌트가 `useParams()`로 언어를 읽는다. 예제 사이트 둘이 이렇게 한다.
+
 ## 미리보기
 
 편집기의 "미리보기"는 `<관리자 주소>/api/preview?token=…&path=…`를 연다. 표가 맞으면 그 브라우저에 Next의 초안 모드를 켜고 글의 공개

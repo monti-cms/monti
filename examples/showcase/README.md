@@ -43,7 +43,9 @@ What to connect yourself:
 | `app/hooks/[name]/route.ts` | Two hooks of the site's own: `/hooks/ok` keeps what it gets, `/hooks/broken` always answers 503 |
 | `app/admin/…` | The admin, with the SEO and MDX plugins' browser halves |
 | `app/(site)/…`, `app/[locale]/…` | The site's pages: Korean without a prefix, `/en/…` and `/ja/…` |
-| `site/pages.tsx` | What those pages draw: every field of an entry, then its body |
+| `app/(site)/not-found.tsx`, `app/[locale]/not-found.tsx`, `app/[locale]/[...rest]/page.tsx` | The page of an address with nothing at it, inside the site's frame |
+| `site/pages.tsx` | What those pages draw: every field of an entry, then its body; and their search and share values (`generateMetadata`) |
+| `site/frame.tsx` | The document, and the top line each page draws: the site's name and its languages, each going to the same entry in that language |
 | `app/site.css` | The site's looks, all under `.site` |
 
 ## The structure

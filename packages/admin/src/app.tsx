@@ -21,7 +21,9 @@ import { ActivityScreen } from "./screens/activity/activity-screen";
 import { DataScreen } from "./screens/data/data-screen";
 import { EntryEditor } from "./screens/entry/entry-editor";
 import { AdminFrame, type FrameCounts, type Place } from "./screens/frame/admin-frame";
+import { CollectionBack, TemplatesBack, TrashBack } from "./screens/frame/editor-back";
 import { ReadFailedBanner } from "./screens/frame/read-failed";
+import { ScreenBoundary } from "./screens/frame/screen-boundary";
 import { KeysScreen } from "./screens/keys/keys-screen";
 import { filterColumn, type ListState, writeState } from "./screens/list/list-query";
 import { ListScreen } from "./screens/list/list-screen";
@@ -201,48 +203,82 @@ function Screens({ route, go }: { route: Route; go: (route: Route, options?: { r
 	const open = (place: Place) => leave(() => go(routeOf(place)));
 	// A link in an answer names a place of the admin by its address; it opens as a press on any link does.
 	const panel = <AssistantPanel onOpen={(address) => leave(() => go(parseRoute(address)))} />;
-	if (route.screen === "entry")
+	// A screen that could not be drawn is kept away at its own address only: any move draws what the new address opens.
+	const at = href(route);
+	if (route.screen === "entry") {
+		const toList = () =>
+			leave(() => go({ screen: "list", collection: route.collection, params: new URLSearchParams() }));
+		const toTrash = () => leave(() => go({ screen: "trash", params: new URLSearchParams() }));
+		// Where the entry was opened from stays with it while it is that entry in the trash: its other languages, its comparison.
+		const from = route.from ? { from: route.from } : {};
 		return (
 			<BesideAssistant panel={panel}>
-				<EntryEditor
-					key={route.id}
-					collection={route.collection}
-					id={route.id}
-					compare={route.compare ?? null}
-					onBack={() =>
-						leave(() => go({ screen: "list", collection: route.collection, params: new URLSearchParams() }))
-					}
-					onTrash={() => leave(() => go({ screen: "trash", params: new URLSearchParams() }))}
-					// The comparison is a step inside the editor: back returns to the editor as it was, with what was typed.
-					onCompare={(compare) =>
-						leaveFiles(() =>
-							go({ screen: "entry", collection: route.collection, id: route.id, ...(compare ? { compare } : {}) }),
+				<ScreenBoundary
+					at={at}
+					// The same way back the editor's head has: the trash for an entry opened from it, its collection's list otherwise.
+					back={
+						route.from === "trash" ? (
+							<TrashBack onBack={toTrash} />
+						) : (
+							<CollectionBack collection={route.collection} onBack={toList} />
 						)
 					}
-					onOpen={(id) => leave(() => go({ screen: "entry", collection: route.collection, id }))}
-					onLanguages={() => leave(() => go({ screen: "settings", tab: "languages" }))}
-					// In a new tab, as the list's "open in new tab": the editor stays as it is, with what was typed (AS-21).
-					onActivity={() =>
-						window.open(
-							href({ screen: "activity", params: new URLSearchParams({ entry: route.id, kind: "assistant" }) }),
-							"_blank",
-							"noopener",
-						)
-					}
-				/>
+				>
+					<EntryEditor
+						key={route.id}
+						collection={route.collection}
+						id={route.id}
+						compare={route.compare ?? null}
+						onBack={toList}
+						onTrash={toTrash}
+						// Restored, it is no entry of the trash any more: the address says so, and so does the way back.
+						onLive={
+							route.from
+								? () => go({ screen: "entry", collection: route.collection, id: route.id }, { replace: true })
+								: undefined
+						}
+						// The comparison is a step inside the editor: back returns to the editor as it was, with what was typed.
+						onCompare={(compare) =>
+							leaveFiles(() =>
+								go({
+									screen: "entry",
+									collection: route.collection,
+									id: route.id,
+									...(compare ? { compare } : {}),
+									...from,
+								}),
+							)
+						}
+						onOpen={(id) => leave(() => go({ screen: "entry", collection: route.collection, id, ...from }))}
+						onLanguages={() => leave(() => go({ screen: "settings", tab: "languages" }))}
+						// In a new tab, as the list's "open in new tab": the editor stays as it is, with what was typed (AS-21).
+						onActivity={() =>
+							window.open(
+								href({ screen: "activity", params: new URLSearchParams({ entry: route.id, kind: "assistant" }) }),
+								"_blank",
+								"noopener",
+							)
+						}
+					/>
+				</ScreenBoundary>
 			</BesideAssistant>
 		);
-	if (route.screen === "template")
+	}
+	if (route.screen === "template") {
+		const toTemplates = () => leave(() => go({ screen: "place", place: "tools" }));
 		return (
 			<BesideAssistant panel={panel}>
-				<TemplateEditor
-					key={route.id ?? "new"}
-					id={route.id}
-					onBack={() => leave(() => go({ screen: "place", place: "tools" }))}
-					onSaved={(id) => go({ screen: "template", id }, { replace: true })}
-				/>
+				<ScreenBoundary at={at} back={<TemplatesBack onBack={toTemplates} />} backGap={16}>
+					<TemplateEditor
+						key={route.id ?? "new"}
+						id={route.id}
+						onBack={toTemplates}
+						onSaved={(id) => go({ screen: "template", id }, { replace: true })}
+					/>
+				</ScreenBoundary>
 			</BesideAssistant>
 		);
+	}
 	return (
 		<AdminFrame
 			open={placeOf(route)}
@@ -260,47 +296,50 @@ function Screens({ route, go }: { route: Route; go: (route: Route, options?: { r
 			counts={counts.data}
 			assistant={assistant.available ? { open: assistant.open, onOpen: () => assistant.setOpen(true), panel } : null}
 		>
-			{route.screen === "review" ? (
-				<ReviewScreen key={route.id} id={route.id} go={go} />
-			) : route.screen === "settings" ? (
-				// One screen for the four tabs: they share a draft, so a move between them asks nothing and loses nothing (doc 12).
-				<SettingsScreen
-					tab={route.tab}
-					onTab={(tab) => go({ screen: "settings", tab })}
-					onOpen={open}
-					review={review}
-				/>
-			) : route.screen === "place" && route.place === "tools" ? (
-				// Body templates turned off (settings › admin, doc 03): the tools keep their other tabs, and every way to the tools (the sidebar,
-				// the templates' own address) opens the first of them, the data.
-				// A plugin's page, while its browser half brings the screen; an address for one it does not bring opens the tools as usual.
-				route.page && toolPages.has(`${route.page.plugin}/${route.page.id}`) ? (
-					<ToolPageScreen page={route.page} tabs={<ToolsTabs current={route.page} go={go} />} />
-				) : route.tab === "keys" ? (
-					<KeysScreen tabs={<ToolsTabs current="keys" go={go} />} />
-				) : route.tab === "data" || !templates ? (
-					<DataScreen tabs={<ToolsTabs current="data" go={go} />} />
-				) : (
-					<TemplatesScreen
-						tabs={<ToolsTabs current="templates" go={go} />}
-						onOpen={(id) => go({ screen: "template", id })}
+			{/* A screen that throws while it is drawn takes only itself down: the frame around it stays (common.md, banners). */}
+			<ScreenBoundary at={at}>
+				{route.screen === "review" ? (
+					<ReviewScreen key={route.id} id={route.id} go={go} />
+				) : route.screen === "settings" ? (
+					// One screen for the four tabs: they share a draft, so a move between them asks nothing and loses nothing (doc 12).
+					<SettingsScreen
+						tab={route.tab}
+						onTab={(tab) => go({ screen: "settings", tab })}
+						onOpen={open}
+						review={review}
 					/>
-				)
-			) : route.screen === "media" ? (
-				<MediaScreen params={route.params} go={go} />
-			) : route.screen === "trash" ? (
-				<TrashScreen params={route.params} go={go} />
-			) : route.screen === "activity" ? (
-				<ActivityScreen params={route.params} go={go} recount={recount} />
-			) : route.screen === "list" ? (
-				<ListScreen
-					key={route.collection}
-					collection={route.collection}
-					params={route.params}
-					count={counts.data?.collections[route.collection]}
-					go={go}
-				/>
-			) : null}
+				) : route.screen === "place" && route.place === "tools" ? (
+					// Body templates turned off (settings › admin, doc 03): the tools keep their other tabs, and every way to the tools (the sidebar,
+					// the templates' own address) opens the first of them, the data.
+					// A plugin's page, while its browser half brings the screen; an address for one it does not bring opens the tools as usual.
+					route.page && toolPages.has(`${route.page.plugin}/${route.page.id}`) ? (
+						<ToolPageScreen page={route.page} tabs={<ToolsTabs current={route.page} go={go} />} />
+					) : route.tab === "keys" ? (
+						<KeysScreen tabs={<ToolsTabs current="keys" go={go} />} />
+					) : route.tab === "data" || !templates ? (
+						<DataScreen tabs={<ToolsTabs current="data" go={go} />} />
+					) : (
+						<TemplatesScreen
+							tabs={<ToolsTabs current="templates" go={go} />}
+							onOpen={(id) => go({ screen: "template", id })}
+						/>
+					)
+				) : route.screen === "media" ? (
+					<MediaScreen params={route.params} go={go} />
+				) : route.screen === "trash" ? (
+					<TrashScreen params={route.params} go={go} />
+				) : route.screen === "activity" ? (
+					<ActivityScreen params={route.params} go={go} recount={recount} />
+				) : route.screen === "list" ? (
+					<ListScreen
+						key={route.collection}
+						collection={route.collection}
+						params={route.params}
+						count={counts.data?.collections[route.collection]}
+						go={go}
+					/>
+				) : null}
+			</ScreenBoundary>
 		</AdminFrame>
 	);
 }

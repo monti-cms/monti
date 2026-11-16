@@ -581,7 +581,52 @@ describe("uploading", () => {
 	});
 });
 
+describe("a double click", () => {
+	/** The second click of a double click, as the browser sends it to what is under the pointer by then. */
+	const secondClick = (on: Element) =>
+		on.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, detail: 2 }));
+
+	it("[MD-03] on a folder opens the folder and nothing in it: the second click, on the file now under the pointer, opens no panel", async () => {
+		await Top.run();
+		await userEvent.dblClick(folder("Blog Assets"));
+		await expect.element(heading()).toHaveTextContent("Blog Assets");
+		await expect.element(page.getByRole("complementary")).not.toBeInTheDocument();
+		// Whatever the folder put under the pointer: a file's tile, or a folder's.
+		secondClick(tile("cybersecurity-code.jpg").element());
+		secondClick(folder("covers").element());
+		await expect.element(heading()).toHaveTextContent("Blog Assets");
+		await expect.element(page.getByRole("complementary")).not.toBeInTheDocument();
+		// One click still opens it.
+		await userEvent.click(tile("cybersecurity-code.jpg"));
+		await expect.element(page.getByRole("complementary")).toBeVisible();
+	});
+
+	it("[MD-03] in the list view too: a folder's row opened, the second click on a file's row opens no panel", async () => {
+		await ListView.run();
+		await userEvent.click(main().getByRole("link", { name: "Blog Assets" }));
+		await expect.element(heading()).toHaveTextContent("Blog Assets");
+		const file = main().getByRole("link", { name: "desk-morning.jpg" });
+		await expect.element(file).toBeVisible();
+		secondClick(file.element());
+		secondClick(main().getByRole("link", { name: "covers" }).element());
+		await expect.element(heading()).toHaveTextContent("Blog Assets");
+		await expect.element(page.getByRole("complementary")).not.toBeInTheDocument();
+		await userEvent.click(file);
+		await expect.element(page.getByRole("complementary")).toBeVisible();
+	});
+});
+
 describe("a file", () => {
+	it("[MD-14] the panel shows the whole picture inside its frame, while the grid's tile stays a filled 4:3", async () => {
+		await openAssets();
+		await userEvent.click(tile("cybersecurity-code.jpg"));
+		const shown = page.getByRole("complementary").getByRole("img", { name: "cybersecurity-code.jpg" });
+		await expect.element(shown).toBeVisible();
+		expect(getComputedStyle(shown.element()).objectFit).toBe("contain");
+		const inTile = tile("cybersecurity-code.jpg").element().querySelector("img") as HTMLImageElement;
+		expect(getComputedStyle(inTile).objectFit).toBe("cover");
+	});
+
 	it("09-2 [flow 6·16] opening a file shows its name, folder, measures and uses beside the grid, and no alt text anywhere", async () => {
 		await openAssets();
 		await userEvent.click(tile("cybersecurity-code.jpg"));

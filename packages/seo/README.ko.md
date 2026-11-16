@@ -60,24 +60,22 @@ seo({
 ## 사이트 페이지에서
 
 ```ts
+import { pageMetadata } from "@monti-cms/next";
 import { seoOf } from "@monti-cms/seo";
 
 export async function generateMetadata({ params }) {
 	const found = await reader.entry({ collection: "post", slug: (await params).slug, locale: "en" });
 	if (!found || !("entry" in found)) return {};
-	const seo = seoOf(found.entry);
-	return {
-		title: seo.title,
-		description: seo.description,
-		alternates: seo.canonical ? { canonical: seo.canonical } : undefined,
-		robots: seo.noindex ? { index: false } : undefined,
-		openGraph: seo.image ? { images: [{ url: seo.image.src, width: seo.image.width, height: seo.image.height }] } : undefined,
-	};
+	const { entry } = found;
+	return pageMetadata({ ...seoOf(entry), locale: entry.locale, path: entry.path, translations: entry.translations });
 }
 ```
 
 `seoOf(entry, follows?)`는 제목(적지 않았으면 글의 제목), 설명, 공유 이미지, 대표 주소(있을 때), `noindex`를 돌려줍니다. 플러그인에
 `follows`를 줬다면 같은 값을 줍니다.
+
+Next.js 사이트에서는 `pageMetadata`(`@monti-cms/next`)가 이 값으로 페이지의 메타데이터를 만듭니다: 대표 주소(적지 않았으면 그 페이지의
+주소), 다른 언어의 같은 글(`hreflang`), `og:title`, `og:url`, 공유 이미지. 다른 프레임워크의 사이트는 같은 값으로 그 태그를 직접 씁니다.
 
 ## 개발
 

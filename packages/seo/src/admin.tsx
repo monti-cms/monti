@@ -42,7 +42,8 @@ function following(field: (options: Record<string, unknown>) => string | null, l
 			size: "md" as const,
 			value: own,
 			placeholder,
-			disabled: props.readOnly,
+			// An entry that cannot be changed is read: full ink, nothing typed (the admin's read-only fields).
+			readOnly: props.readOnly,
 			proposal: props.proposal,
 		};
 		return multiline ? (
@@ -71,7 +72,7 @@ function NoindexSwitch({ id, value, onChange, readOnly, proposal }: FieldInputPr
 		<Switch
 			id={id}
 			checked={value === "noindex"}
-			disabled={readOnly}
+			readOnly={readOnly}
 			proposal={proposal}
 			onCheckedChange={(on) => onChange(on ? "noindex" : null)}
 		/>

@@ -43,7 +43,9 @@ pnpm dev                        # http://localhost:3000, 관리자는 /admin
 | `app/hooks/[name]/route.ts` | 사이트의 웹훅 둘: `/hooks/ok`는 받은 것을 두고, `/hooks/broken`은 늘 503으로 답한다 |
 | `app/admin/…` | 관리자 화면. SEO와 MDX 플러그인의 브라우저 쪽이 붙어 있다 |
 | `app/(site)/…`, `app/[locale]/…` | 사이트의 페이지: 한국어는 접두어 없이, `/en/…`, `/ja/…` |
-| `site/pages.tsx` | 그 페이지들이 그리는 것: 글의 모든 필드, 그다음 본문 |
+| `app/(site)/not-found.tsx`, `app/[locale]/not-found.tsx`, `app/[locale]/[...rest]/page.tsx` | 아무것도 없는 주소의 페이지. 사이트의 틀 안에 그린다 |
+| `site/pages.tsx` | 그 페이지들이 그리는 것: 글의 모든 필드, 그다음 본문. 그리고 검색 · 공유 값(`generateMetadata`) |
+| `site/frame.tsx` | 문서, 그리고 페이지마다 그리는 머리줄: 사이트 이름과 언어. 언어는 같은 글의 그 언어 페이지로 간다 |
 | `app/site.css` | 사이트의 모양. 모두 `.site` 아래에 있다 |
 
 ## 구조

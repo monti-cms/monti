@@ -29,6 +29,11 @@ export type FieldInputProps = {
 	value: unknown;
 	/** `null` empties the field. */
 	onChange: (value: unknown) => void;
+	/**
+	 * The entry cannot be changed (archived, in the trash): the value is to be read. Hand it to the part as its `readOnly` (`Input`,
+	 * `Textarea`, `Select`, `Combobox`, `Switch`, `Checkbox`, `MediaInput` take one), never as `disabled`: a read-only field stays in full
+	 * ink and the keyboard stops on it, and nothing changes its value. The label row shows no `Note` then.
+	 */
 	readOnly: boolean;
 	/**
 	 * The value is one the assistant proposed and nobody has taken or changed yet (doc 05). The input shows it as its part's `proposal`

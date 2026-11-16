@@ -1,13 +1,14 @@
 import { publicPath, type ResolvedRelation, type SiteEntry, type SiteImage, siteImage } from "@monti-cms/core";
 import { type CreateElement, renderDocument, tocOf } from "@monti-cms/core/render";
-import { entryPage, type PageEntry, previewPage } from "@monti-cms/next";
-import { seoOf } from "@monti-cms/seo";
+import { entryPage, homePath, type PageEntry, pageMetadata, previewPage } from "@monti-cms/next";
+import { type SeoFollows, seoOf } from "@monti-cms/seo";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createElement, type ElementType, type ReactNode } from "react";
 import { code, monti, reader } from "@/lib/monti";
 import { blocks, marks } from "../monti/blocks/index";
+import { SitePage } from "./frame";
 
 // The pages of the site, each for one language. The routes under `app/(site)` hand them no language (the source language, Korean); those
 // under `app/[locale]` hand them the one in their address.
@@ -31,6 +32,15 @@ export function localeOf(code?: string): string {
 	if (prefix === "never" || (code === source && prefix !== "always")) notFound();
 	if (!list.some((locale) => locale.code === code)) notFound();
 	return code;
+}
+
+/**
+ * The language a layout draws its document in. A layout refuses no address: Next cannot draw the site's own "not found" page for what a
+ * layout refuses, so the page under it does (`localeOf`), and an address in no language of the site is drawn in the source language.
+ */
+export function frameLocale(code?: string): string {
+	const { source, list } = reader.locales();
+	return code !== undefined && list.some((locale) => locale.code === code) ? code : source;
 }
 
 /** A slug as it is in the address: Next hands a non-ASCII segment over still encoded, and a broken escape is no slug. */
@@ -116,7 +126,7 @@ export async function Home({ locale }: { locale: string }) {
 		reader.entries({ collection: "series", locale }),
 	]);
 	return (
-		<>
+		<SitePage locale={locale}>
 			<h1>Monti showcase</h1>
 			<h2>Articles</h2>
 			<EntryRows entries={articles} locale={locale} />
@@ -135,25 +145,48 @@ export async function Home({ locale }: { locale: string }) {
 					</li>
 				))}
 			</ul>
-		</>
+		</SitePage>
 	);
 }
 
-/** The page's title and search and share values, from the SEO plugin's fields. */
-export async function articleMetadata(slug: string, locale: string): Promise<Metadata> {
-	const found = await reader.entry({ collection: "article", slug: decoded(slug), locale });
-	if (!found || !("entry" in found)) return {};
-	const seo = seoOf(found.entry);
+/** The first page's search and share values: its own address, and the first page of each other language. */
+export function homeMetadata(locale: string): Metadata {
+	const locales = reader.locales();
+	// With no language in any address every language's first page is the one address: there is no other to name.
+	const others = locales.prefix === "never" ? [] : locales.list.filter(({ code }) => code !== locale);
 	return {
-		title: seo.title,
-		description: seo.description,
-		alternates: seo.canonical ? { canonical: seo.canonical } : undefined,
-		robots: seo.noindex ? { index: false } : undefined,
-		openGraph: seo.image
-			? { images: [{ url: seo.image.src, width: seo.image.width, height: seo.image.height }] }
-			: undefined,
+		...pageMetadata({
+			title: "Monti showcase",
+			locale,
+			path: homePath(locales, locale),
+			translations: others.map(({ code }) => ({ locale: code, path: homePath(locales, code) })),
+		}),
+		// The site's name alone, not "name · name" (the layout's title template).
+		title: { absolute: "Monti showcase" },
 	};
 }
+
+/**
+ * An entry's page's search and share values: the SEO plugin's fields where the collection has them, the entry's own otherwise (`follows`),
+ * its own address as the canonical one, and the entry's pages in the other languages.
+ */
+async function entryMetadata(
+	collection: string,
+	slug: string,
+	locale: string,
+	follows?: SeoFollows,
+): Promise<Metadata> {
+	const found = await reader.entry({ collection, slug: decoded(slug), locale });
+	if (!found || !("entry" in found)) return {};
+	const { entry } = found;
+	return pageMetadata({ ...seoOf(entry, follows), locale, path: entry.path, translations: entry.translations });
+}
+
+export const articleMetadata = (slug: string, locale: string) => entryMetadata("article", slug, locale);
+export const tagMetadata = (slug: string, locale: string) =>
+	entryMetadata("tag", slug, locale, { description: "description" });
+export const personMetadata = (slug: string, locale: string) =>
+	entryMetadata("person", slug, locale, { description: "bio", image: "photo" });
 
 /** The fields of the option an article's conditional field has chosen (the reader gives only those). */
 function Format({ entry }: { entry: PageEntry }) {
@@ -282,12 +315,23 @@ function ArticleView({ entry, locale }: { entry: PageEntry; locale: string }) {
 
 export async function Article({ slug, locale }: { slug: string; locale: string }) {
 	// Not found when there is none, on to the new address when this is an old one, the working copy while its preview is open.
-	return <ArticleView entry={await entryPage(reader, { collection: "article", slug, locale })} locale={locale} />;
+	const entry = await entryPage(reader, { collection: "article", slug, locale });
+	return (
+		<SitePage locale={locale} path={entry.path} translations={entry.translations}>
+			<ArticleView entry={entry} locale={locale} />
+		</SitePage>
+	);
 }
 
 /** The site's own preview page (the collection's `previewPath`): only the working copy, only for the one who opened its preview. */
 export async function ArticlePreview({ slug, locale }: { slug: string; locale: string }) {
-	return <ArticleView entry={await previewPage(reader, { collection: "article", slug, locale })} locale={locale} />;
+	const entry = await previewPage(reader, { collection: "article", slug, locale });
+	// The languages go to what is published: the working copy has no page there.
+	return (
+		<SitePage locale={locale} translations={entry.translations}>
+			<ArticleView entry={entry} locale={locale} />
+		</SitePage>
+	);
 }
 
 /** Whether a field points at this entry: the reader finds a relation in the page's language first, so it is this very entry. */
@@ -301,11 +345,11 @@ export async function Tag({ slug, locale }: { slug: string; locale: string }) {
 		pointsAt(article.relations?.tags, tag),
 	);
 	return (
-		<>
+		<SitePage locale={locale} path={tag.path} translations={tag.translations}>
 			<h1># {tag.title}</h1>
 			{text(tag.values.description) ? <p>{text(tag.values.description)}</p> : null}
 			<EntryRows entries={articles} locale={locale} />
-		</>
+		</SitePage>
 	);
 }
 
@@ -317,12 +361,12 @@ export async function Person({ slug, locale }: { slug: string; locale: string })
 		pointsAt(article.relations?.authors, person),
 	);
 	return (
-		<>
+		<SitePage locale={locale} path={person.path} translations={person.translations}>
 			{photo ? <Picture image={photo} className="photo" width={120} /> : null}
 			<h1>{person.title}</h1>
 			<p className="meta">{words(person.values.roles).join(" · ")}</p>
 			{text(person.values.bio) ? <p>{text(person.values.bio)}</p> : null}
 			<EntryRows entries={articles} locale={locale} />
-		</>
+		</SitePage>
 	);
 }
