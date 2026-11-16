@@ -838,3 +838,55 @@ describe("a row with no title", () => {
 		expect(color("첫 번째 글")).not.toBe(subtle);
 	});
 });
+
+describe("a cell that cuts its words", () => {
+	const LONG = "아주 길고 긴 값이 칸 하나의 폭보다 훨씬 더 길게 이어집니다";
+	const tip = () => [...document.querySelectorAll('[data-slot="tooltip-content"]')].map((each) => each.textContent);
+
+	it("[review 2] says its own words whole when it has no `title`, and says its `title` when it has one", async () => {
+		render(
+			<div style={{ width: 240 }}>
+				<Table container="none" layout="fixed" columns={[120, 120]}>
+					<TableBody>
+						<TableRow>
+							<TableCell truncate>{LONG}</TableCell>
+							<TableCell truncate title="전체 값">
+								{LONG}
+							</TableCell>
+						</TableRow>
+					</TableBody>
+				</Table>
+			</div>,
+		);
+		await expect.element(page.getByText(LONG).first()).toBeVisible();
+		const cells = [...document.querySelectorAll<HTMLElement>("td")];
+		await userEvent.hover(cells[0] as HTMLElement, { position: { x: 12, y: 8 } });
+		await expect.poll(tip).toEqual([LONG]);
+		await userEvent.hover(cells[1] as HTMLElement, { position: { x: 12, y: 8 } });
+		await expect.poll(tip).toEqual(["전체 값"]);
+	});
+
+	it("[review 2] has one speaker when its piece is already a cut part (a row's title), and none when its words fit", async () => {
+		render(
+			<div style={{ width: 240 }}>
+				<Table container="none" layout="fixed" columns={[120, 120]}>
+					<TableBody>
+						<TableRow>
+							<TableCell truncate>
+								<RowTitle title={<RowLink href="#/long">{LONG}</RowLink>} />
+							</TableCell>
+							<TableCell truncate>짧은 값</TableCell>
+						</TableRow>
+					</TableBody>
+				</Table>
+			</div>,
+		);
+		await expect.element(page.getByText(LONG)).toBeVisible();
+		const cells = [...document.querySelectorAll<HTMLElement>("td")];
+		await userEvent.hover(cells[0]?.querySelector("a") as HTMLElement, { position: { x: 12, y: 8 } });
+		await expect.poll(tip).toEqual([LONG]);
+		expect(tip().length).toBe(1);
+		await userEvent.hover(cells[1] as HTMLElement, { position: { x: 12, y: 8 }, force: true });
+		await expect.poll(tip).toEqual([]);
+	});
+});

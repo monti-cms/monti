@@ -257,6 +257,8 @@ function CutWords({
 					event.clientY >= edge.top &&
 					event.clientY <= edge.bottom;
 				if (!on) return left();
+				// Words inside these (a row's title in a cell that cuts) are another part's, and it speaks for them.
+				if (event.target instanceof Element && event.target.closest("[data-cut-words]") !== event.currentTarget) return;
 				if (!onWords.current) {
 					onWords.current = true;
 					measured.current = partial || !cut ? null : cutPart(event.currentTarget);
@@ -274,7 +276,8 @@ function CutWords({
 			onFocus: (event: React.FocusEvent<HTMLElement>) => {
 				own.onFocus?.(event);
 				// The keyboard's focus only: a press that focuses a link in the words says nothing.
-				if (event.target.matches(":focus-visible")) say("keys");
+				if (event.target.matches(":focus-visible") && event.target.closest("[data-cut-words]") === event.currentTarget)
+					say("keys");
 			},
 			onBlur: (event: React.FocusEvent<HTMLElement>) => {
 				own.onBlur?.(event);

@@ -139,7 +139,7 @@ export const CUT_OK = new Map([
 	],
 	[
 		"ui/src/table.tsx",
-		"a cell that cuts its pieces; the pieces say themselves whole (`RowTitle`, `Text truncate`, a cell's `title`). A bare string in a cut cell has no tooltip and is given a `title`",
+		"the cell's `truncate` class: a cell that cuts is itself a `CutWords` (`TableCell`), saying its `title` or its own words",
 	],
 	["ui/src/text.tsx", "the `truncate` option: `Text` and `Heading` put cut text in a `CutWords` themselves"],
 	[
