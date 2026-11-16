@@ -248,7 +248,10 @@ export const style = `/*
 	font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
 	font-size: 0.8125rem;
 }
-.monti-block-code-explorer-files > [data-node-view-content] > div > * {
+/* Every file stands with no room above or below it, so the box keeps one height whichever file is picked (only the picked one shows; the body
+   gives a code block 20px below it, the last block of a container none). */
+.monti-block-code-explorer-files [data-block="codeBlock"] {
 	margin-top: 0;
+	margin-bottom: 0;
 }
 `;

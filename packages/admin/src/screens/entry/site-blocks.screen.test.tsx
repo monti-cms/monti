@@ -382,6 +382,22 @@ describe("the site's blocks in the editor (doc 18)", () => {
 		expect(explorer?.attrs).toEqual({ open: "src/db.ts" });
 	});
 
+	it("18-5 a code explorer keeps one height whichever file is picked: no file keeps room under it", async () => {
+		await on().run();
+		await expect.element(page.getByRole("treeitem", { name: /app\.ts/ })).toBeVisible();
+		// The room under the file that shows: the body gives every block 20px below, and in the explorer no file keeps it.
+		const roomUnder = (words: string) =>
+			getComputedStyle(body().getByText(words).element().closest('[data-block="codeBlock"]') as Element).marginBottom;
+		for (const [file, words] of [
+			["app.ts", "export const app = 1;"],
+			["db.ts", "export const db = 2;"],
+		]) {
+			await userEvent.click(page.getByRole("button", { name: file, exact: true }));
+			await expect.element(body().getByText(words)).toBeVisible();
+			expect(roomUnder(words)).toBe("0px");
+		}
+	});
+
 	it("18-6 a formula opens its source in an area of its own under the drawing; what does not read is said under the field, and the drawing stays apart", async () => {
 		const made = on();
 		await made.run();
