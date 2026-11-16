@@ -133,11 +133,11 @@ describe("an event's paths are public addresses, whatever made it", () => {
 			slug: "hello-en",
 		});
 		await write("entries.publish", { ids: [translation.id] });
-		expect(published("post").at(-1)?.paths).toEqual(["/en/posts/hello"]);
+		expect(published("post").at(-1)?.paths).toEqual(["/en/posts/hello-en"]);
 		sent = [];
 		await write("entries.save", { id, version: await versionOf(id), title: "안녕하세요" });
 		await write("entries.publish", { ids: [id] });
-		expect(published("post").map((event) => event.paths)).toEqual([["/posts/hello", "/en/posts/hello"]]);
+		expect(published("post").map((event) => event.paths)).toEqual([["/posts/hello", "/en/posts/hello-en"]]);
 	});
 });
 
@@ -256,7 +256,7 @@ describe("an undo that changes what the site shows says so", () => {
 		const again = await act("entries.publish", { ids: [id] });
 		sent = [];
 		await undo(again.activityId);
-		expect(shown()).toEqual([["entry.published", ["/posts/hello", "/en/posts/hello"]]]);
+		expect(shown()).toEqual([["entry.published", ["/posts/hello", "/en/posts/hello-en"]]]);
 	});
 
 	it("02-7 T29 undoing a publish that changed only the date puts the old date back, and says so", async () => {
