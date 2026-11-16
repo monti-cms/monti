@@ -101,11 +101,9 @@ export default function ColumnsEditor() {
 		if (text) selection?.collapse(text, edge === "start" ? 0 : (text.textContent?.length ?? 0));
 		else selection?.collapse(from, 0);
 	};
-	/** From the strip on: the caret at the start of the block after this one, or the next stop after the editor. */
+	/** From the strip on: just after the columns block at its depth (the text that follows, or what follows picked whole), else the next stop after the editor. */
 	const afterBlock = () => {
-		const node = grid.current?.closest(".ProseMirror > *");
-		const next = node?.nextElementSibling;
-		if (next) return caretAt(next, "start");
+		if (block.moveAfter()) return;
 		const editor = root();
 		if (!editor) return;
 		const stops = [

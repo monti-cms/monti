@@ -21,7 +21,7 @@ import {
 } from "@monti-cms/ui";
 import type { Editor } from "@tiptap/core";
 import type { Node as EditorNode, Schema } from "@tiptap/pm/model";
-import { NodeSelection, TextSelection } from "@tiptap/pm/state";
+import { NodeSelection, Selection, TextSelection } from "@tiptap/pm/state";
 import { NodeViewContent, useEditorState } from "@tiptap/react";
 import {
 	type ComponentProps,
@@ -204,6 +204,19 @@ export function useBlock() {
 					if (own) tr.setSelection(TextSelection.near(tr.doc.resolve(pos() + own.nodeSize)));
 				});
 				editor.view.focus();
+			},
+			/**
+			 * Moves the selection to just after the block, at whatever depth it stands, as the arrow keys would: into the text of what follows (its start), or onto
+			 * it whole when it has no text (a picture, a divider). `false` when nothing follows in the body.
+			 */
+			moveAfter: () => {
+				const own = editor.state.doc.nodeAt(pos());
+				if (!own) return false;
+				const next = Selection.findFrom(editor.state.doc.resolve(pos() + own.nodeSize), 1);
+				if (!next) return false;
+				editor.view.dispatch(editor.state.tr.setSelection(next).scrollIntoView());
+				editor.view.focus();
+				return true;
 			},
 			/** Takes child `from` out and puts it back before what is now child `to`. */
 			moveChild: (from: number, to: number) =>

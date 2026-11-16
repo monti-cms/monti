@@ -282,6 +282,61 @@ describe("the site's blocks in the editor (doc 18)", () => {
 		expect(window.getSelection()?.anchorOffset).toBe(0);
 	});
 
+	/** Columns of `widths` with two one-paragraph columns, inside `wrap` when given (a block that holds blocks), then `after`. */
+	const nested = (wrap: "callout" | null, after: Block[]): Doc => {
+		const columns = {
+			id: "columns",
+			type: "columns",
+			children: [
+				{
+					id: "k1",
+					type: "column",
+					children: [{ id: "k1p", type: "paragraph", content: [{ type: "text", text: "왼쪽 단" }] }],
+				},
+				{
+					id: "k2",
+					type: "column",
+					children: [{ id: "k2p", type: "paragraph", content: [{ type: "text", text: "오른쪽 단" }] }],
+				},
+			],
+		} as Block;
+		return {
+			type: "doc",
+			blocks: [
+				{ id: "s1", type: "paragraph", content: [{ type: "text", text: "처음 글." }] },
+				...(wrap
+					? [{ id: "wrap", type: wrap, attrs: { tone: "tip", title: "겉" }, children: [columns, ...after] } as Block]
+					: [columns, ...after]),
+				{ id: "s9", type: "paragraph", content: [{ type: "text", text: "맨 끝 글." }] },
+			],
+		};
+	};
+	const selectionOf = () =>
+		(body().element() as unknown as { editor: { state: { selection: { node?: { type: { name: string } } } } } }).editor
+			.state.selection;
+
+	it("18-5 columns: from the + strip Tab goes to just after the columns at their depth: the paragraph after them inside the same callout, not past the callout", async () => {
+		await on(
+			nested("callout", [{ id: "in", type: "paragraph", content: [{ type: "text", text: "겉 안의 글." }] } as Block]),
+		).run();
+		await expect.poll(() => document.querySelector(".monti-block-columns-editor")).not.toBeNull();
+		await caretAfter(body().element(), "왼쪽 단");
+		await userEvent.keyboard("{Tab}");
+		await expect.poll(strip).toBe(true);
+		await userEvent.keyboard("{Tab}");
+		await expect.poll(() => caretIn()?.textContent).toBe("겉 안의 글.");
+	});
+
+	it("18-5 columns: from the + strip Tab onto a block without text after the columns (a divider, as a picture) picks it whole, as the arrow keys do", async () => {
+		await on(nested(null, [{ id: "rule", type: "divider" } as Block])).run();
+		await expect.poll(() => document.querySelector(".monti-block-columns-editor")).not.toBeNull();
+		await caretAfter(body().element(), "왼쪽 단");
+		await userEvent.keyboard("{Tab}");
+		await expect.poll(strip).toBe(true);
+		await userEvent.keyboard("{Tab}");
+		await expect.poll(() => selectionOf().node?.type.name).toBe("divider");
+	});
+
 	it("18-5 columns: with no tool row Shift+Tab from the + strip goes back to the caret at the end of the block's last text", async () => {
 		await on(around(undefined)).run();
 		await expect.poll(() => document.querySelector(".monti-block-columns-editor")).not.toBeNull();

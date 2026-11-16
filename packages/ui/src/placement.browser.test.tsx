@@ -2,10 +2,18 @@ import { useState } from "react";
 import { afterEach, describe, expect, it, onTestFinished } from "vitest";
 import { page } from "vitest/browser";
 import { render } from "../test/render";
-import { BodyScope } from "./body-scope";
+import { BodyScope, useInBody } from "./body-scope";
 import { dock, dockTop } from "./bottom-dock";
 import {
+	AlertDialog,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogTitle,
 	Anchored,
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogTitle,
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
@@ -252,5 +260,32 @@ describe("where a floating thing stands (overlay.md, the place rule)", () => {
 		render(<BodyScope>{menuFrom({ top: 70, left: 40 })}</BodyScope>);
 		await expect.poll(() => document.querySelector("[role=menu]")).not.toBeNull();
 		await expect.poll(() => menu().getBoundingClientRect().top).toBeGreaterThanOrEqual(68);
+	});
+
+	it("a modal opened from the body is not in the body: the shared surface of a dialog and of a question resets the scope", async () => {
+		const Probe = ({ id }: { id: string }) => <span data-testid={id}>{String(useInBody())}</span>;
+		render(
+			<BodyScope>
+				<Probe id="body" />
+				<Dialog open>
+					<DialogContent>
+						<DialogTitle>창</DialogTitle>
+						<DialogDescription>설명</DialogDescription>
+						<Probe id="dialog" />
+					</DialogContent>
+				</Dialog>
+				<AlertDialog open>
+					<AlertDialogContent>
+						<AlertDialogTitle>묻기</AlertDialogTitle>
+						<AlertDialogDescription>설명</AlertDialogDescription>
+						<Probe id="question" />
+					</AlertDialogContent>
+				</AlertDialog>
+			</BodyScope>,
+		);
+		const text = (id: string) => document.querySelector(`[data-testid=${id}]`)?.textContent;
+		await expect.poll(() => text("dialog")).toBe("false");
+		expect(text("question")).toBe("false");
+		expect(text("body")).toBe("true");
 	});
 });
