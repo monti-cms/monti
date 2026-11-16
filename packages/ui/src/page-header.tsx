@@ -63,8 +63,8 @@ function PageHeader({
  *
  * `width="content"` (the default) is 880px: settings and form pages, where a label must not drift from its value and a line must not grow long.
  * `width="list"` is for a page of rows (entries, media, trash, the tables of tools): 880px until the page area leaves at least 240px on each side, then it
- * grows with the area up to 1200px (880 at 1440 wide, 1200 at 1920). The column clips what runs out of it sideways (a table wider than the room),
- * so nothing is drawn over a docked panel beside it; a row's ⋯ sticks to the page area's right edge (`TableRow`), so it stays in reach (AT-01). The area is what is beside the sidebar and any docked panel, measured on the
+ * grows with the area up to 1200px (880 at 1440 wide, 1200 at 1920). What runs out of the column sideways (a table wider than the room) is reached by scrolling the page sideways; a docked panel beside it stands above
+ * the page (its own ground and z-order), so the table runs under it, not over it. A row's ⋯ sticks to the page area's right edge (`TableRow`), so it stays in reach (AT-01). The area is what is beside the sidebar and any docked panel, measured on the
  * nearest `container` (the admin frame makes it), so a folded rail or an open panel runs the same rule on the room that is left.
  */
 function PageColumn({
@@ -109,7 +109,7 @@ function PageColumn({
 			}}
 			data-slot="page-column"
 			data-width={width}
-			className={cn("flex min-w-0 flex-1 flex-col overflow-x-clip px-monti-16 pt-monti-40 md:px-monti-48", className)}
+			className={cn("flex min-w-0 flex-1 flex-col px-monti-16 pt-monti-40 md:px-monti-48", className)}
 			{...props}
 		>
 			{/* The room below the page is this box's own, not the column's: beside a docked panel the column is held to the page's height and what

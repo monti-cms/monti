@@ -192,7 +192,7 @@ export function SidePanel({
 			data-slot="side-panel"
 			aria-labelledby={title ? titleId : undefined}
 			className={cn(
-				"relative flex min-h-0 w-full min-w-0 shrink-0 flex-col bg-monti-tool shadow-[inset_1px_0_0_var(--monti-border-default)] [--monti-ground:var(--monti-bg-tool)] sm:w-(--side-panel-width)",
+				"relative z-20 flex min-h-0 w-full min-w-0 shrink-0 flex-col bg-monti-tool shadow-[inset_1px_0_0_var(--monti-border-default)] [--monti-ground:var(--monti-bg-tool)] sm:w-(--side-panel-width)",
 				className,
 			)}
 			style={{ "--side-panel-width": `${resize.width}px`, ...style } as CSSProperties}

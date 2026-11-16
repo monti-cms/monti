@@ -239,6 +239,13 @@ describe("the activity log (doc 13, flow 12)", () => {
 			const box = button.getBoundingClientRect();
 			expect(button.contains(document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2))).toBe(true);
 		}
+		// The table runs under the panel, not over it: what is at the panel's edge, on a row's line, is the panel's.
+		const rowLine = table().element().querySelector("tbody tr")?.getBoundingClientRect();
+		expect(
+			panel()
+				.element()
+				.contains(document.elementFromPoint(edge + 10, (rowLine?.top ?? 0) + (rowLine?.height ?? 0) / 2)),
+		).toBe(true);
 		// The table runs under the ⋯ cell: it shows its edge line, and the head's last cell stands over it at the same left edge.
 		const cell = actions[0]?.closest("td") as HTMLElement;
 		expect(getComputedStyle(cell).boxShadow).not.toBe("none");
