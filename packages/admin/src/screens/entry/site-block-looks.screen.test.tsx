@@ -12,16 +12,30 @@ const p = (id: string, text: string): Block => ({ id, type: "paragraph", content
 
 describe("the looks of the site's blocks in the editor (doc 18)", () => {
 	// First in the file: a block's own view loads once a page, so only the first tabs block drawn waits for it.
-	it("18-5 while the tabs' own view is on its way, the stand-in names the tabs and shows one pane, as the site draws them", async () => {
+	it("18-5 while the tabs' own view is on its way, the stand-in names the tabs, shows the tab the block shows first with all it holds, and keeps its tabs inert", async () => {
 		const made = on({
 			type: "doc",
 			blocks: [
 				{
 					id: "tabs",
 					type: "tabs",
+					attrs: { defaultValue: "pnpm" },
 					children: [
 						{ id: "t1", type: "tab", attrs: { label: "npm" }, children: [p("t1p", "npm install monti")] },
-						{ id: "t2", type: "tab", attrs: { label: "pnpm" }, children: [p("t2p", "pnpm add monti")] },
+						{
+							id: "t2",
+							type: "tab",
+							attrs: { label: "pnpm" },
+							children: [
+								p("t2a", "pnpm add monti"),
+								{
+									id: "co",
+									type: "callout",
+									attrs: { tone: "tip", title: "알아 두세요" },
+									children: [p("co1", "콜아웃 첫 줄"), p("co2", "콜아웃 둘째 줄")],
+								},
+							],
+						},
 					],
 				},
 			],
@@ -29,11 +43,14 @@ describe("the looks of the site's blocks in the editor (doc 18)", () => {
 		onTestFinished(releaseRequests);
 		await holdRequests("**/blocks/tabs/editor.tsx*");
 		await made.run();
-		await expect.element(body().getByRole("tab", { name: /^npm$/ })).toBeVisible();
-		await expect.element(body().getByRole("tab", { name: /^pnpm$/ })).toBeVisible();
-		// One pane: the first tab's words, not every tab's.
-		await expect.element(body().getByText("npm install monti")).toBeVisible();
-		await expect.element(body().getByText("pnpm add monti")).not.toBeVisible();
+		await expect.element(body().getByText("pnpm add monti")).toBeVisible();
+		await expect.element(body().getByText("콜아웃 첫 줄")).toBeVisible();
+		await expect.element(body().getByText("콜아웃 둘째 줄")).toBeVisible();
+		await expect.element(body().getByText("npm install monti")).not.toBeVisible();
+		const shown = body().getByRole("tab", { name: /^pnpm$/ });
+		await expect.element(shown).toHaveAttribute("aria-selected", "true");
+		await expect.element(shown).toBeDisabled();
+		await expect.element(body().getByRole("tab", { name: /^npm$/ })).toBeDisabled();
 		expect(body().element().querySelector('[data-slot="folder-tabs-body"]')).toBeNull();
 		await releaseRequests();
 		await expect

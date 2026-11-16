@@ -37,6 +37,8 @@ function TabsDrawing({ block, attrs, lang, children }: BlockProps & { children?:
 			lang={lang}
 			labels={labels}
 			panels={tabs.map((tab) => tab.panel)}
+			// One holder with every tab in it (the editor's stand-in), not a panel for each tab.
+			holder={panels.length === 1 && tabs.length > 1}
 			defaultIndex={Math.max(0, labels.indexOf(typeof attrs.defaultValue === "string" ? attrs.defaultValue : ""))}
 		/>
 	);

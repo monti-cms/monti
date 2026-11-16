@@ -147,8 +147,30 @@ export const style = `/*
 	margin-bottom: 0;
 }
 
-/* In the editor, while the tabs' own view loads, the site's drawing stands in: its one pane holds every tab, so only the first tab shows. */
-.monti-block-tabs [role="tabpanel"] [data-node-view-content-react] > :not(:first-child) {
+/* In the editor, while the tabs' own view loads, the site's drawing stands in with one holder of every tab: only the tab it shows (data-shown) is drawn, and only
+ * the tabs' own holder is reached (child combinators), so what a tab holds is never hidden. */
+.monti-block-tabs[data-shown="0"] > [role="tabpanel"] > [data-node-view-content] > [data-node-view-content-react] > :not(:nth-child(1)) {
+	display: none;
+}
+.monti-block-tabs[data-shown="1"] > [role="tabpanel"] > [data-node-view-content] > [data-node-view-content-react] > :not(:nth-child(2)) {
+	display: none;
+}
+.monti-block-tabs[data-shown="2"] > [role="tabpanel"] > [data-node-view-content] > [data-node-view-content-react] > :not(:nth-child(3)) {
+	display: none;
+}
+.monti-block-tabs[data-shown="3"] > [role="tabpanel"] > [data-node-view-content] > [data-node-view-content-react] > :not(:nth-child(4)) {
+	display: none;
+}
+.monti-block-tabs[data-shown="4"] > [role="tabpanel"] > [data-node-view-content] > [data-node-view-content-react] > :not(:nth-child(5)) {
+	display: none;
+}
+.monti-block-tabs[data-shown="5"] > [role="tabpanel"] > [data-node-view-content] > [data-node-view-content-react] > :not(:nth-child(6)) {
+	display: none;
+}
+.monti-block-tabs[data-shown="6"] > [role="tabpanel"] > [data-node-view-content] > [data-node-view-content-react] > :not(:nth-child(7)) {
+	display: none;
+}
+.monti-block-tabs[data-shown="7"] > [role="tabpanel"] > [data-node-view-content] > [data-node-view-content-react] > :not(:nth-child(8)) {
 	display: none;
 }
 

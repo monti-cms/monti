@@ -11,12 +11,18 @@ export function TabsView({
 	panels,
 	defaultIndex = 0,
 	lang,
+	holder = false,
 }: {
 	readonly labels: readonly string[];
 	readonly panels: readonly ReactNode[];
 	readonly defaultIndex?: number;
 	/** The source's language, when the tabs keep the source's words in a translation. */
 	readonly lang?: string;
+	/**
+	 * The editor's stand-in while the block's own view loads: one holder (`panels[0]`) has every tab's blocks in it, so it shows the tab `defaultIndex` names (a rule
+	 * of `style.ts`, by `data-shown`), and the tabs are inert until the real view comes.
+	 */
+	readonly holder?: boolean;
 }) {
 	const id = useId();
 	const [active, setActive] = useState(defaultIndex);
@@ -43,7 +49,7 @@ export function TabsView({
 	};
 
 	return (
-		<div className="monti-block-tabs" lang={lang}>
+		<div className="monti-block-tabs" lang={lang} data-shown={holder ? defaultIndex : undefined}>
 			<div className="monti-block-tabs-list" role="tablist" aria-orientation="horizontal">
 				{labels.map((label, index) => (
 					<button
@@ -58,6 +64,7 @@ export function TabsView({
 						className="monti-block-tabs-tab"
 						title={label}
 						aria-label={label}
+						disabled={holder}
 						aria-selected={index === active}
 						aria-controls={`${id}-panel-${index}`}
 						tabIndex={index === active ? 0 : -1}
@@ -70,14 +77,14 @@ export function TabsView({
 					</button>
 				))}
 			</div>
-			{panels.map((panel, index) => (
+			{(holder ? panels.slice(0, 1) : panels).map((panel, index) => (
 				<div
 					// biome-ignore lint/suspicious/noArrayIndexKey: same position order as the tabs
 					key={index}
 					role="tabpanel"
 					id={`${id}-panel-${index}`}
-					aria-labelledby={`${id}-tab-${index}`}
-					hidden={index !== active}
+					aria-labelledby={`${id}-tab-${holder ? defaultIndex : index}`}
+					hidden={!holder && index !== active}
 				>
 					{panel}
 				</div>
