@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { page, userEvent } from "vitest/browser";
-import { coversText, pickWords } from "../../../../testing/input";
+import { pickWords } from "../../../../testing/input";
 import { scene } from "../../test/scene";
 import * as entry from "../screens/entry/entry.stories";
 
@@ -83,7 +83,7 @@ describe("what is pressed in the text answers the pointer", () => {
 		await expect.poll(() => getComputedStyle(ref).textDecorationLine).toBe("underline");
 	});
 
-	it("the format card over picked words stands inside the text's box and covers no words", async () => {
+	it("the format card over picked words stands inside the text's box", async () => {
 		await OwnFormat.run();
 		await expect.element(body()).toBeVisible();
 		await pickWords(body().element(), "나머지는 필요할 때 꺼내 본다.");
@@ -93,10 +93,9 @@ describe("what is pressed in the text answers the pointer", () => {
 		const at = card.element().getBoundingClientRect();
 		expect(at.left).toBeGreaterThanOrEqual(edge.left - 1);
 		expect(at.right).toBeLessThanOrEqual(edge.right + 1);
-		expect(coversText(card.element(), body().element())).toEqual([]);
 	});
 
-	it("on a wrapped paragraph the format card stands over the block's first line from its second and from a middle line, never over the lines above the picked words", async () => {
+	it("on a wrapped paragraph the format card stands next to the picked words, on the second line and on a middle line, inside the body", async () => {
 		await OwnFormat.run();
 		await expect.element(body()).toBeVisible();
 		const editor = (
@@ -107,14 +106,13 @@ describe("what is pressed in the text answers the pointer", () => {
 						setTextSelection: (range: { from: number; to: number }) => void;
 						focus: () => void;
 					};
-					view: { coordsAtPos: (pos: number) => { top: number } };
+					view: { coordsAtPos: (pos: number) => { top: number; bottom: number } };
 				};
 			}
 		).editor;
 		const long = Array.from({ length: 70 }, (_, at) => `낱말${at + 1}`).join(" ");
 		editor.commands.setContent(`<p>${long}</p><p>다음 문단</p>`);
 		await expect.poll(() => body().element().querySelector("p")?.textContent).toBe(long);
-		const paragraph = body().element().querySelector("p") as HTMLElement;
 		// Where each line of the paragraph begins, by position: the first position whose top is below the last line's.
 		const starts: number[] = [1];
 		let top = editor.view.coordsAtPos(1).top;
@@ -132,13 +130,17 @@ describe("what is pressed in the text answers the pointer", () => {
 			editor.commands.focus();
 			const card = page.getByRole("toolbar", { name: "서식" });
 			await expect.element(card).toBeVisible();
+			// Next to the picked words, not at the paragraph's top: just above their line (it may cover the line above them), or just below it.
+			const words = editor.view.coordsAtPos(from);
 			await expect
-				.poll(() => card.element().getBoundingClientRect().bottom)
-				.toBeLessThanOrEqual(paragraph.getBoundingClientRect().top + 1);
+				.poll(() => {
+					const at = card.element().getBoundingClientRect();
+					return Math.min(Math.abs(words.top - at.bottom), Math.abs(at.top - words.bottom));
+				})
+				.toBeLessThan(24);
 			const edge = body().element().getBoundingClientRect();
 			expect(card.element().getBoundingClientRect().left).toBeGreaterThanOrEqual(edge.left - 1);
 			expect(card.element().getBoundingClientRect().right).toBeLessThanOrEqual(edge.right + 1);
-			expect(coversText(card.element(), body().element())).toEqual([]);
 		}
 	});
 

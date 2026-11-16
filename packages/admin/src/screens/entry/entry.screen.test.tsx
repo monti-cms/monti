@@ -1085,7 +1085,7 @@ describe("the entry editor: the assistant's proposals in the body (T32)", () => 
 		expect(await proposals()).toHaveLength(2);
 	});
 
-	it("at the end of the text the review bar stands in the room the body keeps for it and covers no words", async () => {
+	it("a bar fixed to the window's edge lets every word scroll clear of it: at the end the last words are above the review bar, and the end room is the bar's height and gap", async () => {
 		await proposed();
 		const dock = () => document.querySelector("[data-slot=proposal-bubble-dock]") as HTMLElement;
 		await expect.poll(dock).not.toBeNull();
@@ -1095,15 +1095,23 @@ describe("the entry editor: the assistant's proposals in the body (T32)", () => 
 				if (at.scrollHeight > at.clientHeight) found.push(at);
 			return found;
 		};
-		// Mid-scroll the bar floats at the window's foot over what scrolls under it (it is the one thing that stays and may cover words, overlay.md): it
-		// is whole in the window there.
+		// Mid-scroll the bar is whole at the window's foot, and the words scroll under it.
 		for (const at of scrollers()) at.scrollTop = at.scrollHeight / 3;
 		await expect
 			.poll(() => dock().firstElementChild?.getBoundingClientRect().bottom ?? 0)
 			.toBeLessThanOrEqual(window.innerHeight);
-		// At the end of the text it stands in the room the body keeps for it and covers no words.
+		// At the end the last words are clear of it.
 		for (const at of scrollers()) at.scrollTop = at.scrollHeight;
 		await expect.poll(() => coversText(dock(), body().element())).toEqual([]);
+		// The room the body keeps at its end: from the last words down to the foot of the scrolling box, the bar's height and the gap over the edge.
+		const bar = dock().firstElementChild as HTMLElement;
+		const text = [...body().element().querySelectorAll("p, li, h2, h3, h4")]
+			.filter((each) => each.textContent?.trim())
+			.at(-1) as Element;
+		const foot = (scrollers()[0] ?? document.documentElement).getBoundingClientRect().bottom;
+		await expect
+			.poll(() => foot - text.getBoundingClientRect().bottom)
+			.toBeGreaterThanOrEqual(bar.getBoundingClientRect().height + 12 - 1);
 	});
 
 	it("'모두 받기' puts every proposal into the text at once, unsaved", async () => {

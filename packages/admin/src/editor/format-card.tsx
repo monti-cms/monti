@@ -55,19 +55,18 @@ const GROUPS: { type: string; mark: FormatMark; keys?: ShortcutKeys }[][] = [
 ];
 
 /**
- * Where the card stands, as `Anchored` reads it: over the first line of the selected words' block, at the words' start (across them when they are on
- * one line). One rule for every selection: on a wrapped paragraph's second or middle line the card is not drawn over the line above, it stands over
- * the block's first line, in the gap above the block; `Anchored` folds it inside the body (`selection-above`, EB-02).
+ * Where the card stands, as `Anchored` reads it: the first line of the selected words, from their start (across them when they are on one line).
+ * The card is a thing opened, like a menu: it stands over the words while they are picked, flipped below where there is no room above, folded inside
+ * the body (`selection-above`, EB-02), and may cover the line above while the selection lasts.
  */
 function wordsSpot(editor: Editor, from: number, to: number): Spot {
 	if (editor.isDestroyed) return { left: 0, top: 0 };
 	const start = editor.view.coordsAtPos(from);
 	const end = editor.view.coordsAtPos(to);
-	const first = editor.view.coordsAtPos(editor.state.doc.resolve(from).start());
 	const sameLine = Math.abs(start.top - end.top) < 4;
 	return {
 		left: start.left,
-		top: Math.min(first.top, start.top),
+		top: Math.min(start.top, end.top),
 		width: sameLine ? end.right - start.left : 0,
 		height: start.bottom - start.top,
 	};

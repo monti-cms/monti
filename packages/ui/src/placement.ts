@@ -75,13 +75,11 @@ export function usePlacementPadding() {
 }
 
 /**
- * How a placed thing meets an edge. `stays`: flips to the other side and slides along (a thing beside the pointer). `slides`: keeps its side and slides
- * along inside the box it folds into (the format card never leaves the body; it is not flipped onto the words). `exact`: stays where it is told (a handle,
+ * How a placed thing meets an edge. `stays`: flips to the other side and slides along (a thing opened: the format card, a thing beside the pointer). `exact`: stays where it is told (a handle,
  * a grip, a drawn line or box): it is not flipped onto text either, and a thing whose anchor has scrolled out of view is hidden (`Anchored`).
  */
 export const COLLISION = {
 	stays: { side: "flip", align: "shift" },
-	slides: { side: "none", align: "shift" },
 	exact: { side: "none", align: "none" },
 } as const;
 
@@ -97,8 +95,8 @@ export const PLACES: Record<
 > = {
 	/** The block handle: in the left margin, level with the block's first line, {@link EDGE_GAP} off the text. */
 	"block-left": { side: "left", align: "start", sideOffset: EDGE_GAP, collision: "exact" },
-	/** The format card: over the first line of the selected words' block, 8px up, so it never stands over a line of its own block. */
-	"selection-above": { side: "top", align: "center", sideOffset: 8, collision: "slides" },
+	/** The format card: over the selected words, 8px up, flipped below when there is no room above; it is a thing opened and goes with the selection. */
+	"selection-above": { side: "top", align: "center", sideOffset: 8, collision: "stays" },
 	/** A table's column grip: above the top edge, {@link EDGE_GAP} off, in the middle of the column. */
 	"table-above": { side: "top", align: "center", sideOffset: EDGE_GAP, collision: "exact" },
 	/** A table's row grip: out of the left rule by its own width and the gap, in the middle of the row. */

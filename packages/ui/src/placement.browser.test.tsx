@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { afterEach, describe, expect, it } from "vitest";
 import { page } from "vitest/browser";
-import { coversText } from "../../../testing/input";
 import { render } from "../test/render";
 import { dock } from "./bottom-dock";
 import {
@@ -43,7 +42,7 @@ function menuFrom(place: { top?: number; bottom?: number; left?: number; right?:
 const menu = () => page.getByRole("menu").element() as HTMLElement;
 
 describe("where a floating thing stands (overlay.md, the place rule)", () => {
-	it("a thing over words stands above the line it stands for with words around it, inside the body's box, and covers none; a panel that narrows the body keeps it inside", async () => {
+	it("a thing opened over words stands just above the line it stands for with words around it, inside the body's box; a panel that narrows the body keeps it inside", async () => {
 		function Page() {
 			const [box, setBox] = useState<HTMLElement | null>(null);
 			const [panel, setPanel] = useState(0);
@@ -93,7 +92,7 @@ describe("where a floating thing stands (overlay.md, the place rule)", () => {
 		await expect.poll(inside).toBe(true);
 		// Over the line it stands for, not on it, with the words above it left clear.
 		expect(card.getBoundingClientRect().bottom).toBeLessThanOrEqual(line.getBoundingClientRect().top);
-		expect(coversText(card, body)).toEqual([]);
+		expect(line.getBoundingClientRect().top - card.getBoundingClientRect().bottom).toBeLessThan(20);
 		const before = body.getBoundingClientRect().width;
 		await page.getByRole("button", { name: "open panel" }).click();
 		await expect.poll(() => body.getBoundingClientRect().width).toBeLessThan(before - 100);
