@@ -40,15 +40,16 @@ const LAYERS = '[role="menu"], [role="listbox"], [role="dialog"], [role="alertdi
  * The widths a side panel starts at (the `width-panel`, `width-side-panel` and `width-assistant` tokens): `side` for a file or an activity beside a
  * list, `panel` for the entry's properties, `assistant` for the assistant. The writer can drag it up to twice as wide, never narrower.
  */
-const MIN_WIDTH = {
-	side: "sm:min-w-[360px]",
-	panel: "sm:min-w-[300px]",
-	assistant: "sm:min-w-[380px]",
-} as const;
 const SIDE_PANEL_WIDTH = {
 	side: 360,
 	panel: 300,
 	assistant: 380,
+} as const;
+/** The same start widths as a floor: short of room a panel gives way to them, never below (the tokens themselves). */
+const MIN_WIDTH = {
+	side: "sm:min-w-monti-side-panel",
+	panel: "sm:min-w-monti-panel",
+	assistant: "sm:min-w-monti-assistant",
 } as const;
 
 /**
