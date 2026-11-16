@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
+import { userEvent } from "storybook/test";
 import {
 	Combobox,
 	ComboboxChip,
@@ -51,6 +52,7 @@ export const Playground: Story = {
 };
 
 export const States: Story = {
+	tags: ["visual"],
 	render: () => (
 		<Stack className="max-w-sm" gap={16}>
 			<StoryCaption>placeholder</StoryCaption>
@@ -71,6 +73,11 @@ export const States: Story = {
 			<StoryCaption>disabled</StoryCaption>
 			<Combobox items={TAGS} defaultValue="일상">
 				<ComboboxInput disabled />
+				<Popup />
+			</Combobox>
+			<StoryCaption>readOnly (a value to read: full ink, no caret and no clear, its list does not open)</StoryCaption>
+			<Combobox items={TAGS} value="일상" readOnly>
+				<ComboboxInput showClear />
 				<Popup />
 			</Combobox>
 			<StoryCaption>invalid</StoryCaption>
@@ -106,11 +113,31 @@ export const Empty: Story = {
 	),
 };
 
-function ChipsExample({ open, invalid, proposal }: { open?: boolean; invalid?: boolean; proposal?: boolean }) {
+function ChipsExample({
+	open,
+	invalid,
+	proposal,
+	disabled,
+	readOnly,
+}: {
+	open?: boolean;
+	invalid?: boolean;
+	proposal?: boolean;
+	disabled?: boolean;
+	readOnly?: boolean;
+}) {
 	const anchor = useComboboxAnchor();
 	const [value, setValue] = useState<string[]>(["공지사항", "리뷰"]);
 	return (
-		<Combobox items={TAGS} multiple defaultOpen={open} value={value} onValueChange={setValue}>
+		<Combobox
+			items={TAGS}
+			multiple
+			defaultOpen={open}
+			value={value}
+			onValueChange={setValue}
+			disabled={disabled}
+			readOnly={readOnly}
+		>
 			<ComboboxChips ref={anchor} proposal={proposal}>
 				{value.map((tag) => (
 					<ComboboxChip key={tag}>{tag}</ComboboxChip>
@@ -131,16 +158,39 @@ function ChipsExample({ open, invalid, proposal }: { open?: boolean; invalid?: b
 	);
 }
 
-/** Multiple selection as chips: closed, invalid, and with values the assistant proposed. */
+/**
+ * Multiple selection as chips: closed, invalid, with values the assistant proposed, off (the field dimmed once, chips and all), and read-only
+ * (full ink, no × on a chip; the keyboard's focus is a ring around the field).
+ */
 export const Chips: Story = {
+	tags: ["visual"],
 	render: () => (
 		<Stack className="max-w-sm" gap={16}>
+			<StoryCaption>closed</StoryCaption>
 			<ChipsExample />
+			<StoryCaption>invalid</StoryCaption>
 			<ChipsExample invalid />
-			{/* Values the assistant chose and nobody has touched. */}
+			<StoryCaption>proposal (values the assistant chose and nobody has touched)</StoryCaption>
 			<ChipsExample proposal />
+			<StoryCaption>disabled</StoryCaption>
+			<ChipsExample disabled />
+			<StoryCaption>readOnly</StoryCaption>
+			<ChipsExample readOnly />
 		</Stack>
 	),
+};
+
+/** A read-only field of many with the keyboard on it: nothing is typed, so no caret shows the focus; a ring around the field does. */
+export const ChipsReadOnlyFocused: Story = {
+	tags: ["visual"],
+	render: () => (
+		<Stack className="max-w-sm" gap={16}>
+			<ChipsExample readOnly />
+		</Stack>
+	),
+	play: async () => {
+		await userEvent.tab();
+	},
 };
 
 export const ChipsOpen: Story = {
