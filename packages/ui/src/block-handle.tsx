@@ -4,6 +4,7 @@ import { Button as ButtonPrimitive } from "@base-ui/react/button";
 import type { ComponentProps, ReactElement } from "react";
 import { cn } from "./cn";
 import { Grip } from "./grip";
+import { Tooltip, TooltipContent, TooltipTrigger } from "./tooltip";
 
 /**
  * A rounded square of 20 × 24, Notion's handle: a light ground when pointed at, the pressed ground while its menu is open (2026-11-14, owner). It
@@ -20,6 +21,7 @@ const HANDLE_BUTTON =
  */
 function BlockHandle({
 	gripLabel,
+	hint,
 	active = false,
 	trigger,
 	className,
@@ -27,6 +29,8 @@ function BlockHandle({
 }: Omit<ButtonPrimitive.Props, "aria-label" | "children"> & {
 	/** The name of the grip for screen readers. */
 	gripLabel: string;
+	/** What the grip does, in a few words, as its tooltip ("Drag to move · press for menu"). */
+	hint: string;
 	/** The block menu is open. */
 	active?: boolean;
 	trigger?: (grip: ReactElement) => ReactElement;
@@ -44,7 +48,10 @@ function BlockHandle({
 	);
 	return (
 		<span data-slot="block-handle" className={cn("flex", className)}>
-			{trigger ? trigger(grip) : grip}
+			<Tooltip>
+				<TooltipTrigger render={trigger ? trigger(grip) : grip} />
+				<TooltipContent side="top">{hint}</TooltipContent>
+			</Tooltip>
 		</span>
 	);
 }
@@ -66,7 +73,7 @@ function Block({ active = false, className, ...props }: ComponentProps<"div"> & 
 
 /**
  * The box a drag from the margin outside the text draws to pick blocks (editor-tools.md, picking several blocks): a thin line, never a fill, so the
- * blocks under it show their own picked ground and the text stays readable. The editor sets its place and size (`EditorOverlay`).
+ * blocks under it show their own picked ground and the text stays readable. The editor sets its place and size (`Anchored`).
  */
 function PickBox() {
 	return (

@@ -2,6 +2,8 @@
 
 import type { ComponentProps, ReactNode, Ref } from "react";
 import { BlockBox } from "./block-bar";
+import { cn } from "./cn";
+import { TOOL_ROW_ROOM } from "./placement";
 
 /**
  * A site block written in a language of its own in the editor (a formula, a diagram, a chart; editor-tools.md, the source block): its drawing in a box
@@ -44,7 +46,7 @@ function SourceBox({
 
 /** A site block's frame in the editor: what its tool row (`BlockBarPlace`) hangs off. The editor reads the pointer over it. */
 function BlockFrameBox({ ref, ...props }: ComponentProps<"div"> & { ref?: Ref<HTMLDivElement> }) {
-	return <div ref={ref} data-slot="block-frame" className="relative" {...props} />;
+	return <div ref={ref} data-slot="block-frame" className={cn("relative", TOOL_ROW_ROOM)} {...props} />;
 }
 
 /**

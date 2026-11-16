@@ -3,7 +3,7 @@ import { Box, EditorBody, Stack, TableAddStrip, TableColumnBorder, TableGrip } f
 
 /**
  * A table's tools in the editor: the grips on the caret's column and row, the borders between columns, and the + strips along its right and bottom edges. The editor places them
- * over the table with `EditorOverlay`; here they stand on their own.
+ * over the table with `Anchored`; here they stand on their own.
  */
 const meta = {
 	title: "Monti/EditorTools/TableTools",

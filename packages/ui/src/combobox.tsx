@@ -12,6 +12,7 @@ import { Input } from "./input";
 import { useUiLabels } from "./labels";
 import { MENU_CARD, MENU_EMPTY, MENU_ITEM, MENU_LABEL, MENU_MOTION, MENU_SEPARATOR, MenuTick } from "./menu-parts";
 import { menuWords } from "./menu-words";
+import { FIRST_PASS, FIT_HEIGHT, FIT_LIST, usePlacementPadding } from "./placement";
 
 /**
  * The combobox. `readOnly` is a value to read, the same in a field of one and of many: full ink, the keyboard stops on it and its words can be
@@ -150,9 +151,12 @@ function ComboboxContent({
 	...props
 }: ComboboxPrimitive.Popup.Props &
 	Pick<ComboboxPrimitive.Positioner.Props, "side" | "align" | "sideOffset" | "alignOffset" | "anchor">) {
+	const placement = usePlacementPadding();
 	return (
 		<ComboboxPrimitive.Portal>
 			<ComboboxPrimitive.Positioner
+				collisionPadding={placement}
+				style={FIRST_PASS}
 				side={side}
 				sideOffset={sideOffset}
 				align={align}
@@ -166,7 +170,9 @@ function ComboboxContent({
 					className={cn(
 						MENU_CARD,
 						MENU_MOTION,
-						"group/combobox-content relative max-h-(--available-height) w-(--anchor-width) min-w-[calc(var(--anchor-width)+--spacing(7))] max-w-(--available-width) overflow-hidden data-[chips=true]:min-w-(--anchor-width)",
+						"group/combobox-content relative",
+						FIT_HEIGHT,
+						"w-(--anchor-width) min-w-[calc(var(--anchor-width)+--spacing(7))] max-w-(--available-width) overflow-hidden data-[chips=true]:min-w-(--anchor-width)",
 						className,
 					)}
 					{...props}
@@ -181,7 +187,8 @@ function ComboboxList({ className, ...props }: ComboboxPrimitive.List.Props) {
 		<ComboboxPrimitive.List
 			data-slot="combobox-list"
 			className={cn(
-				"no-scrollbar max-h-[min(calc(--spacing(72)---spacing(9)),calc(var(--available-height)---spacing(9)))] scroll-py-1 overflow-y-auto overscroll-contain p-monti-6 data-empty:p-0",
+				"no-scrollbar scroll-py-1 overflow-y-auto overscroll-contain p-monti-6 data-empty:p-0",
+				FIT_LIST,
 				className,
 			)}
 			{...props}

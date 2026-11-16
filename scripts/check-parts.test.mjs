@@ -7,6 +7,7 @@ import {
 	koTexts,
 	listCompose,
 	monoProps,
+	overlayPlace,
 	ownGlyph,
 	requiredMark,
 } from "./check-parts.mjs";
@@ -275,4 +276,43 @@ test("list-compose: a table drawn by hand in a screen is named, CollectionTable 
 	assert.match(found[0].message, /use CollectionTable/);
 	assert.match(found[1].message, /use CollectionTable/);
 	assert.match(found[2].message, /no table by hand any more/);
+});
+
+test("overlay-place: EditorOverlay and a top or left built from a measurement are named, Anchored and a listed file pass, comments are not code, a stale entry fails", () => {
+	const found = overlayPlace(
+		{
+			"packages/admin/src/editor/old.tsx": "export const A = () => <EditorOverlay top={1} left={2} />;\n",
+			"packages/admin/src/editor/by-hand.tsx":
+				"const r = el.getBoundingClientRect();\nexport const B = () => <div style={{ top: r.top, left: r.left }} />;\n",
+			"packages/admin/src/editor/prop.tsx":
+				"const at = view.coordsAtPos(1);\nexport const C = () => <Thing top={at.top} />;\n",
+			"packages/admin/src/editor/spot.tsx":
+				'const at = view.coordsAtPos(1);\nexport const D = () => <Anchored anchor={{ spot: () => ({ left: at.left, top: at.top }) }} place="block-left" />;\n',
+			"packages/admin/src/editor/said.tsx":
+				"// The old EditorOverlay put a top={x} from getBoundingClientRect.\nexport const E = 1;\n",
+			"packages/admin/src/editor/listed.tsx":
+				"const r = el.getBoundingClientRect();\nexport const F = () => <Mark top={r.top} />;\n",
+			"packages/ui/src/anchored.tsx":
+				"const r = el.getBoundingClientRect();\nexport const G = () => <div style={{ top: r.top }} />;\n",
+			"packages/admin/src/editor/by-hand.stories.tsx": "export const H = () => <EditorOverlay />;\n",
+			"packages/next/src/other.tsx": "export const I = () => <EditorOverlay />;\n",
+		},
+		{
+			allowed: new Map([
+				["admin/src/editor/listed.tsx", "a mark inside the body"],
+				["admin/src/editor/gone.tsx", "was placed by hand once"],
+			]),
+		},
+	);
+	assert.deepEqual(
+		found.map(({ file, line }) => [file, line]),
+		[
+			["packages/admin/src/editor/old.tsx", 1],
+			["packages/admin/src/editor/by-hand.tsx", 2],
+			["packages/admin/src/editor/prop.tsx", 2],
+			["packages/admin/src/editor/gone.tsx", 1],
+		],
+	);
+	assert.match(found[0].message, /use Anchored|float it with `Anchored`/);
+	assert.match(found[1].message, /OVERLAY_PLACE_OK/);
 });

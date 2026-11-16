@@ -4,6 +4,7 @@ import { Popover as PopoverPrimitive } from "@base-ui/react/popover";
 import type * as React from "react";
 import { cn } from "./cn";
 import { MENU_CARD, MENU_MOTION } from "./menu-parts";
+import { FIRST_PASS, FIT_HEIGHT, usePlacementPadding } from "./placement";
 
 function Popover({ ...props }: PopoverPrimitive.Root.Props) {
 	return <PopoverPrimitive.Root data-slot="popover" {...props} />;
@@ -42,9 +43,12 @@ function PopoverContent({
 		/** Scrolls inside when taller than the space left on screen. */
 		scroll?: boolean;
 	}) {
+	const placement = usePlacementPadding();
 	return (
 		<PopoverPrimitive.Portal>
 			<PopoverPrimitive.Positioner
+				collisionPadding={placement}
+				style={FIRST_PASS}
 				anchor={anchor}
 				align={align}
 				alignOffset={alignOffset}
@@ -61,7 +65,7 @@ function PopoverContent({
 						POPOVER_WIDTH[width],
 						padding === "default" && "px-monti-16 pt-monti-12 pb-monti-16",
 						padding === "menu" && "gap-0 p-monti-6",
-						scroll && "max-h-(--available-height) overflow-y-auto",
+						scroll && [FIT_HEIGHT, "overflow-y-auto"],
 						className,
 					)}
 					{...props}

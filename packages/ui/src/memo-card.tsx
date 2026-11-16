@@ -8,6 +8,7 @@ import { CutWords } from "./cut-words";
 import { IconButton } from "./icon-button";
 import { ArrowUp } from "./icons";
 import { MENU_CARD, MENU_MOTION } from "./menu-parts";
+import { usePlacementPadding } from "./placement";
 import type { ShortcutKeys } from "./shortcut";
 import { Spark } from "./spark";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./tooltip";
@@ -246,10 +247,12 @@ function MemoCardPopover({
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
 }) {
+	const placement = usePlacementPadding();
 	return (
 		<PopoverPrimitive.Root open={open} onOpenChange={onOpenChange}>
 			<PopoverPrimitive.Portal>
 				<PopoverPrimitive.Positioner
+					collisionPadding={placement}
 					anchor={anchor}
 					side="bottom"
 					align="start"

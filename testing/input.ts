@@ -158,3 +158,30 @@ export function rowHeights(table: Element): number[] {
 	const heights = [...table.querySelectorAll("tbody tr")].map((row) => row.getBoundingClientRect().height);
 	return [...new Set(heights.filter((height) => height > 0))];
 }
+
+/**
+ * The words of `body` that `floating` covers: a thing that stays while a person edits (the format card, a block's tool row, a table's grips and +
+ * strips, the block handle, the review bar) covers none (docs/design/admin/components/overlay.md, "자리 규칙"). Each word's line is measured as the
+ * browser lays it out (the rects of its text), so a thing over padding or a margin covers nothing. Words inside `floating` itself are not the body's.
+ * Empty when nothing is covered; otherwise what was covered, with the overlap in px.
+ *
+ * Cannot see: a thing that covers words by its own drawing but not by its box (a shadow), and whether words that are covered are text or a
+ * decoration a person does not read.
+ */
+export function coversText(floating: Element, body: Element): string[] {
+	const over = floating.getBoundingClientRect();
+	const covered: string[] = [];
+	const walker = document.createTreeWalker(body, NodeFilter.SHOW_TEXT);
+	for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+		const words = node.textContent?.trim();
+		if (!words || floating.contains(node)) continue;
+		const range = document.createRange();
+		range.selectNodeContents(node);
+		for (const line of range.getClientRects()) {
+			const across = Math.min(line.right, over.right) - Math.max(line.left, over.left);
+			const down = Math.min(line.bottom, over.bottom) - Math.max(line.top, over.top);
+			if (across > 1 && down > 1) covered.push(`"${words.slice(0, 24)}" ${Math.round(across)}×${Math.round(down)}`);
+		}
+	}
+	return covered;
+}

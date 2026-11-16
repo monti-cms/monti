@@ -53,6 +53,7 @@ type BlockWidth = `${number}px` | `${number}%`;
 function BlockBox({
 	width,
 	selected = false,
+	pointable = false,
 	measure,
 	spoken,
 	ref,
@@ -61,6 +62,8 @@ function BlockBox({
 }: {
 	width?: BlockWidth;
 	selected?: boolean;
+	/** The block can be picked and changed here: pointed at, a thin ring (1px, the emphasis line) says so, a step under the picked line (EI-04). */
+	pointable?: boolean;
 	measure?: string;
 	spoken?: string;
 	ref?: Ref<HTMLDivElement>;
@@ -71,6 +74,7 @@ function BlockBox({
 			ref={ref}
 			data-slot="block-box"
 			data-selected={selected || undefined}
+			data-pointable={pointable || undefined}
 			className="group/block-box relative w-full max-w-full outline-none"
 			// design-allow: the block's own width, chosen by the person or the picture's own.
 			style={width ? { width } : undefined}
@@ -92,14 +96,16 @@ function BlockBox({
 				aria-hidden="true"
 				// Its own box's state only (the parent): a picture or a file inside a picked block draws no line of its own.
 				data-slot="block-line"
-				className="pointer-events-none absolute inset-0 hidden rounded-monti-md outline-offset-0 [:focus-visible>&]:block [:focus-visible>&]:ring-2 [:focus-visible>&]:ring-monti-contrast/60 [[data-selected]>&]:block [[data-selected]>&]:outline-2 [[data-selected]>&]:outline-monti-contrast"
+				className="pointer-events-none absolute inset-0 hidden rounded-monti-md outline-offset-0 [:focus-visible>&]:block [:focus-visible>&]:ring-2 [:focus-visible>&]:ring-monti-contrast/60 [[data-pointable]:hover>&]:block [[data-pointable]:hover>&]:ring-1 [[data-pointable]:hover>&]:ring-monti-emphasis [[data-selected]>&]:block [[data-selected]>&]:outline-2 [[data-selected]>&]:outline-monti-contrast"
 			/>
 		</div>
 	);
 }
 
 /**
- * Where a selected block's tool row stands: over the block's top left, outside it, where it covers no text. Its parent is the block's picture box (position relative).
+ * Where a selected block's tool row stands: over the block's top left, outside it, in the room the block keeps for it (`TOOL_ROW_ROOM`, on the block's
+ * own element: the row's height and `TOOL_ROW_GAP`), where it covers no text. Its parent is the block's picture box (position relative), so it stands on the block it
+ * belongs to by the box itself and scrolls with it.
  */
 function BlockBarPlace({ children }: { children: ReactNode }) {
 	return (

@@ -444,7 +444,12 @@ export function EditorNotionScreen() {
 				{/* design-allow: the handle floats in the margin beside the block, where the editor's overlay puts it (28px left, 3px down: the 20 × 24 handle centred on the 30px line) */}
 				<div style={{ position: "absolute", top: 3, left: -28 }}>
 					<DropdownMenu open modal={false}>
-						<BlockHandle gripLabel="블록 메뉴" active trigger={(grip) => <DropdownMenuTrigger render={grip} />} />
+						<BlockHandle
+							gripLabel="블록 메뉴"
+							hint="끌어 옮기기 · 눌러 메뉴"
+							active
+							trigger={(grip) => <DropdownMenuTrigger render={grip} />}
+						/>
 						<BlockMenu />
 					</DropdownMenu>
 				</div>

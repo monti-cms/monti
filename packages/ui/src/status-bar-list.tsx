@@ -5,6 +5,7 @@ import * as React from "react";
 import { cn } from "./cn";
 import { Count } from "./count";
 import { MENU_CARD, MENU_LABEL, MENU_MOTION, MENU_SEPARATOR } from "./menu-parts";
+import { FIRST_PASS, FIT_HEIGHT, usePlacementPadding } from "./placement";
 
 /**
  * The list that opens upward from a status bar cell ("To do 3"): a card with the group's name and its count in the head (no count once nothing is
@@ -42,11 +43,19 @@ function StatusBarList({
 	// Focus lands on the card itself, not on its first row's action: the row's focus ring would otherwise show as a box around it when the list
 	// opens (and with `defaultOpen`). Tab then goes row by row.
 	const popup = React.useRef<HTMLDivElement>(null);
+	const placement = usePlacementPadding();
 	return (
 		<PopoverPrimitive.Root open={open} defaultOpen={defaultOpen} onOpenChange={onOpenChange}>
 			<PopoverPrimitive.Trigger render={trigger} />
 			<PopoverPrimitive.Portal>
-				<PopoverPrimitive.Positioner side="top" align={align} sideOffset={6} className="isolate z-50">
+				<PopoverPrimitive.Positioner
+					collisionPadding={placement}
+					style={FIRST_PASS}
+					side="top"
+					align={align}
+					sideOffset={6}
+					className="isolate z-50"
+				>
 					<PopoverPrimitive.Popup
 						ref={popup}
 						initialFocus={popup}
@@ -54,7 +63,9 @@ function StatusBarList({
 						className={cn(
 							MENU_CARD,
 							MENU_MOTION,
-							"z-50 max-h-(--available-height) w-85 overflow-y-auto p-monti-6 text-left outline-none",
+							"z-50",
+							FIT_HEIGHT,
+							"w-85 overflow-y-auto p-monti-6 text-left outline-none",
 						)}
 					>
 						<div data-slot="status-bar-list-head" className={MENU_LABEL}>

@@ -1,10 +1,10 @@
 import {
+	Anchored,
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
-	EditorOverlay,
 	TableAddStrip,
 	TableColumnBorder,
 	TableGrip,
@@ -27,9 +27,8 @@ const KEY_STEP_LARGE = 10;
 /** A border being dragged: whose table, which border, where the drag started and the shares then. */
 type Drag = { tablePos: number; at: number; startX: number; x: number; width: number; shares: number[] };
 
-/** How far the + strips sit from the table's edge, and how thick they are. */
-const STRIP_GAP = 4;
-const STRIP = 16;
+/** How thick the + strips are: they lie inside the table's right and bottom edge, in the cells' own padding (8px across, 6px down), over no text. */
+const STRIP = 8;
 
 type Caret = { tablePos: number; row: number; column: number; rows: number; columns: number };
 
@@ -74,25 +73,11 @@ export function useTableTools(editor: Editor | null) {
 	const [hovered, setHovered] = useState<number | null>(null);
 	const [menu, setMenu] = useState<"column" | "row" | null>(null);
 	const [drag, setDrag] = useState<Drag | null>(null);
-	// The tools sit at measured points of the screen: they follow the page when it scrolls or the window changes size.
-	const [, setTick] = useState(0);
 	const caret = useEditorState({
 		editor,
 		selector: ({ editor: current }) => (current?.isEditable ? caretOf(current) : null),
 		equalityFn: (a, b) => JSON.stringify(a) === JSON.stringify(b),
 	});
-	const shown = caret !== null || hovered !== null;
-	useEffect(() => {
-		if (!shown) return;
-		const update = () => setTick((tick) => tick + 1);
-		window.addEventListener("scroll", update, true);
-		window.addEventListener("resize", update);
-		return () => {
-			window.removeEventListener("scroll", update, true);
-			window.removeEventListener("resize", update);
-		};
-	}, [shown]);
-
 	/** Notes the table under the pointer, or none. The + strips stay while the pointer is on them or on its way to them. */
 	const point = (target: EventTarget | null, x: number, y: number) => {
 		if (!editor || !(target instanceof Element)) return;
@@ -100,7 +85,7 @@ export function useTableTools(editor: Editor | null) {
 		const table = target.closest("table");
 		if (!table || !editor.view.dom.contains(table)) {
 			const current = hovered === null ? null : tableElement(editor, hovered)?.getBoundingClientRect();
-			const reach = STRIP_GAP + STRIP;
+			const reach = STRIP;
 			const near =
 				current && x >= current.left && x <= current.right + reach && y >= current.top && y <= current.bottom + reach;
 			if (!near) setHovered(null);
@@ -195,12 +180,9 @@ export function useTableTools(editor: Editor | null) {
 		const cell = row?.cells[caret.column];
 		const head = table?.rows[0]?.cells[caret.column];
 		if (!table || !row || !cell || !head) return null;
-		const box = table.getBoundingClientRect();
-		const column = head.getBoundingClientRect();
-		const line = row.getBoundingClientRect();
 		return (
 			<>
-				<EditorOverlay top={box.top} left={column.left + column.width / 2} place="center">
+				<Anchored anchor={head} place="table-above">
 					<DropdownMenu open={menu === "column"} onOpenChange={(open) => pick(open, "column")} modal={false}>
 						<TableGrip
 							along="column"
@@ -229,8 +211,8 @@ export function useTableTools(editor: Editor | null) {
 							) : null}
 						</DropdownMenuContent>
 					</DropdownMenu>
-				</EditorOverlay>
-				<EditorOverlay top={line.top + line.height / 2} left={box.left} place="center">
+				</Anchored>
+				<Anchored anchor={row} place="table-left">
 					<DropdownMenu open={menu === "row"} onOpenChange={(open) => pick(open, "row")} modal={false}>
 						<TableGrip
 							along="row"
@@ -258,7 +240,7 @@ export function useTableTools(editor: Editor | null) {
 							) : null}
 						</DropdownMenuContent>
 					</DropdownMenu>
-				</EditorOverlay>
+				</Anchored>
 			</>
 		);
 	})();
@@ -280,15 +262,25 @@ export function useTableTools(editor: Editor | null) {
 		const node = editor.state.doc.nodeAt(tablePos);
 		const table = tableElement(editor, tablePos);
 		if (!node || node.type.name !== "table" || !table) return null;
-		const box = table.getBoundingClientRect();
 		const shares = sharesNow(node);
 		const moved = drag ? tradeShares(drag.shares, drag.at, ((drag.x - drag.startX) / drag.width) * 100) : null;
-		return shares.slice(0, -1).map((_, at) => {
+		// Read again whenever the page moves: the border stands on the table's own box, wherever it is now.
+		const spotAt = (at: number) => () => {
+			const box = table.getBoundingClientRect();
 			const now = moved && drag?.at === at ? moved : shares;
 			const x = box.left + (now.slice(0, at + 1).reduce((sum, share) => sum + share, 0) / 100) * box.width;
+			return { left: x - BORDER / 2, top: box.top, width: BORDER, height: box.height };
+		};
+		const box = table.getBoundingClientRect();
+		return shares.slice(0, -1).map((_, at) => {
 			return (
-				// biome-ignore lint/suspicious/noArrayIndexKey: a border is its place between two columns
-				<EditorOverlay key={at} top={box.top} left={x - BORDER / 2} width={BORDER} height={box.height}>
+				<Anchored
+					// biome-ignore lint/suspicious/noArrayIndexKey: a border is its place between two columns
+					key={at}
+					anchor={{ spot: spotAt(at), context: table }}
+					place="over-box"
+					size={{ width: BORDER, height: box.height }}
+				>
 					<TableColumnBorder
 						label={t("table.border", { left: at + 1, right: at + 2 })}
 						active={drag?.at === at}
@@ -310,7 +302,7 @@ export function useTableTools(editor: Editor | null) {
 							reshare(tablePos, tradeShares(shares, at, step));
 						}}
 					/>
-				</EditorOverlay>
+				</Anchored>
 			);
 		});
 	})();
@@ -320,14 +312,27 @@ export function useTableTools(editor: Editor | null) {
 		const table = tableElement(editor, hovered);
 		if (!table) return null;
 		const box = table.getBoundingClientRect();
+		// Inside the table's edge, as long as the edge (the box is read again as the page moves).
+		const column = () => {
+			const now = table.getBoundingClientRect();
+			return { left: now.right - STRIP, top: now.top, width: STRIP, height: now.height };
+		};
+		const bottom = () => {
+			const now = table.getBoundingClientRect();
+			return { left: now.left, top: now.bottom - STRIP, width: now.width, height: STRIP };
+		};
 		return (
 			<>
-				<EditorOverlay top={box.top} left={box.right + STRIP_GAP} width={STRIP} height={box.height}>
+				<Anchored
+					anchor={{ spot: column, context: table }}
+					place="over-box"
+					size={{ width: STRIP, height: box.height }}
+				>
 					<TableAddStrip label={t("table.addColumn")} onClick={() => addAtEnd(hovered, "column")} />
-				</EditorOverlay>
-				<EditorOverlay top={box.bottom + STRIP_GAP} left={box.left} width={box.width} height={STRIP}>
+				</Anchored>
+				<Anchored anchor={{ spot: bottom, context: table }} place="over-box" size={{ width: box.width, height: STRIP }}>
 					<TableAddStrip label={t("table.addRow")} onClick={() => addAtEnd(hovered, "row")} />
-				</EditorOverlay>
+				</Anchored>
 			</>
 		);
 	})();

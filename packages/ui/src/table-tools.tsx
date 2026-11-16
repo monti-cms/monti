@@ -3,6 +3,7 @@
 import { Button as ButtonPrimitive } from "@base-ui/react/button";
 import type { ReactElement } from "react";
 import { cn } from "./cn";
+import { HIT_AREA_BOX } from "./hit-area";
 import { Add, Draggable } from "./icons";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./tooltip";
 
@@ -33,6 +34,7 @@ function TableGrip({
 			aria-label={label}
 			data-active={active || undefined}
 			className={cn(
+				HIT_AREA_BOX,
 				"flex cursor-pointer items-center justify-center rounded-monti-full border-0 bg-monti-muted p-0 text-monti-subtle outline-none transition-colors hover:bg-monti-selected hover:text-monti-default focus-visible:ring-2 focus-visible:ring-monti-contrast/60 aria-expanded:bg-monti-emphasis aria-expanded:text-monti-on-emphasis data-active:bg-monti-emphasis data-active:text-monti-on-emphasis",
 				along === "column" ? "h-monti-12 w-monti-20" : "h-monti-20 w-monti-12",
 				className,
@@ -53,8 +55,8 @@ function TableGrip({
 }
 
 /**
- * The + strip along a table's right edge (a column) or bottom edge (a row), shown while the pointer is over the table, its name in a tooltip. It fills the box it is put in
- * (`EditorOverlay` with the table's height or width).
+ * The + strip along the inside of a table's right edge (a column) or bottom edge (a row), shown while the pointer is over the table, its name in a tooltip. It fills the box it is put in
+ * (`Anchored` with the table's height or width).
  */
 function TableAddStrip({
 	label,
@@ -70,13 +72,13 @@ function TableAddStrip({
 			type="button"
 			aria-label={label}
 			className={cn(
-				"flex size-full cursor-pointer items-center justify-center rounded-monti-full border-0 bg-monti-muted p-0 text-monti-subtle outline-none transition-colors hover:bg-monti-selected hover:text-monti-default focus-visible:ring-2 focus-visible:ring-monti-contrast/60",
+				"flex size-full cursor-pointer items-center justify-center overflow-hidden rounded-monti-full border-0 bg-monti-muted p-0 text-monti-subtle outline-none transition-colors hover:bg-monti-selected hover:text-monti-default focus-visible:ring-2 focus-visible:ring-monti-contrast/60",
 				className,
 			)}
 			onMouseDown={(event) => event.preventDefault()}
 			{...props}
 		>
-			<Add aria-hidden className="size-3.5" />
+			<Add aria-hidden className="size-2.5 shrink-0" />
 		</ButtonPrimitive>
 	);
 	return (
@@ -90,7 +92,7 @@ function TableAddStrip({
 /**
  * The border between two columns of a table in the editor, to drag wider or narrower: a thin hit area over the border that shows a 2px ink line
  * while it is pointed at, focused or dragged (`active`). The two columns beside it trade width; the table stays as wide as the body. It fills the box
- * it is put in (`EditorOverlay` with the table's height). The arrow keys move it too.
+ * it is put in (`Anchored` with the table's height). The arrow keys move it too.
  */
 function TableColumnBorder({
 	label,

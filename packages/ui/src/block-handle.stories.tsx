@@ -8,7 +8,7 @@ import { Block, BlockHandle, PickBox, Stack, Text } from "./index";
 const meta = {
 	title: "Monti/EditorTools/BlockHandle",
 	component: BlockHandle,
-	args: { gripLabel: "블록 메뉴" },
+	args: { gripLabel: "블록 메뉴", hint: "끌어 옮기기 · 눌러 메뉴" },
 } satisfies Meta<typeof BlockHandle>;
 export default meta;
 type Story = StoryObj<typeof meta>;

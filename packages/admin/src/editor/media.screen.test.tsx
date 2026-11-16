@@ -2,7 +2,7 @@ import { toast } from "@monti-cms/ui";
 import { composeStories, composeStory } from "@storybook/react-vite";
 import { describe, expect, it } from "vitest";
 import { type Locator, page, userEvent } from "vitest/browser";
-import { dragPath, middleOf, onTopOf, pointerPath, typeKorean } from "../../../../testing/input";
+import { coversText, dragPath, middleOf, onTopOf, pointerPath, typeKorean } from "../../../../testing/input";
 import type { StorySite } from "../../.storybook/pglite-site";
 import * as media from "../screens/entry/media.stories";
 
@@ -1192,8 +1192,8 @@ describe("selecting, copying and cutting across a picture", () => {
 		// From the end of the words before the picture, one press takes the picture and stands in the words after it.
 		await userEvent.keyboard("{End}{Shift>}{ArrowRight}{/Shift}");
 		expect(selectedBlocks()).toEqual(["", "picture", ""]);
-		// From the start of the body, down twice: all of it.
-		await userEvent.click(first());
+		// From the start of the body, down twice: all of it. The press is at the words' start: Home is the platform's, not always the line's start.
+		await userEvent.click(first(), { position: { x: 1, y: 8 } });
 		await userEvent.keyboard("{Home}{Shift>}{ArrowDown}{ArrowDown}{/Shift}");
 		expect(selectedBlocks()).toEqual(THREE);
 		const copied = clip("copy");
@@ -1205,6 +1205,20 @@ describe("selecting, copying and cutting across a picture", () => {
 		pasteClip(copied);
 		await expect.poll(shownBlocks).toEqual(THREE);
 		await expect.element(body().getByRole("img", { name: "아침 책상" })).toBeVisible();
+	});
+
+	it("a picture keeps the room of its tool row above it, shown or not, and the row covers no words of the text", async () => {
+		await WithImage.run();
+		const block = () => body().element().querySelector("[data-block=image]") as HTMLElement;
+		const words = first().element();
+		// With no row shown, the room is already there: the row's 36px and the 8px under it.
+		const room = () => block().getBoundingClientRect().top - words.getBoundingClientRect().bottom;
+		expect(room()).toBeGreaterThanOrEqual(44);
+		await userEvent.click(body().getByRole("img", { name: "아침 책상" }));
+		const bar = body().getByRole("toolbar");
+		await expect.element(bar).toBeVisible();
+		expect(coversText(bar.element(), body().element())).toEqual([]);
+		expect(room()).toBeGreaterThanOrEqual(44);
 	});
 
 	it("09-1 T134 'select all' takes the words and the picture: cut, the body is empty; pasted, they are back", async () => {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { page, userEvent } from "vitest/browser";
-import { pickWords } from "../../../../testing/input";
+import { coversText, pickWords } from "../../../../testing/input";
 import { scene } from "../../test/scene";
 import * as entry from "../screens/entry/entry.stories";
 
@@ -81,6 +81,19 @@ describe("what is pressed in the text answers the pointer", () => {
 		expect(getComputedStyle(ref).textDecorationLine).toBe("none");
 		await userEvent.hover(ref);
 		await expect.poll(() => getComputedStyle(ref).textDecorationLine).toBe("underline");
+	});
+
+	it("the format card over picked words stands inside the text's box and covers no words", async () => {
+		await OwnFormat.run();
+		await expect.element(body()).toBeVisible();
+		await pickWords(body().element(), "나머지는 필요할 때 꺼내 본다.");
+		const card = page.getByRole("toolbar", { name: "서식" });
+		await expect.element(card).toBeVisible();
+		const edge = body().element().getBoundingClientRect();
+		const at = card.element().getBoundingClientRect();
+		expect(at.left).toBeGreaterThanOrEqual(edge.left - 1);
+		expect(at.right).toBeLessThanOrEqual(edge.right + 1);
+		expect(coversText(card.element(), body().element())).toEqual([]);
 	});
 
 	it("a site's own text format is a row of the format bar's ⋯, starting with an icon as every menu row does", async () => {

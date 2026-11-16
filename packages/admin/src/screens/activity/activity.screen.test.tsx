@@ -1,6 +1,6 @@
 import type { ActivityList } from "@monti-cms/core";
 import { toast as toasts } from "@monti-cms/ui";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, onTestFinished } from "vitest";
 import { page, userEvent } from "vitest/browser";
 import { dragPath, dropDrag, middleOf, rowHeights, spillingCells } from "../../../../../testing/input";
 import type { StorySite } from "../../../.storybook/pglite-site";
@@ -222,6 +222,25 @@ describe("the activity log (doc 13, flow 12)", () => {
 		await userEvent.click(panel().getByRole("button", { name: "닫기" }));
 		await expect.poll(() => location.hash).toBe("#/activity");
 		await expect.element(panel()).not.toBeInTheDocument();
+	});
+
+	it("at 1024 wide with the detail panel open, no row's ⋯ is drawn over the panel: the page column clips its own table", async () => {
+		await page.viewport(1024, 768);
+		onTestFinished(() => page.viewport(1440, 900));
+		await draw(stories.Panel).run();
+		await expect.element(panel()).toBeVisible();
+		const edge = panel().element().getBoundingClientRect().left;
+		const actions = [...table().element().querySelectorAll("[data-slot=row-actions]")];
+		expect(actions.length).toBeGreaterThan(0);
+		for (const each of actions) {
+			const at = each.getBoundingClientRect();
+			// Inside the column, or cut at its edge: what is on top where the ⋯ would be, past the panel's edge, is never the ⋯.
+			const past =
+				at.left + at.width / 2 > edge
+					? document.elementFromPoint(at.left + at.width / 2, at.top + at.height / 2)
+					: null;
+			expect(past === null || !each.contains(past)).toBe(true);
+		}
 	});
 
 	it("the assistant's row open: its request whole, each thing it did, and what it touched", async () => {
