@@ -2,7 +2,6 @@ import type { FolderNode } from "@monti-cms/core";
 import {
 	Count,
 	folderTree,
-	IconButton,
 	Inline,
 	Sidebar,
 	SidebarContent,
@@ -24,8 +23,8 @@ import {
 	Stack,
 	Text,
 } from "@monti-cms/ui";
-import { Document, Image, RecentlyViewed, SettingsAdjust, Spark, Tag, Tools, TrashCan } from "@monti-cms/ui/icons";
-import { createContext, type ReactNode, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { Document, Image, RecentlyViewed, SettingsAdjust, Tag, Tools, TrashCan } from "@monti-cms/ui/icons";
+import { type ReactNode, useEffect } from "react";
 import { labelOfCollection } from "../../format/names";
 import { FolderFilesProvider, useGiveFolderFiles } from "../../media/folder-files";
 import { useFolderDrop } from "../../media/use-file-drop";
@@ -53,18 +52,6 @@ export type FrameCounts = {
 	/** Deliveries queued and not tried yet: while any is, the counts are read again (a delivery fails after its write has answered). */
 	deliveriesOnTheWay: number;
 };
-
-const CornerContext = createContext<((covered: boolean) => void) | null>(null);
-
-/** A panel docked at the page's right edge covers the ✦ button in the frame's corner while `covered` (common.md: the button goes under the panel). */
-export function useCoverCorner(covered: boolean) {
-	const cover = useContext(CornerContext);
-	useEffect(() => {
-		if (!cover || !covered) return;
-		cover(true);
-		return () => cover(false);
-	}, [cover, covered]);
-}
 
 const same = (a: Place | null, b: Place) =>
 	a !== null && (typeof a === "string" || typeof b === "string" ? a === b : a.collection === b.collection);
@@ -200,26 +187,16 @@ export function AdminFrame({
 	/** The sidebar's numbers; the app reads them and reads them again after a write that changes them. */
 	counts: FrameCounts | null;
 	/**
-	 * The site's assistant, when it has one: the ✦ in the page's corner opens its panel, which then stands at the page's right edge. `null` on a
-	 * site without one: no ✦ is drawn.
+	 * The site's assistant, when it has one: its panel stands at the page's right edge while it is open (the ✦ that opens it is the head row's,
+	 * `AssistantSlot`). `null` on a site without one.
 	 */
-	assistant?: { open: boolean; onOpen: () => void; panel: ReactNode } | null;
+	assistant?: { open: boolean; panel: ReactNode } | null;
 	children: ReactNode;
 }) {
 	const { t, siteName } = useAdmin();
 	// Read again after every write, as every read is: a saved collection's label and a new collection's row show at once (flow 4, step 06).
 	const schema = useRead<SchemaRead>("schema.read");
 	const [mode, setMode] = useScreenMode();
-	const [covered, setCovered] = useState(false);
-	// Closing the assistant's panel hands the focus back to the button that opened it, which is drawn again as the panel goes.
-	const corner = useRef<HTMLButtonElement>(null);
-	const assistantOpen = assistant?.open ?? false;
-	const wasOpen = useRef(assistantOpen);
-	useEffect(() => {
-		if (wasOpen.current && !assistantOpen) corner.current?.focus();
-		wasOpen.current = assistantOpen;
-	}, [assistantOpen]);
-	const cover = useMemo(() => (next: boolean) => setCovered(next), []);
 	const [rail, setRail] = useSidebarRail();
 	const collections = Object.entries(schema.data?.schema.collections ?? {});
 	const state = schema.data;
@@ -316,26 +293,16 @@ export function AdminFrame({
 								<SchemaBanner onReview={onReview} />
 							</>
 						}
-						// No assistant on the site: no button. Its panel open, or another docked at the edge: the button is under it.
-						corner={
-							covered || !assistant || assistant.open ? undefined : (
-								<IconButton ref={corner} label={t("frame.assistant")} onClick={assistant.onOpen}>
-									<Spark aria-hidden />
-								</IconButton>
-							)
-						}
 					>
-						<CornerContext.Provider value={cover}>
-							<Stack gap={0} grow minWidth={0} minHeight={0} container>
-								<Inline align="stretch" gap={0} grow minHeight={0} overflow="hidden">
-									{/* The page scrolls here, one bar at its right edge (or beside a docked panel), the header with it (2026-11-06, owner). */}
-									<Stack gap={0} grow minWidth={0} minHeight={0} container overflow="y">
-										{children}
-									</Stack>
-									{assistant?.open ? assistant.panel : null}
-								</Inline>
-							</Stack>
-						</CornerContext.Provider>
+						<Stack gap={0} grow minWidth={0} minHeight={0} container>
+							<Inline align="stretch" gap={0} grow minHeight={0} overflow="hidden">
+								{/* The page scrolls here, one bar at its right edge (or beside a docked panel), the header with it (2026-11-06, owner). */}
+								<Stack gap={0} grow minWidth={0} minHeight={0} container overflow="y">
+									{children}
+								</Stack>
+								{assistant?.open ? assistant.panel : null}
+							</Inline>
+						</Stack>
 					</SidebarInset>
 				</SidebarProvider>
 			</FolderFilesProvider>

@@ -28,6 +28,7 @@ export const ChangesGroup = close(open.ChangesGroup);
 export const DocCallout = close(open.DocCallout);
 export const DocCode = close(open.DocCode);
 export const DocTable = close(open.DocTable);
+export const AssistantSlot = close(open.AssistantSlot);
 export const EditorHeader = close(open.EditorHeader);
 export const EditorTitleRule = close(open.EditorTitleRule);
 export const DangerBlock = close(open.DangerBlock);

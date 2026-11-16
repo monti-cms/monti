@@ -58,7 +58,6 @@ import { useAdmin } from "../../operations/admin-context";
 import { reasonOf, useRead } from "../../operations/use-operation";
 import { linkTo, type Route } from "../../route";
 import { useTrashMove } from "../../trash/use-trash";
-import { useCoverCorner } from "../frame/admin-frame";
 import { ValueRow } from "./filter-rows";
 import { MergeDialog } from "./merge-dialog";
 import { NoMatchRow } from "./no-match-row";
@@ -355,7 +354,6 @@ export function TaxonomyScreen({
 	const [picked, setPicked] = useState<Set<string>>(new Set());
 	const [mergeGroups, setMergeGroups] = useState<string[] | null>(null);
 
-	useCoverCorner(openGroup !== null);
 	const trash = useTrashMove();
 	const panelMove = usePanelMove(openGroup);
 	const openPanel = (group: string | null) => panelMove(group, () => setOpenGroup(group));

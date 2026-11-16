@@ -26,7 +26,6 @@ import {
 import { OverflowMenuHorizontal } from "@monti-cms/ui/icons";
 import type { Editor } from "@tiptap/react";
 import { useCallback, useMemo, useRef, useState } from "react";
-import { AssistantButton } from "../../assistant/assistant-button";
 import { useLeaveGuard } from "../../draft/leave-guard";
 import { BodyEditor } from "../../editor/body-editor";
 import { CodeLinkBanner } from "../../editor/code/code-links";
@@ -165,7 +164,6 @@ export function TemplateEditor({
 							</DropdownMenuContent>
 						</DropdownMenu>
 					) : null}
-					<AssistantButton />
 				</Inline>
 			</EditorHeader>
 			<Inline align="stretch" gap={0} grow minHeight={0} overflow="hidden">

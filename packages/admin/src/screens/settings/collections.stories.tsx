@@ -587,7 +587,7 @@ export const ApplyRefused: Story = {
 /**
  * A save refused before its review opens (the site refuses `schema.plan` here): the reason is the page's banner, at the very top of the screen over
  * the title, where the frame's own banners stand (common.md). It stays until the next save's answer. The site has the assistant, so its
- * button is in the page's corner: it stands under the banner.
+ * button ends the page's head row: it stands under the banner.
  */
 export const SaveRefused: Story = {
 	loaders: site({ plugins: [assistant({ provider: scriptedProvider().for })] }),

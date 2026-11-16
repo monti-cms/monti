@@ -22,7 +22,7 @@ import { SchemaPage } from "./schema";
  */
 export function SchemaFieldScreen() {
 	return (
-		<AdminFrame open="settings" corner={false}>
+		<AdminFrame open="settings">
 			<SchemaPage />
 			<Sheet open>
 				<SheetContent>

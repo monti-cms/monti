@@ -12,7 +12,7 @@ export const listStartOf = (table: HTMLElement | null) =>
 /**
  * Where the keyboard's focus goes when a row leaves its list by its own action (a failed delivery sent again in a list of failed ones, a
  * row of the trash restored or deleted for good): to the row that follows, or with none after it to the list's start, not to the page
- * (tokens.md, the states). What stands after the list (the corner's button, a panel) is not what the row's action was about.
+ * (tokens.md, the states). What stands after the list (a panel) is not what the row's action was about.
  */
 export const afterRow = (listStart: () => HTMLElement | null) => (gone: HTMLElement) => {
 	const next = gone.closest("tr")?.nextElementSibling;

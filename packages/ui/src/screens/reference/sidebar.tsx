@@ -18,9 +18,9 @@ export function SidebarThemeScreen() {
 	return (
 		<Inline align="stretch" gap={48}>
 			<Box width="sidebar" shrink={false}>
-				<AdminFrame open="posts" folders={POSTS_FOLDERS} mode="dark" fixed={false} corner={false} />
+				<AdminFrame open="posts" folders={POSTS_FOLDERS} mode="dark" fixed={false} />
 			</Box>
-			<AdminFrame open="posts" rail mode="dark" modeOpen fixed={false} corner={false} />
+			<AdminFrame open="posts" rail mode="dark" modeOpen fixed={false} />
 		</Inline>
 	);
 }

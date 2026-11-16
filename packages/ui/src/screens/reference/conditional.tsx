@@ -119,7 +119,7 @@ const OPTIONS = [
 /** 1. The field sheet of a conditional field: what any field has, then its options, their fields are added in the fields list. */
 export function ConditionalFieldSheetScreen() {
 	return (
-		<AdminFrame open="settings" corner={false}>
+		<AdminFrame open="settings">
 			<SchemaPage fields={FIELDS} />
 			<Sheet open>
 				<SheetContent>
@@ -240,7 +240,7 @@ export function ConditionalPanelScreen({ changed = false }: { changed?: boolean 
 /** 4. The review when an option is taken out: the choice's line with the entries that had it chosen, then its fields as removed fields. */
 export function ConditionalReviewScreen() {
 	return (
-		<AdminFrame open="settings" corner={false}>
+		<AdminFrame open="settings">
 			<SchemaPage
 				fields={FIELDS.filter((field) => !["동영상", "videoUrl !", "poster"].includes(String(field.name)))}
 				changed

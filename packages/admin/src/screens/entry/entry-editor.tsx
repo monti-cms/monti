@@ -64,7 +64,6 @@ import {
 } from "@monti-cms/ui/icons";
 import type { Editor } from "@tiptap/react";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { AssistantButton } from "../../assistant/assistant-button";
 import { draftContext } from "../../assistant/draft-context";
 import {
 	useHasAssistant,
@@ -1442,7 +1441,6 @@ export function EntryEditor({
 							</DropdownMenuContent>
 						</DropdownMenu>
 					)}
-					<AssistantButton />
 				</Inline>
 			</EditorHeader>
 			<Inline align="stretch" gap={beside ? 40 : 0} grow minHeight={0} overflow="hidden">

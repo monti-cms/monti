@@ -1931,19 +1931,6 @@
 			},
 			"events": []
 		},
-		"AssistantCorner": {
-			"kind": "overlay",
-			"bind": false,
-			"children": false,
-			"slots": [],
-			"props": {
-				"label": {
-					"kind": "text",
-					"type": "string"
-				}
-			},
-			"events": []
-		},
 		"PageToolbar": {
 			"kind": "part",
 			"bind": false,

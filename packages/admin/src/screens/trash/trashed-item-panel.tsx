@@ -22,7 +22,6 @@ import { useAdmin } from "../../operations/admin-context";
 import { useRead } from "../../operations/use-operation";
 import { linkTo, type Route } from "../../route";
 import { DaysLeftFact } from "../../trash/days-left";
-import { useCoverCorner } from "../frame/admin-frame";
 
 /**
  * An item in the trash, beside the trash's list (flow 5·19): its collection, its name and address in each language, and the entries that point at it, which show it
@@ -48,7 +47,6 @@ export function TrashedItemPanel({
 	const languageName = useLanguageName();
 	const read = useRead<TrashedEntry>("trash.get", { id }, { quiet: true });
 	const item = read.data;
-	useCoverCorner(true);
 	// Read again after it left the trash (restored, deleted): the answer is a refusal, and the panel has nothing to show.
 	if (!item || read.refusal) return null;
 	const [first] = item.locales;

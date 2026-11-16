@@ -55,7 +55,6 @@ import { useAdmin } from "../../operations/admin-context";
 import { reasonOf, useOperation, useRead } from "../../operations/use-operation";
 import { linkTo, type Route } from "../../route";
 import { DaysLeftFact } from "../../trash/days-left";
-import { useCoverCorner } from "../frame/admin-frame";
 import type { Folders } from "../list/folders";
 import type { SchemaRead } from "../settings/schema-draft";
 
@@ -263,7 +262,6 @@ export function TrashedFilePanel({
 	const read = useRead<MediaDetail>("media.get", { id }, { quiet: true });
 	const item = read.data;
 	const uses = useUseRows(item?.useRows ?? []);
-	useCoverCorner(true);
 	if (!item || item.daysLeft === null) return null;
 	return (
 		<SidePanel
@@ -343,8 +341,6 @@ export function MediaPanel({
 		}
 		return {};
 	}, []);
-	// Docked at the page's edge, it stands where the frame's ✦ is: its × must not lie under it (screens/media.md).
-	useCoverCorner(true);
 	const draft = useDraft({ target, base, version: item?.version ?? null, proposalValues });
 	// The version these changes were made on, whatever was read since: saving over someone else's rename is a conflict, not a success.
 	const madeOn = useRef<number | null>(null);

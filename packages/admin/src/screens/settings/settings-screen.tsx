@@ -26,7 +26,7 @@ import { useAdmin } from "../../operations/admin-context";
 import { useOperation } from "../../operations/use-operation";
 import { linkTo, SETTINGS_TABS, type SettingsTab } from "../../route";
 import { useSession } from "../../session";
-import { type Place as FramePlace, useCoverCorner } from "../frame/admin-frame";
+import type { Place as FramePlace } from "../frame/admin-frame";
 import { firstStopIn, useFocusHandOff } from "../frame/focus-hand-off";
 import { AdminTab, type PreferenceFailure } from "./admin-tab";
 import { CollectionsTab, useCollectionsView } from "./collections-tab";
@@ -111,7 +111,6 @@ export function SettingsScreen({
 	// The bubble goes once every proposed change is taken or left: with the keyboard, the focus goes to the first control of what it sat over.
 	const overBubble = useFocusHandOff((gone) => (gone.parentElement ? firstStopIn(gone.parentElement) : null));
 	const previewing = tab === "collections" && view.preview && view.tab === "fields" && view.current !== null;
-	useCoverCorner(previewing);
 
 	// A removal's toast undoes it in the draft; once the draft is saved there is nothing left for it to undo.
 	const undoToasts = useRef<(string | number)[]>([]);

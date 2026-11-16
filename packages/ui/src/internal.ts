@@ -21,6 +21,7 @@ export {
 	AlertDialogTitle,
 	AlertDialogTrigger,
 } from "./alert-dialog";
+export { AssistantSlot } from "./assistant-slot";
 export { Banner } from "./banner";
 export { BlockBarPlace, BlockBox, ResizeCorner } from "./block-bar";
 export { Block, BlockHandle, PickBox } from "./block-handle";

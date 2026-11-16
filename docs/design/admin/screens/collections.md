@@ -61,7 +61,7 @@
 
 | 자리 | 부품 | 이렇게 쓴다 |
 |---|---|---|
-| 패널 | `SidePanel`(`width="panel"`, `title` "미리보기"와 흐린 "· 저장 안 됨", 닫기 ×) | 저장하지 않은 필드 목록으로 글의 속성 패널을 그린다. ✦ 버튼을 가린다. |
+| 패널 | `SidePanel`(`width="panel"`, `title` "미리보기"와 흐린 "· 저장 안 됨", 닫기 ×) | 저장하지 않은 필드 목록으로 글의 속성 패널을 그린다. ✦ 버튼은 머리 줄 끝에 그대로 있다. |
 | 탭 줄 "기본 · SEO" | `TabsList variant="bar"` | |
 | 속성 행 | 글 편집기와 같은 부품([editor.md](editor.md)의 속성 패널: `FormField`, 값 자리의 입력 부품(`md`, 미디어는 `MediaInput`), 묶음은 `PropertyGroup`) | 글 편집기에서 보일 모양 그대로. 종류마다 어느 입력 부품인지는 편집기의 속성 패널과 한 곳(`FieldInput`, `FieldToggle`)에서 정하므로 둘이 달라질 수 없다: 여럿을 고르는 고르기와 관계는 칩 필드, 스위치로 고르는 것은 줄 끝의 `Switch`(`Option spread`, 라벨 줄 없음), 하나를 고르는 것은 `Select`다. 전에는 고르기가 모두 `Select` 하나였다(ST-13, 만들며 정함 (2026-11-16)). 저장하지 않은 필드는 읽을 후보가 없어 관계 필드는 빈 목록이다. 빈 칸의 말은 편집기와 같다: 고를 수 있는 고르기와 관계는 "고르기…", 나머지는 "비어 있음"(만들며 정함 (2026-11-16)). |
 | 미리볼 수 없음 (빠짐, 2026-11-05) | | 미리보기는 고칠 곳이 있어도 미리보기를 그린다(선택지 없는 고르기는 빈 고르기 상자). 고칠 곳은 저장할 때 검토 맨 위에서 알린다. |
@@ -132,7 +132,7 @@
 | "새 컬렉션 검토" | 4.05 | 검토 `Sheet`: `ChangeGroup kind="new"`와 `ChangeLines`. 줄은 공개 주소, 미리보기 주소(적었을 때만, 본문이 있는 글만), 필드 순서다. 공개 페이지가 없는 항목은 공개 주소 줄이 없다. | Controls/Overlay/Sheet, Monti/Change/ChangeGroup |
 | "만듦" | 4.06 | `toast` "노트를 만들었습니다"와 "보기" | Controls/Status/Toast |
 | "필드 바꿈" | 4.07 | `FieldRow` 셋: 이름 바꿈(`warning`, "← summary"), 지움(`faint`), 새 필수(`success`), 게시글 `NavLink dot`, 변경 사항 3 | Patterns/List/FieldTree, Patterns/Frame/NavLink |
-| "미리보기" | 4.08 | 미리보기 `SidePanel`, "속성 패널 미리보기" 눌림, ✦ 버튼 가려짐 | Controls/Overlay/SidePanel |
+| "미리보기" | 4.08 | 미리보기 `SidePanel`, "속성 패널 미리보기" 눌림 | Controls/Overlay/SidePanel |
 | "고칠 곳" | 4.09 | 해당 `FieldRow tone="danger"`. 저장을 누르면 검토 맨 위에 "고칠 곳" 변경 블록과 "열기", 발에 알약 없음 | Monti/Change/ChangeGroup, Patterns/List/FieldTree |
 | "변경 사항 목록" | 4.10 | `ChangesGroup`의 목록 열림(요약 · 부제 · 글 종류, 각각 되돌리기) | Monti/Change/ChangesGroup |
 | "필드 검토" | 4.11 | 검토 `Sheet`: 이름 · 지움 · 필수 `ChangeGroup` | Controls/Overlay/Sheet, Monti/Change/ChangeGroup |
@@ -167,7 +167,7 @@
 | "충돌" | 11.19 | 검토 `Sheet` 맨 위 `ErrorNote` "파일이 바뀌었습니다", 알약 "다시 불러오기" | Controls/Overlay/Sheet, Controls/Status/ErrorNote |
 | `tab` "필드" · "기본" | 11.10, 11.11, 11.12, 11.14, 11.14b, 11.17, 11.17b, 11.17c, 11.19, 11.20 | 필드 탭 또는 기본 탭(삭제 · 주소 단계는 기본 탭) |  |
 | `sheetKind` "관계" · "글자" · "고르기" | 11.10, 11.11, 11.12, 11.14, 11.14b, 11.17, 11.17b, 11.17c, 11.19, 11.20 | 필드 시트의 `PickListItem selected`와 그 종류의 설정 | Controls/Menu/PickList |
-| `withRail` | 11.11 | ✦ 어시스턴트 열기(미리보기 중에는 패널에 가려진다) |  |
+| `withRail` | 11.11 | ✦ 어시스턴트 열기(머리 줄 끝) |  |
 
 ## 설정 · 컬렉션 · 에디터 (CollectionEditor)
 
