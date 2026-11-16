@@ -423,10 +423,11 @@ export function FieldsTab({
 		return {
 			fieldName: name,
 			name: def.required ? `${name} !` : name,
-			// The fixed fields have no label in the schema: they are called what the list and the editor call them (ST-11).
-			label:
-				(model.shown(at.fieldValue(c, key, "label")) as string | undefined) ||
-				(key === "title" || key === "slug" ? fieldName(key, null, t) : undefined),
+			// The fixed fields are called what the list and the editor call them, as `fieldName` does everywhere (ST-11).
+			label: (() => {
+				const given = (model.shown(at.fieldValue(c, key, "label")) as string | undefined) || undefined;
+				return key === "title" || key === "slug" ? fieldName(key, given, t) : given;
+			})(),
 			description: (model.shown(at.fieldValue(c, key, "description")) as string | undefined) || undefined,
 			kind: kindText(def),
 			depth: stepIn(depth),

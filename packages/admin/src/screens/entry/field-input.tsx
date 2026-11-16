@@ -546,7 +546,8 @@ export function FieldInput({
 }) {
 	const { t } = useAdmin();
 	// A choice says what it asks for, not that it is empty: an input and a picker are told apart before they are touched.
-	const choosing = t("entry.choose");
+	// A field nobody can change asks for nothing: it keeps the word for an empty value.
+	const choosing = readOnly ? placeholder : t("entry.choose");
 	const text = typeof value === "string" ? value : "";
 	if (def.kind === "slug")
 		return (

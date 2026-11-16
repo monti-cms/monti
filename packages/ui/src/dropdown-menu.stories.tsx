@@ -125,6 +125,32 @@ export const SameName: Story = {
 	),
 };
 
+/** A filter's values with an address and a count: the address sits against the count, not in the middle of the row. */
+export const SameNameCounted: Story = {
+	tags: ["visual"],
+	render: () => (
+		<DropdownMenu defaultOpen>
+			{More}
+			<DropdownMenuContent>
+				<DropdownMenuCheckboxItem box checked>
+					같은 이름
+					<MenuValue address="first-post" />
+					<MenuShortcut>3</MenuShortcut>
+				</DropdownMenuCheckboxItem>
+				<DropdownMenuCheckboxItem box checked={false}>
+					같은 이름
+					<MenuValue address="first-post-2" />
+					<MenuShortcut>12</MenuShortcut>
+				</DropdownMenuCheckboxItem>
+				<DropdownMenuCheckboxItem box checked={false}>
+					다른 이름
+					<MenuShortcut>1</MenuShortcut>
+				</DropdownMenuCheckboxItem>
+			</DropdownMenuContent>
+		</DropdownMenu>
+	),
+};
+
 /** Picking one value: the current one has a ✓ at its end; picking applies it and closes the menu. Opened from a text button. */
 export const PickOne: Story = {
 	render: () => (

@@ -102,7 +102,7 @@ function MenuShortcut({
 			data-slot="menu-shortcut"
 			data-typed={typed || undefined}
 			className={cn(
-				"ml-auto shrink-0 whitespace-nowrap text-monti-micro text-monti-subtle data-typed:text-monti-faint data-typed:text-monti-note",
+				"ml-auto shrink-0 whitespace-nowrap text-monti-micro text-monti-subtle data-typed:text-monti-faint data-typed:text-monti-note [[data-slot=menu-value]+&]:ml-monti-8",
 				className,
 			)}
 			{...props}
@@ -132,7 +132,7 @@ function MenuValue({
 			{...props}
 		>
 			{address ? (
-				<span data-slot="menu-value-address" className="font-mono text-monti-faint text-monti-meta">
+				<span data-slot="menu-value-address" className="font-mono text-monti-meta text-monti-subtle">
 					{address}
 				</span>
 			) : null}

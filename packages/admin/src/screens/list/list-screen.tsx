@@ -661,7 +661,7 @@ function DocumentListScreen({
 				);
 			}
 			case "media": {
-				// The picture, or a file's name; an empty cell for an empty field (T59).
+				// The picture, or a file's name; "—" for an empty field, as every field cell says it (T59, LT-20).
 				const file = row.media[column.id];
 				return (
 					<TableCell key={column.id} tone="subtle" truncate title={file?.name}>
@@ -671,7 +671,7 @@ function DocumentListScreen({
 								<Image src={file.thumbnail} alt="" size="row" ratio="photo" radius="sm" />
 							</RowThumb>
 						) : (
-							file?.name
+							(file?.name ?? "—")
 						)}
 					</TableCell>
 				);

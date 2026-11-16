@@ -45,7 +45,7 @@
 | 행 ⋯ | `RowActions` 안의 `RowMore`(`label` "더 보기", 툴팁도 같은 말) + `DropdownMenu` | 늘 보인다. 항목은 오른쪽 클릭과 같다. 보드는 글자 버튼으로 그렸지만 [button.md](../components/button.md)의 아이콘 버튼을 따른다. |
 | 행 오른쪽 클릭 | `ContextMenu`: "열기" · "새 탭에서 열기" · "복제" │ `ContextMenuSub` "폴더로" · "카테고리" · "태그" │ "보관" · "휴지통으로"(`variant="danger"`, `MenuShortcut keys={["Delete"]}`) | 행마다 앞에 아이콘: "열기"는 `Document`, "새 탭에서 열기"는 `Launch`(새 탭의 표시는 그 하나에만, 만들며 정함 (2026-11-14)). 둘째 단계까지. 행의 ⋯ 메뉴도 같은 행이고 키 표시만 없다. 행에서 Delete나 Backspace를 누르면 휴지통으로 간다(고른 행 중 하나면 고른 행 모두). 휴지통과 미디어도 같은 두 키다(만들며 정함 (2026-11-14)). |
 | 여러 행 오른쪽 클릭 | `ContextMenu`: `ContextMenuLabel` "2개 항목" · "발행" · "보관" · `ContextMenuSub` "폴더로" │ "카테고리" · "태그" │ "내보내기" │ "휴지통으로"(`variant="danger"`, `MenuShortcut keys={["Delete"]}`) | 일괄 막대와 같은 이름. 관계 필드가 바로 놓인다. 아이콘은 없다. 여러 행에 되는 것만 담는다. 복제, 보관, 보관 풀기, 내보내기, 새 글 만들기가 거절되면 `toast.error`가 까닭을 말한다([status.md](../components/status.md), 만들며 정함 (2026-11-14)). |
-| 미디어 필드 칸 (대표 이미지) | `RowThumb` 안 `Image size="row" ratio="photo"`, 그림이 아닌 파일은 이름 | 빈 필드는 비어 있다. 열 메뉴는 글자 필드처럼 "비어 있음"이다(T59). |
+| 미디어 필드 칸 (대표 이미지) | `RowThumb` 안 `Image size="row" ratio="photo"`, 그림이 아닌 파일은 이름 | 빈 필드는 다른 필드 칸처럼 "—"다(LT-20, 만들며 정함 (2026-11-16): 소유자의 결정이 아니었고, 한 규칙으로 맞췄다). 열 메뉴는 글자 필드처럼 "비어 있음"이다(T59). |
 | 폴더 행 | `RowTitle folder`(`title` 폴더 이름, `note` "글 2": 사람이 읽는 말이라 sans, 만들며 정함 (2026-11-14)), 끝에 `IconButton` ⋯ | 상태 칸은 비운다. 누르면 폴더 안으로. "상위 폴더로" 행도 같다. |
 | 폴더 오른쪽 클릭 | `ContextMenu`: "열기" · "이름 바꾸기" · `ContextMenuSub` "옮기기" │ "휴지통으로"(`variant="danger"`) | 글 행의 "휴지통으로"와 같은 말이다(다른 휴지통 행과 같은 말이다. 전에는 "폴더 지우기"였다: MD-40, 만들며 정함 (2026-11-16)). |
 | 새 폴더 · 이름 바꾸기 | `RenameField`(`value`, `onValueChange`, `onCommit`, `onCancel`, `label` "폴더 이름") | 행 안에서 "새 폴더"가 선택된 채 열린다. Enter나 벗어나면 지키고 Esc는 버린다. 행 높이가 변하지 않는다. |

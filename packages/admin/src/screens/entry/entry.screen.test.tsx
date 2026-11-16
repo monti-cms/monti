@@ -1800,7 +1800,7 @@ describe("the property panel of an entry that cannot be changed (AT-29)", () => 
 			},
 		},
 	});
-	const archived = (how: "archived" | "trashed" = "archived") =>
+	const archived = (how: "archived" | "trashed" = "archived", filled = true) =>
 		scene<Loaded>(
 			{
 				loaders: [
@@ -1832,13 +1832,17 @@ describe("the property panel of an entry that cannot be changed (AT-29)", () => 
 										values: {
 											summary: "한 문장 요약",
 											note: "여러 줄 메모",
-											mood: "calm",
-											moods: ["calm", "loud"],
 											pinned: "on",
-											category: groups[0],
-											// One of the two: the other is left to pick once the entry can be changed.
-											topics: [groups[0]],
-											series: groups,
+											...(filled
+												? {
+														mood: "calm",
+														moods: ["calm", "loud"],
+														category: groups[0],
+														// One of the two: the other is left to pick once the entry can be changed.
+														topics: [groups[0]],
+														series: groups,
+													}
+												: {}),
 										},
 									},
 									entry.admin,
@@ -1867,6 +1871,21 @@ describe("the property panel of an entry that cannot be changed (AT-29)", () => 
 			if (getComputedStyle(at).opacity !== "1") return true;
 		return false;
 	};
+
+	it("[AT-29] a choice or relation with no value, on an entry nobody can change, says it is empty and does not ask to be chosen", async () => {
+		const drawn = archived("archived", false);
+		await drawn.run();
+		await expect.element(button("보관 풀기")).toBeVisible();
+		if ((await panel().elements()).length === 0) await userEvent.click(button("속성"));
+		await expect.element(panel().getByText("비어 있음").first()).toBeVisible();
+		await expect.element(panel().getByText("고르기…")).not.toBeInTheDocument();
+		for (const name of ["mood", "topics", "series", "category"]) {
+			const inputs = field(name)?.matches("input")
+				? [field(name)]
+				: [...(field(name)?.querySelectorAll("input") ?? [])];
+			for (const input of inputs) expect((input as HTMLInputElement).placeholder).not.toBe("고르기…");
+		}
+	});
 
 	it("[AT-29] every kind of field is read, not off: full ink, nothing in the panel is disabled, and the keyboard stops on each", async () => {
 		const drawn = archived();

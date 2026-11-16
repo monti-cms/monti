@@ -390,7 +390,7 @@ export function ActivityScreen({
 					tone="danger"
 					// A date with words after it is a sentence: sans, not the mono of an address (AT-06).
 					plainMeta
-					title={t(failed === 1 ? "activity.failedBannerOne" : "activity.failedBanner", { count: failed })}
+					title={t("activity.failedBanner", { count: failed })}
 					meta={counts.data?.since ? t("activity.since", { date: shortDate(counts.data.since, language) }) : undefined}
 				>
 					{!failedOnly && (

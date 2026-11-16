@@ -37,3 +37,26 @@ describe("English numbers", () => {
 		expect(wordsOf("ko", { key: "library.usedBy", values: { count: 1 } })).toBe("1곳");
 	});
 });
+
+describe("every English plural", () => {
+	it("reads whole for one and for two: no plural pattern is left in the words", async () => {
+		const { formatMessage } = await import("@monti-cms/core");
+		const { adminMessages } = await import("../messages");
+		const { coreMessages } = await import("@monti-cms/core");
+		for (const bundle of [adminMessages, coreMessages])
+			for (const [key, text] of Object.entries(bundle.messages.en)) {
+				if (!text.includes("plural")) continue;
+				const names = [...text.matchAll(/\{(\w+), plural/g)].map((match) => match[1] as string);
+				for (const count of [1, 2]) {
+					const values = Object.fromEntries(
+						[...text.matchAll(/\{(\w+)[,}]/g)].map((match) => [
+							match[1] as string,
+							names.includes(match[1] as string) ? count : "x",
+						]),
+					);
+					const said = formatMessage([bundle], "en", { key, values });
+					expect(said, key).not.toMatch(/plural|[{}]/);
+				}
+			}
+	});
+});
