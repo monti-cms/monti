@@ -178,7 +178,7 @@ erDiagram
 | `entries.create` | write | 새 글. 컬렉션, 언어, 템플릿(03)을 받는다 |
 | `entries.get` | read | 고치는 본, 발행본 요약, 버전, 상태, 할 일 |
 | `entries.save` | write | 바뀐 칸을 저장. 읽은 버전이 다르면 충돌, 보관된 글이면 거절 |
-| `entries.compare` | read | 보낸 입력과 서버 최신본의 칸별 차이("다른 곳 3") |
+| `entries.compare` | read | 보낸 입력과 서버 최신본의 칸별 차이("차이 3곳") |
 | `entries.checkPublish` | read | 할 일 목록 |
 | `entries.publish` | write · preview | 여러 글을 발행. 발행일 "그대로" 또는 "오늘" |
 | `entries.archive` · `entries.unarchive` | write | 보관, 보관 풀기 |

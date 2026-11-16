@@ -38,7 +38,7 @@ export function EditorCompareScreen() {
 				</Inline>
 				<Inline gap={16} justify="end" paddingX={12}>
 					<Text variant="note" tone="subtle">
-						다른 곳 3
+						차이 3곳
 					</Text>
 					<Separator orientation="vertical" length="control" flush />
 					<TextButton>서버 최신본 불러오기</TextButton>

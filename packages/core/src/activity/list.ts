@@ -170,7 +170,7 @@ export type ActivityList = {
 	/** Whether the log shows deliveries at all: the site has a receiver, or once had one whose deliveries are still here. */
 	deliveries: boolean;
 	/** The entry the lines are filtered by, as the filter's row in the "action" menu names it. */
-	entry: { id: string; title: string } | null;
+	entry: { id: string; title: string; titleLocale?: string } | null;
 };
 
 /** A record of a line, as its details show it. */
@@ -423,7 +423,11 @@ async function linesOf(
  * The entry the log is filtered by: every language of it, and what the filter's row in the "action" menu calls it, as the log calls it (`source`
  * is the site's source language: an untitled translation is called by its source).
  */
-async function entryFilter(db: Db, id: string, source: string): Promise<{ ids: string[]; title: string }> {
+async function entryFilter(
+	db: Db,
+	id: string,
+	source: string,
+): Promise<{ ids: string[]; title: string; titleLocale?: string }> {
 	const entry = await db
 		.selectFrom("entries")
 		.select(["id", "title", "locale", "translation_group"])
@@ -435,7 +439,7 @@ async function entryFilter(db: Db, id: string, source: string): Promise<{ ids: s
 			.select("id")
 			.where("translation_group", "=", entry.translation_group)
 			.execute();
-		return { ids: group.map((row) => row.id), title: await entryName(db, source, entry) };
+		return { ids: group.map((row) => row.id), ...(await entryName(db, source, entry)) };
 	}
 	// Deleted for good: the log still has its lines, and the newest of them knows what it was called.
 	const { rows } = await sql<{ targets: LoggedRecord[] }>`select targets from monti_activity
@@ -443,7 +447,7 @@ async function entryFilter(db: Db, id: string, source: string): Promise<{ ids: s
 		db,
 	);
 	const logged = rows[0]?.targets.find((record) => record.kind === "entry" && record.id === id);
-	return { ids: [id], title: logged?.title ?? "" };
+	return { ids: [id], title: logged?.title ?? "", ...(logged?.titleLocale ? { titleLocale: logged.titleLocale } : {}) };
 }
 
 type Condition = ReturnType<typeof sql>;
@@ -576,7 +580,10 @@ export async function listActivity(
 		mark: activityPageMark(query, asOf, query.page),
 		asOf,
 		deliveries: options.receivers || any !== undefined,
-		entry: entry && query.entry !== undefined ? { id: query.entry, title: entry.title } : null,
+		entry:
+			entry && query.entry !== undefined
+				? { id: query.entry, title: entry.title, ...(entry.titleLocale ? { titleLocale: entry.titleLocale } : {}) }
+				: null,
 	};
 }
 

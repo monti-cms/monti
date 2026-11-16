@@ -1,4 +1,4 @@
-import { DropdownMenuCheckboxItem, DropdownMenuGroup, DropdownMenuLabel, MenuShortcut } from "@monti-cms/ui";
+import { DropdownMenuCheckboxItem, DropdownMenuGroup, DropdownMenuLabel, MenuShortcut, MenuValue } from "@monti-cms/ui";
 
 /**
  * One value of a column's filter, in every table's column menu (components/list.md): a box that is ticked or not, and at the end how many rows it would show. The
@@ -9,16 +9,20 @@ export function ValueRow({
 	onToggle,
 	label,
 	counted,
+	address,
 }: {
 	checked: boolean;
 	onToggle: () => void;
 	label: string;
 	/** How many rows the value holds; `null` while the counts are being read, and for a value that is not counted (the log's entry). */
 	counted: number | null;
+	/** What tells this value from another of the same name (a relation's target). */
+	address?: string | null;
 }) {
 	return (
 		<DropdownMenuCheckboxItem box checked={checked} closeOnClick={false} onCheckedChange={onToggle}>
 			{label}
+			{address ? <MenuValue address={address} /> : null}
 			{counted !== null && <MenuShortcut>{counted}</MenuShortcut>}
 		</DropdownMenuCheckboxItem>
 	);

@@ -122,7 +122,13 @@ export type ListRow = {
 	media: Record<string, { name: string; thumbnail: string | null }>;
 };
 
-export type Facet = { value: string | null; label?: string; count: number };
+export type Facet = {
+	value: string | null;
+	label?: string;
+	/** A relation value's address: what tells two targets of one title apart. */
+	slug?: string;
+	count: number;
+};
 
 const collectionOf = (ctx: OperationContext, collection: string): CollectionDefinition => {
 	const definition = ctx.site.schema().collections[collection];
@@ -468,14 +474,15 @@ export async function runFacets(ctx: OperationContext, query: ListQuery, column:
 			left join entry_links l on l.from_group = rep.translation_group and l.field = ${column}
 			where ${where} group by l.to_group`.execute(ctx.db);
 		const counts = new Map(rows.map((row) => [row.to_group, Number(row.count)]));
-		const { rows: targets } = await sql<{ translation_group: string; title: string }>`
-			select rep.translation_group, rep.title from ${representatives(field.to, ctx.site.schema().locales.source)} rep where rep.status <> 'archived'`.execute(
+		const { rows: targets } = await sql<{ translation_group: string; title: string; slug: string }>`
+			select rep.translation_group, rep.title, rep.slug from ${representatives(field.to, ctx.site.schema().locales.source)} rep where rep.status <> 'archived'`.execute(
 			ctx.db,
 		);
 		const facets = targets
 			.map((target) => ({
 				value: target.translation_group,
 				label: target.title,
+				slug: target.slug,
 				count: counts.get(target.translation_group) ?? 0,
 			}))
 			.sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));

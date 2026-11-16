@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { entryPlace, oneOrMany, recordsOf, titleOf } from "../activity/words";
+import { entryPlace, oneOrMany, recordsOf, titled } from "../activity/words";
 import { assertDoc } from "../body/check";
 import { asDoc, blockMap, type Doc, withNewIds } from "../body/doc";
 import { randomUUID } from "../bytes";
@@ -414,7 +414,7 @@ export const entryOperations = [
 		log: "save",
 		summary: (_input, output, records) => ({
 			key: "entries.create",
-			values: { title: titleOf(records, "entry", output.id) },
+			values: { ...titled(records, "entry", output.id) },
 		}),
 		where: (_input, output, records) => entryPlace(recordsOf(records, "entry", [output.id])),
 	}),
@@ -671,7 +671,7 @@ export const entryOperations = [
 		log: "save",
 		summary: (input, _output, records) => ({
 			key: "entries.save",
-			values: { title: titleOf(records, "entry", input.id) },
+			values: { ...titled(records, "entry", input.id) },
 		}),
 		where: (input, _output, records) => entryPlace(recordsOf(records, "entry", [input.id])),
 	}),
@@ -946,7 +946,7 @@ export const entryOperations = [
 		log: "save",
 		summary: (_input, output, records) => ({
 			key: "entries.duplicate",
-			values: { title: titleOf(records, "entry", output.id) },
+			values: { ...titled(records, "entry", output.id) },
 		}),
 		where: (_input, output, records) => entryPlace(recordsOf(records, "entry", [output.id])),
 	}),

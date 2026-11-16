@@ -11,7 +11,7 @@ import {
 	type MessageBundle,
 } from "@monti-cms/core";
 import { type ComponentType, createContext, type ReactNode, useCallback, useContext, useMemo, useState } from "react";
-import { languageName } from "../format/language";
+import { languageName, titleInLanguage } from "../format/language";
 import { adminMessages } from "../messages";
 import type { AdminPlugin, DocumentView, FieldInput, FieldViewProps } from "../plugins";
 import { createFailedReads, type FailedReads } from "./failed-reads";
@@ -142,9 +142,15 @@ const LANGUAGE_VALUES: Record<string, readonly string[]> = {
 };
 
 function withLanguageNames(language: Language, message: Message): Message {
-	const names = LANGUAGE_VALUES[message.key];
-	if (!names || !message.values) return message;
+	if (!message.values) return message;
 	const values = { ...message.values };
+	// An entry called by its source's title: the title and its language by name ("First post (Japanese)"), whatever the message.
+	const { titleLocale, title } = values;
+	if (typeof titleLocale === "string" && typeof title === "string")
+		values.title = titleInLanguage(title, titleLocale, language);
+	delete values.titleLocale;
+	const names = LANGUAGE_VALUES[message.key];
+	if (!names) return { ...message, values };
 	for (const name of names) if (typeof values[name] === "string") values[name] = languageName(values[name], language);
 	return { ...message, values };
 }

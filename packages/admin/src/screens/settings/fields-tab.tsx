@@ -28,6 +28,7 @@ import {
 } from "@monti-cms/ui";
 import { Add, Edit, TrashCan } from "@monti-cms/ui/icons";
 import { type ComponentProps, type ReactNode, useRef, useState } from "react";
+import { fieldName } from "../../format/names";
 import { useAdmin } from "../../operations/admin-context";
 import {
 	bandId,
@@ -422,7 +423,10 @@ export function FieldsTab({
 		return {
 			fieldName: name,
 			name: def.required ? `${name} !` : name,
-			label: (model.shown(at.fieldValue(c, key, "label")) as string | undefined) || undefined,
+			// The fixed fields have no label in the schema: they are called what the list and the editor call them (ST-11).
+			label:
+				(model.shown(at.fieldValue(c, key, "label")) as string | undefined) ||
+				(key === "title" || key === "slug" ? fieldName(key, null, t) : undefined),
 			description: (model.shown(at.fieldValue(c, key, "description")) as string | undefined) || undefined,
 			kind: kindText(def),
 			depth: stepIn(depth),

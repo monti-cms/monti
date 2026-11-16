@@ -13,6 +13,12 @@ export function recordsOf(records: LoggedRecord[], kind: string, ids?: readonly 
 export const titleOf = (records: LoggedRecord[], kind: string, id: string): string =>
 	records.find((record) => record.kind === kind && record.id === id)?.title ?? "";
 
+/** `titleOf` as message values: the title, and the language when the record is called by its source's title (the screen writes it by name). */
+export const titled = (records: LoggedRecord[], kind: string, id: string): { title: string; titleLocale?: string } => {
+	const found = records.find((record) => record.kind === kind && record.id === id);
+	return { title: found?.title ?? "", ...(found?.titleLocale ? { titleLocale: found.titleLocale } : {}) };
+};
+
 /**
  * One thing by its title, several by their count: `<key>.one` with `{title}`, `<key>.many` with `{count}`. The log's first line reads "“First
  * post” published" for one and "3 entries published" for several.
@@ -20,7 +26,10 @@ export const titleOf = (records: LoggedRecord[], kind: string, id: string): stri
 export function oneOrMany(key: string, records: LoggedRecord[], values: Record<string, string | number> = {}): Message {
 	const [only] = records;
 	return records.length === 1 && only
-		? { key: `${key}.one`, values: { title: only.title ?? "", ...values } }
+		? {
+				key: `${key}.one`,
+				values: { title: only.title ?? "", ...(only.titleLocale ? { titleLocale: only.titleLocale } : {}), ...values },
+			}
 		: { key: `${key}.many`, values: { count: records.length, ...values } };
 }
 

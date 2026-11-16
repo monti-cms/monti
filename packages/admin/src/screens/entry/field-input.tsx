@@ -544,6 +544,9 @@ export function FieldInput({
 	/** What the panel adds to a text's input (its focus, for the count). */
 	textProps?: Pick<ComponentProps<"input">, "onFocus" | "onBlur">;
 }) {
+	const { t } = useAdmin();
+	// A choice says what it asks for, not that it is empty: an input and a picker are told apart before they are touched.
+	const choosing = t("entry.choose");
 	const text = typeof value === "string" ? value : "";
 	if (def.kind === "slug")
 		return (
@@ -598,7 +601,7 @@ export function FieldInput({
 				items={items}
 				value={Array.isArray(value) ? (value as string[]) : []}
 				onChange={onChange}
-				placeholder={placeholder}
+				placeholder={choosing}
 				readOnly={readOnly}
 				proposal={proposal}
 			/>
@@ -609,7 +612,7 @@ export function FieldInput({
 				items={items}
 				value={typeof value === "string" ? value : null}
 				onChange={onChange}
-				placeholder={placeholder}
+				placeholder={choosing}
 				readOnly={readOnly}
 				proposal={proposal}
 			/>
@@ -624,7 +627,7 @@ export function FieldInput({
 			entryGroup: relation?.entryGroup,
 			offline: relation === null,
 			createMissing: def.createMissing,
-			placeholder,
+			placeholder: choosing,
 			readOnly,
 			proposal,
 		};

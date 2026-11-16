@@ -110,6 +110,37 @@ const Frame = ({ children, dimmed }: { children: React.ReactNode; dimmed?: boole
 
 export const Rows: Story = { render: () => <Frame>{rows(() => ({}))}</Frame> };
 
+/** A row with no title: the word for it in `fg-subtle`, beside a titled row, and the same on the picked row's grey ground. */
+export const Untitled: Story = {
+	tags: ["visual"],
+	render: () => (
+		<Frame>
+			{[false, true].map((selected) => (
+				<TableRow key={String(selected)} selected={selected}>
+					<TableCell />
+					<TableCell truncate>
+						<RowTitle untitled title={<RowLink href="#">제목 없음</RowLink>} address="/draft-1" />
+					</TableCell>
+					<TableCell tone="muted" align="end">
+						11. 14
+					</TableCell>
+					<TableCell />
+				</TableRow>
+			))}
+			<TableRow>
+				<TableCell />
+				<TableCell truncate>
+					<RowTitle title={<RowLink href="#">첫 번째 글</RowLink>} address="/first-post" />
+				</TableCell>
+				<TableCell tone="muted" align="end">
+					11. 13
+				</TableCell>
+				<TableCell />
+			</TableRow>
+		</Frame>
+	),
+};
+
 /** The assistant's work (the activity log): the ✦ leads the line in blue, the request after it, then what it did; the mark stays when the words are cut. */
 export const ByAssistant: Story = {
 	render: () => (

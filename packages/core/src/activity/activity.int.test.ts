@@ -1489,12 +1489,18 @@ describe("the log", () => {
 			await monti.proposals.add(proposal, "body.edit", { id, version: await versionOf(id), ops: insert(words) });
 		await monti.proposals.apply(proposal);
 		const [line] = (await list({ kinds: ["assistant"] }, monti)).lines;
-		const once = ['"첫 번째 글 (en)" 본문 1곳 고침', '"첫 번째 글" 본문 3곳 고침', '"첫 번째 글" 본문 1곳 고침'];
+		const once = ['"첫 번째 글" 본문 1곳 고침', '"첫 번째 글" 본문 3곳 고침', '"첫 번째 글" 본문 1곳 고침'];
 		expect(line?.what.map(ko)).toEqual(once);
+		// The translation's line carries its language apart from the title, for the screen to write by name.
+		expect(line?.what[0]?.values).toMatchObject({ title: "첫 번째 글", titleLocale: "en" });
 		expect(line?.more).toBe(0);
 		expect((await detail(line?.id ?? "", monti)).writes.map(ko)).toEqual(once);
 		// The filter's name for the translation is the one the log gives it; a translation with a title of its own has that.
-		expect((await list({ entry: english }, monti)).entry).toEqual({ id: english, title: "첫 번째 글 (en)" });
+		expect((await list({ entry: english }, monti)).entry).toEqual({
+			id: english,
+			title: "첫 번째 글",
+			titleLocale: "en",
+		});
 		await save(english, { title: "First post" }, monti);
 		expect((await list({ entry: english }, monti)).entry).toEqual({ id: english, title: "First post" });
 
@@ -1525,8 +1531,12 @@ describe("the log", () => {
 		await write("trash.move", { rows: [{ kind: "entry", id: second }] }, monti);
 		const emptied = await write("trash.empty", {}, monti);
 		const purged = await detail(emptied.activityId, monti);
-		expect(purged.records.find((record) => record.id === untitled)?.title).toBe("둘째 글 (en)");
-		expect((await list({ entry: untitled }, monti)).entry).toEqual({ id: untitled, title: "둘째 글 (en)" });
+		expect(purged.records.find((record) => record.id === untitled)?.title).toBe("둘째 글");
+		expect((await list({ entry: untitled }, monti)).entry).toEqual({
+			id: untitled,
+			title: "둘째 글",
+			titleLocale: "en",
+		});
 	});
 
 	it("13-3 [AT-11] two translations of one title stay two messages: counts are added up only for one record", async () => {

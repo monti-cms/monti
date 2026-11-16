@@ -174,7 +174,7 @@ export async function Home({ locale }: { locale: string }) {
 					<ul className="rows">
 						{series.map((item) => (
 							<li key={item.id}>
-								{item.title}
+								{text(item.title) ?? words.untitled}
 								{text(item.values.note) ? <span className="quiet">{text(item.values.note)}</span> : null}
 							</li>
 						))}

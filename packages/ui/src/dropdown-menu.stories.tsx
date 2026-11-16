@@ -102,6 +102,29 @@ export const SecondLevel: Story = {
 	),
 };
 
+/** Two values of one name: each says its address at the end, alone or beside another word ("발행 전"), so the rows can be told apart. */
+export const SameName: Story = {
+	tags: ["visual"],
+	render: () => (
+		<DropdownMenu defaultOpen>
+			{More}
+			<DropdownMenuContent>
+				<DropdownMenuRadioGroup value="a">
+					<DropdownMenuRadioItem value="a">
+						같은 이름
+						<MenuValue address="first-post" />
+					</DropdownMenuRadioItem>
+					<DropdownMenuRadioItem value="b">
+						같은 이름
+						<MenuValue address="first-post-2">발행 전</MenuValue>
+					</DropdownMenuRadioItem>
+					<DropdownMenuRadioItem value="c">다른 이름</DropdownMenuRadioItem>
+				</DropdownMenuRadioGroup>
+			</DropdownMenuContent>
+		</DropdownMenu>
+	),
+};
+
 /** Picking one value: the current one has a ✓ at its end; picking applies it and closes the menu. Opened from a text button. */
 export const PickOne: Story = {
 	render: () => (

@@ -34,7 +34,7 @@ import { Chat, OverflowMenuHorizontal, Renew, Undo } from "@monti-cms/ui/icons";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { useOpenConversation } from "../../assistant/use-assistant";
 import { shortTime } from "../../format/date";
-import { useLanguageName } from "../../format/language";
+import { titleInLanguage, useLanguageName } from "../../format/language";
 import { labelOfCollection, titleOf } from "../../format/names";
 import { useAdmin } from "../../operations/admin-context";
 import { reasonOf, useOperation, useRead } from "../../operations/use-operation";
@@ -266,7 +266,9 @@ export function ActivityPanel({
 	const sentDeliveries = line.deliveries.filter((delivery) => !unsent.current.ids.has(delivery.id));
 	const name = (record: ActivityRecord) => {
 		const route = routeOf(record);
-		const words = titleOf(record.title, t);
+		const words = record.titleLocale
+			? titleInLanguage(titleOf(record.title, t), record.titleLocale, language)
+			: titleOf(record.title, t);
 		return route ? (
 			<TextButton variant="underline" {...linkTo(route, go)}>
 				{words}

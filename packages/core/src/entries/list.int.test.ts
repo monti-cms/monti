@@ -271,6 +271,12 @@ describe("the list query", () => {
 			["성능", 1],
 			["안 쓰는 태그", 0],
 		]);
+		// A relation's value carries its address, so two targets of one title can be told apart.
+		expect(
+			tags
+				.filter((facet) => facet.value !== null)
+				.every((facet) => typeof facet.slug === "string" && facet.slug !== ""),
+		).toBe(true);
 		expect(await facets("status")).toEqual([
 			{ value: "published", count: 0 },
 			{ value: "changed", count: 1 },

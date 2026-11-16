@@ -681,7 +681,8 @@ function DocumentListScreen({
 				return (
 					<TableCell key={column.id} tone="subtle" truncate title={text || undefined}>
 						{check}
-						{text}
+						{/* A field with no value says so, so an empty cell is not a cell that has not been read (LT-20). */}
+						{text || "—"}
 					</TableCell>
 				);
 			}

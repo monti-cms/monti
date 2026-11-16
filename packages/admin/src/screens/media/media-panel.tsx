@@ -199,18 +199,20 @@ function FileFacts({ item, children }: { item: MediaDetail; children?: ReactNode
 		<DescriptionList>
 			{children}
 			<DescriptionItem label={t("library.type")}>{item.mime}</DescriptionItem>
-			<DescriptionItem label={t("library.size")}>
-				<Stack gap={2}>
-					{item.web && <span>{t("library.sizeWeb", { size: sizeLabel(item) })}</span>}
-					<span>
-						{item.web
-							? t("library.sizeOriginal", {
-									size: `${item.original.width}×${item.original.height} · ${bytes(item.size)}`,
-								})
-							: [sizeLabel(item), bytes(item.size)].filter(Boolean).join(" · ")}
-					</span>
-				</Stack>
-			</DescriptionItem>
+			{/* The dimensions and the bytes are two rows, named as the list's two columns are (MD-45). */}
+			{sizeLabel(item) && (
+				<DescriptionItem label={t("library.column.measure")}>
+					<Stack gap={2}>
+						{item.web && <span>{t("library.sizeWeb", { size: sizeLabel(item) })}</span>}
+						<span>
+							{item.web
+								? t("library.sizeOriginal", { size: `${item.original.width}×${item.original.height}` })
+								: sizeLabel(item)}
+						</span>
+					</Stack>
+				</DescriptionItem>
+			)}
+			<DescriptionItem label={t("library.size")}>{bytes(item.size)}</DescriptionItem>
 			<DescriptionItem label={t("library.uploadedAt")}>{fullDate(item.uploadedAt, language)}</DescriptionItem>
 		</DescriptionList>
 	);

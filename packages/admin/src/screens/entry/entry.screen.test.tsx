@@ -371,12 +371,12 @@ describe("the entry editor: saving and coming back", () => {
 		await BrowserCopy.run();
 		await userEvent.click(button("비교하기"));
 		await expect.element(page.getByText("임시 저장본과 비교")).toBeVisible();
-		await expect.element(page.getByText(/다른 곳 \d/)).toBeVisible();
+		await expect.element(page.getByText(/차이 \d곳/)).toBeVisible();
 		// The count is in the ink of plain words (screens/editor-more.md: \`Text variant="note"\`), not a quiet label's.
 		const ink = document.createElement("span");
 		ink.className = "text-monti-default";
 		document.body.append(ink);
-		expect(getComputedStyle(page.getByText(/다른 곳 \d/).element()).color).toBe(getComputedStyle(ink).color);
+		expect(getComputedStyle(page.getByText(/차이 \d곳/).element()).color).toBe(getComputedStyle(ink).color);
 		ink.remove();
 	});
 
@@ -1760,7 +1760,7 @@ describe("a conditional field in the property panel (doc 19)", () => {
 	it("19-5 the comparison of two sides that chose different options: each shows its choice by its label and the fields of its own option, and the choice is the one place counted", async () => {
 		const { ConditionalCompare } = composeStories(entry);
 		await ConditionalCompare.run();
-		await expect.element(page.getByText("다른 곳 1")).toBeVisible();
+		await expect.element(page.getByText("차이 1곳")).toBeVisible();
 		const sides = [...document.querySelectorAll<HTMLElement>("[data-slot=compare-side]")];
 		expect(sides).toHaveLength(2);
 		const [mine, server] = sides.map((side) => side.textContent ?? "");

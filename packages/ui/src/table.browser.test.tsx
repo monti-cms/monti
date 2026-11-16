@@ -811,7 +811,7 @@ describe("A cut line under a row's title", () => {
 });
 
 describe("a row with no title", () => {
-	it("[LR-15] the word for no title is drawn faint, not in the ink of a title someone typed", async () => {
+	it("[LR-15] the word for no title is drawn subtle, not in the ink of a title someone typed, and not in faint, which fails on a hovered row", async () => {
 		const host = render(
 			<Table container="none">
 				<TableBody>
@@ -830,12 +830,11 @@ describe("a row with no title", () => {
 		);
 		await expect.element(page.getByRole("link", { name: "제목 없음" })).toBeVisible();
 		const color = (name: string) => getComputedStyle(page.getByRole("link", { name }).element()).color;
-		// The faint ink, as a placeholder has it.
 		const probe = document.createElement("span");
-		probe.className = "text-monti-faint";
+		probe.className = "text-monti-subtle";
 		host.append(probe);
-		const faint = getComputedStyle(probe).color;
-		expect(color("제목 없음")).toBe(faint);
-		expect(color("첫 번째 글")).not.toBe(faint);
+		const subtle = getComputedStyle(probe).color;
+		expect(color("제목 없음")).toBe(subtle);
+		expect(color("첫 번째 글")).not.toBe(subtle);
 	});
 });

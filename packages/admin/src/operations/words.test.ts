@@ -26,3 +26,14 @@ describe("a language in an operation's message", () => {
 		expect(wordsOf("ko", { key: "trash.localeTaken", values: { locale: "en" } })).toBe("영어 번역이 이미 있습니다.");
 	});
 });
+
+describe("English numbers", () => {
+	it("a count says its noun in the singular for one, and the plural otherwise", () => {
+		expect(wordsOf("en", { key: "library.usedBy", values: { count: 1 } })).toBe("1 place");
+		expect(wordsOf("en", { key: "library.usedBy", values: { count: 3 } })).toBe("3 places");
+		expect(wordsOf("en", { key: "settings.review.sourceDrafts", values: { count: 1 } })).toBe(
+			"1 entry without one gets a draft in it.",
+		);
+		expect(wordsOf("ko", { key: "library.usedBy", values: { count: 1 } })).toBe("1곳");
+	});
+});

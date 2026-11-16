@@ -1452,7 +1452,7 @@ describe("the activity log of one entry (doc 13; AS-23, AT-11, TR-27)", () => {
 		await expect.element(row("첫머리에 세 줄 더해 줘")).toHaveTextContent('"첫 번째 글" 본문 3곳 고침');
 		expect(row("첫머리에 세 줄 더해 줘").element().textContent).not.toContain("외");
 		// The translation is the same entry in another language; with no title of its own it is called by its source's and its language.
-		await expect.element(row("번역에 한 줄 더해 줘")).toHaveTextContent('"첫 번째 글 (ja)" 본문 1곳 고침');
+		await expect.element(row("번역에 한 줄 더해 줘")).toHaveTextContent('"첫 번째 글 (일본어)" 본문 1곳 고침');
 		// The assistant's earlier work on this entry is here too; the other post of the same title is not.
 		await expect.element(row("이 두 편 요약 채워 줘")).toBeVisible();
 		expect(rows().some((words) => words.includes("이름이 같은 글에도 한 줄"))).toBe(false);
@@ -1468,7 +1468,7 @@ describe("the activity log of one entry (doc 13; AS-23, AT-11, TR-27)", () => {
 		await draw(stories.TranslationStarted).run();
 		await userEvent.click((await menuOf("일본어 번역 시작")).getByRole("menuitem", { name: "되돌리기" }));
 		await expect.element(dialog()).toHaveTextContent("되돌릴까요?");
-		await expect.element(dialog()).toHaveTextContent("「첫 번째 글」 일본어 번역을 영구 삭제합니다.");
+		await expect.element(dialog()).toHaveTextContent('"첫 번째 글" 일본어 번역을 영구 삭제합니다.');
 		await userEvent.keyboard("{Escape}");
 	});
 

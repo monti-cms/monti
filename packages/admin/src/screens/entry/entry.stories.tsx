@@ -841,7 +841,7 @@ export const CompareConflict: Story = {
 		const page = within(context.canvasElement);
 		await userEvent.click(page.getByRole("button", { name: "비교하기" }));
 		await page.findByText("서버 최신본과 비교", {}, wait);
-		await page.findByText(/다른 곳 \d/, {}, wait);
+		await page.findByText(/차이 \d곳/, {}, wait);
 	},
 };
 
@@ -863,7 +863,7 @@ export const ConditionalCompare: Story = {
 		await page.findByText(/먼저 저장했습니다/, {}, wait);
 		await userEvent.click(page.getByRole("button", { name: "비교하기" }));
 		await page.findByText("서버 최신본과 비교", {}, wait);
-		await page.findByText(/다른 곳 \d/, {}, wait);
+		await page.findByText(/차이 \d곳/, {}, wait);
 	},
 };
 

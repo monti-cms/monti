@@ -140,29 +140,30 @@ const SnapshotShape: z.ZodType<Snapshot> = z.object({
 });
 
 /**
- * What the activity log calls an entry: its title. A translation with no title yet is called by its source's title and its language ("First
- * post (ja)"), as its editor shows the source's title in the empty title (TR-27); the log has no language column, so the language is in the
- * name, in the code its "ja translation started" line uses. A write that deleted the source with it (a group deleted for good) keeps the name
+ * What the activity log calls an entry: its title. A translation with no title yet is called by its source's title and its language
+ * (`titleLocale`, written by name beside the title on the screen: "First post (Japanese)"), as its editor shows the source's title in the empty
+ * title (TR-27); the log has no language column. A write that deleted the source with it (a group deleted for good) keeps the name
  * the log last gave it. Empty when there is none: the screen writes "Untitled".
  */
 export async function entryName(
 	db: Db,
 	source: string,
 	row: Pick<Selectable<EntryTable>, "id" | "title" | "locale" | "translation_group">,
-): Promise<string> {
-	if (row.title !== "" || row.locale === source) return row.title;
+): Promise<{ title: string; titleLocale?: string }> {
+	if (row.title !== "" || row.locale === source) return { title: row.title };
 	const original = await db
 		.selectFrom("entries")
 		.select("title")
 		.where("translation_group", "=", row.translation_group)
 		.where("locale", "=", source)
 		.executeTakeFirst();
-	if (original) return original.title ? `${original.title} (${row.locale})` : "";
+	if (original) return original.title ? { title: original.title, titleLocale: row.locale } : { title: "" };
 	const { rows } = await sql<{
-		targets: { kind: string; id: string; title?: string }[];
+		targets: { kind: string; id: string; title?: string; titleLocale?: string }[];
 	}>`select targets from monti_activity
 		where targets @> ${JSON.stringify([{ kind: "entry", id: row.id }])}::jsonb order by seq desc limit 1`.execute(db);
-	return rows[0]?.targets.find((record) => record.kind === "entry" && record.id === row.id)?.title ?? "";
+	const logged = rows[0]?.targets.find((record) => record.kind === "entry" && record.id === row.id);
+	return { title: logged?.title ?? "", ...(logged?.titleLocale ? { titleLocale: logged.titleLocale } : {}) };
 }
 
 /**
@@ -175,7 +176,7 @@ export const entryRecord = defineRecordKind({
 		const { row } = data as Snapshot;
 		const address = row.slug === "" ? null : publicPath(site.schema(), row.collection, row.slug, row.locale);
 		return {
-			title: await entryName(db, site.schema().locales.source, row),
+			...(await entryName(db, site.schema().locales.source, row)),
 			collection: row.collection,
 			locale: row.locale,
 			slug: row.slug,

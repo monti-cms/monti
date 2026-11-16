@@ -73,7 +73,15 @@ export type LoggedRecord = RecordRef & { version: number | null } & RecordLabel;
  * What a record is called in the log, from its record kind: a title, and for an entry its collection, language, slug and public address. The address is
  * the one it had when the write ran: a collection's path changed or removed since does not rewrite what the log says.
  */
-export type RecordLabel = { title?: string; collection?: string; locale?: string; slug?: string; address?: string };
+export type RecordLabel = {
+	title?: string;
+	/** The language of a translation that is called by its source's title: the screen writes it by name beside the title. */
+	titleLocale?: string;
+	collection?: string;
+	locale?: string;
+	slug?: string;
+	address?: string;
+};
 
 /** What an operation gets besides its input. */
 export interface OperationContext {

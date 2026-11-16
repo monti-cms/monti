@@ -9,7 +9,7 @@ import {
 } from "@monti-cms/ui";
 import { type ReactNode, useState } from "react";
 import { useLanguageName } from "../../format/language";
-import { titleOf } from "../../format/names";
+import { addressIfShared, titleOf } from "../../format/names";
 import { useAdmin } from "../../operations/admin-context";
 import { useRead } from "../../operations/use-operation";
 import { DateRows } from "./date-rows";
@@ -176,9 +176,12 @@ function ValuesMenu({ column, state, query, setFilter, onHide, countedWhere }: M
 				.toLowerCase()
 				.includes(find.trim().toLowerCase()),
 	);
-	const rows = values.map((facet) => (
+	// Two values of one name on screen are told apart by their address, as a list row's is.
+	const shown = values.map((facet) => ({ group: facet.value, title: facet.label ?? "", slug: facet.slug ?? "" }));
+	const rows = values.map((facet, index) => (
 		<ValueRow
 			key={facet.value}
+			address={kind === "relation" && shown[index] ? addressIfShared(shown[index], shown, t) : null}
 			label={labelOf(facet)}
 			counted={facet.count}
 			checked={chosen.includes(facet.value)}

@@ -95,9 +95,9 @@ export function useRelationField({
 	const addressOf = useCallback(
 		(group: string): string | null => {
 			const found = allOptions.find((opt) => opt.group === group);
-			return found ? addressIfShared(found, allOptions, t) : null;
+			return found ? addressIfShared(found, options, t) : null;
 		},
-		[allOptions, t],
+		[allOptions, options, t],
 	);
 
 	return {

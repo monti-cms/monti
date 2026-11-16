@@ -4,7 +4,7 @@
 const ko = {
 	site: { name: "Monti showcase", nav: "사이트" },
 	sections: { articles: "글", tags: "태그", people: "사람", series: "연재" },
-	more: "스무 편이 넘습니다. 나머지는 리더가 나눠 읽습니다.",
+	more: "스무 편이 넘습니다.",
 	contents: "목차",
 	pinned: "고정",
 	preview: "미리보기",
@@ -48,7 +48,7 @@ type Words = typeof ko;
 const en: Words = {
 	site: { name: "Monti showcase", nav: "Site" },
 	sections: { articles: "Articles", tags: "Tags", people: "People", series: "Series" },
-	more: "More than twenty: the reader pages them.",
+	more: "More than twenty.",
 	contents: "Contents",
 	pinned: "Pinned",
 	preview: "Preview",
@@ -90,7 +90,7 @@ const en: Words = {
 const ja: Words = {
 	site: { name: "Monti showcase", nav: "サイト" },
 	sections: { articles: "記事", tags: "タグ", people: "人", series: "連載" },
-	more: "20本を超えています。残りはリーダーが分けて読みます。",
+	more: "20本を超えています。",
 	contents: "目次",
 	pinned: "固定",
 	preview: "プレビュー",

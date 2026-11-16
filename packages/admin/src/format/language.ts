@@ -10,6 +10,10 @@ export function languageName(code: string, language: string): string {
 	}
 }
 
+/** A translation called by its source's title: the title and its language by name, "First post (Japanese)". */
+export const titleInLanguage = (title: string, code: string, language: string): string =>
+	`${title} (${languageName(code, language)})`;
+
 /**
  * A language's name in the admin's language: what every screen calls a language (owner, 2026-11-16: the admin-language name everywhere, the tabs
  * of an entry's languages too). The one place that writes each language in itself is the picker of the admin's own language, which asks

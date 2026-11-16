@@ -47,6 +47,7 @@ import { useSendAgain } from "../../activity/use-send-again";
 import { useUndo } from "../../activity/use-undo";
 import { useOpenConversation } from "../../assistant/use-assistant";
 import { clock, fullTime, shortDate, shortTime } from "../../format/date";
+import { titleInLanguage } from "../../format/language";
 import { titleOf as shownTitle } from "../../format/names";
 import { useAdmin } from "../../operations/admin-context";
 import { useRead } from "../../operations/use-operation";
@@ -173,7 +174,7 @@ export function ActivityScreen({
 	 * The entry the log was opened for (the editor's ⋯ › "what the AI changed"), as the server named it. It stays in the first column's menu once
 	 * unticked, as every value of a menu does: the row under the keyboard's focus does not go, and ticked again it filters again.
 	 */
-	const entryShown = useRef<{ id: string; title: string } | null>(null);
+	const entryShown = useRef<{ id: string; title: string; titleLocale?: string } | null>(null);
 	if (data?.entry) entryShown.current = data.entry;
 	const offeredEntry = entryShown.current;
 	const looking =
@@ -309,7 +310,11 @@ export function ActivityScreen({
 							<ValueRow
 								checked={state.entry === offeredEntry.id}
 								onToggle={() => look({ entry: state.entry === offeredEntry.id ? null : offeredEntry.id })}
-								label={t("activity.ofEntry", { title: shownTitle(offeredEntry.title, t) })}
+								label={t("activity.ofEntry", {
+									title: offeredEntry.titleLocale
+										? titleInLanguage(shownTitle(offeredEntry.title, t), offeredEntry.titleLocale, language)
+										: shownTitle(offeredEntry.title, t),
+								})}
 								counted={null}
 							/>
 						</>
@@ -383,6 +388,8 @@ export function ActivityScreen({
 				<Banner
 					ref={bannerHandOff}
 					tone="danger"
+					// A date with words after it is a sentence: sans, not the mono of an address (AT-06).
+					plainMeta
 					title={t(failed === 1 ? "activity.failedBannerOne" : "activity.failedBanner", { count: failed })}
 					meta={counts.data?.since ? t("activity.since", { date: shortDate(counts.data.since, language) }) : undefined}
 				>
