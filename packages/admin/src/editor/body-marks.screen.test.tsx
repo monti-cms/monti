@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, onTestFinished } from "vitest";
 import { page, userEvent } from "vitest/browser";
 import { pickWords } from "../../../../testing/input";
 import { scene } from "../../test/scene";
@@ -154,6 +154,34 @@ describe("what is pressed in the text answers the pointer", () => {
 		await expect.element(card).toBeVisible();
 		const picked = () => window.getSelection()?.getRangeAt(0).getClientRects()[0]?.top ?? 0;
 		await expect.poll(() => card.element().getBoundingClientRect().bottom).toBeLessThanOrEqual(picked() + 1);
+	});
+
+	it("picking words on the first visible line under the editor header: the card does not cross the header's bottom edge", async () => {
+		await OwnFormat.run();
+		await expect.element(body()).toBeVisible();
+		const editor = (
+			body().element() as unknown as {
+				editor: { commands: { setTextSelection: (range: { from: number; to: number }) => void; focus: () => void } };
+			}
+		).editor;
+		await page.viewport(1280, 360);
+		onTestFinished(() => page.viewport(1440, 900));
+		const scroller = (() => {
+			for (let at = body().element().parentElement; at; at = at.parentElement)
+				if (/(auto|scroll)/.test(getComputedStyle(at).overflowY) && at.scrollHeight > at.clientHeight) return at;
+			throw new Error("nothing scrolls");
+		})();
+		// The first paragraph's first line right under the header.
+		const first = body().element().querySelector("p") as HTMLElement;
+		scroller.scrollTop += first.getBoundingClientRect().top - scroller.getBoundingClientRect().top - 2;
+		editor.commands.setTextSelection({ from: 1, to: 5 });
+		editor.commands.focus();
+		const card = page.getByRole("toolbar", { name: "서식" });
+		await expect.element(card).toBeVisible();
+		const header = document.querySelector("[data-slot=editor-header]") as HTMLElement;
+		await expect
+			.poll(() => card.element().getBoundingClientRect().top)
+			.toBeGreaterThanOrEqual(header.getBoundingClientRect().bottom - 1);
 	});
 
 	it("a site's own text format is a row of the format bar's ⋯, starting with an icon as every menu row does", async () => {

@@ -109,11 +109,15 @@ function BlockBox({
 /**
  * Where a selected block's tool row stands: over the block's top left, outside it, in the room the block keeps for it (`TOOL_ROW_ROOM`, set by the
  * block's `toolRow`: the row's height and the gap under it), where it covers no text. Its parent is the block's picture box (position relative), so it stands on the block it
- * belongs to by the box itself and scrolls with it.
+ * belongs to by the box itself and scrolls with it. `lifted` stands it 16px higher, above a lane of the block's own tools on its top edge (`TOOL_ROW_ROOM_LANE`).
  */
-function BlockBarPlace({ children }: { children: ReactNode }) {
+function BlockBarPlace({ lifted = false, children }: { lifted?: boolean; children: ReactNode }) {
 	return (
-		<div data-slot="block-bar-place" contentEditable={false} className="absolute bottom-full left-0 z-1 mb-monti-8">
+		<div
+			data-slot="block-bar-place"
+			contentEditable={false}
+			className={cn("absolute bottom-full left-0 z-1", lifted ? "mb-monti-24" : "mb-monti-8")}
+		>
 			{children}
 		</div>
 	);

@@ -160,22 +160,23 @@ describe("the site's blocks in the editor (doc 18)", () => {
 	const meets = (a: DOMRect, b: DOMRect) =>
 		a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
 
-	it("18-5 columns: a column's grip that would meet the tool row is not drawn (a narrow first column), and none that is drawn meets it", async () => {
-		const narrow = on(sized("15,85"));
+	it("18-5 columns: a narrow first column keeps its grip beside the tool row: with the row shown (25/75) the grip shows and the two do not overlap", async () => {
+		const narrow = on(sized("25,75"));
 		await narrow.run();
 		await expect.poll(() => document.querySelector(".monti-block-columns-editor")).not.toBeNull();
 		await caretAfter(body().element(), "왼쪽 단");
 		const bar = page.getByRole("toolbar");
 		await expect.element(bar).toBeVisible();
-		// The first column is narrow: its grip would stand over the row's "even widths", so it is not drawn; the second column's is.
-		await expect.poll(() => page.getByRole("button", { name: "단 1", exact: true }).elements().length).toBe(0);
-		await userEvent.hover(body().getByText("오른쪽 단"));
-		await expect.element(page.getByRole("button", { name: "단 2", exact: true })).toBeVisible();
-		for (const grip of page.getByRole("button", { name: /^단 \d$/ }).elements())
-			expect(meets(grip.getBoundingClientRect(), bar.element().getBoundingClientRect())).toBe(false);
+		const grip = page.getByRole("button", { name: "단 1", exact: true });
+		await expect.element(grip).toBeVisible();
+		expect(meets(grip.element().getBoundingClientRect(), bar.element().getBoundingClientRect())).toBe(false);
+		// The row stands above the grips' lane, whatever the columns' widths.
+		expect(bar.element().getBoundingClientRect().bottom).toBeLessThanOrEqual(
+			grip.element().getBoundingClientRect().top,
+		);
 	});
 
-	it("18-5 columns: with even widths the first column's grip is drawn beside the tool row, not over it", async () => {
+	it("18-5 columns: with even widths the first column's grip is beside the tool row, not over it", async () => {
 		const even = on(sized("50,50"));
 		await even.run();
 		await expect.poll(() => document.querySelector(".monti-block-columns-editor")).not.toBeNull();
@@ -185,6 +186,25 @@ describe("the site's blocks in the editor (doc 18)", () => {
 		const grip = page.getByRole("button", { name: "단 1", exact: true });
 		await expect.element(grip).toBeVisible();
 		expect(meets(grip.element().getBoundingClientRect(), bar.element().getBoundingClientRect())).toBe(false);
+	});
+
+	it("18-5 columns: Tab from inside the block reaches its + strip next, after the block's own tool row, not after the rest of the page", async () => {
+		const made = on(sized("50,50"));
+		await made.run();
+		await expect.poll(() => document.querySelector(".monti-block-columns-editor")).not.toBeNull();
+		await caretAfter(body().element(), "왼쪽 단");
+		await userEvent.keyboard("{Tab}");
+		await expect.poll(() => document.activeElement?.textContent).toBe("고르게");
+		await userEvent.keyboard("{Tab}");
+		await expect.poll(() => document.activeElement?.getAttribute("aria-label")).toBe("단 더하기");
+	});
+
+	it("18-5 columns: with no tool row (even columns) Tab from the text goes straight to the + strip", async () => {
+		await on().run();
+		await expect.poll(() => document.querySelector(".monti-block-columns-editor")).not.toBeNull();
+		await caretAfter(body().element(), "왼쪽 단");
+		await userEvent.keyboard("{Tab}");
+		await expect.poll(() => document.activeElement?.getAttribute("aria-label")).toBe("단 더하기");
 	});
 
 	it("18-4 a collapsible folds in the editor too, and its tool row's labelled toggle sets it to start open", async () => {

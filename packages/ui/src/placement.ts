@@ -1,5 +1,5 @@
 import { type CSSProperties, useMemo, useSyncExternalStore } from "react";
-import { dockShown, watchDock } from "./bottom-dock";
+import { dockShown, dockTopShown, watchDock } from "./bottom-dock";
 
 /**
  * Where floating things stand (overlay.md, the place rule). Four kinds:
@@ -22,6 +22,12 @@ import { dockShown, watchDock } from "./bottom-dock";
  * written, or a picked picture of a read-only body has its settings), the same whether the row shows or not, so nothing jumps.
  */
 export const TOOL_ROW_ROOM = "mt-[44px]";
+
+/**
+ * The same, for a block whose own tools stand on its top edge (the columns' grips: 12px tall and 4px off): the tool row stands above that lane, 16px
+ * higher, so the two never meet whatever the columns' widths are. 36 + 8 + 16.
+ */
+export const TOOL_ROW_ROOM_LANE = "mt-[60px]";
 
 /** The gap between a thing at a block's or a table's edge and the edge (px): the block handle, a table's grips. */
 export const EDGE_GAP = 4;
@@ -52,27 +58,35 @@ export const FIRST_PASS = { "--available-height": `${MIN_MENU_HEIGHT}px` } as CS
 /** How far a floating thing stays from the window's edges (px). */
 export const WINDOW_PADDING = 8;
 
-/** What stands docked at the window's foot (the review bar) is not covered by a card: the bottom padding takes its height and the 12px it stands over the edge. */
-function dockRoom(docked: HTMLElement | null) {
-	const held = docked?.firstElementChild;
+/**
+ * The room a bar fixed to the window's edge takes, in px from that edge: the review bar's height and the 12px it stands over the edge, or the editor
+ * header's whole height (it ends where the box that scrolls begins). Both are read here, so what opens in the body leaves each clear by one rule.
+ */
+function barRoom(bar: HTMLElement | null, edge: "top" | "bottom") {
+	if (!bar) return 0;
+	if (edge === "top") return Math.max(0, Math.ceil(bar.getBoundingClientRect().bottom));
+	const held = bar.firstElementChild;
 	return held instanceof HTMLElement ? held.offsetHeight + 24 : 0;
 }
 
 /**
- * The collision padding every floating thing takes (px, per edge): the window padding, and at the bottom the review bar's room while it is shown
- * (AS-14: a card never covers the bar). The same object while the numbers are the same, so the positioner does not start measuring again.
+ * The collision padding every floating thing takes (px, per edge): the window padding, and over the bars fixed to the window's edges their room
+ * (AS-14: a card never covers the review bar, and nothing opened in the body covers the editor header). The same object while the numbers are the
+ * same, so the positioner does not start measuring again.
  */
 export function usePlacementPadding() {
 	const docked = useSyncExternalStore(watchDock, dockShown, () => null);
-	const room = dockRoom(docked);
+	const header = useSyncExternalStore(watchDock, dockTopShown, () => null);
+	const bottom = barRoom(docked, "bottom");
+	const top = barRoom(header, "top");
 	return useMemo(
 		() => ({
-			top: WINDOW_PADDING,
+			top: Math.max(WINDOW_PADDING, top + (top ? WINDOW_PADDING : 0)),
 			left: WINDOW_PADDING,
 			right: WINDOW_PADDING,
-			bottom: Math.max(WINDOW_PADDING, room + WINDOW_PADDING),
+			bottom: Math.max(WINDOW_PADDING, bottom + WINDOW_PADDING),
 		}),
-		[room],
+		[top, bottom],
 	);
 }
 

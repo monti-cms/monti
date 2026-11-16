@@ -66,8 +66,8 @@ function useAcrossBoundary(within: Element | null | undefined) {
  *   Up and down the window is the limit. With none it folds inside the window.
  * - `place="over-box"` is laid exactly over its anchor's box and is as big as it (`--anchor-width`, `--anchor-height`, live): a held line, a table's
  *   right edge, a border, the picking box.
- * - What stands at an edge (a handle, a grip, a strip, a border) is hidden as soon as any part of it would go out of the scrolling box it stands in (under the
- *   editor's header), and never flips onto the text.
+ * - What stands at an edge (a handle, a grip) is hidden as soon as any part of it would go out of the scrolling box it stands in (under the editor's
+ *   header), and never flips onto the text. What is laid over a box (a table's strip and borders) is cut off at that box's visible edge, and the part in view stays.
  *
  * Its anchor is the same object while the box it measures is the same, so the positioner does not start following again at every keystroke.
  */
@@ -86,15 +86,25 @@ function Anchored({
 	const boundary = useAcrossBoundary(within);
 	const box = useRef<HTMLDivElement | null>(null);
 	const [clipped, setClipped] = useState(false);
-	const standsAtEdge = PLACES[place].collision === "exact" && place !== "over-box";
+	const [cut, setCut] = useState<string | undefined>();
+	const laidOver = place === "over-box";
+	const standsAtEdge = PLACES[place].collision === "exact" && !laidOver;
 	const context = anchor instanceof Element ? anchor : anchor?.context;
 	useEffect(() => {
-		const scroller = standsAtEdge ? scrollerOf(context) : null;
+		const scroller = standsAtEdge || laidOver ? scrollerOf(context) : null;
 		if (!scroller) return;
 		let frame = 0;
 		const check = () => {
 			const mine = box.current?.getBoundingClientRect();
 			const room = scroller.getBoundingClientRect();
+			if (laidOver) {
+				// What is laid over a box that runs under the header (a tall table's strip and borders) is cut off at the scrolling box's visible edge, by the same
+				// rect the others are hidden by: the part in view stays.
+				const above = mine ? Math.max(0, Math.round(room.top - mine.top)) : 0;
+				const below = mine ? Math.max(0, Math.round(mine.bottom - room.bottom)) : 0;
+				setCut(above || below ? `inset(${above}px 0 ${below}px 0)` : undefined);
+				return;
+			}
 			setClipped(Boolean(mine && mine.height > 0 && (mine.top < room.top - 0.5 || mine.bottom > room.bottom + 0.5)));
 		};
 		// The positioner follows a scroll a frame later: read after it.
@@ -110,7 +120,7 @@ function Anchored({
 			scroller.removeEventListener("scroll", soon);
 			window.removeEventListener("resize", soon);
 		};
-	}, [standsAtEdge, context]);
+	}, [standsAtEdge, laidOver, context]);
 	const last = useRef<{ key: string; context: Element | undefined; virtual: Virtual } | null>(null);
 	if (typeof document === "undefined" || !anchor) return null;
 	let target: Element | Virtual;
@@ -158,6 +168,7 @@ function Anchored({
 					collisionAvoidance={COLLISION[where.collision]}
 					className="isolate z-40 data-anchor-hidden:pointer-events-none data-clipped:pointer-events-none data-anchor-hidden:invisible data-clipped:invisible"
 					data-clipped={clipped || undefined}
+					style={cut ? { clipPath: cut } : undefined}
 				>
 					<div
 						ref={box}

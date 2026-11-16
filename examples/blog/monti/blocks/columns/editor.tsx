@@ -17,7 +17,7 @@ import {
 	useBlock,
 } from "@monti-cms/admin/blocks";
 import { ArrowsHorizontal } from "@monti-cms/admin/icons";
-import { type CSSProperties, useLayoutEffect, useRef, useState } from "react";
+import { type CSSProperties, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { columnsGridTemplate, parseColumnWidths } from "./layout";
 import { style } from "./style";
 import { words } from "./words";
@@ -52,6 +52,7 @@ export default function ColumnsEditor() {
 	const [dragging, setDragging] = useState<number[] | null>(null);
 	const widths = dragging ?? saved ?? Array.from({ length: count }, () => 100 / count);
 	const grid = useRef<HTMLDivElement>(null);
+	const strip = useRef<HTMLButtonElement>(null);
 	// Counts the drawings, so the tools that stand on the columns are asked again once they are there.
 	const [, setMade] = useState(0);
 	/** The pointer is over the block: its + strip shows. */
@@ -69,12 +70,6 @@ export default function ColumnsEditor() {
 	// Drawn again once the columns are: their elements are what the tools stand on.
 	useLayoutEffect(() => setMade(count));
 	const columns = columnsOf();
-	// The tool row stands over the block's top left: a column's grip that would meet it (a narrow first column) is not drawn, so the two never overlap.
-	const meetsBar = (column: HTMLElement) => {
-		const bar = grid.current?.closest("[data-slot=block-frame]")?.querySelector("[data-slot=block-bar-place]");
-		const at = column.getBoundingClientRect();
-		return Boolean(bar && at.left + at.width / 2 - 12 < bar.getBoundingClientRect().right + 4);
-	};
 	const borderAt = (border: number) => () => {
 		const cols = columnsOf();
 		const frame = grid.current?.getBoundingClientRect();
@@ -87,6 +82,25 @@ export default function ColumnsEditor() {
 		const frame = grid.current?.getBoundingClientRect();
 		return { left: (frame?.right ?? 0) + STRIP_GAP, top: frame?.top ?? 0, width: STRIP, height: frame?.height ?? 0 };
 	};
+
+	// The + strip floats away from the block (a layer at the end of the page), so the keyboard would reach it only after the whole page. Tab goes to it
+	// right after the block's own tab stops: from the text when the block has no tool row, else from the row's last button.
+	useEffect(() => {
+		const onKey = (event: KeyboardEvent) => {
+			if (event.key !== "Tab" || event.shiftKey || event.isComposing || !strip.current) return;
+			const target = event.target as Element;
+			const bar = grid.current?.closest("[data-slot=block-frame]")?.querySelector("[data-slot=block-bar-place]");
+			const stops = [...(bar?.querySelectorAll<HTMLElement>("button:not([disabled])") ?? [])];
+			const toStrip = bar?.contains(target)
+				? target === stops.at(-1)
+				: block.inside && target.matches(".ProseMirror") && stops.length === 0;
+			if (!toStrip) return;
+			event.preventDefault();
+			strip.current.focus();
+		};
+		window.addEventListener("keydown", onKey, true);
+		return () => window.removeEventListener("keydown", onKey, true);
+	}, [block.inside]);
 
 	const write = (next: number[] | null) =>
 		block.setAttrs({ widths: next ? next.map((width) => Math.round(width)).join(",") : undefined });
@@ -103,6 +117,8 @@ export default function ColumnsEditor() {
 
 	return (
 		<BlockFrame
+			// The grips stand on the columns' top edge: the tool row stands above them, so the two never meet.
+			lane
 			// While a border is dragged, the widths it makes ("60 : 40"), as a picture says its size.
 			measure={dragging ? dragging.map((width) => Math.round(width)).join(" : ") : undefined}
 			bar={
@@ -183,7 +199,7 @@ export default function ColumnsEditor() {
 							</Anchored>
 						))}
 						{columns.map((column, index) =>
-							(menu === index || block.childAt === index || pointed === index) && !meetsBar(column) ? (
+							menu === index || block.childAt === index || pointed === index ? (
 								<Anchored
 									// biome-ignore lint/suspicious/noArrayIndexKey: a grip is its column's place
 									key={index}
@@ -233,6 +249,7 @@ export default function ColumnsEditor() {
 						{count < MOST && (
 							<Anchored anchor={{ spot: stripAt, context: grid.current ?? undefined }} place="over-box">
 								<TableAddStrip
+									ref={strip}
 									label={say(words.addColumn)}
 									shown={over}
 									onClick={() => block.insertChild(newColumn(), count, { widths: undefined })}

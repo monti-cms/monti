@@ -270,10 +270,13 @@ export function useBlock() {
 export function BlockFrame({
 	bar,
 	measure,
+	lane = false,
 	children,
 	...props
 }: {
 	bar?: ReactNode;
+	/** The block has tools of its own on its top edge (columns' grips): the tool row stands above them. */
+	lane?: boolean;
 	/** What a drag makes of the block, shown at its top right while it lasts ("60 : 40"). */
 	measure?: string;
 	children: ReactNode;
@@ -287,14 +290,14 @@ export function BlockFrame({
 		<HoldContext.Provider value={(on) => setHeld((count) => Math.max(0, count + (on ? 1 : -1)))}>
 			<FocusContext.Provider value={setFocused}>
 				<BlockFrameBox
-					toolRow={editable}
+					toolRow={editable && (lane ? "lane" : true)}
 					onPointerEnter={() => setOver(true)}
 					onPointerLeave={() => setOver(false)}
 					{...props}
 				>
 					{/* Picked as a whole, it has the picked line around it, as a picture has. */}
 					<BlockBox selected={selected} measure={measure}>
-						{up && <BlockBarPlace>{bar}</BlockBarPlace>}
+						{up && <BlockBarPlace lifted={lane}>{bar}</BlockBarPlace>}
 						{children}
 					</BlockBox>
 				</BlockFrameBox>

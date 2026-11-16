@@ -166,4 +166,28 @@ describe("a table's tools", () => {
 		scrollTo(60);
 		await expect.poll(() => getComputedStyle(stands()).visibility).toBe("visible");
 	});
+
+	it("what is laid over a table that runs under the editor header (a column border) is cut off at the scrolling box's edge, the part in view staying", async () => {
+		await TableGrips.run();
+		await userEvent.click(body().getByRole("cell", { name: "편집기 다시 만들기" }));
+		await page.viewport(1280, 300);
+		onTestFinished(() => page.viewport(1440, 900));
+		const border = () =>
+			document.querySelector("[data-slot=table-column-border]")?.closest("[data-slot=anchored]") as HTMLElement;
+		await expect.poll(border).not.toBeNull();
+		const scroller = (() => {
+			for (let at = table().element().parentElement; at; at = at.parentElement)
+				if (/(auto|scroll)/.test(getComputedStyle(at).overflowY) && at.scrollHeight > at.clientHeight) return at;
+			throw new Error("nothing scrolls");
+		})();
+		const scrollTo = (gap: number) => {
+			scroller.scrollTop += table().element().getBoundingClientRect().top - scroller.getBoundingClientRect().top - gap;
+		};
+		scrollTo(60);
+		await expect.poll(() => getComputedStyle(border()).clipPath).toBe("none");
+		scrollTo(-10);
+		// Part of the border is under the header: cut there, the rest shows (it is not hidden whole).
+		await expect.poll(() => getComputedStyle(border()).clipPath).toMatch(/inset\([1-9]\d*px/);
+		expect(getComputedStyle(border()).visibility).toBe("visible");
+	});
 });

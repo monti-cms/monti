@@ -6,6 +6,22 @@ const docked: HTMLElement[] = [];
 const listeners = new Set<() => void>();
 let shown: HTMLElement | null = null;
 
+/** The bar fixed to the window's top while it is shown (an editor's header): what opens in the body leaves it clear, as it leaves the bottom one (`usePlacementPadding`). */
+let top: HTMLElement | null = null;
+
+/** Says a bar is fixed at the window's top; the answer takes it off again. */
+export function dockTop(node: HTMLElement): () => void {
+	top = node;
+	told();
+	return () => {
+		if (top === node) top = null;
+		told();
+	};
+}
+
+/** The bar at the window's top now, or none. */
+export const dockTopShown = () => top;
+
 const told = () => {
 	shown = docked.at(-1) ?? null;
 	for (const listener of listeners) listener();
