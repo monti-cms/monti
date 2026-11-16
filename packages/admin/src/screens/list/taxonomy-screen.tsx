@@ -513,7 +513,7 @@ export function TaxonomyScreen({
 		<Inline align="stretch" gap={0} grow minHeight={0}>
 			{trash.dialog}
 			<PageColumn width="list">
-				<PageHeader title={collectionName} meta={path}>
+				<PageHeader title={collectionName} address={path}>
 					<SearchToggle
 						label={t("list.search")}
 						value={search}

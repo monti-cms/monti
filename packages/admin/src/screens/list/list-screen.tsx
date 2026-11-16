@@ -453,7 +453,7 @@ function DocumentListScreen({
 	const header = (
 		<PageHeader
 			title={name}
-			meta={openFolder ? undefined : path}
+			address={openFolder ? undefined : path}
 			trail={
 				openFolder ? (
 					<Inline gap={4}>

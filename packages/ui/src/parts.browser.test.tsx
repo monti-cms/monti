@@ -277,3 +277,17 @@ describe("a thing in hand, in dark (floating shadow: a transparent one)", () => 
 		}
 	});
 });
+
+describe("a page header's two slots (one font each)", () => {
+	it("the address after the title is mono, the note is sans, as a row title's two are", async () => {
+		render(
+			<>
+				<PageHeader title="게시글" address="/posts/:slug" />
+				<PageHeader title="휴지통" note="30일 남음" />
+			</>,
+		);
+		await expect.element(page.getByText("30일 남음")).toBeVisible();
+		expect(getComputedStyle(page.getByText("/posts/:slug").element()).fontFamily).toContain("Plex Mono");
+		expect(getComputedStyle(page.getByText("30일 남음").element()).fontFamily).toContain("Pretendard");
+	});
+});

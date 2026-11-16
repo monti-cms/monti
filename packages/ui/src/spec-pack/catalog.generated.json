@@ -2763,7 +2763,7 @@
 			"kind": "part",
 			"bind": false,
 			"children": true,
-			"slots": ["meta", "title", "trail"],
+			"slots": ["address", "note", "title", "trail"],
 			"props": {},
 			"events": []
 		},

@@ -302,7 +302,7 @@ export function ConditionalProposalScreen() {
 					어시스턴트
 				</TextButton>
 				<Stack gap={0} paddingTop={2}>
-					<PageHeader title="제안 검토" meta="11. 13 10:51">
+					<PageHeader title="제안 검토" note="11. 13 10:51">
 						<Button variant="ghost">버리기</Button>
 						<Button>1건 적용</Button>
 					</PageHeader>

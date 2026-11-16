@@ -31,7 +31,7 @@ type Story = StoryObj<typeof meta>;
 export const List: Story = {
 	render: () => (
 		<PageColumn width="list">
-			<PageHeader title="게시글" meta="/posts/:slug">
+			<PageHeader title="게시글" address="/posts/:slug">
 				<Button variant="secondary">가져오기</Button>
 				<Button>
 					<Add />새 글

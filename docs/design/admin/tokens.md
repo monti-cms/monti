@@ -151,7 +151,7 @@
 글꼴 계열은 둘이다. 글은 Pretendard, 주소와 식별자와 코드는 IBM Plex Mono다. 두 글꼴의 `@font-face`와 파일은 `scripts/build-styles.mjs`가 `@monti-cms/admin/styles.css`를 만들 때 넣는다(파일은 그 옆 `fonts/`). `tokens.css`에는 `@font-face`가 없다. Noto Sans KR은 대체 글꼴이고, Pretendard를 불러올 수 없을 때만 쓴다. 전체 글꼴 목록은 다음과 같다.
 
 - `sans`: `Pretendard, "Noto Sans KR", "Apple SD Gothic Neo", system-ui, sans-serif`
-- `mono`: `"IBM Plex Mono", ui-monospace, Menlo, monospace, "Pretendard Hangul"`. 줄이 짧아 biome가 생성 파일을 줄바꿈하지 않는다(생성 파일과 `gen:tokens --check`가 어긋나지 않는다). `Pretendard Hangul`은 Pretendard의 같은 파일을 한글(U+AC00–D7AF, U+1100–11FF, U+3130–318F)로만 한정해 다시 이름 붙인 `@font-face`다(`packages/ui/.storybook/fonts.ts`). 모노스페이스 글꼴 뒤에 두므로 라틴 · 키릴 · 그리스 문자와 기호는 Plex Mono와 시스템 모노에 남고(Plex가 올라오기 전에도 비례폭 Pretendard로 그려지지 않는다), 한글만 늘 같은 글꼴로 그려진다. 앞서는 한글이 시스템이 고른 글꼴이라 글자 폭이 고르지 않았다(만들며 정함 (2026-11-16), EC-06, MD-43, TG-16, TP-07).
+- `mono`: `"IBM Plex Mono", ui-monospace, Menlo, monospace, "Pretendard Hangul", "Noto Sans KR", "Apple SD Gothic Neo"`. `Pretendard Hangul`은 Pretendard의 같은 파일을 한글(U+AC00–D7AF, U+1100–11FF, U+3130–318F)로만 한정해 다시 이름 붙인 `@font-face`다(`packages/ui/.storybook/fonts.ts`). 모노스페이스 글꼴 뒤에 두므로 라틴 · 키릴 · 그리스 문자와 기호는 Plex Mono와 시스템 모노에 남고(Plex가 올라오기 전에도 비례폭 Pretendard로 그려지지 않는다), 한글만 늘 같은 글꼴로 그려진다. 앞서는 한글이 시스템이 고른 글꼴이라 글자 폭이 고르지 않았다(만들며 정함 (2026-11-16), EC-06, MD-43, TG-16, TP-07).
 
 역할은 그 글자가 무엇인지로 고른다. 크기 단위는 px다.
 

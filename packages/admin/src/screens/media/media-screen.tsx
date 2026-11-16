@@ -1008,8 +1008,7 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 			<PageColumn width="list">
 				<PageHeader
 					title={here?.name ?? t("frame.media")}
-					plainMeta
-					meta={
+					note={
 						data
 							? // What the page shows is counted: its folders too, when it shows them (MD-08).
 								childFolders.length > 0

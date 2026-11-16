@@ -47,7 +47,7 @@ export const MONO_OK = new Map([
 	["ui/src/model-menu.tsx", "a model's key is an identifier (`metaMono`)"],
 	["ui/src/nav-link.tsx", "the count or identifier at the end of a row"],
 	["ui/src/option-table.tsx", "the value column of an option table is a typed value"],
-	["ui/src/page-header.tsx", "the meta after a title is a count or a date"],
+	["ui/src/page-header.tsx", "the address after a title is a typed value (`address`); its `note` is words in sans"],
 	["ui/src/patch.tsx", "a file's path, its line counts and the changed code"],
 	["ui/src/pick-list.tsx", "the mark at the end of a row is a short code"],
 	["ui/src/property-list.tsx", "a section heading is a word in the small sans role"],

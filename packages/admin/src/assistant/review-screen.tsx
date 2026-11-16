@@ -124,7 +124,7 @@ export function ReviewScreen({ id, go }: { id: string; go: (route: Route) => voi
 		<PageColumn ref={leaving} width="content">
 			<PageHeader
 				title={t("review.title")}
-				meta={recentTime(view.createdAt, language)}
+				note={recentTime(view.createdAt, language)}
 				trail={
 					// The way back as the editor's and the templates' are: a quiet text button with the chevron icon before its name.
 					<TextButton variant="quiet" onClick={back}>

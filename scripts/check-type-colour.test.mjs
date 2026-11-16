@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import {
@@ -233,4 +234,17 @@ test("token-contrast: the focus ring at half ink fails on the open row in dark (
 	const half = tokenContrast(tokens, { sources: own, ringAlpha: 0.5 });
 	assert.ok(half.some((each) => /the focus ring on bg-current \(dark\)/.test(each.message)));
 	assert.deepEqual(tokenContrast(tokens, { sources: own }), []);
+});
+
+test("the generated token files are as biome leaves them, so the pre-commit hook changes nothing and gen:tokens --check holds", () => {
+	const root = new URL("..", import.meta.url).pathname;
+	const files = [
+		"packages/ui/styles/tokens.css",
+		"packages/ui/styles/theme.css",
+		"packages/ui/src/tokens.generated.ts",
+		"packages/ui/.storybook/manager-theme.generated.ts",
+	];
+	// `biome check` (no write) fails on a file it would change.
+	execFileSync(`${root}node_modules/.bin/biome`, ["check", ...files], { cwd: root, stdio: "pipe" });
+	execFileSync("node", ["scripts/gen-tokens.mjs", "--check"], { cwd: root, stdio: "pipe" });
 });

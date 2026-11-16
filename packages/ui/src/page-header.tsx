@@ -2,23 +2,24 @@ import type * as React from "react";
 import { cn } from "./cn";
 
 /**
- * The head of a content page: the title (26px bold) with the ink rule under it, the only heavy line of a page. `meta` is a list's address rule in mono
- * beside the title (`plainMeta`: it is words, such as a count or the days left, in sans); `children` are the page's actions on the right, the secondary pill first and the one primary pill last. The title row is as tall
+ * The head of a content page: the title (26px bold) with the ink rule under it, the only heavy line of a page. Two slots stand beside the title, one font each as `RowTitle`'s do: `address` is a list's address rule, a typed value, in mono; `note` is
+ * words (a count, the days left, a time), in sans. A header takes the one it needs, or both, address first. `children` are the page's actions on the right, the secondary pill first and the one primary pill last. The title row is as tall
  * as a pill (36px) with or without one, so the rule sits at the same height on every page. `trail` is the way back above the title (a folder path).
  */
 function PageHeader({
 	title,
-	meta,
-	plainMeta = false,
+	address,
+	note,
 	trail,
 	className,
 	children,
 	...props
 }: Omit<React.ComponentProps<"header">, "title"> & {
 	title: React.ReactNode;
-	meta?: React.ReactNode;
-	/** The meta is words (a count, the days left), not a value: sans, not mono. */
-	plainMeta?: boolean;
+	/** After the title, in mono: what is typed or copied as it stands (a list's address rule, `/posts/:slug`). */
+	address?: React.ReactNode;
+	/** After the title, in sans: words a person reads (a count, the days left, a time). */
+	note?: React.ReactNode;
 	trail?: React.ReactNode;
 }) {
 	return (
@@ -30,8 +31,15 @@ function PageHeader({
 			{trail && <div className="pb-monti-10 text-monti-faint text-monti-note">{trail}</div>}
 			<div className="flex flex-wrap items-end gap-monti-12">
 				<h1 className="pt-monti-4 text-monti-page">{title}</h1>
-				{meta && (
-					<span className={cn("pb-[3px] text-monti-body text-monti-faint", !plainMeta && "font-mono")}>{meta}</span>
+				{address && (
+					<span data-slot="page-header-address" className="pb-[3px] font-mono text-monti-body text-monti-faint">
+						{address}
+					</span>
+				)}
+				{note && (
+					<span data-slot="page-header-note" className="pb-[3px] text-monti-body text-monti-faint">
+						{note}
+					</span>
 				)}
 				{children && <span className="ml-auto flex items-center gap-monti-16">{children}</span>}
 			</div>
