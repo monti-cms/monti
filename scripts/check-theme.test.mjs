@@ -41,6 +41,7 @@ test("theme-token: a colour literal in a block's code fails unless the file is n
 		found.map(({ file, line }) => [file, line]),
 		[
 			["packages/blocks/blocks/mermaid/other.ts", 1],
+			["packages/blocks/blocks/mermaid/view.tsx", 1],
 			["packages/blocks/blocks/mermaid/view.tsx", 2],
 			["packages/blocks/blocks/math/site.tsx", 1],
 			["packages/core/src/code/highlight.ts", 1],

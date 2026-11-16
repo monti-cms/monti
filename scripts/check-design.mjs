@@ -1540,7 +1540,11 @@ function checkLooks() {
 			if (inTargets(path.join(root, file))) add(path.join(root, file), line, rule, message);
 	};
 	report("theme-token", themeToken(sources));
-	report("blocks-sync", blocksSync(sources));
+	// A copy that drifted is reported when the copy or its package source is named on the command line: the one to change is the source.
+	const sourceOf = (file) => file.replace(/^examples\/[^/]+\/monti\/blocks\//, "packages/blocks/blocks/");
+	for (const { file, line, message } of blocksSync(sources))
+		if (inTargets(path.join(root, file)) || inTargets(path.join(root, sourceOf(file))))
+			add(path.join(root, file), line, "blocks-sync", message);
 }
 checkLooks();
 

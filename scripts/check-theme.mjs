@@ -70,8 +70,8 @@ export function themeToken(sources, { allowed = LITERAL_OK } = {}) {
 				});
 		});
 		const at = (pattern, message) => {
-			const hit = pattern.exec(text);
-			if (hit) found.push({ file, line: lineOf(text, hit.index), message });
+			for (const hit of text.matchAll(new RegExp(pattern.source, "g")))
+				found.push({ file, line: lineOf(text, hit.index), message });
 		};
 		if (!css) {
 			at(
@@ -79,7 +79,8 @@ export function themeToken(sources, { allowed = LITERAL_OK } = {}) {
 				'KaTeX draws `output: "htmlAndMathml"`: the browser\'s MathML alone breaks matrices, limits and alignment',
 			);
 			at(
-				/theme:\s*["'](?:default|dark|neutral|forest)["']/,
+				// Any of Mermaid's own themes named in the value, in a branch of a conditional too (`theme: dark ? "dark" : "default"`).
+				/theme:[^,;}\n]*["'](?:default|dark|neutral|forest)["']/,
 				'Mermaid draws `theme: "base"` with the colours of `mermaidLook`, never one of its own themes',
 			);
 			at(
