@@ -22,11 +22,18 @@ import {
 import { ChevronDown, ChevronRight } from "@monti-cms/ui/icons";
 import { getSchema } from "@tiptap/core";
 import type { DOMOutputSpec, Mark as MarkOf, Node as NodeOf, Schema } from "@tiptap/pm/model";
-import { createElement, Fragment, type ReactNode, useEffect, useMemo, useState } from "react";
+import { createElement, Fragment, type ReactNode, useContext, useEffect, useMemo, useState } from "react";
 import { type AdminBlockDefinition, useAdmin } from "../operations/admin-context";
 import { useRead } from "../operations/use-operation";
-import { type CodeChange, type Part, type ReadMarks, valuesOf } from "../screens/entry/compare-entries";
-import { useBlockNames } from "../screens/entry/use-block-names";
+import {
+	type BlockNames,
+	blockWords,
+	type CodeChange,
+	type Part,
+	type ReadMarks,
+	valuesOf,
+} from "../screens/entry/compare-entries";
+import { blockNamesOf } from "../screens/entry/use-block-names";
 import type { Catalog, CatalogBlock } from "./catalog";
 import {
 	type CodeData,
@@ -39,10 +46,12 @@ import {
 	hiddenLines,
 	looksOf,
 	type Piece,
+	readColoured,
 } from "./code/code-state";
 import { docToEditor } from "./convert";
 import { footnoteNumbers } from "./footnotes";
 import { MarkLooks } from "./mark-looks";
+import { ReadCatalog } from "./read-catalog";
 import { bodyExtensions, nodeName, UNKNOWN } from "./schema";
 
 /**
@@ -109,21 +118,27 @@ function Words({ parts, kind }: { parts: readonly Part[]; kind: ReadMark }) {
 // --- Code ------------------------------------------------------------------------------------------------------------------------------------
 
 /** A code's colours, as the editor's block gets them (`codeColours`): none until the highlighter answers, none for a language it does not know. */
-function useColours(settings: CodeBlockSettings | undefined, language: string | undefined, code: string) {
+function useColours(
+	settings: CodeBlockSettings | undefined,
+	language: string | undefined,
+	code: string,
+	streaming: boolean,
+) {
 	const [pieces, setPieces] = useState<Piece[]>([]);
 	useEffect(() => {
-		if (!settings || !language || !code) {
+		// Code still arriving is not coloured, and none of it is remembered: the colours come once the answer is whole.
+		if (!settings || !language || !code || streaming) {
 			setPieces([]);
 			return;
 		}
 		let gone = false;
-		void codeColours(settings, language, code).then((found) => {
+		void codeColours(settings, language, code, readColoured).then((found) => {
 			if (!gone) setPieces(found);
 		});
 		return () => {
 			gone = true;
 		};
-	}, [settings, language, code]);
+	}, [settings, language, code, streaming]);
 	return pieces;
 }
 
@@ -198,6 +213,7 @@ function ReadCode({
 	parts,
 	change,
 	kind,
+	streaming = false,
 }: {
 	code: string;
 	data: CodeData;
@@ -209,11 +225,12 @@ function ReadCode({
 	parts?: readonly Part[];
 	change?: CodeChange;
 	kind: ReadMark;
+	streaming?: boolean;
 }) {
 	const { t } = useAdmin();
 	const [folds, setFolds] = useState<ReadonlyMap<string, boolean>>(new Map());
 	const language = data.language;
-	const pieces = useColours(settings, language, code);
+	const pieces = useColours(settings, language, code, streaming);
 	const starts = lineStarts(code);
 	const effects = data.lines ?? [];
 	const changedLines = new Set(change?.lines ?? []);
@@ -333,7 +350,16 @@ function addressProps(href: unknown, onOpen: ((address: string) => void) | undef
 	if (href.startsWith("#/") && onOpen)
 		return {
 			href,
-			onClick: (event: { preventDefault: () => void }) => {
+			// Only a plain press opens the place here; a press with Cmd, Ctrl, Shift or Alt (a new tab, a new window) is the browser's, as a middle press is.
+			onClick: (event: {
+				button: number;
+				metaKey: boolean;
+				ctrlKey: boolean;
+				shiftKey: boolean;
+				altKey: boolean;
+				preventDefault: () => void;
+			}) => {
+				if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
 				event.preventDefault();
 				onOpen(href);
 			},
@@ -349,7 +375,7 @@ type Context = {
 	definitions: ReadonlyMap<string, AdminBlockDefinition>;
 	settings: CodeBlockSettings | undefined;
 	blocks: Map<string, Block>;
-	names: ReturnType<typeof useBlockNames>;
+	names: BlockNames | undefined;
 	marks: ReadMarks | undefined;
 	kind: ReadMark;
 	numbers: Map<string, number>;
@@ -359,6 +385,7 @@ type Context = {
 	cursor: { at: number; ranges: Range[] } | null;
 	current: string | null | undefined;
 	footnotes: number;
+	streaming: boolean;
 };
 
 /** What an element says, with `content` where its hole is. The one place a block's element is made: the editor's own `renderHTML`. */
@@ -424,7 +451,14 @@ function drawText(node: NodeOf, context: Context, key: number) {
 const checkOf = (checked: boolean, label: string) =>
 	createElement(
 		"span",
-		{ key: "check", "data-check": "", role: "checkbox", "aria-checked": checked, "aria-label": label },
+		{
+			key: "check",
+			"data-check": "",
+			role: "checkbox",
+			"aria-checked": checked,
+			"aria-readonly": true,
+			"aria-label": label,
+		},
 		createElement(
 			"span",
 			{ "data-check-box": "" },
@@ -435,6 +469,15 @@ const checkOf = (checked: boolean, label: string) =>
 			),
 		),
 	);
+
+/** Whether a block is drawn as a box with its name and values (no drawing of the admin's own for it): then its name line is in the box. */
+function isBox(block: CatalogBlock, context: Context) {
+	const Site = CORE_BLOCKS.has(block.type) ? undefined : context.definitions.get(block.type)?.Site;
+	return (
+		!Site &&
+		(block.type === "image" || block.type === "file" || (block.holds === "nothing" && !CORE_BLOCKS.has(block.type)))
+	);
+}
 
 /** The words of a box block, and its name line's marks when the body is read against another. */
 function Box({ type, id, label, context }: { type: string; id: string; label: string; context: Context }) {
@@ -490,11 +533,12 @@ function drawNode(node: NodeOf, context: Context, key: number, parent: NodeOf): 
 		}
 		if (!block || !spec) return elementOf(spec ?? ["span", 0], drawChildren(node, context), context, key);
 		const values = id ? context.marks?.values.get(id) : undefined;
-		const line = values?.some((part) => part.changed) ? (
-			<CompareValues key={`${key}:values`}>
-				<Words parts={values} kind={context.kind} />
-			</CompareValues>
-		) : null;
+		const line =
+			!isBox(block, context) && values?.some((part) => part.changed) ? (
+				<CompareValues key={`${key}:values`}>
+					<Words parts={values} kind={context.kind} />
+				</CompareValues>
+			) : null;
 		const drawn = drawBlock(node, block, spec, context, key, parent);
 		return line ? (
 			<Fragment key={key}>
@@ -547,16 +591,13 @@ function drawBlock(
 				parts={context.marks?.words.get(id)}
 				change={context.marks?.code.get(id)}
 				kind={context.kind}
+				streaming={context.streaming}
 			/>
 		);
 	}
 	const Site = CORE_BLOCKS.has(block.type) ? undefined : context.definitions.get(block.type)?.Site;
-	if (
-		!Site &&
-		(block.type === "image" || block.type === "file" || (block.holds === "nothing" && !CORE_BLOCKS.has(block.type)))
-	) {
+	if (isBox(block, context))
 		return <Box key={key} type={block.type} id={id} label={context.t(block.label)} context={context} />;
-	}
 	if (block.type === "divider" || block.type === "table")
 		return elementOf(spec, drawChildren(node, context), context, key);
 	if (block.type === "footnote") {
@@ -572,9 +613,11 @@ function drawBlock(
 	if (Site) {
 		const source = block.fence ? String(data[block.fence.attr] ?? "") : "";
 		const words = context.marks?.words.get(id);
-		const attrs = context.blocks.get(id)?.attrs ?? data;
+		// The block as the body holds it, with the blocks it holds: a drawing reads its children's own values (a tab's name, a column count, a file's path).
+		const whole: Block = context.blocks.get(id) ?? { id, type: block.type, attrs: data };
+		const attrs = whole.attrs ?? data;
 		const children = block.holds === "nothing" ? undefined : drawChildren(node, context);
-		const drawn = createElement(Site, { block: { id, type: block.type, attrs }, attrs }, children);
+		const drawn = createElement(Site, { block: whole, attrs }, children);
 		return (
 			<div key={key} data-block={block.type}>
 				{drawn}
@@ -585,6 +628,7 @@ function drawBlock(
 						settings={context.settings}
 						parts={words}
 						kind={context.kind}
+						streaming={context.streaming}
 					/>
 				) : null}
 			</div>
@@ -593,12 +637,7 @@ function drawBlock(
 	const children = drawChildren(node, context);
 	// A list item of a checklist has its box before its words.
 	if (block.type === "listItem" && parent.type.name === nodeName("checklist"))
-		return elementOf(
-			spec,
-			[checkOf(Boolean(data.checked), context.t("editor.checklist.done")), ...children],
-			context,
-			key,
-		);
+		return elementOf(spec, [checkOf(Boolean(data.checked), node.textContent), ...children], context, key);
 	return elementOf(spec, children, context, key);
 }
 
@@ -615,6 +654,22 @@ function schemaOf(kit: Catalog, definitions: ReadonlyMap<string, AdminBlockDefin
 		byDefinitions.set(definitions, schema);
 	}
 	return schema;
+}
+
+/**
+ * The catalog the bodies read below it are drawn with, read once, with the site's marks' looks mounted once: a screen with many bodies in it (the source
+ * cells of a side-by-side translation, the margin cards) reads the catalog, makes the schema and mounts the looks one time, not once per body. Without it
+ * a `ReadBody` reads the catalog itself.
+ */
+export function ReadBodies({ children }: { children: ReactNode }) {
+	const kit = useRead<Catalog>("blocks.catalog", {}).data;
+	const value = useMemo(() => ({ kit }), [kit]);
+	return (
+		<ReadCatalog.Provider value={value}>
+			{children}
+			<MarkLooks />
+		</ReadCatalog.Provider>
+	);
 }
 
 const byIdOf = (doc: Doc) => {
@@ -642,6 +697,7 @@ export function ReadBody({
 	mark = "changed",
 	size = "reading",
 	muted = false,
+	streaming = false,
 	current,
 	files,
 	onOpen,
@@ -652,6 +708,8 @@ export function ReadBody({
 	size?: "reading" | "chat";
 	/** In the quieter ink: a source read beside its translation. */
 	muted?: boolean;
+	/** The text is still arriving (an answer being written): its code is not coloured until it is whole. */
+	streaming?: boolean;
 	current?: string | null;
 	/** The library's files the body shows, to name a picture or a file by its name. */
 	files?: readonly { id: string; name: string }[];
@@ -659,17 +717,40 @@ export function ReadBody({
 	onOpen?: (address: string) => void;
 }) {
 	const { t, blocks: definitions } = useAdmin();
-	const kit = useRead<Catalog>("blocks.catalog", {}).data;
-	const names = useBlockNames(files);
+	const shared = useContext(ReadCatalog);
+	const own = useRead<Catalog>("blocks.catalog", {}, { skip: shared !== null }).data;
+	const kit = (shared ? shared.kit : own) ?? undefined;
+	const known = (files ?? []).map((file) => `${file.id}\u0000${file.name}`).join("\u0001");
+	// biome-ignore lint/correctness/useExhaustiveDependencies: the files are followed by what they are (`known`), not by the array's identity
+	const names = useMemo(() => (kit ? blockNamesOf(kit, t, files) : undefined), [kit, t, known]);
 	const drawn = useMemo(() => {
-		if (!kit || doc.blocks.length === 0) return null;
+		if (doc.blocks.length === 0) return null;
+		// Without the catalog (still being read, or it failed) the body is its words, so nothing is left blank.
+		if (!kit) return doc.blocks.map((block) => <p key={block.id}>{blockWords(block).text}</p>);
 		const schema = schemaOf(kit, definitions);
-		let body: NodeOf;
+		const from = (blocks: Block[]) => docToEditor({ ...doc, blocks }, kit);
+		// The whole body, or, where one block cannot be made into the editor's nodes, each block by itself: the others are drawn and that one is a box.
+		let body: NodeOf | null = null;
 		try {
-			body = schema.nodeFromJSON(docToEditor(doc, kit));
+			body = schema.nodeFromJSON(from(doc.blocks));
 		} catch {
-			return null;
+			body = null;
 		}
+		const made: { id: string; node: NodeOf | null }[] = [];
+		if (body)
+			body.forEach((node) => {
+				made.push({ id: String(node.attrs.blockId ?? ""), node });
+			});
+		else
+			for (const block of doc.blocks) {
+				let node: NodeOf | null = null;
+				try {
+					node = schema.nodeFromJSON(from([block]).content?.[0] ?? {});
+				} catch {
+					node = null;
+				}
+				made.push({ id: block.id, node });
+			}
 		const context: Context = {
 			schema,
 			byType: new Map(kit.blocks.map((block) => [nodeName(block.type), block])),
@@ -679,17 +760,26 @@ export function ReadBody({
 			names,
 			marks,
 			kind: mark,
-			numbers: footnoteNumbers(body),
+			numbers: body ? footnoteNumbers(body) : new Map(),
 			onOpen,
 			t,
 			cursor: null,
 			current,
 			footnotes: 0,
+			streaming,
 		};
 		const top: ReactNode[] = [];
-		body.forEach((node, _, index) => {
-			const id = String(node.attrs.blockId ?? "");
-			const block = drawNode(node, context, index, body);
+		const parent = body ?? ({ type: { name: "doc" } } as NodeOf);
+		made.forEach(({ id, node }, index) => {
+			let block: ReactNode;
+			try {
+				if (!node) throw new Error("not a block of the editor");
+				block = drawNode(node, context, index, parent);
+			} catch {
+				const type = context.blocks.get(id)?.type ?? "";
+				// biome-ignore lint/suspicious/noArrayIndexKey: the blocks of one body, in order
+				block = <Box key={index} type={type} id={id} label={t("editor.unknownBlock", { type })} context={context} />;
+			}
 			top.push(
 				current === undefined ? (
 					block
@@ -701,12 +791,12 @@ export function ReadBody({
 			);
 		});
 		return top;
-	}, [kit, doc, definitions, names, marks, mark, onOpen, t, current]);
+	}, [kit, doc, definitions, names, marks, mark, onOpen, t, current, streaming]);
 	if (!drawn) return null;
 	return (
 		<EditorBody readOnly muted={muted} size={size}>
 			{drawn}
-			<MarkLooks />
+			{shared ? null : <MarkLooks />}
 		</EditorBody>
 	);
 }

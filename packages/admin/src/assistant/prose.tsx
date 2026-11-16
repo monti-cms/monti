@@ -24,7 +24,7 @@ export function Prose({
 	if (doc.blocks.length === 0) return streaming ? <ChatMessage author="assistant" streaming /> : null;
 	return (
 		<ChatMessage author="assistant" streaming={streaming}>
-			<ReadBody doc={doc} size="chat" onOpen={onOpen} />
+			<ReadBody doc={doc} size="chat" streaming={streaming} onOpen={onOpen} />
 		</ChatMessage>
 	);
 }

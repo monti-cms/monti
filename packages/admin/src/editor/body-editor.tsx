@@ -41,6 +41,20 @@ import {
 import { useBodyEditor } from "./use-body-editor";
 
 /**
+ * A source cell's key among the portals drawn in them: its element's own, never the source block's id, since a copied block is paired with the same
+ * source block as the block it was copied from and two cells then stand for one id.
+ */
+const cellKeys = new WeakMap<HTMLElement, string>();
+let cellCount = 0;
+const cellKey = (element: HTMLElement) => {
+	const known = cellKeys.get(element);
+	if (known) return known;
+	const key = `cell:${++cellCount}`;
+	cellKeys.set(element, key);
+	return key;
+};
+
+/**
  * The body of an entry or a template (doc 03): the blocks in the reading column, the handle beside the block under the pointer, the "/" menu, the
  * format card and a table's grips and + strips. It shows the body it is mounted with; to show another, mount it again with a new `key`.
  */
@@ -286,7 +300,13 @@ export function BodyEditor({
 					? [...cells].flatMap(([element, source]) => {
 							const block = paired.source.get(source);
 							return block
-								? [createPortal(<ReadBody doc={block.doc} marks={block.marks} mark="source" muted />, element, source)]
+								? [
+										createPortal(
+											<ReadBody doc={block.doc} marks={block.marks} mark="source" muted />,
+											element,
+											cellKey(element),
+										),
+									]
 								: [];
 						})
 					: null}

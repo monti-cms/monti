@@ -735,6 +735,66 @@ describe("the review page (flow 2, 12–15)", () => {
 		);
 	});
 
+	it("10-1 [AS-09] the card in the conversation says a change of a code block's line effects in words, where the words are the same", async () => {
+		const story = on({
+			script: (ids, version) => [
+				async () => ({
+					calls: [
+						{
+							name: "body_edit",
+							input: {
+								id: ids.second,
+								version: await version(ids.second),
+								ops: [
+									{
+										op: "setBlock",
+										block: "b_code",
+										value: {
+											type: "codeBlock",
+											attrs: { language: "ts", lines: [{ name: "plus", start: 0, end: 1 }] },
+											content: [{ type: "text", text: "let a = 1;" }],
+										},
+									},
+								],
+								_group: "다듬기",
+							},
+						},
+					],
+				}),
+				{ text: "고쳤습니다." },
+			],
+		});
+		await story.run();
+		const loaded = story.loaded();
+		const now = (await loaded.site.monti.run("entries.get", { id: loaded.ids.second }, stories.admin)) as {
+			entry: { version: number };
+		};
+		await loaded.site.monti.run(
+			"entries.save",
+			{
+				id: loaded.ids.second,
+				version: now.entry.version,
+				doc: {
+					type: "doc",
+					blocks: [
+						{
+							id: "b_code",
+							type: "codeBlock",
+							attrs: { language: "ts" },
+							content: [{ type: "text", text: "let a = 1;" }],
+						},
+					],
+				},
+			},
+			stories.admin,
+		);
+		await openPanel();
+		await say("둘째 글 다듬어 줘");
+		// The code is the same and only its effects change: the card says which line and what it gets.
+		await expect.element(panel().getByText(/1번째 줄/)).toBeVisible();
+		await expect.element(panel().getByText("추가", { exact: true })).toBeVisible();
+	});
+
 	it("10-1 [flow 2·14, 15] applying from the page shows each change's result and what was not kept in is not applied; undoing puts everything back", async () => {
 		const story = on({ script: stories.proposedKinds });
 		await toReview(story);

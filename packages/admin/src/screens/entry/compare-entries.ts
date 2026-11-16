@@ -227,8 +227,7 @@ export function valuesOf(block: Block, names: BlockNames | undefined): string | 
 
 /** A block's own words: its text, a table's rows, a source (a formula, a diagram), or the lines of the blocks it holds with their name lines. */
 function wordsOf(block: Block, names: BlockNames | undefined): string {
-	if (block.type === "table" && Array.isArray(block.attrs?.rows))
-		return (block.attrs.rows as unknown[][]).map((row) => row.map(String).join(" | ")).join("\n");
+	if (block.type === "table" && Array.isArray(block.attrs?.rows)) return ownText(block, names);
 	const fence = names?.block(block.type)?.fence;
 	if (fence) return typeof block.attrs?.[fence.attr] === "string" ? String(block.attrs[fence.attr]) : "";
 	if (!block.children) return plainText(block.content);
@@ -355,24 +354,54 @@ export type ReadMarks = {
  * between its rows), a formula's or a diagram's source, otherwise the text of its content. The words of the blocks it holds are theirs.
  */
 export function ownText(block: Block, names?: BlockNames): string {
-	if (block.type === "table" && Array.isArray(block.attrs?.rows))
-		return (block.attrs.rows as unknown[][]).map((row) => row.map(String).join(" | ")).join("\n");
+	if (block.type === "table" && Array.isArray(block.attrs?.rows)) {
+		// Every row is as wide as the widest, as the editor's table makes them (`tableToEditor`): the cells of a short row are empty.
+		const rows = (block.attrs.rows as unknown[]).map((row) => (Array.isArray(row) ? row : []));
+		const columns = Math.max(1, ...rows.map((row) => row.length));
+		return rows
+			.map((row) => Array.from({ length: columns }, (_, column) => String(row[column] ?? "")).join(" | "))
+			.join("\n");
+	}
 	const fence = names?.block(block.type)?.fence;
 	if (fence) return typeof block.attrs?.[fence.attr] === "string" ? String(block.attrs[fence.attr]) : "";
 	return plainText(block.content);
 }
 
-/** Every block of a body by id, the blocks inside blocks too, with the top-level block each stands in. */
+/** Every block of a body by id, the blocks inside blocks too, with the top-level block each stands in, the block that holds it and the order of its siblings. */
 function blocksById(doc: Doc | null) {
-	const found = new Map<string, { block: Block; top: string }>();
-	const walk = (blocks: Block[], top: string | null) => {
+	const found = new Map<string, { block: Block; top: string; parent: string; siblings: string[] }>();
+	const walk = (blocks: Block[], top: string | null, parent: string) => {
+		const siblings = blocks.map((block) => block.id);
 		for (const block of blocks) {
-			found.set(block.id, { block, top: top ?? block.id });
-			if (block.children) walk(block.children, top ?? block.id);
+			found.set(block.id, { block, top: top ?? block.id, parent, siblings });
+			if (block.children) walk(block.children, top ?? block.id, block.id);
 		}
 	};
-	walk(doc?.blocks ?? [], null);
+	walk(doc?.blocks ?? [], null, "");
 	return found;
+}
+
+/**
+ * The blocks of `own` that stand elsewhere than in `other`: under another block, or in another order among the siblings both have (a block put in or taken
+ * out among them moves no other). The blocks that moved are the ones read as changed.
+ */
+/** Whether `id` is held, at any depth, by the block `ancestor`. */
+function isInside(blocks: ReturnType<typeof blocksById>, id: string, ancestor: string): boolean {
+	for (let at = blocks.get(id)?.parent; at; at = blocks.get(at)?.parent) if (at === ancestor) return true;
+	return false;
+}
+
+function movedBlocks(own: ReturnType<typeof blocksById>, other: ReturnType<typeof blocksById>) {
+	const moved = new Set<string>();
+	for (const [id, here] of own) {
+		const there = other.get(id);
+		if (!there) continue;
+		const common = (siblings: string[], against: string[]) => siblings.filter((each) => against.includes(each));
+		const inOwn = common(here.siblings, there.siblings);
+		const inOther = common(there.siblings, here.siblings);
+		if (here.parent !== there.parent || inOwn.indexOf(id) !== inOther.indexOf(id)) moved.add(id);
+	}
+	return moved;
 }
 
 /**
@@ -387,11 +416,12 @@ export function sideMarks(
 	names?: BlockNames,
 	only?: ReadonlySet<string>,
 ): ReadMarks {
+	const ours = blocksById(own);
 	const theirs = blocksById(other);
 	const marks: ReadMarks = { words: new Map(), values: new Map(), code: new Map() };
 	// The two sides are marked by the same diff, whichever side asks: the first text is "mine" and the second the server's.
 	const pair = (here: string, there: string) => (side === "mine" ? wordDiff(here, there) : wordDiff(there, here))[side];
-	for (const [id, { block, top }] of blocksById(own)) {
+	for (const [id, { block, top }] of ours) {
 		if (only && !only.has(top)) continue;
 		const match = theirs.get(id)?.block;
 		const text = ownText(block, names);
@@ -403,6 +433,22 @@ export function sideMarks(
 			marks.values.set(id, match ? pair(values, valuesOf(match, names) ?? "") : [{ text: values, changed: true }]);
 		if (block.type === "codeBlock")
 			marks.code.set(id, codeChanges(blockWords(block, names), match ? blockWords(match, names) : undefined));
+	}
+	// A block that moved, under another block or in another order, is marked as a changed one is: all its words and the words of the blocks it holds,
+	// or its name line when it has none.
+	const moved = movedBlocks(ours, theirs);
+	for (const id of moved) {
+		if (only && !only.has(ours.get(id)?.top ?? "")) continue;
+		const inside = [...ours].filter(([each]) => each === id || isInside(ours, each, id));
+		let any = false;
+		for (const [each] of inside) {
+			const parts = marks.words.get(each);
+			if (!parts?.length) continue;
+			any = true;
+			marks.words.set(each, [{ text: parts.map((part) => part.text).join(""), changed: true }]);
+		}
+		const line = marks.values.get(id);
+		if (!any && line) marks.values.set(id, [{ text: line.map((part) => part.text).join(""), changed: true }]);
 	}
 	return marks;
 }

@@ -495,6 +495,35 @@ describe("writing a translation (owner review, 2026-11-06)", () => {
 		expect(pane.element().querySelectorAll("[data-slot=source-change]").length).toBeGreaterThan(0);
 	});
 
+	it("04-1 [TR-05] the source blocks side by side are drawn from one read of the block catalog, not one read each (or two)", async () => {
+		const [load] = stories.site("changed", "english") as unknown as [() => Promise<{ site: { transport: unknown } }>];
+		const reads = { catalog: 0 };
+		const counted = composeStory(
+			{
+				...stories.SideBySide,
+				loaders: [
+					async () => {
+						const loaded = await load();
+						const { transport } = loaded.site as { transport: (...args: unknown[]) => Promise<unknown> };
+						(loaded.site as { transport: unknown }).transport = async (name: string, ...rest: unknown[]) => {
+							if (name === "blocks.catalog") reads.catalog++;
+							return transport(name, ...rest);
+						};
+						return loaded;
+					},
+				],
+			} as typeof stories.SideBySide,
+			stories.default,
+		);
+		await counted.run();
+		await expect
+			.poll(() => body().element().querySelectorAll("[data-pair=source] [data-slot=code-frame]").length)
+			.toBe(1);
+		expect(body().element().querySelectorAll("[data-pair=source] [data-slot=editor-body]").length).toBeGreaterThan(3);
+		// The editor's own two reads and the one the bodies that are only read share: five source cells and their notes add none.
+		expect(reads.catalog).toBeLessThanOrEqual(3);
+	});
+
 	it("04-1 3.05 side by side, a row's translation is written in place, and the row being written is marked on both sides", async () => {
 		await SideBySide.run();
 		const line = page.getByText("The editor follows the same rule", { exact: false });

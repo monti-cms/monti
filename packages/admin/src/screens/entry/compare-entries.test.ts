@@ -160,6 +160,51 @@ describe("blocks that hold values, in the comparison (doc 18, T197)", () => {
 		expect([...sideMarks(mine, server, "mine", names, new Set(["b"])).words.keys()]).toEqual(["c"]);
 	});
 
+	it("04-2 two list items that swapped places are marked on both sides, and a block put in among them moves none", () => {
+		const list = (...ids: string[]): Doc =>
+			doc({
+				id: "l",
+				type: "bulletList",
+				children: ids.map((id) => ({ id, type: "listItem", content: [{ type: "text", text: `항목 ${id}` }] })),
+			});
+		const swapped = sideMarks(list("a", "b"), list("b", "a"), "mine", names);
+		expect(marked(swapped.words.get("a") ?? [])).toEqual(["항목 a"]);
+		expect(marked(swapped.words.get("b") ?? [])).toEqual(["항목 b"]);
+		expect(marked(sideMarks(list("b", "a"), list("a", "b"), "server", names).words.get("a") ?? [])).toEqual(["항목 a"]);
+		// A new item in front moves no other one.
+		const put = sideMarks(list("n", "a", "b"), list("a", "b"), "mine", names);
+		expect(marked(put.words.get("a") ?? [])).toEqual([]);
+		expect(marked(put.words.get("n") ?? [])).toEqual(["항목 n"]);
+	});
+
+	it("04-2 a block moved between containers is marked with the words it holds, and so is a container that moved", () => {
+		const callout = (id: string, ...children: Block[]): Block => ({
+			id,
+			type: "callout",
+			attrs: { tone: "note" },
+			children,
+		});
+		const before = doc(callout("x", p("m", "옮길 문단")), callout("y"));
+		const after = doc(callout("x"), callout("y", p("m", "옮길 문단")));
+		expect(marked(sideMarks(after, before, "mine", names).words.get("m") ?? [])).toEqual(["옮길 문단"]);
+		expect(marked(sideMarks(before, after, "server", names).words.get("m") ?? [])).toEqual(["옮길 문단"]);
+		// A container that swapped with another: the words inside it are marked, though they stayed where they were in it.
+		const two = doc(callout("x", p("m", "첫째")), callout("y", p("n", "둘째")));
+		const swap = doc(callout("y", p("n", "둘째")), callout("x", p("m", "첫째")));
+		expect(marked(sideMarks(swap, two, "mine", names).words.get("n") ?? [])).toEqual(["둘째"]);
+	});
+
+	it("04-2 a table's rows are as wide as the widest, so a short row reads as the editor draws it", () => {
+		const table = doc({ id: "t", type: "table", attrs: { rows: [["a", "b", "c"], ["d"]] } });
+		const marks = sideMarks(table, null, "mine", names);
+		expect(
+			marks.words
+				.get("t")
+				?.map((part) => part.text)
+				.join(""),
+		).toBe("a | b | c\nd |  | ");
+	});
+
 	it("04-2 a table's words are its cells in order, so the marks can be laid back on its cells", () => {
 		const table = (cell: string): Doc =>
 			doc({

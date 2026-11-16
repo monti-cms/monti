@@ -147,22 +147,30 @@ function colourKey(language: string, code: string) {
 	return `${language}\u0000${code}`;
 }
 
-function remember(key: string, pieces: Piece[]) {
-	coloured.delete(key);
-	coloured.set(key, pieces);
-	if (coloured.size > 80) {
-		const oldest = coloured.keys().next().value;
-		if (oldest !== undefined) coloured.delete(oldest);
+function remember(key: string, pieces: Piece[], cache: Map<string, Piece[]> = coloured) {
+	cache.delete(key);
+	cache.set(key, pieces);
+	if (cache.size > 80) {
+		const oldest = cache.keys().next().value;
+		if (oldest !== undefined) cache.delete(oldest);
 	}
 }
+
+/** What the read views keep of the colours they asked for: a cache of their own, so reading cannot push out what the open editor's blocks are drawn with. */
+export const readColoured = new Map<string, Piece[]>();
 
 /**
  * A code's colours: asked of the one highlighter once per page and kept, so the editor's block and a read-only view of the same code colour it from
  * one answer (`ReadBody`). A language the highlighter does not know has none.
  */
-export function codeColours(settings: CodeBlockSettings, language: string, code: string): Promise<Piece[]> {
+export function codeColours(
+	settings: CodeBlockSettings,
+	language: string,
+	code: string,
+	cache: Map<string, Piece[]> = coloured,
+): Promise<Piece[]> {
 	const key = colourKey(language, code);
-	const known = coloured.get(key);
+	const known = cache.get(key);
 	if (known) return Promise.resolve(known);
 	colours ??= codeHighlighter({ themes: settings.themes, languages: settings.languages }, { lazy: true });
 	return colours
@@ -184,11 +192,11 @@ export function codeColours(settings: CodeBlockSettings, language: string, code:
 					offset += token.text.length;
 				}
 			});
-			remember(key, pieces);
+			remember(key, pieces, cache);
 			return pieces;
 		})
 		.catch(() => {
-			remember(key, []);
+			remember(key, [], cache);
 			return [];
 		});
 }

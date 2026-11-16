@@ -15,7 +15,7 @@ import { useLanguageName } from "../format/language";
 import { endsClosed, fieldName as nameOfField } from "../format/names";
 import { useAdmin } from "../operations/admin-context";
 import { useRead } from "../operations/use-operation";
-import { type BlockWords, blockWords } from "../screens/entry/compare-entries";
+import { type BlockNames, type BlockWords, blockWords, codeChanges } from "../screens/entry/compare-entries";
 import { useBlockNames } from "../screens/entry/use-block-names";
 import type { SchemaRead } from "../screens/settings/schema-draft";
 import type { DiffRun } from "./diff";
@@ -30,6 +30,59 @@ export type EntryNow = {
 	/** The library's files its body shows (`entries.get`'s `media`), to name a picture by its file. */
 	media?: { id: string; name: string }[];
 };
+
+/** The line effects whose names the core's messages have (doc 17). */
+const CORE_EFFECTS = new Set(["highlight", "focus", "plus", "minus", "warning", "error", "collapse"]);
+
+/**
+ * What one changed block says of its change in one line each, as it is and as proposed: its values ("Kind Note" and "Kind Warning"), its words, and, when
+ * its words are the same, a code block's line effects, language and file name ("Line 2: Plus"). The card in the conversation and the one-line view read
+ * these; the review page reads the blocks themselves (`Place.body`).
+ */
+export function changedWords(
+	old: Block,
+	block: Block,
+	names: BlockNames | undefined,
+	t: (message: string | { key: string }, values?: Record<string, string | number>) => string,
+) {
+	const was = blockWords(old, names);
+	const now = blockWords(block, names);
+	// A block with values: its kind is its name, and a change of its values alone is a line of its own.
+	const valuesOnly = (words: BlockWords) => words.values?.split(" · ").slice(1).join(" · ") ?? "";
+	const before: string[] = [];
+	const after: string[] = [];
+	if (valuesOnly(was) !== valuesOnly(now)) {
+		before.push(valuesOnly(was));
+		after.push(valuesOnly(now));
+	}
+	if (was.text !== now.text) {
+		before.push(was.text);
+		after.push(now.text);
+	} else {
+		// The same code with other effects (doc 17, T196): the lines whose effects change, with their effects on each side. A core effect says its name; a
+		// site's own effect, which has no words in the admin, says its stored name.
+		const effectName = (name: string) =>
+			CORE_EFFECTS.has(name) ? t({ key: name === "collapse" ? "marks.codeFold" : `code.effect.${name}` }) : name;
+		const changed = codeChanges(now, was);
+		const effects = (side: BlockWords, lines: number[]) =>
+			lines
+				.map((line) => {
+					const named = side.code?.lines[line] ?? [];
+					return `${t("editor.code.line", { n: line + 1 })}: ${named.length ? named.map(effectName).join(", ") : "—"}`;
+				})
+				.join(" · ");
+		const head = (side: BlockWords) => [side.code?.language, side.code?.title].filter(Boolean).join(" · ");
+		if (changed.lines.length || changed.language || changed.title) {
+			before.push(
+				[changed.language || changed.title ? head(was) : "", effects(was, changed.lines)].filter(Boolean).join(" · "),
+			);
+			after.push(
+				[changed.language || changed.title ? head(now) : "", effects(now, changed.lines)].filter(Boolean).join(" · "),
+			);
+		}
+	}
+	return { before: before.filter(Boolean).join(" · "), after: after.filter(Boolean).join(" · ") };
+}
 
 /**
  * One place a change touches, as it is now and as proposed. A place in the body also has its block on each side (`body`, `null` where it has none: a
@@ -237,8 +290,7 @@ export function useChangeWords(items: readonly ProposalItemView[] | undefined) {
 			else if (!sameJson(old, block))
 				places.push({
 					name: named(now, index),
-					before: said(blockWords(old, names)),
-					after: said(now),
+					...changedWords(old, block, names, t as Parameters<typeof changedWords>[3]),
 					body: { before: old, after: block },
 				});
 		});
