@@ -461,9 +461,13 @@ export function EntryProperties({
 				/>
 			);
 		// A choice with one option, on or off (doc 19): a switch at the end of the field's row, the way every switch stands. A field that
-		// names an input of its own is drawn with that one instead, as any other kind is.
-		if (!own && isToggle(def)) {
-			const toggle = (
+		// names an input of its own puts that one in the switch's place.
+		// A plugin's input for a choice of one option is that choice's switch (seo's "hide from search"), whatever the field says of its control.
+		if (isToggle(def) || (own && def.kind === "select" && def.options.length === 1 && !def.many)) {
+			// A plugin's own switch stands in the same place: label at the start, the switch at the end (PP-55).
+			const toggle = own ? (
+				<own.Input {...ownProps()} />
+			) : (
 				<FieldToggle
 					def={def}
 					id={id}

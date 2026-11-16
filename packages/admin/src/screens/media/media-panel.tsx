@@ -15,6 +15,7 @@ import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
+	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 	FilePreview,
 	FileUseList,
@@ -427,6 +428,7 @@ export function MediaPanel({
 							<Copy aria-hidden />
 							{t("library.copyId")}
 						</DropdownMenuItem>
+						<DropdownMenuSeparator />
 						<DropdownMenuItem variant="danger" onClick={() => onTrash(item.id)}>
 							<TrashCan aria-hidden />
 							{t("trash.toTrash")}

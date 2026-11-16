@@ -379,14 +379,15 @@ export function CompareView({
 					<Separator orientation="vertical" length="control" flush />
 					{mode === "conflict" ? (
 						<>
-							<TextButton
+							<Button
+								variant="ghost"
 								onClick={async () => {
 									// Not read: the comparison stays, with what it compares.
 									if (await editor.loadLatest()) onBack();
 								}}
 							>
 								{t("compare.loadLatest")}
-							</TextButton>
+							</Button>
 							<Button
 								loading={editor.saving}
 								onClick={async () => {
@@ -398,14 +399,15 @@ export function CompareView({
 						</>
 					) : (
 						<>
-							<TextButton
+							<Button
+								variant="ghost"
 								onClick={() => {
 									editor.dropBrowserCopy();
 									onBack();
 								}}
 							>
 								{t("compare.drop")}
-							</TextButton>
+							</Button>
 							<Button
 								onClick={() => {
 									editor.loadBrowserCopy();

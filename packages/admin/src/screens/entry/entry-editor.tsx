@@ -1143,9 +1143,9 @@ export function EntryEditor({
 			<Tooltip>
 				<TooltipTrigger
 					render={
-						<TextButton loading={editor.saving} onClick={() => void save()}>
+						<Button variant="ghost" loading={editor.saving} onClick={() => void save()}>
 							{t("entry.saveAction")}
-						</TextButton>
+						</Button>
 					}
 				/>
 				{/* Its name with its keys after it, as every tooltip with a shortcut (overlay.md). */}

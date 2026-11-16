@@ -141,6 +141,21 @@ describe("the entry editor: saving and coming back", () => {
 		expect(tip()?.querySelector("span")?.textContent).toMatch(/S$/);
 	});
 
+	it("[TB-01] the head's actions are buttons at the head's height: 저장 is a ghost pill as tall as 미리보기 and 발행하기, not a text link", async () => {
+		await on("draft").run();
+		await opened();
+		const box = (name: string) => button(name).element().getBoundingClientRect();
+		const save = box("저장");
+		// Pills of the head's one height, in the page's pill shape; the text button of 24px is gone from the row.
+		expect(save.height).toBe(box("발행하기").height);
+		expect(getComputedStyle(button("저장").element()).borderRadius).toBe(
+			getComputedStyle(button("발행하기").element()).borderRadius,
+		);
+		expect(button("저장").element().getAttribute("data-slot")).not.toBe("text-button");
+		// The back link is the one text button of the row.
+		expect(save.left).toBeGreaterThan(box("게시글").right);
+	});
+
 	it("16-2 'Preview' opens the site's preview address in a new tab, with the entry's ticket and the page to go on to", async () => {
 		const story = on("draft");
 		await story.run();

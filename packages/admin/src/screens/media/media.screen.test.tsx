@@ -694,6 +694,10 @@ describe("a file", () => {
 		// One menu, one way: every row has its icon (menu.md).
 		for (const name of ["새 탭에서 열기", "주소 복사", "파일 바꾸기", "ID 복사", "휴지통으로"])
 			expect(page.getByRole("menuitem", { name }).element().querySelector("svg")).not.toBeNull();
+		// [MD-39] The row that puts the file away stands after a rule, as it does in every other menu.
+		const trash = page.getByRole("menuitem", { name: "휴지통으로" }).element();
+		const before = trash.previousElementSibling;
+		expect(before?.getAttribute("role")).toBe("separator");
 		await userEvent.keyboard("{Escape}");
 	});
 });

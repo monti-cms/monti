@@ -177,6 +177,21 @@ describe("the SEO tab in the editor (T84, T75; flow 1·08)", () => {
 		expect((await entry(story.loaded())).values).toMatchObject({ seoTitle: "검색 제목", seoNoindex: "noindex" });
 	});
 
+	it("[PP-55] a plugin's switch stands as a built-in one does: its name at the start of the row and the switch at the end, on one line", async () => {
+		await open(plugins.SeoTab).run();
+		const hide = page.getByRole("switch", { name: "검색에서 숨기기" });
+		await expect.element(hide).toBeVisible();
+		const name = page.getByText("검색에서 숨기기", { exact: true }).element();
+		const box = (element: Element) => element.getBoundingClientRect();
+		const row = hide.element().closest("[data-slot=option]") ?? hide.element().parentElement;
+		// One line: the switch's middle is the name's middle, and the switch is after the name, at the row's end.
+		expect(
+			Math.abs(box(hide.element()).top + box(hide.element()).height / 2 - (box(name).top + box(name).height / 2)),
+		).toBeLessThan(4);
+		expect(box(hide.element()).left).toBeGreaterThan(box(name).left);
+		expect(box(row as Element).right - box(hide.element()).right).toBeLessThan(4);
+	});
+
 	it("14-5 'hide from search' is a switch: on, the preview says so and the value is noindex; off, the value is gone", async () => {
 		const story = open(plugins.SeoTab);
 		await story.run();

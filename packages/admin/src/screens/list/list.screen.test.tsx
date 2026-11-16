@@ -246,6 +246,21 @@ describe("the row's menu (menu.md)", () => {
 	});
 });
 
+describe("the bulk bar's menu", () => {
+	it("[LB-08] its row that puts the picked rows in the trash shows the key that does the same, as the right-click menu does", async () => {
+		await listAt().run();
+		await rowsShown();
+		await userEvent.click(page.getByRole("checkbox", { name: "가을 사진 정리 고르기" }));
+		await userEvent.click(page.getByRole("checkbox", { name: "발행 후 고친 글 고르기" }));
+		await userEvent.click(
+			page.getByRole("row").filter({ hasText: "2개 선택" }).getByRole("button", { name: "더 보기" }),
+		);
+		const trash = page.getByRole("menuitem", { name: /휴지통으로/ });
+		await expect.element(trash).toBeVisible();
+		expect(trash.element().querySelector("[data-slot=menu-shortcut]")?.textContent).toMatch(/^(Delete|⌫)$/);
+	});
+});
+
 describe("the list's dates", () => {
 	it("[TC-03] a date cell shows the short date, and its tooltip is the whole moment with the year and the time", async () => {
 		await Main.run();
