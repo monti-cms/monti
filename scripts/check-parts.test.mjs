@@ -50,6 +50,15 @@ test("assistant-place: the ✦ button's name is read in one file, a second refer
 	assert.equal(more.length, 2);
 	assert.match(more[0].message, /ReferenceAssistant/);
 	assert.match(more[1].message, /no corner/);
+	// The regression this rule is for: a screen puts the button in its own head again.
+	const again = assistantPlace({
+		...one,
+		"packages/admin/src/app.tsx": "<AssistantSlot button={<AssistantButton />} />",
+		"packages/admin/src/screens/entry/entry-editor.tsx": "<EditorHeader><AssistantButton /></EditorHeader>",
+	});
+	assert.equal(again.length, 1);
+	assert.equal(again[0].file, "packages/admin/src/screens/entry/entry-editor.tsx");
+	assert.match(again[0].message, /outside app\.tsx/);
 });
 
 test("cut-words: a part that cuts words in a class without CutWords is named; one that imports it, a listed one and a prop are not", () => {
@@ -59,6 +68,11 @@ test("cut-words: a part that cuts words in a class without CutWords is named; on
 			"packages/ui/src/variant.tsx": 'export const B = "*:data-[slot=value]:line-clamp-1 flex";\n',
 			"packages/ui/src/wrapped.tsx":
 				'import { CutWords } from "./cut-words";\nexport const C = () => <CutWords className="truncate">x</CutWords>;\n',
+			"packages/ui/src/rendered.tsx":
+				'import { CutWords } from "./cut-words";\nexport const C = () => <CutWords render={<b className="min-w-0 truncate" />}>x</CutWords>;\n',
+			// A file that imports CutWords for one name and cuts another passes no more.
+			"packages/ui/src/imported-only.tsx":
+				'import { CutWords } from "./cut-words";\nexport const C = () => <><CutWords>x</CutWords><span className="truncate">y</span></>;\n',
 			"packages/ui/src/listed.tsx": 'export const D = "truncate";\n',
 			"packages/ui/src/prop.tsx": "export const E = () => <Text truncate>x</Text>;\n",
 			"packages/ui/src/stale-name.tsx": 'export const F = "truncated-looking";\n',
@@ -75,10 +89,11 @@ test("cut-words: a part that cuts words in a class without CutWords is named; on
 		[
 			"packages/ui/src/bare.tsx",
 			"packages/ui/src/variant.tsx",
-			"packages/gone.tsx".replace("packages/", "packages/ui/src/"),
+			"packages/ui/src/imported-only.tsx",
+			"packages/ui/src/gone.tsx",
 		],
 	);
-	assert.match(found[2].message, /no longer cuts/);
+	assert.match(found[3].message, /no longer cuts/);
 });
 
 test("menu-danger-separator: a danger row after another row is named; first, after a rule, after a condition that holds one, or alone is not", () => {
@@ -106,7 +121,7 @@ test("menu-danger-separator: a danger row after another row is named; first, aft
 	assert.deepEqual(fine, []);
 });
 
-test("required-mark: a typed ' !' after a name, a '*' typed in JSX and a legend that starts with '!' are named; the label's own star is not", () => {
+test("required-mark: a typed ' !' after a name, a name written 'title !', a lone '!' or '*' in JSX and a legend that starts with '!' are named; the label's own star is not", () => {
 	const found = requiredMark({
 		// biome-ignore lint/suspicious/noTemplateCurlyInString: source text under test
 		"packages/admin/src/a.tsx": "const name = (def) => (def.required ? `${key} !` : key);\n",
@@ -115,10 +130,37 @@ test("required-mark: a typed ' !' after a name, a '*' typed in JSX and a legend 
 		"packages/admin/src/messages.ts": 'export const m = { "settings.fields.legend": "! 필수 · → 관계" };\n',
 		// biome-ignore lint/suspicious/noTemplateCurlyInString: source text under test
 		"packages/admin/src/c.tsx": "const price = `${a} ! ${b}`;\n",
+		"packages/ui/src/screens/reference/d.tsx":
+			'export const F = [{ name: "title !", label: "제목" }, { name: "videoUrl !" }];\n',
+		"packages/ui/src/screens/reference/e.tsx":
+			'export const R = (<span>필수 <Text mono>!</Text></span>);\nexport const M = { mark: "!" };\n',
+		"packages/ui/src/screens/reference/fine.tsx":
+			'export const F = [{ name: "title", required: true }, { name: "Done" }];\n',
 	});
 	assert.deepEqual(
-		found.map((each) => each.file),
-		["packages/admin/src/a.tsx", "packages/admin/src/b.tsx", "packages/admin/src/messages.ts"],
+		found.map((each) => `${each.file}:${each.line}`),
+		[
+			"packages/admin/src/a.tsx:1",
+			"packages/admin/src/b.tsx:1",
+			"packages/admin/src/messages.ts:1",
+			"packages/ui/src/screens/reference/d.tsx:1",
+			"packages/ui/src/screens/reference/d.tsx:1",
+			"packages/ui/src/screens/reference/e.tsx:1",
+			"packages/ui/src/screens/reference/e.tsx:2",
+		],
+	);
+});
+
+test("menu-danger-separator: two separators in a row are named, in a story too", () => {
+	const found = dangerSeparator({
+		"packages/ui/src/menu.stories.tsx":
+			'export const S = () => (<ContextMenuContent><ContextMenuItem>복제</ContextMenuItem><ContextMenuSeparator /><ContextMenuSeparator /><ContextMenuItem variant="danger">지우기</ContextMenuItem></ContextMenuContent>);\n',
+		"packages/ui/src/other.stories.tsx":
+			'export const S = () => (<ContextMenuContent><ContextMenuItem>복제</ContextMenuItem><ContextMenuItem variant="danger">지우기</ContextMenuItem></ContextMenuContent>);\n',
+	});
+	assert.deepEqual(
+		found.map((each) => `${each.file}:${each.message.split(" ")[0]}`),
+		["packages/ui/src/menu.stories.tsx:two", "packages/ui/src/other.stories.tsx:a"],
 	);
 });
 

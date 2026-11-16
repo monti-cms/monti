@@ -29,8 +29,8 @@ import { SettingsTabs } from "./settings";
 type Field = React.ComponentProps<typeof FieldRow>;
 
 const START: Field[] = [
-	{ name: "title !", label: "제목", kind: "text" },
-	{ name: "slug !", label: "주소", kind: "slug" },
+	{ name: "title", required: true, label: "제목", kind: "text" },
+	{ name: "slug", required: true, label: "주소", kind: "slug" },
 ];
 const SUMMARY: Field = {
 	name: "summary",
@@ -54,7 +54,7 @@ export const CHANGED_FIELDS: Field[] = [
 	...START,
 	{ name: "excerpt", label: "요약", note: "← summary", kind: "text · 120", tone: "warning" },
 	{ name: "subtitle", label: "부제", note: "삭제", kind: "text", tone: "faint" },
-	{ name: "format !", label: "글 종류", note: "추가", kind: "select", tone: "success" },
+	{ name: "format", required: true, label: "글 종류", note: "추가", kind: "select", tone: "success" },
 	...END,
 ];
 

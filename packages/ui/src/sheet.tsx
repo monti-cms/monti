@@ -173,7 +173,9 @@ function SheetTitle({
 }: SheetPrimitive.Title.Props & { of?: React.ReactNode; ofMono?: boolean }) {
 	return (
 		<CutWords
-			render={<SheetPrimitive.Title data-slot="sheet-title" className={cn(PANEL_TITLE, className)} {...props} />}
+			render={
+				<SheetPrimitive.Title data-slot="sheet-title" className={cn(PANEL_TITLE, "truncate", className)} {...props} />
+			}
 		>
 			{children}
 			{of && (

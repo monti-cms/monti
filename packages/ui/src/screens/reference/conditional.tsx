@@ -84,16 +84,16 @@ const ADD = (
  * here is drawn with parts the built screens already use.
  */
 const FIELDS: Field[] = [
-	{ name: "title !", label: "제목", kind: "text" },
-	{ name: "slug !", label: "주소", kind: "slug" },
-	{ name: "format !", label: "글 종류", kind: "conditional · 3" },
+	{ name: "title", required: true, label: "제목", kind: "text" },
+	{ name: "slug", required: true, label: "주소", kind: "slug" },
+	{ name: "format", required: true, label: "글 종류", kind: "conditional · 3" },
 	// Each option is a band under the choice, one step in, with no grip (the sheet orders the options) and its value after its name; its fields sit one step further in.
 	{ name: "글", group: true, grip: false, depth: 1, note: "article · 필드 없음", kind: ADD },
 	{ name: "동영상", group: true, grip: false, depth: 1, note: "video", kind: ADD },
-	{ name: "videoUrl !", label: "동영상 주소", kind: "text", depth: 2 },
+	{ name: "videoUrl", required: true, label: "동영상 주소", kind: "text", depth: 2 },
 	{ name: "poster", label: "미리보기 그림", kind: "image", depth: 2 },
 	{ name: "링크", group: true, grip: false, depth: 1, note: "link", kind: ADD },
-	{ name: "linkUrl !", label: "링크 주소", kind: "text", depth: 2 },
+	{ name: "linkUrl", required: true, label: "링크 주소", kind: "text", depth: 2 },
 	{ name: "summary", label: "요약", kind: "text · 120" },
 	// A group of the panel, to tell the two apart: at the list's edge, with a grip, its name alone.
 	{ name: "분류", group: true },
@@ -242,7 +242,7 @@ export function ConditionalReviewScreen() {
 	return (
 		<AdminFrame open="settings">
 			<SchemaPage
-				fields={FIELDS.filter((field) => !["동영상", "videoUrl !", "poster"].includes(String(field.name)))}
+				fields={FIELDS.filter((field) => !["동영상", "videoUrl", "poster"].includes(String(field.name)))}
 				changed
 				head={<ChangesBar label="변경 사항" count={3} discardLabel="모두 되돌리기" saveLabel="저장하고 적용" />}
 			/>

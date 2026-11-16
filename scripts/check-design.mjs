@@ -118,9 +118,9 @@ const targets = process.argv.slice(2).map((target) => path.resolve(target));
 const SOURCES = [
 	{ dir: "packages/ui/src", ext: /\.tsx?$/, kind: "ui" },
 	{ dir: "packages/admin/src", ext: /\.tsx?$/, kind: "screen" },
-	{ dir: "packages/ai/src", ext: /\.tsx$/, kind: "screen" },
-	{ dir: "packages/seo/src", ext: /\.tsx$/, kind: "screen" },
-	{ dir: "packages/mdx/src/admin", ext: /\.tsx$/, kind: "screen" },
+	{ dir: "packages/ai/src", ext: /\.tsx?$/, kind: "screen" },
+	{ dir: "packages/seo/src", ext: /\.tsx?$/, kind: "screen" },
+	{ dir: "packages/mdx/src/admin", ext: /\.tsx?$/, kind: "screen" },
 ];
 const SKIP_DIRS = new Set(["__test__", "node_modules", "dist", "test", "foundations"]);
 const isSkippedFile = (name) =>
@@ -1477,7 +1477,15 @@ function checkParts() {
 	report("own-glyph", ownGlyph(sources));
 	report("assistant-place", assistantPlace(sources));
 	report("cut-words", cutWords(sources));
-	report("menu-danger-separator", dangerSeparator(sources));
+	// The menus of the stories too: they are what the docs show.
+	const stories = Object.fromEntries(
+		["packages/ui/src", "packages/admin/src"].flatMap((dir) =>
+			sourcesUnder(path.join(root, dir))
+				.filter((file) => /\.stories\.tsx$/.test(file))
+				.map((file) => [rel(file), readFileSync(file, "utf8")]),
+		),
+	);
+	report("menu-danger-separator", dangerSeparator({ ...sources, ...stories }));
 	report("required-mark", requiredMark({ ...sources, ...messages }));
 	report("mono-props", monoProps(sources, { texts }));
 }

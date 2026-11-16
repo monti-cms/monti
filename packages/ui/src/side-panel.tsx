@@ -26,7 +26,7 @@ import { Text } from "./text";
  */
 export const PANEL_HEAD =
 	"flex h-monti-header shrink-0 items-center gap-monti-4 border-monti-default border-b pr-monti-12 pl-monti-24";
-export const PANEL_TITLE = "min-w-0 grow truncate text-monti-default text-monti-title";
+export const PANEL_TITLE = "min-w-0 grow text-monti-default text-monti-title";
 export const PANEL_BODY = "flex flex-col gap-monti-20 px-monti-24 py-monti-20";
 export const PANEL_FOOT =
 	"flex shrink-0 items-center justify-end gap-monti-20 border-monti-default border-t px-monti-24 py-monti-12";

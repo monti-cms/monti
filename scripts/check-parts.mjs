@@ -67,7 +67,7 @@ export function ownGlyph(sources, { allowed = OWN_GLYPH_OK } = {}) {
 
 /**
  * `assistant-place`: the ✦ that opens the assistant is one part in one place (common.md): the admin reads its name `frame.assistant` in one file,
- * the reference screens draw it in one, and `SidebarInset` has no corner for it.
+ * the reference screens draw it in one, `<AssistantButton` is written in `app.tsx` alone, and `SidebarInset` has no corner for it.
  *
  * Cannot see: a button that opens the assistant under another name, or a second ✦ drawn with the name written another way.
  */
@@ -92,6 +92,17 @@ export function assistantPlace(sources) {
 			line: lineOf(source, source.search(/label="어시스턴트 열기"/)),
 			message: "a second ✦ button: the reference screens take it from `ReferenceAssistant` (frame.tsx)",
 		});
+	// The button is given once, by the app, to `AssistantSlot`: a screen that draws `<AssistantButton` puts a second one on the page.
+	for (const [file, source] of Object.entries(sources)) {
+		if (!isCode(file) || /\/app\.tsx$/.test(file) || /\/assistant-button\.tsx$/.test(file)) continue;
+		const hit = /<AssistantButton\b/.exec(source);
+		if (hit)
+			found.push({
+				file,
+				line: lineOf(source, hit.index),
+				message: "`<AssistantButton` outside app.tsx: the ✦ is given once to `AssistantSlot` and drawn by the head row",
+			});
+	}
 	for (const [file, source] of Object.entries(sources)) {
 		const hit = /<SidebarInset\b[^>]*\bcorner\s*=/s.exec(source);
 		if (hit)
@@ -105,12 +116,12 @@ export function assistantPlace(sources) {
 }
 
 /**
- * `cut-words`: words cut to their box with "…" say themselves whole to the pointer and the keyboard (`CutWords`). A part of the design system that
- * writes `truncate`, `text-ellipsis` or `line-clamp-N` in a class imports `CutWords`, or is named here with the reason the words are shown whole
- * elsewhere.
+ * `cut-words`: words cut to their box with "…" say themselves whole to the pointer and the keyboard (`CutWords`). In a part of the design system a
+ * class that cuts (`truncate`, `text-ellipsis`, `line-clamp-N`) is written on a `<CutWords>` (its `className`, or the element it `render`s), or the
+ * file is named here with the reason the words are cut some other way and said whole there.
  *
- * Cannot see: which element of the file the `CutWords` wraps (a file that imports it for one name and cuts another passes), nor a box that is cut
- * with no class of its own (`overflow-hidden` alone). Whether a cut really shows its tooltip is the part's browser test (`menu-words.browser.test.tsx`).
+ * Cannot see: a cut that a `<CutWords>` wraps from outside the class (a cell that cuts what a `CutWords` inside it holds), a box cut with no class of
+ * its own (`overflow-hidden` alone), and a class built from pieces at run time. Whether a cut really shows its tooltip is the part's browser test (`menu-words.browser.test.tsx`).
  */
 export const CUT_OK = new Map([
 	["ui/src/cut-words.tsx", "the part itself"],
@@ -119,22 +130,41 @@ export const CUT_OK = new Map([
 		"a key's masked trace (··· a1b2) is short and typed; nothing in it is cut in a field of a line's width",
 	],
 	[
+		"ui/src/search-box.tsx",
+		"the typed words of the search input, which an input scrolls: it is not words cut with a mark, and its chip is a `CutWords`",
+	],
+	[
+		"ui/src/sidebar.tsx",
+		"the selectors that cut a row's name (`[&>span]:truncate`); the row is a `CutWords`, which says the cut name, not the count beside it",
+	],
+	[
+		"ui/src/table.tsx",
+		"a cell that cuts its pieces; the pieces say themselves whole (`RowTitle`, `Text truncate`, a cell's `title`). A bare string in a cut cell has no tooltip and is given a `title`",
+	],
+	["ui/src/text.tsx", "the `truncate` option: `Text` and `Heading` put cut text in a `CutWords` themselves"],
+	[
 		"ui/src/entry-status.tsx",
 		"a status name is one short fixed word; a table's cut cell says it whole through the cell's `title`",
 	],
 ]);
 const CUT_CLASS = /(?:^|[\s:])(?:truncate|text-ellipsis|line-clamp-\d)(?=\s|$)/;
 const OWN_GLYPH_CODE = /<svg\b|createElementNS\s*\([^)]*svg/;
-/** The text of the string and template literals of a source: the classes are written there. */
-function stringsOf(file, source) {
+/**
+ * The cut classes of a source that stand outside every `<CutWords ...>` opening (its `className`, or the element in its `render`): the strings
+ * and template parts that write `truncate`, `text-ellipsis` or `line-clamp-N` anywhere else.
+ */
+function cutOutside(file, source) {
 	const { program, errors } = parseSync(file, source);
-	const out = [];
-	if (errors.length > 0) return out;
+	if (errors.length > 0) return [];
+	const inside = [];
+	const classes = [];
 	walkTree(program, (node) => {
-		if (node.type === "Literal" && typeof node.value === "string") out.push({ at: node.start, text: node.value });
-		if (node.type === "TemplateElement") out.push({ at: node.start, text: node.value?.cooked ?? "" });
+		if (node.type === "JSXOpeningElement" && nameOf(node.name) === "CutWords") inside.push([node.start, node.end]);
+		if (node.type === "Literal" && typeof node.value === "string" && CUT_CLASS.test(node.value))
+			classes.push(node.start);
+		if (node.type === "TemplateElement" && CUT_CLASS.test(node.value?.cooked ?? "")) classes.push(node.start);
 	});
-	return out;
+	return classes.filter((at) => !inside.some(([from, to]) => at >= from && at <= to));
 }
 
 export function cutWords(sources, { allowed = CUT_OK } = {}) {
@@ -143,10 +173,11 @@ export function cutWords(sources, { allowed = CUT_OK } = {}) {
 	for (const [file, source] of Object.entries(sources)) {
 		if (!isCode(file) || !file.startsWith("packages/ui/src/") || /\/spec-pack\//.test(file)) continue;
 		if (!/truncate|text-ellipsis|line-clamp/.test(source)) continue;
-		const hit = stringsOf(file, source).find((each) => CUT_CLASS.test(each.text));
-		if (!hit) continue;
+		const outside = cutOutside(file, source);
+		if (outside.length === 0) continue;
 		seen.add(keyOf(file));
-		if (allowed.has(keyOf(file)) || /import\s*\{[^}]*\bCutWords\b[^}]*\}\s*from/.test(source)) continue;
+		if (allowed.has(keyOf(file))) continue;
+		const hit = { at: outside[0] };
 		found.push({
 			file,
 			line: lineOf(source, hit.at),
@@ -181,7 +212,8 @@ const attrOf = (opening, key) =>
 
 /**
  * `menu-danger-separator`: in a menu, the row that cannot be undone ("to the trash", "remove") stands after a rule unless it is the first row
- * (menu.md). A `variant="danger"` menu item whose previous sibling is not a `*Separator` is named.
+ * (menu.md). A `variant="danger"` menu item whose previous sibling is not a `*Separator` is named, and so are two `*Separator`s side by side. Stories
+ * are read too: they are the menus the docs show. A menu in a file the rule does not reach (a package outside the admin) is not read.
  *
  * Cannot see: rows built from an array or by a component of their own (the file that draws the rows is read), a danger row that is itself inside a
  * condition (`{a ? <Item variant="danger"/> : …}`), a separator that a condition may leave out, and a menu whose first row is not the menu's start
@@ -190,12 +222,10 @@ const attrOf = (opening, key) =>
 export function dangerSeparator(sources) {
 	const found = [];
 	for (const [file, source] of Object.entries(sources)) {
-		if (
-			!isCode(file) ||
-			!/^packages\/(ui\/src\/screens|admin|ai|seo|mdx)\//.test(file) ||
-			!source.includes('variant="danger"')
-		)
+		// Stories are read too: they are the menus the docs show.
+		if (!/\.tsx?$/.test(file) || /\.test\.tsx?$/.test(file) || !/^packages\/(ui\/src|admin|ai|seo|mdx)\//.test(file))
 			continue;
+		if (!/variant="danger"|Separator/.test(source)) continue;
 		const { program, errors } = parseSync(file, source);
 		if (errors.length > 0) {
 			found.push({ file, line: 1, message: "the file does not parse, so its menus were not read" });
@@ -211,6 +241,16 @@ export function dangerSeparator(sources) {
 			kids.forEach((kid, at) => {
 				if (kid.type !== "JSXElement") return;
 				const opening = kid.openingElement;
+				// Two rules in a row are one rule too many: whoever draws a menu's rows draws the rules between them, and a component owns none.
+				if (/Separator$/.test(nameOf(opening.name) ?? "") && at > 0) {
+					const before = kids[at - 1];
+					if (before.type === "JSXElement" && /Separator$/.test(nameOf(before.openingElement.name) ?? ""))
+						found.push({
+							file,
+							line: lineOf(source, kid.start),
+							message: "two separators in a row in a menu (menu.md)",
+						});
+				}
 				if (!/MenuItem$|^Item$/.test(nameOf(opening.name) ?? "")) return;
 				const variant = attrOf(opening, "variant");
 				if (variant?.value?.value !== "danger" || at === 0) return;
@@ -234,7 +274,8 @@ export function dangerSeparator(sources) {
 
 /**
  * `required-mark`: the red `*` of a required field is `RequiredMark`, drawn by `Label` and `FieldRow`. No screen types it: not a " !" after a
- * name, not a "*" of its own in JSX text, and no legend whose first mark is a typed "!".
+ * name (in a template or a string such as "title !"), not a "*" or a lone "!" of its own in JSX text or a string, and no legend whose first mark is a
+ * typed "!".
  *
  * Cannot see: a mark built at runtime from pieces, or a screen that draws its own star as an icon.
  */
@@ -253,7 +294,7 @@ export function requiredMark(sources) {
 				});
 			continue;
 		}
-		if (file.endsWith("/label.tsx") || !/\}\s!`|>\s*\*\s*</.test(source)) continue;
+		if (file.endsWith("/label.tsx") || !/ !["'`]|\}\s!`|>\s*[*!]\s*<|["'`]!["'`]/.test(source)) continue;
 		const { program, errors } = parseSync(file, source);
 		if (errors.length > 0) continue;
 		walkTree(program, (node) => {
@@ -267,11 +308,22 @@ export function requiredMark(sources) {
 					line: lineOf(source, node.start),
 					message: 'a required mark typed as " !": use `RequiredMark` (field.md, required fields)',
 				});
-			if (node.type === "JSXText" && node.value.trim() === "*")
+			// A name written with its mark ("title !") or a mark alone ("!"): the field says `required`, the row draws the star.
+			if (
+				node.type === "Literal" &&
+				typeof node.value === "string" &&
+				(/^[\w.-]+ !$/.test(node.value) || node.value.trim() === "!")
+			)
 				found.push({
 					file,
 					line: lineOf(source, node.start),
-					message: 'a "*" typed in JSX: the required mark is `RequiredMark`',
+					message: `${JSON.stringify(node.value)}: a required mark typed as "!": give the field \`required\` (\`RequiredMark\`, field.md)`,
+				});
+			if (node.type === "JSXText" && (node.value.trim() === "*" || node.value.trim() === "!"))
+				found.push({
+					file,
+					line: lineOf(source, node.start),
+					message: `a ${JSON.stringify(node.value.trim())} typed in JSX: the required mark is \`RequiredMark\``,
 				});
 		});
 	}

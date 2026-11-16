@@ -71,6 +71,7 @@ export const Post: Story = {
 					<Archive />
 					보관
 				</ContextMenuItem>
+				<ContextMenuSeparator />
 				<ContextMenuItem variant="danger">
 					<TrashCan />
 					휴지통으로
@@ -97,6 +98,7 @@ export const Several: Story = {
 				</ContextMenuSub>
 				<ContextMenuSeparator />
 				<ContextMenuItem>내보내기</ContextMenuItem>
+				<ContextMenuSeparator />
 				<ContextMenuItem variant="danger">
 					휴지통으로
 					<MenuShortcut>Del</MenuShortcut>

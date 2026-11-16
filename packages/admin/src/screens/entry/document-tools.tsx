@@ -87,7 +87,6 @@ export function DocumentToolRows({ tools, onView }: { tools: Tools; onView?: (vi
 					</DropdownMenuRadioGroup>
 				</DropdownMenuSubContent>
 			</DropdownMenuSub>
-			<DropdownMenuSeparator />
 		</>
 	);
 }
