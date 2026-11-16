@@ -1,4 +1,5 @@
 import type { EntryState, Facet, ListColumn, ListFilter } from "@monti-cms/core";
+import { sortFacets } from "@monti-cms/core";
 import {
 	DropdownMenuGroup,
 	DropdownMenuItem,
@@ -115,7 +116,14 @@ function LocaleMenu({ state, query, setFilter, onHide, countedWhere }: MenuProps
 	const chosen = current?.on === "locale" ? current.any : [];
 	const translation = filterOf(state, "translation");
 	const picked = translation?.on === "translation" ? translation.any : [];
-	const locales = [...new Set([...(facets ?? []).map((facet) => facet.value ?? ""), ...chosen])].filter(Boolean);
+	// By count, then by the name shown (the server sorts by the code, which is not what the menu says).
+	const locales = sortFacets(
+		[...new Set([...(facets ?? []).map((facet) => facet.value ?? ""), ...chosen])].filter(Boolean).map((value) => ({
+			value,
+			label: languageName(value),
+			count: count(facets, value) ?? 0,
+		})),
+	).map((each) => each.value);
 	return (
 		<>
 			<Counted where={countedWhere}>

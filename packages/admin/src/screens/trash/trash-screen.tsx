@@ -1,4 +1,4 @@
-import { MEDIA_KIND, type TrashList, type TrashRef, type TrashRow } from "@monti-cms/core";
+import { MEDIA_KIND, sortFacets, type TrashList, type TrashRef, type TrashRow } from "@monti-cms/core";
 import {
 	Button,
 	ContextMenu,
@@ -273,11 +273,13 @@ export function TrashScreen({
 						filtered: state.locales.length > 0,
 						menu: (
 							<FilterRows
-								values={languages.map((locale) => ({
-									value: locale,
-									label: languageName(locale),
-									count: data?.locales[locale] ?? 0,
-								}))}
+								values={sortFacets(
+									languages.map((locale) => ({
+										value: locale,
+										label: languageName(locale),
+										count: data?.locales[locale] ?? 0,
+									})),
+								)}
 								chosen={state.locales}
 								onChange={(locales) => setState({ ...state, page: 1, locales })}
 							/>
@@ -291,7 +293,9 @@ export function TrashScreen({
 			filtered: state.kinds.length > 0,
 			menu: (
 				<FilterRows
-					values={kinds.map((kind) => ({ value: kind, label: kindLabel(kind), count: data?.counts[kind] ?? 0 }))}
+					values={sortFacets(
+						kinds.map((kind) => ({ value: kind, label: kindLabel(kind), count: data?.counts[kind] ?? 0 })),
+					)}
 					chosen={state.kinds}
 					onChange={(next) => setState({ ...state, page: 1, kinds: next })}
 				/>

@@ -1,4 +1,3 @@
-import { sortFacets } from "@monti-cms/core";
 import { DropdownMenuCheckboxItem, DropdownMenuGroup, DropdownMenuLabel, MenuShortcut, MenuValue } from "@monti-cms/ui";
 
 /**
@@ -42,9 +41,9 @@ export type FilterProps<Value extends string> = {
 	countedWhere?: string;
 };
 
-/** A filter's values as a column menu's rows, in the one order of every menu: the most rows first, the same count by name, the values with none at the end. */
+/** A filter's values as a column menu's rows, in the order they are given: the caller sorts what comes from the content (`sortFacets`), a fixed set keeps its own. */
 export function FilterRows<Value extends string>({ values, chosen, onChange, countedWhere }: FilterProps<Value>) {
-	const rows = sortFacets(values).map((each) => (
+	const rows = values.map((each) => (
 		<ValueRow
 			key={each.value}
 			checked={chosen.includes(each.value)}

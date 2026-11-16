@@ -438,6 +438,11 @@ describe("the activity log (doc 13, flow 12)", () => {
 		const first = (await site.monti.run("activity.list", {}, { actor: "admin" })) as ActivityList;
 		await expect.element(main().getByText(`1–50 / ${first.total}`)).toBeVisible();
 		expect(rows()).toHaveLength(50);
+		// The footer stands right under the rows (not pushed down by the box the table is in).
+		const footer = main().element().querySelector("[data-slot=list-footer]")?.getBoundingClientRect();
+		const under = table().element().getBoundingClientRect().bottom;
+		expect(footer && footer.top - under).toBeGreaterThanOrEqual(0);
+		expect(footer && footer.top - under).toBeLessThan(8);
 		const last = rows().at(-1);
 		// New activity arrives before the next page is opened.
 		await site.monti.run(

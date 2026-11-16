@@ -131,8 +131,10 @@ export type Facet = {
 };
 
 /**
- * The order of a column menu's values, one rule for every menu (components/list.md): the values with the most rows first, the ones with the same count by
- * name (the label, or the value), and the values with no rows kept, at the end. The clients that build values of their own (the trash's) sort with it too.
+ * The order of the values that come from the content (select options, relations, languages, the trash's kinds), one rule for every menu
+ * (components/list.md): the values with the most rows first, the ones with the same count by the name shown on screen (`label`, else the value), and
+ * the values with no rows kept, at the end. A fixed set the system defines (entry status, delivery states, translation state) keeps its own order.
+ * A client that shows a value under another name than the one it came with (a language's) sorts with this too, by that name.
  */
 export function sortFacets<T extends { value: string | null; label?: string; count: number }>(
 	facets: readonly T[],
@@ -447,9 +449,11 @@ export async function runFacets(ctx: OperationContext, query: ListQuery, column:
 		const { rows } = await sql<{ state: EntryState; count: string }>`
 			select ${stateSql} as state, count(*) as count from ${from}
 			where ${whereSql(ctx, every, (filter) => filter.on === "status")} group by 1`.execute(ctx.db);
-		return sortFacets(
-			STATES.map((state) => ({ value: state, count: Number(rows.find((row) => row.state === state)?.count ?? 0) })),
-		);
+		// A fixed set the system defines keeps its one order, the one of `STATES`.
+		return STATES.map((state) => ({
+			value: state,
+			count: Number(rows.find((row) => row.state === state)?.count ?? 0),
+		}));
 	}
 	// Picking a value is a filter, and a filter looks through the folders under the open one (doc 07, T54): each count is the rows the list
 	// shows once that value is picked, the status menu's too (its every-state filter reaches as far).

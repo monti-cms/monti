@@ -277,12 +277,12 @@ describe("the list query", () => {
 				.filter((facet) => facet.value !== null)
 				.every((facet) => typeof facet.slug === "string" && facet.slug !== ""),
 		).toBe(true);
-		// One order for every menu: the most rows first, the same count by name, the values with none kept at the end.
+		// The status is a fixed set: its own order, not the order of the counts.
 		expect(await facets("status")).toEqual([
+			{ value: "published", count: 0 },
+			{ value: "changed", count: 1 },
 			{ value: "draft", count: 2 },
 			{ value: "archived", count: 1 },
-			{ value: "changed", count: 1 },
-			{ value: "published", count: 0 },
 		]);
 		expect((await facets("format")).map((facet) => [facet.value, facet.count])).toEqual([
 			[null, 1],

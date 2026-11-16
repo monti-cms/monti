@@ -991,6 +991,28 @@ describe("the library's states (components/list.md)", () => {
 		await expect.element(main().getByText("맞는 파일이 없습니다.")).not.toBeInTheDocument();
 	});
 
+	it("the grid's 검색어 지우기 pressed with the keyboard goes with its line, and the focus stays in the library, not on the page", async () => {
+		await at("#/media?q=없는파일", async () => {});
+		const clear = main().getByRole("button", { name: "검색어 지우기" });
+		await expect.element(clear).toBeVisible();
+		for (let presses = 0; presses < 80 && document.activeElement !== clear.element(); presses++) await userEvent.tab();
+		expect(document.activeElement).toBe(clear.element());
+		await userEvent.keyboard("{Enter}");
+		await expect.element(main().getByText("맞는 파일이 없습니다.")).not.toBeInTheDocument();
+		await expect.poll(() => document.activeElement).not.toBe(document.body);
+		expect(main().element().contains(document.activeElement)).toBe(true);
+	});
+
+	it("the 사용 menu is a fixed set: its rows keep their one order whatever the counts are", async () => {
+		await at("#/media", async () => {});
+		await userEvent.click(main().getByRole("button", { name: "사용", exact: true }));
+		const names = page
+			.getByRole("menuitemcheckbox")
+			.elements()
+			.map((each) => each.textContent?.replace(/\d+$/, ""));
+		expect(names).toEqual(["사용 중", "사용 안 함"]);
+	});
+
 	it("the grid's one line says the table row's words, and its button is named by what is applied", async () => {
 		await at("#/media?q=없는파일", async () => {});
 		await expect.element(main().getByText("맞는 파일이 없습니다.")).toBeVisible();
