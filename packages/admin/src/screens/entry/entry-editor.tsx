@@ -1048,7 +1048,8 @@ export function EntryEditor({
 					// A title the assistant proposed is in the title, blue, until it is taken, changed or discarded (T86).
 					value={titleProposed ? String(titleProposed.value ?? "") : editor.title}
 					proposal={titleProposed !== null}
-					placeholder={compared?.source.title || t("entry.title")}
+					// An empty title reads what every list calls such an entry (EH-03).
+					placeholder={compared?.source.title || t("list.untitled")}
 					size={size}
 					appearance="inline"
 					// An entry that cannot be changed is still read: the title stands in full ink like the body, with nothing to type (AT-29).

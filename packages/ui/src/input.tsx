@@ -12,10 +12,11 @@ const INLINE_SIZE = {
 	sm: "text-monti-note",
 	md: "text-monti-body",
 	default: "text-monti-body",
-	title: "text-monti-title",
-	display: "text-monti-display",
+	// A heading's placeholder is not a heading: faint and regular, so "Untitled" does not read as a title someone typed (EH-03).
+	title: "text-monti-title placeholder:font-normal",
+	display: "text-monti-display placeholder:font-normal",
 	/** The type of the text it stands in: a block's own title or tab name, edited where it reads. */
-	inherit: "text-[length:inherit] font-[inherit] text-inherit placeholder:text-current placeholder:opacity-50",
+	inherit: "text-[length:inherit] font-[inherit] text-inherit placeholder:font-normal placeholder:text-monti-faint",
 } as const;
 
 /**

@@ -46,6 +46,7 @@ import { OverflowMenuHorizontal, TrashCan, Undo } from "@monti-cms/ui/icons";
 import { type KeyboardEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useOpenConversation } from "../../assistant/use-assistant";
 import { useLanguageName } from "../../format/language";
+import { titleOf } from "../../format/names";
 import { useAdmin } from "../../operations/admin-context";
 import { useRead } from "../../operations/use-operation";
 import { href, type Route } from "../../route";
@@ -486,13 +487,14 @@ export function TrashScreen({
 											<RowCheck
 												checked={picked.has(key)}
 												onCheckedChange={(on) => pick(row, on)}
-												label={t("list.pick", { title: row.title })}
+												label={t("list.pick", { title: titleOf(row.title, t) })}
 											/>
 											<RowTitle
+												untitled={!row.title.trim()}
 												title={
 													link ? (
 														<HandedRowLink href={link} listStart={listStart}>
-															{row.title || t("list.untitled")}
+															{titleOf(row.title, t)}
 														</HandedRowLink>
 													) : (
 														<HandedRowLink
@@ -500,7 +502,7 @@ export function TrashScreen({
 															onClick={() => open(row)}
 															listStart={listStart}
 														>
-															{row.title || t("list.untitled")}
+															{titleOf(row.title, t)}
 														</HandedRowLink>
 													)
 												}

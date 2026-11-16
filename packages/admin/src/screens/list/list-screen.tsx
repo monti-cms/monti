@@ -55,7 +55,7 @@ import { useImport } from "../../data/use-import";
 import { saveBackup } from "../../download";
 import { fullTime, shortDate } from "../../format/date";
 import { useLanguageName } from "../../format/language";
-import { endsClosed, fieldCell } from "../../format/names";
+import { endsClosed, fieldCell, titleOf } from "../../format/names";
 import { chooseFiles } from "../../media/choose-files";
 import { useAdmin } from "../../operations/admin-context";
 import { type Refusal, reasonOf, useOperation, useRead } from "../../operations/use-operation";
@@ -616,7 +616,7 @@ function DocumentListScreen({
 			<RowCheck
 				checked={picked.has(row.id)}
 				onCheckedChange={(on) => pick(row, on)}
-				label={picked.get(row.id)?.proposal ? t("list.aiPicked") : t("list.pick", { title: row.title })}
+				label={picked.get(row.id)?.proposal ? t("list.aiPicked") : t("list.pick", { title: titleOf(row.title, t) })}
 				proposal={picked.get(row.id)?.proposal}
 			/>
 		) : null;
@@ -635,7 +635,8 @@ function DocumentListScreen({
 					<TableCell key={column.id} truncate>
 						{check}
 						<RowTitle
-							title={<RowLink href={href(entryRoute(row))}>{row.title || t("list.untitled")}</RowLink>}
+							untitled={!row.title.trim()}
+							title={<RowLink href={href(entryRoute(row))}>{titleOf(row.title, t)}</RowLink>}
 							address={row.slug ? `/${row.slug}` : undefined}
 						/>
 					</TableCell>

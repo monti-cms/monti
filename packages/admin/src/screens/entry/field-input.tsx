@@ -205,11 +205,16 @@ function RelationSingleInput({
 						}
 						const opt = rel.allOptions.find((o) => o.group === group);
 						const unpublished = rel.targetKind === "document" && opt && !opt.published;
+						const address = rel.addressOf(group);
 						return (
 							<ComboboxItem key={group} value={group}>
 								{rel.labelOf(group)}
-								{/* A draft says so at the row's end, as the link card's rows do (menu.md). */}
-								{unpublished && <MenuValue>{t("relations.unpublished")}</MenuValue>}
+								{/* A draft says so at the row's end, as the link card's rows do; a name two options share has its address there (menu.md). */}
+								{(unpublished || address) && (
+									<MenuValue address={address ?? undefined}>
+										{unpublished ? t("relations.unpublished") : null}
+									</MenuValue>
+								)}
 							</ComboboxItem>
 						);
 					}}
@@ -297,11 +302,16 @@ function RelationManyInput({
 						}
 						const opt = rel.allOptions.find((o) => o.group === group);
 						const unpublished = rel.targetKind === "document" && opt && !opt.published;
+						const address = rel.addressOf(group);
 						return (
 							<ComboboxItem key={group} value={group}>
 								{rel.labelOf(group)}
-								{/* A draft says so at the row's end, as the link card's rows do (menu.md). */}
-								{unpublished && <MenuValue>{t("relations.unpublished")}</MenuValue>}
+								{/* A draft says so at the row's end, as the link card's rows do; a name two options share has its address there (menu.md). */}
+								{(unpublished || address) && (
+									<MenuValue address={address ?? undefined}>
+										{unpublished ? t("relations.unpublished") : null}
+									</MenuValue>
+								)}
 							</ComboboxItem>
 						);
 					}}
@@ -387,11 +397,16 @@ function RelationOrderedManyInput({
 								}
 								const opt = rel.allOptions.find((o) => o.group === group);
 								const unpublished = rel.targetKind === "document" && opt && !opt.published;
+								const address = rel.addressOf(group);
 								return (
 									<ComboboxItem key={group} value={group}>
 										{rel.labelOf(group)}
-										{/* A draft says so at the row's end, as the link card's rows do (menu.md). */}
-										{unpublished && <MenuValue>{t("relations.unpublished")}</MenuValue>}
+										{/* A draft says so at the row's end, as the link card's rows do; a name two options share has its address there (menu.md). */}
+										{(unpublished || address) && (
+											<MenuValue address={address ?? undefined}>
+												{unpublished ? t("relations.unpublished") : null}
+											</MenuValue>
+										)}
 									</ComboboxItem>
 								);
 							}}

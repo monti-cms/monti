@@ -16,7 +16,7 @@ import {
 } from "@monti-cms/ui";
 import { useEffect, useId, useMemo, useState } from "react";
 import { useUndo } from "../../activity/use-undo";
-import { endsClosed, endsDirectionClosed } from "../../format/names";
+import { endsClosed, endsDirectionClosed, titleOf } from "../../format/names";
 import { useAdmin } from "../../operations/admin-context";
 import { reasonOf, useOperation } from "../../operations/use-operation";
 
@@ -88,7 +88,7 @@ export function MergeDialog({
 	const fromGroups = useMemo(() => fromItems.map((i) => i.group), [fromItems]);
 
 	const affectedCount = fromItems.reduce((sum, i) => sum + i.usageCount, 0);
-	const intoTitle = intoItem?.title ?? intoGroup;
+	const intoTitle = titleOf(intoItem?.title, t);
 
 	const removedUrls = collectionPath
 		? fromItems
@@ -99,7 +99,7 @@ export function MergeDialog({
 		? fromItems.length === 1
 			? t("taxonomy.mergePreviewOne", {
 					count: affectedCount,
-					from: fromItems[0]?.title ?? "",
+					from: titleOf(fromItems[0]?.title, t),
 					into: intoTitle,
 				})
 			: t("taxonomy.mergePreviewMany", {
@@ -107,7 +107,7 @@ export function MergeDialog({
 					into: intoTitle,
 					itemCount: fromItems.length,
 				})
-		: t("taxonomy.mergeTargetDescription", { from: sourceItem?.title ?? "" });
+		: t("taxonomy.mergeTargetDescription", { from: titleOf(sourceItem?.title, t) });
 
 	const handleMerge = async () => {
 		if (!intoGroup || fromGroups.length === 0) return setUnpicked(true);

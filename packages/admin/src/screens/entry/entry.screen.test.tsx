@@ -1965,3 +1965,13 @@ describe("the property panel of an entry that cannot be changed (AT-29)", () => 
 		for (const name of lists) await staysShut(name);
 	});
 });
+
+describe("an entry with no title", () => {
+	it("[EH-03] the empty title reads the list's word for it, '제목 없음', faint and in the regular weight", async () => {
+		await from(entry.NewEntry).run();
+		await expect.element(title()).toHaveAttribute("placeholder", "제목 없음");
+		const shown = getComputedStyle(title().element(), "::placeholder");
+		expect(Number(shown.fontWeight)).toBeLessThan(500);
+		expect(shown.color).not.toBe(getComputedStyle(title().element()).color);
+	});
+});

@@ -47,6 +47,7 @@ import { useSendAgain } from "../../activity/use-send-again";
 import { useUndo } from "../../activity/use-undo";
 import { useOpenConversation } from "../../assistant/use-assistant";
 import { clock, fullTime, shortDate, shortTime } from "../../format/date";
+import { titleOf as shownTitle } from "../../format/names";
 import { useAdmin } from "../../operations/admin-context";
 import { useRead } from "../../operations/use-operation";
 import { href, type Route } from "../../route";
@@ -209,9 +210,7 @@ export function ActivityScreen({
 	const { sized, resize } = useColumnWidths("activity");
 	/** A message of the log in the admin's language; an entry with no title yet is called what the lists call it. */
 	const say = (message: Message) =>
-		t(
-			message.values?.title === "" ? { ...message, values: { ...message.values, title: t("list.untitled") } } : message,
-		);
+		t(message.values?.title === "" ? { ...message, values: { ...message.values, title: shownTitle("", t) } } : message);
 	// A send that runs somewhere else: in another tab, or started here before the page was loaded again.
 	const elsewhere = again.sending === null && (counts.data?.sending ?? 0) > 0;
 	/** While any send runs, every send control says so and none can be pressed: one runs at a time. */
@@ -310,7 +309,7 @@ export function ActivityScreen({
 							<ValueRow
 								checked={state.entry === offeredEntry.id}
 								onToggle={() => look({ entry: state.entry === offeredEntry.id ? null : offeredEntry.id })}
-								label={t("activity.ofEntry", { title: offeredEntry.title || t("list.untitled") })}
+								label={t("activity.ofEntry", { title: shownTitle(offeredEntry.title, t) })}
 								counted={null}
 							/>
 						</>

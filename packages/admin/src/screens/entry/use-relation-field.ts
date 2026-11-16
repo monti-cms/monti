@@ -1,5 +1,6 @@
 import type { RelationOption, RelationOptionsResult } from "@monti-cms/core";
 import { useCallback, useMemo, useState } from "react";
+import { addressIfShared, titleOf } from "../../format/names";
 import { useAdmin } from "../../operations/admin-context";
 import { useRead } from "../../operations/use-operation";
 
@@ -23,6 +24,8 @@ export type RelationFieldModel = {
 	createToken: string | null;
 	createLabel: string | null;
 	labelOf: (groupOrToken: string) => string;
+	/** The address of an option that shares its name with another: what tells the two apart. Nothing for a name that stands alone. */
+	addressOf: (group: string) => string | null;
 	targetCollection?: string;
 	targetKind?: "document" | "item";
 };
@@ -74,20 +77,30 @@ export function useRelationField({
 			}
 			const found = allOptions.find((opt) => opt.group === groupOrToken);
 			if (found) {
-				return found.title || found.slug || groupOrToken;
+				return titleOf(found.title, t);
 			}
 			// A target in the trash is no choice, but the field still points at it: it is named, and says where it is (doc 08).
 			const trashed = read.data?.trashed.find((each) => each.group === groupOrToken);
-			if (trashed) return t("relations.inTrash", { title: trashed.title });
-			return groupOrToken;
+			if (trashed) return t("relations.inTrash", { title: titleOf(trashed.title, t) });
+			// Not read yet, or gone for good: an id is not a name, so it says nothing.
+			return "";
 		},
 		[allOptions, read.data?.trashed, t],
+	);
+
+	const addressOf = useCallback(
+		(group: string): string | null => {
+			const found = allOptions.find((opt) => opt.group === group);
+			return found ? addressIfShared(found, allOptions, t) : null;
+		},
+		[allOptions, t],
 	);
 
 	return {
 		read,
 		options,
 		allOptions,
+		addressOf,
 		search,
 		setSearch,
 		canCreate,

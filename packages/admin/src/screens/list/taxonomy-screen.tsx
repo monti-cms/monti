@@ -53,6 +53,7 @@ import { Add, Edit, List, Merge, OverflowMenuHorizontal, TrashCan } from "@monti
 import { useMemo, useRef, useState } from "react";
 import { useLeaveGuard, usePanelMove } from "../../draft/leave-guard";
 import { useLanguageName } from "../../format/language";
+import { titleOf } from "../../format/names";
 import { useAdmin } from "../../operations/admin-context";
 import { reasonOf, useRead } from "../../operations/use-operation";
 import { linkTo, type Route } from "../../route";
@@ -577,12 +578,13 @@ export function TaxonomyScreen({
 											<RowCheck
 												checked={picked.has(item.group)}
 												onCheckedChange={(checked) => togglePick(item.group, checked)}
-												label={t("taxonomy.pick", { title: item.title })}
+												label={t("taxonomy.pick", { title: titleOf(item.title, t) })}
 											/>
 											<RowTitle
+												untitled={!item.title.trim()}
 												title={
 													<RowLink render={<button type="button" />} onClick={() => openPanel(item.group)}>
-														{item.title || t("list.untitled")}
+														{titleOf(item.title, t)}
 													</RowLink>
 												}
 												address={shownAddress}

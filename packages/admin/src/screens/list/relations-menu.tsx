@@ -16,7 +16,7 @@ import {
 import { Tag } from "@monti-cms/ui/icons";
 import { useState } from "react";
 import { useUndo } from "../../activity/use-undo";
-import { endsClosed } from "../../format/names";
+import { endsClosed, titleOf } from "../../format/names";
 import { useAdmin } from "../../operations/admin-context";
 import { reasonOf, useOperation, useRead } from "../../operations/use-operation";
 
@@ -122,7 +122,7 @@ export function RelationSubmenu({ collection, column, rows, context, icon = fals
 						closeOnClick={false}
 						onCheckedChange={() => void handleToggle(opt.group, all)}
 					>
-						{opt.title}
+						{titleOf(opt.title, t)}
 						{some && <MenuShortcut>{`${matching}/${rows.length}`}</MenuShortcut>}
 					</DropdownMenuCheckboxItem>
 				);
@@ -139,7 +139,7 @@ export function RelationSubmenu({ collection, column, rows, context, icon = fals
 			{!column.required && <DropdownMenuRadioItem value={NONE}>{t("list.relationNone")}</DropdownMenuRadioItem>}
 			{options.map((opt) => (
 				<DropdownMenuRadioItem key={opt.group} value={opt.group}>
-					{opt.title}
+					{titleOf(opt.title, t)}
 				</DropdownMenuRadioItem>
 			))}
 		</DropdownMenuRadioGroup>

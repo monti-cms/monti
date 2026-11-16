@@ -17,6 +17,7 @@ import {
 } from "@monti-cms/ui";
 import { OverflowMenuHorizontal, TrashCan } from "@monti-cms/ui/icons";
 import { useLanguageName } from "../../format/language";
+import { titleOf } from "../../format/names";
 import { useAdmin } from "../../operations/admin-context";
 import { useRead } from "../../operations/use-operation";
 import { linkTo, type Route } from "../../route";
@@ -55,7 +56,7 @@ export function TrashedItemPanel({
 	return (
 		<SidePanel
 			width="side"
-			title={first?.title ?? ""}
+			title={titleOf(first?.title, t)}
 			onClose={onClose}
 			actions={
 				<DropdownMenu>

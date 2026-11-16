@@ -46,7 +46,7 @@ import { type Path, useDraft } from "../../draft/use-draft";
 import type { ProposalItem } from "../../draft/use-proposals";
 import { bytes } from "../../format/bytes";
 import { fullDate } from "../../format/date";
-import { extensionLabel } from "../../format/names";
+import { extensionLabel, titleOf } from "../../format/names";
 import { chooseFiles } from "../../media/choose-files";
 import { previewUrl, sizeLabel } from "../../media/file-text";
 import { putFile } from "../../media/put-file";
@@ -84,7 +84,7 @@ function useUseRows(rows: readonly MediaUseRow[]) {
 				(use.owner === "entry"
 					? {
 							key,
-							title: use.title,
+							title: titleOf(use.title, t),
 							route: { screen: "entry" as const, collection: use.collection, id: use.id },
 							places: new Set<string>(),
 						}

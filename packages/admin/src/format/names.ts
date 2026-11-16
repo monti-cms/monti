@@ -2,11 +2,25 @@
 // the same name everywhere and an id is never shown as one.
 import type { Label, ListColumn, ListRow } from "@monti-cms/core";
 
-type Translate = (message: Label) => string;
+export type Translate = (message: Label) => string;
 
 /** A title as every screen writes it: the title, or the list's word for one that is empty ("Untitled"). */
 export const titleOf = (title: string | null | undefined, t: Translate): string =>
 	title?.trim() ? title : t("list.untitled");
+
+/**
+ * The address of a choice that shares its name with another of the shown choices: what tells the two apart, written after the name as a list
+ * row's address is. Nothing for a name that stands alone, or a choice with no address.
+ */
+export function addressIfShared<Option extends { group: string; title: string; slug: string }>(
+	option: Option,
+	shown: readonly Option[],
+	t: Translate,
+): string | null {
+	if (!option.slug) return null;
+	const name = (each: Option) => titleOf(each.title, t).trim().toLowerCase();
+	return shown.some((each) => each.group !== option.group && name(each) === name(option)) ? option.slug : null;
+}
 
 /** The two fields every collection has, called what the list and the settings call them. */
 const FIXED_FIELDS: Record<string, "list.column.title" | "settings.field.kind.slug"> = {

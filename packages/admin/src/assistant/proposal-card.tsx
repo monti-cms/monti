@@ -13,6 +13,7 @@ import {
 	Text,
 } from "@monti-cms/ui";
 import type { ReactNode } from "react";
+import { type Translate, titleOf } from "../format/names";
 import { useAdmin } from "../operations/admin-context";
 import { followersOf, marked, type Place, rowCounts, useChangeWords } from "./change-words";
 import { inlineDiff } from "./diff";
@@ -27,6 +28,7 @@ const SHOWN = 3;
 export function changeOf(
 	item: ProposalItemView,
 	view: ProposalView,
+	t: Translate,
 ): { title: string; address: string | null; after: string | null } {
 	const record = item.targets.map((key) => view.records[key]).find((found) => found !== undefined);
 	const input = (item.input ?? {}) as { title?: unknown; values?: Record<string, unknown>; alt?: unknown };
@@ -36,7 +38,8 @@ export function changeOf(
 		item.operation === "media.update" ? input.alt : undefined,
 	].filter((value): value is string => typeof value === "string" && value.trim() !== "");
 	return {
-		title: record?.title ?? item.group,
+		// A record with no title is called what the lists call it; with no record at all, the change is called by its group's name.
+		title: record ? titleOf(record.title, t) : item.group,
 		address: record?.detail ?? null,
 		// One text says the change; several (a title and a field) are read on the review page.
 		after: texts.length === 1 ? (texts[0] ?? null) : null,
@@ -83,7 +86,7 @@ export function ProposalCardOf({ id }: { id: string }) {
 	const nameOf = (item: ProposalItemView) =>
 		(item.operation === "translations.create"
 			? entries[String((item.input as { source?: unknown }).source ?? "")]?.title
-			: undefined) ?? changeOf(item, view).title;
+			: undefined) ?? changeOf(item, view, t).title;
 	// What could not be applied, by row: a translation whose words went wrong is one row that failed, with what its words' write said.
 	const failed = rows.flatMap((item) => {
 		const went = [item, ...followers(item.id)].find((each) => each.state === "failed" || each.state === "skipped");
@@ -140,7 +143,7 @@ export function ProposalCardOf({ id }: { id: string }) {
 								);
 							})
 						: (shown ?? []).map((item) => {
-								const change = changeOf(item, view);
+								const change = changeOf(item, view, t);
 								const place = placesOf(item).find((each) => each.before !== "" || each.after !== "");
 								const words = place ? placeWords(place) : change.after !== null ? <Ins>{change.after}</Ins> : null;
 								return (

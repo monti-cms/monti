@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { bytes } from "./bytes";
 import { clock, fullDate, fullTime, isoDay, recentDay, recentTime, shortDate, shortTime } from "./date";
-import { extensionLabel, fieldName, titleOf } from "./names";
+import { addressIfShared, extensionLabel, fieldName, titleOf } from "./names";
 
 const now = new Date(2026, 10, 16, 9, 0);
 const words: Record<string, string> = {
@@ -64,6 +64,24 @@ describe("names", () => {
 		expect(titleOf("  ", t)).toBe("제목 없음");
 		expect(titleOf(null, t)).toBe("제목 없음");
 		expect(titleOf("글", t)).toBe("글");
+	});
+
+	it("[PP-36] a choice that shares its name with another has its address to tell them apart; a name that stands alone has none", () => {
+		const options = [
+			{ group: "a", title: "React", slug: "react" },
+			{ group: "b", title: "react ", slug: "react-2" },
+			{ group: "c", title: "Vue", slug: "vue" },
+			{ group: "d", title: "", slug: "draft-1" },
+			{ group: "e", title: "", slug: "" },
+		];
+		const address = (group: string) =>
+			addressIfShared(options.find((each) => each.group === group) ?? options[0], options, t);
+		expect(address("a")).toBe("react");
+		expect(address("b")).toBe("react-2");
+		expect(address("c")).toBeNull();
+		// Two with no title are both "Untitled": the one with an address says it.
+		expect(address("d")).toBe("draft-1");
+		expect(address("e")).toBeNull();
 	});
 
 	it("[AT-08] a field is called by its fixed word, then its label, then its id", () => {

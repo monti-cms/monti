@@ -9,6 +9,7 @@ import {
 } from "@monti-cms/ui";
 import { type ReactNode, useState } from "react";
 import { useLanguageName } from "../../format/language";
+import { titleOf } from "../../format/names";
 import { useAdmin } from "../../operations/admin-context";
 import { useRead } from "../../operations/use-operation";
 import { DateRows } from "./date-rows";
@@ -165,14 +166,20 @@ function ValuesMenu({ column, state, query, setFilter, onHide, countedWhere }: M
 		const any = toggled(chosen, value);
 		setFilter(column.id, any.length ? { on: kind, field: column.id, any } : null);
 	};
+	// A relation's value is another entry: one with no title is called what the lists call it, never by its id. An option is its label.
+	const labelOf = (facet: Facet & { value: string }) =>
+		kind === "relation" ? titleOf(facet.label, t) : (facet.label ?? facet.value);
 	const values = (facets ?? []).filter(
 		(facet): facet is Facet & { value: string } =>
-			facet.value !== null && (facet.label ?? facet.value).toLowerCase().includes(find.trim().toLowerCase()),
+			facet.value !== null &&
+			labelOf(facet as Facet & { value: string })
+				.toLowerCase()
+				.includes(find.trim().toLowerCase()),
 	);
 	const rows = values.map((facet) => (
 		<ValueRow
 			key={facet.value}
-			label={facet.label ?? facet.value}
+			label={labelOf(facet)}
 			counted={facet.count}
 			checked={chosen.includes(facet.value)}
 			onToggle={() => toggle(facet.value)}

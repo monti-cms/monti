@@ -31,6 +31,7 @@ import { type ReactNode, useEffect, useRef, useState } from "react";
 import { useOpenConversation } from "../../assistant/use-assistant";
 import { shortTime } from "../../format/date";
 import { useLanguageName } from "../../format/language";
+import { titleOf } from "../../format/names";
 import { useAdmin } from "../../operations/admin-context";
 import { reasonOf, useOperation, useRead } from "../../operations/use-operation";
 import { linkTo, type Route } from "../../route";
@@ -206,7 +207,7 @@ export function ActivityPanel({
 					: null;
 	const name = (record: ActivityRecord) => {
 		const route = routeOf(record);
-		const words = record.title || t("list.untitled");
+		const words = titleOf(record.title, t);
 		return route ? (
 			<TextButton variant="underline" {...linkTo(route, go)}>
 				{words}

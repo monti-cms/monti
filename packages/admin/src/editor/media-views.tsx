@@ -767,13 +767,19 @@ function ImageBlockView({ node, updateAttributes, getPos, selected, editor }: No
 	const captionFill = fill?.of(captionPlace);
 	const captionFilled = captionFill !== undefined && caption.value !== "" && captionFill.filled === caption.value;
 	const [inCaption, setInCaption] = useState(false);
+	/** The caret is in the caption itself. */
+	const [captionFocused, setCaptionFocused] = useState(false);
 	const captionInput = (
 		<Input
 			appearance="inline"
 			size="sm"
 			align={CAPTION_ALIGN[align]}
 			aria-label={t("editor.image.caption")}
-			placeholder={t("editor.image.caption")}
+			// An empty caption says what it is only while the picture is picked or the caret is in it: a page of pictures is not a page of
+			// "Caption" (EI-03).
+			placeholder={selected || captionFocused ? t("editor.image.caption") : undefined}
+			onFocus={() => setCaptionFocused(true)}
+			onBlur={() => setCaptionFocused(false)}
 			readOnly={!editable}
 			// What a fill wrote is blue until it is changed.
 			proposal={captionFilled}

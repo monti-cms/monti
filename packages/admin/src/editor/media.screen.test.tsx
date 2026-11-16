@@ -2041,3 +2041,19 @@ describe("a picture or file that is gone, or picked", () => {
 		expect(getComputedStyle(own).borderTopColor).toBe("rgba(0, 0, 0, 0)");
 	});
 });
+
+describe("a picture's empty caption", () => {
+	it("[EI-03] says '캡션' only while the picture is picked or the caret is in the caption", async () => {
+		await Draft.run();
+		await caretAfter("글의 첫 문단");
+		await paste(await canvasFile("pasted.png"));
+		const caption = body().getByRole("textbox", { name: "캡션" });
+		await expect.element(caption).toBeVisible();
+		await expect.element(body().getByRole("progressbar")).not.toBeInTheDocument();
+		// The caret goes on in the words after the picture: the caption says nothing.
+		await userEvent.keyboard("이어 쓴 글");
+		await expect.element(caption).not.toHaveAttribute("placeholder");
+		await userEvent.click(caption);
+		await expect.element(caption).toHaveAttribute("placeholder", "캡션");
+	});
+});

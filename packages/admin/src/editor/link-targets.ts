@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { titleOf } from "../format/names";
 import { useAdmin } from "../operations/admin-context";
 import { useOperation, useRead } from "../operations/use-operation";
 import type { SchemaRead } from "../screens/settings/schema-draft";
@@ -62,7 +63,7 @@ export function useLinkTargets({ open, text, href }: { open: boolean; text: stri
 									row,
 									target: {
 										group: row.translationGroup,
-										title: row.title || t("list.untitled"),
+										title: titleOf(row.title, t),
 										collection: label,
 										draft: row.state === "draft",
 									},

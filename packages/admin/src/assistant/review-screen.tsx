@@ -223,7 +223,7 @@ export function ReviewScreen({ id, go }: { id: string; go: (route: Route) => voi
 								<Table container="none" aria-label={group.label}>
 									<TableBody>
 										{rows.map((item) => {
-											const change = changeOf(item, view);
+											const change = changeOf(item, view, t);
 											const places = placesOf(item);
 											const entryId = item.targets
 												.find((target) => target.startsWith("entry:"))
