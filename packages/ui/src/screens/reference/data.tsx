@@ -35,7 +35,7 @@ export function DataScreen() {
 						<Option>
 							<Checkbox checked={false} />
 							미디어 파일도 담기
-							<Text variant="meta" tone="subtle">
+							<Text mono variant="meta" tone="subtle">
 								2.1 GB
 							</Text>
 						</Option>

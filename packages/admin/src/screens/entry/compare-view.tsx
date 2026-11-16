@@ -215,7 +215,7 @@ export function CompareView({
 			</TextButton>
 			<Text variant="title">{t(mode === "conflict" ? "compare.conflictTitle" : "compare.draftTitle")}</Text>
 			{address ? (
-				<Text variant="meta" tone="faint" truncate>
+				<Text mono variant="meta" tone="faint" truncate>
 					{address}
 				</Text>
 			) : null}

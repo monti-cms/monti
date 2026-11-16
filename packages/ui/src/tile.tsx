@@ -119,9 +119,7 @@ function Tile({
 						</span>
 					) : (
 						detail && (
-							<span
-								className={cn("truncate font-mono text-monti-meta", failed ? "text-monti-danger" : "text-monti-subtle")}
-							>
+							<span className={cn("truncate text-monti-meta", failed ? "text-monti-danger" : "text-monti-subtle")}>
 								{detail}
 							</span>
 						)

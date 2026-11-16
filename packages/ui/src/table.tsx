@@ -430,13 +430,13 @@ function RowTitle({
 						whole={addressTitle}
 						className={cn(
 							"relative z-1 max-w-max grow basis-[3ch] text-monti-faint",
-							note ? "text-monti-caption" : "text-monti-meta",
+							note ? "text-monti-caption" : "font-mono text-monti-meta",
 						)}
 					>
 						{note ? (
 							<>
 								{address ? (
-									<span data-slot="row-title-address" className="text-monti-meta">
+									<span data-slot="row-title-address" className="font-mono text-monti-meta">
 										{address}
 									</span>
 								) : null}
@@ -537,10 +537,11 @@ function TableCell({
 			data-slot="table-cell"
 			data-truncate={truncate || undefined}
 			className={cn(
-				// Its pieces stand on the line's baseline, so the words of a row share one baseline whatever their size. Pieces set on "the middle" of the
-				// line (`align-middle`) made the line taller than the 20px one by a fraction (a 42.28px row) and put the centres of a row's cells up to
-				// 1px apart (measured in `layout.browser.test.tsx`).
-				"relative whitespace-nowrap px-monti-10 py-monti-10 align-middle first:pl-monti-12 last:pr-monti-12 [&:has([role=checkbox])]:pr-0",
+				// Its pieces sit on the middle of the line, not on their letters' baselines: pieces of two sizes on one baseline (a chip, a title) would
+				// make the line taller than either. The middle still leaves a line a fraction taller than the 20px one (a 42.28px row), so a cell is 41px
+				// high by its own height, not by its padding and its line: the row is 41px with its rule, whatever the pieces are (measured in
+				// `layout.browser.test.tsx`). A cell that holds a picture or wraps over lines takes its height from them and keeps the 10px above and below.
+				"relative h-[41px] whitespace-nowrap px-monti-10 py-0 align-middle *:align-middle first:pl-monti-12 last:pr-monti-12 has-[[data-slot=row-thumb]]:h-auto has-[[data-slot=row-thumb]]:py-monti-10 [&:has([role=checkbox])]:pr-0",
 				ALIGN[align],
 				// The row's check hangs in the left margin, so its cell does not clip. In a row with a link the cells are static and the check stands on the row
 				// itself: there the cell clips as any other, and a first column dragged narrow keeps its words in.
@@ -554,7 +555,7 @@ function TableCell({
 				title !== undefined && "[&>:not([data-slot=row-check])]:relative [&>:not([data-slot=row-check])]:z-1",
 				width && COLUMN_WIDTH[width],
 				valign === "top" && "align-top *:align-top",
-				wrap && "whitespace-normal break-words",
+				wrap && "h-auto whitespace-normal break-words py-monti-10",
 				tone === "muted" && "text-monti-muted",
 				tone === "subtle" && "text-monti-note text-monti-subtle",
 				filler && "p-0",

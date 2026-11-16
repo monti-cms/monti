@@ -29,7 +29,7 @@ function CodeFrame({ head, children, className, ...props }: React.ComponentProps
 
 /**
  * The code being written: the line numbers' column (`gutter`, rows of `CodeNumber`), and the text with the lines' grounds behind it (`grounds`, rows of
- * `CodeGround`, one per line as the text shows it). Every row is one 20px line, so the grounds of lines next to each other meet with no gap. The text is
+ * `CodeGround`, one per line as the text shows it). Every row is one 24px line, so the grounds of lines next to each other meet with no gap. The text is
  * the editor's own (`children`): what the highlighter, a rule or a closed fold put on it is styled here by its `data-` attribute.
  */
 function CodeArea({
@@ -65,7 +65,7 @@ function CodeArea({
 						data-slot="code-text"
 						data-picking={picking ? "" : undefined}
 						className={cn(
-							"relative whitespace-pre pr-monti-16 pl-monti-16 font-mono text-monti-code text-monti-default",
+							"relative whitespace-pre pr-monti-16 pl-monti-16 font-mono text-monti-default text-monti-editor-code",
 							"data-picking:caret-transparent [&>*]:outline-none [&_.ProseMirror-trailingBreak]:hidden",
 							// The site's two themes colour each piece (`--shiki-light`, `--shiki-dark` set on it by the highlighter).
 							"[&_[data-token]]:text-(--shiki-light) monti-dark:[&_[data-token]]:text-(--shiki-dark)",
@@ -95,9 +95,9 @@ function CodeAside({ row, children }: { row: number; children: React.ReactNode }
 		<div
 			data-slot="code-aside"
 			contentEditable={false}
-			className="absolute right-monti-8 z-1 flex h-[20px] select-none items-center"
-			// design-allow: the line's place, from its row among the lines shown (20px each)
-			style={{ top: row * 20 }}
+			className="absolute right-monti-8 z-1 flex h-[24px] select-none items-center"
+			// design-allow: the line's place, from its row among the lines shown (24px each)
+			style={{ top: row * 24 }}
 		>
 			{children}
 		</div>
@@ -113,9 +113,9 @@ type CodeLineTone = "highlight" | "plus" | "minus" | "picked" | "lit";
 const TONES =
 	"data-[tone=highlight]:bg-monti-highlight data-[tone=minus]:bg-monti-danger-muted data-[tone=plus]:bg-monti-success-muted data-[tone=lit]:bg-monti-block data-[tone=picked]:bg-monti-selection";
 
-/** One line's ground behind the text being written: one 20px row, so picked lines next to each other are one ground. */
+/** One line's ground behind the text being written: one 24px row, so picked lines next to each other are one ground. */
 function CodeGround({ tone }: { tone?: CodeLineTone }) {
-	return <div data-slot="code-ground" data-tone={tone} className={cn("h-[20px] shrink-0", TONES)} />;
+	return <div data-slot="code-ground" data-tone={tone} className={cn("h-[24px] shrink-0", TONES)} />;
 }
 
 /** Where a line stands in a fold that spans lines: its first line, a line inside it, its last line. The fold's column draws the extent as a bracket. */
@@ -157,7 +157,7 @@ function CodeNumber({
 			data-slot="code-number"
 			data-tone={tone}
 			className={cn(
-				"flex h-[20px] shrink-0 items-center gap-monti-2 pr-monti-4 pl-monti-8 font-mono text-monti-code tabular-nums",
+				"flex h-[24px] shrink-0 items-center gap-monti-2 pr-monti-4 pl-monti-8 font-mono text-monti-editor-code tabular-nums",
 				TONES,
 				readOnly ? undefined : "cursor-pointer hover:bg-monti-selected",
 				numbersOff ? "text-monti-faint" : "text-monti-subtle",
@@ -167,7 +167,7 @@ function CodeNumber({
 			{...props}
 		>
 			{folds ? (
-				<span className="relative flex size-[20px] shrink-0 items-center justify-center self-stretch">
+				<span className="relative flex size-[24px] shrink-0 items-center justify-center self-stretch">
 					{edge && !fold ? (
 						<span
 							aria-hidden
@@ -238,7 +238,7 @@ function CodeLine({
 		<div
 			data-slot="code-line"
 			data-tone={tone}
-			className={cn("group/line flex h-[20px] items-stretch font-mono text-monti-code", TONES, className)}
+			className={cn("group/line flex h-[24px] items-stretch font-mono text-monti-editor-code", TONES, className)}
 			{...props}
 		>
 			<CodeNumber

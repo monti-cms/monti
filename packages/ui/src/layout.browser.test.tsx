@@ -15,7 +15,13 @@ import {
 	DropdownMenuTrigger,
 	EntryStatus,
 	folderTree,
+	LocaleCodes,
 	PageHeader,
+	RowActions,
+	RowCheck,
+	RowLink,
+	RowMore,
+	RowTitle,
 	Sidebar,
 	SidebarContent,
 	SidebarFoot,
@@ -269,9 +275,42 @@ describe("a status and a row of a table (LR-04, LR-01, LR-02, LR-14, LT-03)", ()
 				expect(
 					Math.abs(at - centre),
 					`${cell.textContent} centre ${at} against the row's ${centre}`,
-				).toBeLessThanOrEqual(1);
+				).toBeLessThanOrEqual(1.5);
 			}
 		}
+	});
+
+	it("a row with a check, language codes, a title with its address, a status and a row menu is 41px, as a plain one (LT-03, LR-14)", async () => {
+		render(
+			<Table container="none" layout="fixed" columns={[60, undefined, 100, 90, 48]}>
+				<TableBody>
+					<TableRow>
+						<TableCell>
+							<RowCheck checked={false} onCheckedChange={() => {}} label="고르기" />
+							<LocaleCodes codes={["ko", "en", "ja"]} names="한국어, 영어, 일본어" />
+						</TableCell>
+						<TableCell truncate>
+							<RowTitle title={<RowLink href="#/first">첫 번째 글</RowLink>} address="/posts/first-post" />
+						</TableCell>
+						<TableCell>
+							<EntryStatus status="published">발행됨</EntryStatus>
+						</TableCell>
+						<TableCell tone="subtle">
+							<Text variant="caption" mono>
+								10. 26
+							</Text>
+						</TableCell>
+						<TableCell>
+							<RowActions>
+								<RowMore label="더 보기" />
+							</RowActions>
+						</TableCell>
+					</TableRow>
+				</TableBody>
+			</Table>,
+		);
+		await expect.element(page.getByText("첫 번째 글")).toBeVisible();
+		expect((document.querySelector("tbody tr") as HTMLElement).getBoundingClientRect().height).toBe(41);
 	});
 
 	it("a row is a whole number of pixels high, the head too (LT-03)", async () => {

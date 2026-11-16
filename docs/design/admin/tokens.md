@@ -143,10 +143,10 @@
 
 ## 글자
 
-글꼴 계열은 둘이다. 글은 Pretendard, 주소, 숫자, 라벨은 IBM Plex Mono다. 두 글꼴의 `@font-face`와 파일은 `scripts/build-styles.mjs`가 `@monti-cms/admin/styles.css`를 만들 때 넣는다(파일은 그 옆 `fonts/`). `tokens.css`에는 `@font-face`가 없다. Noto Sans KR은 대체 글꼴이고, Pretendard를 불러올 수 없을 때만 쓴다. 전체 글꼴 목록은 다음과 같다.
+글꼴 계열은 둘이다. 글은 Pretendard, 주소와 식별자와 코드는 IBM Plex Mono다. 두 글꼴의 `@font-face`와 파일은 `scripts/build-styles.mjs`가 `@monti-cms/admin/styles.css`를 만들 때 넣는다(파일은 그 옆 `fonts/`). `tokens.css`에는 `@font-face`가 없다. Noto Sans KR은 대체 글꼴이고, Pretendard를 불러올 수 없을 때만 쓴다. 전체 글꼴 목록은 다음과 같다.
 
 - `sans`: `Pretendard, "Noto Sans KR", "Apple SD Gothic Neo", system-ui, sans-serif`
-- `mono`: `"IBM Plex Mono", ui-monospace, Menlo, monospace`
+- `mono`: `"IBM Plex Mono", Pretendard, "Noto Sans KR", "Apple SD Gothic Neo", ui-monospace, Menlo, monospace`. 한글 대체 글꼴을 Plex Mono 뒤에 두었다: 앞서는 한글이 시스템이 고른 글꼴로 그려져 글자 폭이 고르지 않았다(만들며 정함 (2026-11-16), EC-06, MD-43, TG-16, TP-07).
 
 역할은 그 글자가 무엇인지로 고른다. 크기 단위는 px다.
 
@@ -154,7 +154,8 @@
 |---|---|---|---|---|---|
 | `text-display` | sans | 36 / 45 | 700 | -0.025em | 편집기의 글 제목. |
 | `text-page` | sans | 26 / 32 | 700 | -0.02em | 잉크 선 위의 콘텐츠 페이지 제목. |
-| `text-heading` | sans | 22 / 30 | 700 | – | 편집기 본문의 제목, 대화상자 제목. |
+| `text-heading` | sans | 22 / 30 | 700 | – | 편집기 본문의 둘째 크기 제목(h2), 대화상자 제목. |
+| `text-subheading` | sans | 19 / 28 | 600 | – | 편집기 본문의 셋째 크기 제목(h3). 넷째(h4)는 `text-reading`에 600을 준 것이다: 본문 크기이고 굵기로 구별한다(소유자 (2026-11-16)). |
 | `text-reading` | sans | 17 / 30 | 400 | – | 편집기 본문 글자. |
 | `text-title` | sans | 16 / 22 | 600 | – | 패널과 시트 제목, 설정의 구역 제목. |
 | `text-body` | sans | 14 / 20 | 400 | – | 기본 UI 글자, 버튼, 입력, 목록 행 제목(잉크색. 다른 칸은 회색). |
@@ -162,9 +163,10 @@
 | `text-label` | sans | 13 / 18 | 500 | – | 탭, 필터, 작은 버튼. |
 | `text-note` | sans | 13 / 20 | 400 | – | 행 제목 아래의 보조 줄, 피할 수 없는 힌트. |
 | `text-caption` | sans | 12 / 16 | 400 | – | 캡션, sans로 쓴 시각. |
-| `text-meta` | mono | 12 / 16 | 400 | – | 주소, 식별자, 개수, 파일 크기. |
-| `text-code` | mono | 12 / 20 | 400 | – | 여러 줄 코드와 JSON: 본문의 코드 블록, 비교의 코드. |
-| `text-micro` | mono | 11 / 14 | 400 | – | 메뉴와 패널의 묶음 라벨. 필드 라벨은 더 잘 읽히도록 `text-caption`(sans 12)을 쓴다. |
+| `text-meta` | sans | 12 / 16 | 400 | – | 줄 안의 작은 말과 숫자: 개수, 파일 크기, 이름 아래의 세부, 상태 표시줄 칸. 적힌 그대로의 값(주소, 식별자)에는 `font-mono`를 더한다(만들며 정함 (2026-11-16): 앞서는 이 역할이 mono라 한글도 mono로 그려졌다). |
+| `text-micro` | sans | 11 / 14 | 400 | – | 메뉴와 패널의 묶음 라벨, 행 끝의 짧은 덧말. 필드 라벨은 `text-caption`(sans 12)을 쓴다(만들며 정함 (2026-11-16)). |
+| `text-code` | mono | 12 / 20 | 400 | – | 여러 줄 코드와 JSON: 비교와 변경 보기의 코드. |
+| `text-editor-code` | mono | 14 / 24 | 400 | – | 편집기 본문의 코드 블록과 인라인 코드(소유자 (2026-11-16)). 다른 코드는 `text-code`(12)다. |
 
 글자 규칙:
 
@@ -174,7 +176,10 @@
 - 줄 높이는 역할이 정하고 모두 4px의 배수다. 한 줄짜리 UI 글은 `body`(20), 여러 줄로 이어지는 글은 `prose`(24), 코드는 `code`(20)다. 크기의 몇 배(1.6, 1.7)로 줄 높이를 주지 않는다(2026-11-05 소유자: 1.6, 1.65, 1.7배가 섞여 있던 것을 둘로 줄였다).
 - 굵기는 역할을 따른다. 400은 글, 500은 `text-label`에서만, 600은 강조(패널 · 시트 · 구역 제목, 버튼, 고른 탭, 표 묶음 머리), 700은 큰 제목 역할(`display`, `page`, `heading`)과 페이지 툴바의 고른 탭뿐이다. 부품이 `font-bold`나 `font-medium`을 덧붙이지 않는다. 본문 안의 굵은 글과 서식 막대의 B는 굵게 그 자체라 예외다. `check:design`이 막는다.
 - 단계 밖의 크기는 둘뿐이다. 여백의 요청 표시(10px mono)와 제목 아이콘의 단계 숫자(8px)다.
-- mono는 적힌 그대로 치거나 복사하는 것에만 쓴다(2026-11-12 만들며 정함): 주소, 식별자, 모델 이름, 키의 끝 글자, 개수. 사람이 읽는 말은 sans다. 보조 줄과 상태 칸(키 줄의 "1.24M 토큰", "채우기 · 요청 · 번역")은 `text-note`이고, 사람이 붙인 이름(키 이름)도 sans다. 같은 자리의 줄이 한 화면에서 두 글꼴로 서지 않는다. 한 칸(span)은 한 글꼴이다: 행 제목 뒤 회색 줄처럼 주소와 말이 한 줄에 함께 서면, 주소는 mono 주소 칸(`RowTitle`의 `address`)에, 말은 sans 칸(`note`)에 따로 담고 한 칸에 섞지 않는다. 그래서 같은 자리에 두 글꼴이 있는 것이 아니라, 두 칸이 저마다 한 글꼴이다(만들며 정함 (2026-11-14)). 메뉴와 패널의 묶음 라벨(`text-micro`)은 이 규칙 밖의 자기 역할이다.
+- `text-meta`와 `text-micro`는 sans 역할이다(만들며 정함 (2026-11-16)). 한글 낱말을 mono로 그리지 않는다. mono는 값에만 쓰고, 값은 그 칸에 `font-mono`(`Text`의 `mono`)를 적는다. `check:design`의 `mono-words`가 `font-mono` · `text-monti-meta` · `text-monti-micro`를 쓰는 파일에 `MONO_OK`의 까닭을 요구한다.
+- 숫자는 전역에서 자리가 같은 숫자(`tabular-nums`)다(만들며 정함 (2026-11-16), `admin.css`의 `.monti-admin`과 body). 9가 10이 될 때 옆의 것이 밀리지 않고, 크기와 날짜의 세로줄이 맞는다. `tabular` 규칙이 그 선언이 있는지 본다. mono가 아닌 숫자도 같다.
+- 숫자와 날짜와 크기를 담은 열은 오른쪽에, 글은 왼쪽에 맞춘다(list.md, "열 정렬과 행 높이").
+- mono는 적힌 그대로 치거나 복사하는 것에만 쓴다(2026-11-12 만들며 정함): 주소, 식별자, 모델 이름, 키의 끝 글자, 개수. 사람이 읽는 말은 sans다. 보조 줄과 상태 칸(키 줄의 "1.24M 토큰", "채우기 · 요청 · 번역")은 `text-note`이고, 사람이 붙인 이름(키 이름)도 sans다. 같은 자리의 줄이 한 화면에서 두 글꼴로 서지 않는다. 한 칸(span)은 한 글꼴이다: 행 제목 뒤 회색 줄처럼 주소와 말이 한 줄에 함께 서면, 주소는 mono 주소 칸(`RowTitle`의 `address`)에, 말은 sans 칸(`note`)에 따로 담고 한 칸에 섞지 않는다. 그래서 같은 자리에 두 글꼴이 있는 것이 아니라, 두 칸이 저마다 한 글꼴이다(만들며 정함 (2026-11-14)). 메뉴와 패널의 묶음 라벨(`text-micro`)은 sans다.
 
 ## 간격
 

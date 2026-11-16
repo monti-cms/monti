@@ -271,13 +271,22 @@
 	letter-spacing: var(--monti-text-page-tracking);
 }
 
-/* 22px/30px 700. Headings in the editor body; dialog titles at 20px use this role. */
+/* 22px/30px 700. Second-level headings in the editor body (h2); dialog titles at 20px use this role. */
 @utility text-monti-heading {
 	font-family: var(--monti-family, var(--monti-font-sans));
 	font-size: var(--monti-text-heading-size);
 	line-height: var(--monti-text-heading-line);
 	font-weight: var(--monti-text-heading-weight);
 	letter-spacing: var(--monti-text-heading-tracking);
+}
+
+/* 19px/28px 600. Third-level headings in the editor body (h3). The fourth level (h4) is `text-reading` in semibold: the body size, set apart by weight. */
+@utility text-monti-subheading {
+	font-family: var(--monti-family, var(--monti-font-sans));
+	font-size: var(--monti-text-subheading-size);
+	line-height: var(--monti-text-subheading-line);
+	font-weight: var(--monti-text-subheading-weight);
+	letter-spacing: var(--monti-text-subheading-tracking);
 }
 
 /* 17px/30px 400. Editor body text. */
@@ -343,13 +352,22 @@
 	letter-spacing: var(--monti-text-caption-tracking);
 }
 
-/* 12px/16px 400. Addresses, identifiers, counts, file sizes. */
+/* 12px/16px 400. Small words and numbers in a line: counts, file sizes, details under a name, status bar cells. A typed value (an address, an id) adds `font-mono`. */
 @utility text-monti-meta {
-	font-family: var(--monti-font-mono);
+	font-family: var(--monti-family, var(--monti-font-sans));
 	font-size: var(--monti-text-meta-size);
 	line-height: var(--monti-text-meta-line);
 	font-weight: var(--monti-text-meta-weight);
 	letter-spacing: var(--monti-text-meta-tracking);
+}
+
+/* 11px/14px 400. Group labels in menus and panels, a short note at the end of a row. Field labels use `text-caption`. */
+@utility text-monti-micro {
+	font-family: var(--monti-family, var(--monti-font-sans));
+	font-size: var(--monti-text-micro-size);
+	line-height: var(--monti-text-micro-line);
+	font-weight: var(--monti-text-micro-weight);
+	letter-spacing: var(--monti-text-micro-tracking);
 }
 
 /* 12px/20px 400. Code and JSON over several lines: code blocks in the body and in comparisons. Meta's size on a 20px line. */
@@ -361,12 +379,12 @@
 	letter-spacing: var(--monti-text-code-tracking);
 }
 
-/* 11px/14px 400. Field labels, group labels in menus and panels. */
-@utility text-monti-micro {
+/* 14px/24px 400. Code blocks and inline code in the editor body. Other code (diffs, comparisons) is `text-code` at 12px. */
+@utility text-monti-editor-code {
 	font-family: var(--monti-font-mono);
-	font-size: var(--monti-text-micro-size);
-	line-height: var(--monti-text-micro-line);
-	font-weight: var(--monti-text-micro-weight);
-	letter-spacing: var(--monti-text-micro-tracking);
+	font-size: var(--monti-text-editor-code-size);
+	line-height: var(--monti-text-editor-code-line);
+	font-weight: var(--monti-text-editor-code-weight);
+	letter-spacing: var(--monti-text-editor-code-tracking);
 }
 /* END generated */

@@ -28,7 +28,7 @@ function FilePreview({
 			)}
 		>
 			<Document aria-hidden className="size-5" />
-			<span className="text-monti-micro">{ext}</span>
+			<span className="font-mono text-monti-micro">{ext}</span>
 		</span>
 	);
 }

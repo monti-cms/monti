@@ -77,7 +77,7 @@ function CountRow({ label, count }: { label: React.ReactNode; count: React.React
 			className="flex items-baseline justify-between gap-monti-12 py-monti-6 text-monti-muted text-monti-note"
 		>
 			<span className="min-w-0">{label}</span>
-			<span className="shrink-0 text-monti-meta">{count}</span>
+			<span className="shrink-0 font-mono text-monti-meta">{count}</span>
 		</div>
 	);
 }

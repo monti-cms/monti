@@ -392,7 +392,7 @@ function FilterMenu<Value extends string>({ label, ...filter }: FilterProps<Valu
 function MetaCell({ value, align }: { value: string; align?: "end" }) {
 	return (
 		<TableCell align={align} truncate title={value}>
-			<Text variant="meta" tone="subtle">
+			<Text mono variant="meta" tone="subtle">
 				{value}
 			</Text>
 		</TableCell>

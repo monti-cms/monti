@@ -35,7 +35,7 @@ function CompareSide({
 		<section data-slot="compare-side" aria-label={label} className={cn("flex flex-col", className)} {...props}>
 			<div
 				data-slot="compare-label"
-				className="border-monti-default border-b pt-monti-16 pb-monti-12 font-mono text-monti-micro text-monti-subtle"
+				className="border-monti-default border-b pt-monti-16 pb-monti-12 text-monti-micro text-monti-subtle"
 			>
 				{label}
 			</div>
@@ -75,7 +75,7 @@ function CompareProperty({
 			aria-hidden={blank || undefined}
 			className={cn("flex flex-col gap-monti-4", blank && "invisible")}
 		>
-			<span className="font-mono text-monti-micro text-monti-subtle">{label}</span>
+			<span className="text-monti-micro text-monti-subtle">{label}</span>
 			<span className={cn("text-monti-note", !has && "text-monti-faint")}>{has ? children : empty}</span>
 		</div>
 	);
@@ -201,14 +201,14 @@ function CompareRow({
 			className={cn(
 				"grid items-stretch border-monti-muted border-b last:border-b-0",
 				single ? "grid-cols-[104px_minmax(0,1fr)]" : "grid-cols-[104px_minmax(0,1fr)_minmax(0,1fr)]",
-				head && "border-t border-t-monti-contrast font-mono text-monti-micro text-monti-subtle",
+				head && "border-t border-t-monti-contrast text-monti-micro text-monti-subtle",
 				className,
 			)}
 			{...props}
 		>
 			<span
 				className={cn(
-					"flex flex-col gap-monti-2 py-monti-16 pr-monti-12 text-right font-mono text-monti-micro text-monti-subtle",
+					"flex flex-col gap-monti-2 py-monti-16 pr-monti-12 text-right text-monti-micro text-monti-subtle",
 					title && "pt-monti-20",
 				)}
 			>

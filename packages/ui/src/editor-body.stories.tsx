@@ -36,6 +36,27 @@ const Column = ({ children }: { children: React.ReactNode }) => (
 	</div>
 );
 
+/** The heading steps (h2 22, h3 19, h4 17 in semibold, the body's size) with the body text under them, then code, block and inline, at 14px, and a raised and a lowered mark. */
+export const Headings: Story = {
+	tags: ["visual"],
+	render: () => (
+		<Column>
+			<h2>둘째 크기 제목</h2>
+			<p>
+				제목 아래 본문은 17px이다. 물 H<sub>2</sub>O 와 제곱 x<sup>2</sup> 는 기준선에서 같은 거리에 선다.
+			</p>
+			<h3>셋째 크기 제목</h3>
+			<p>
+				본문과 <code>inline.code()</code> 는 14px 코드다.
+			</p>
+			<h4>넷째 크기 제목</h4>
+			<pre>
+				<code>{"const name = 'monti';"}</code>
+			</pre>
+		</Column>
+	),
+};
+
 /** Every core block once: headings, a paragraph with marks, the three lists, a quote, code, a table and the divider. */
 export const Blocks: Story = {
 	render: () => (

@@ -38,7 +38,7 @@ function FormFieldLegend({
 			data-slot="field-legend"
 			data-variant={variant}
 			className={cn(
-				"mb-monti-12 data-[variant=field]:mb-monti-8 data-[variant=field]:text-monti-micro data-[variant=field]:text-monti-subtle data-[variant=label]:text-monti-label data-[variant=legend]:text-monti-title",
+				"mb-monti-12 data-[variant=field]:mb-monti-8 data-[variant=field]:text-monti-caption data-[variant=field]:text-monti-subtle data-[variant=label]:text-monti-label data-[variant=legend]:text-monti-title",
 				className,
 			)}
 			{...props}

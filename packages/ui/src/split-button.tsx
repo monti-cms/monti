@@ -46,7 +46,7 @@ function SplitButton({
 	/** The menu's items. */
 	menu: ReactNode;
 	/** The other labels the main half takes: it is as wide as the widest, so its neighbours do not move when the words change. */
-	reserve?: ReactNode[];
+	reserve?: string[];
 	/** Which edge of the control the menu lines up with. */
 	align?: "start" | "center" | "end";
 }) {

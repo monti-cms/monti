@@ -118,6 +118,10 @@
 	--monti-text-heading-line: 30px;
 	--monti-text-heading-weight: 700;
 	--monti-text-heading-tracking: 0em;
+	--monti-text-subheading-size: 19px;
+	--monti-text-subheading-line: 28px;
+	--monti-text-subheading-weight: 600;
+	--monti-text-subheading-tracking: 0em;
 	--monti-text-reading-size: 17px;
 	--monti-text-reading-line: 30px;
 	--monti-text-reading-weight: 400;
@@ -150,16 +154,21 @@
 	--monti-text-meta-line: 16px;
 	--monti-text-meta-weight: 400;
 	--monti-text-meta-tracking: 0em;
-	--monti-text-code-size: 12px;
-	--monti-text-code-line: 20px;
-	--monti-text-code-weight: 400;
-	--monti-text-code-tracking: 0em;
 	--monti-text-micro-size: 11px;
 	--monti-text-micro-line: 14px;
 	--monti-text-micro-weight: 400;
 	--monti-text-micro-tracking: 0em;
+	--monti-text-code-size: 12px;
+	--monti-text-code-line: 20px;
+	--monti-text-code-weight: 400;
+	--monti-text-code-tracking: 0em;
+	--monti-text-editor-code-size: 14px;
+	--monti-text-editor-code-line: 24px;
+	--monti-text-editor-code-weight: 400;
+	--monti-text-editor-code-tracking: 0em;
 	--monti-font-sans: "Monti Pretendard", "Noto Sans KR", "Apple SD Gothic Neo", system-ui, sans-serif;
-	--monti-font-mono: "Monti Plex Mono", ui-monospace, Menlo, monospace;
+	--monti-font-mono:
+		"Monti Plex Mono", "Monti Pretendard", "Noto Sans KR", "Apple SD Gothic Neo", ui-monospace, Menlo, monospace;
 }
 
 :where(html:is(.dark, [data-theme="dark"]):has(.monti-admin)) {

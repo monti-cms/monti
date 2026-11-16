@@ -60,6 +60,10 @@
  *   format-only         Dates, times, file sizes and the names of languages are written by `packages/admin/src/format/` alone: no
  *                       `Intl.DateTimeFormat` or `Intl.DisplayNames`, no `padStart`, no date part in a template and no `toUpperCase()` in
  *                       the admin's other sources. `check-format.mjs` says what it cannot see. A `design-allow` marker does not skip it.
+ *   mono-words          `font-mono`, `text-monti-meta` and `text-monti-micro` (the small roles are sans; mono is for values) only in a file named in
+ *                       `MONO_OK` of `check-type-colour.mjs` with its reason. `check-type-colour.mjs` says what it cannot see.
+ *   type-order          The heading roles step down, and the editor body's h2, h3, h4 are not smaller than its text (h4, the text's size, is semibold).
+ *   tabular             `admin.css` sets tabular digits on `.monti-admin` and the body, and no source takes them back.
  *   design-allow        A `design-allow` marker without a reason.
  *
  * A value that is measured or computed at runtime (a position under the pointer, a width the user dragged) ends its line with
@@ -71,6 +75,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { problems as bannerPlaces } from "./check-banner-place.mjs";
 import { checked as formatChecked, problems as formatProblems } from "./check-format.mjs";
+import { monoWords, tabular, typeOrder } from "./check-type-colour.mjs";
 import { problems as typedMarks } from "./check-typed-marks.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -1178,10 +1183,29 @@ const FIXED_HEIGHTS = new Map([
 		]),
 	],
 	[
+		"ui/src/code-frame.tsx",
+		new Map([
+			[
+				"h-[24px]",
+				"a code line of the editor, one `text-editor-code` line (24px), so the grounds of lines meet with no gap",
+			],
+			["size-[24px]", "the fold mark's square, one code line high"],
+		]),
+	],
+	[
 		"ui/src/patch.tsx",
 		new Map([["h-10", "the file name row heading a code change, a row of the card, not a control"]]),
 	],
-	["ui/src/table.tsx", new Map([["h-10", "the table's head row, measured in the list board"]])],
+	[
+		"ui/src/table.tsx",
+		new Map([
+			["h-10", "the table's head row, measured in the list board"],
+			[
+				"h-[41px]",
+				"the cells of a row: 40px of line and padding and the 1px rule, so a row is 41px whatever its pieces are",
+			],
+		]),
+	],
 	[
 		"ui/src/proposal-bubble.tsx",
 		new Map([["h-11", "the floating bar that holds the proposal's buttons (32px each), a bar, not a control"]]),
@@ -1373,6 +1397,26 @@ function checkFormat() {
 }
 checkFormat();
 
+/**
+ * The type and colour rules (`check-type-colour.mjs`): where mono is used, the order of the heading roles, tabular digits. Every file is read
+ * whatever the command line names, as each rule reads a whole file's or the token file's meaning.
+ */
+function checkTypeColour() {
+	const text = (file) => readFileSync(path.join(root, file), "utf8");
+	const sources = Object.fromEntries(files.map(({ file }) => [rel(file), readFileSync(file, "utf8")]));
+	const report = (rule, found) => {
+		for (const { file, line, message } of found)
+			if (inTargets(path.join(root, file))) add(path.join(root, file), line, rule, message);
+	};
+	report("mono-words", monoWords(sources, { themeCss: text(THEME_FILE) }));
+	report(
+		"type-order",
+		typeOrder(JSON.parse(text("packages/ui/tokens/tokens.json")), text("packages/ui/src/editor-body.tsx")),
+	);
+	report("tabular", tabular(text(ADMIN_CSS_FILE), sources));
+}
+checkTypeColour();
+
 const HINTS = {
 	"css-file": "Admin UI is styled with token utilities, not stylesheets.",
 	"admin-css-rule": "admin.css holds document-wide base rules only; style the element with token utilities.",
@@ -1401,6 +1445,12 @@ const HINTS = {
 		"What is off takes no pointer (`pointer-events-none`); a button at work shows the plain cursor (`cursor-default`).",
 	"format-only":
 		"A screen asks packages/admin/src/format/ for a date, a time, a file's size or a language's name; it builds none itself.",
+	"mono-words":
+		"Mono is for values (an address, an id, code, a count); words are sans. A file that draws mono or the small roles is named in MONO_OK (check-type-colour.mjs) with the reason.",
+	"type-order":
+		"The heading roles step down (display, page, heading, subheading) and the editor's h2, h3, h4 are not smaller than the text.",
+	tabular:
+		"Digits are tabular: admin.css says font-variant-numeric: tabular-nums on .monti-admin and the body, and nothing takes it back.",
 	"design-allow": "A marker states why the value cannot be a token.",
 };
 

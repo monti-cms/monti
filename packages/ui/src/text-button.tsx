@@ -48,7 +48,7 @@ const textButtonVariants = cva(
 				/** A field label's type (sans 12); an icon beside it is 12px, the size for 12px text. */
 				caption:
 					"text-monti-caption [&_svg:not([data-slot=caret])]:mr-monti-4 [&_svg:not([data-slot=caret])]:size-monti-icon-xs",
-				/** Mono 12, for a value that opens a menu of values (the model, rows per page). */
+				/** 12px words or numbers that open a menu of values (rows per page). A typed value in it (a model name) adds `font-mono`. */
 				meta: "text-monti-meta",
 			},
 			/** The assistant's action, in the proposal blue (its rule too). */
