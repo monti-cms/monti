@@ -544,7 +544,7 @@ export const adminMessages = defineMessages({
 			"editor.code.openAtFirst": "Open at first",
 			"editor.code.line": "Line {n}",
 			"editor.code.lines": "Lines {from}–{to}",
-			"editor.code.lineMenu": "{lines, plural, one {# effect} other {# effects}}",
+			"editor.code.lineMenu": "{lines} effects",
 			"editor.code.foldLines": "Fold these lines",
 			"editor.code.foldCrosses": "Crosses a fold",
 			"editor.code.unfold": "Remove fold",
@@ -648,8 +648,7 @@ export const adminMessages = defineMessages({
 			"trash.askPublishedOne": "“{title}” goes off the site.",
 			"trash.askPublished":
 				"{count, plural, one {# published entry goes} other {# published entries go}} off the site.",
-			"trash.askTranslations":
-				"{languages, plural, one {Its # translation goes} other {Its # translations go}} with it.",
+			"trash.askTranslations": "Its {languages} translations go with it.",
 			"trash.askPointing":
 				"{count, plural, one {# published entry loses} other {# published entries lose}} this {label}.",
 			"trash.askPointingMany":

@@ -114,7 +114,7 @@ function MenuShortcut({
 
 /**
  * The current value of a row that opens a second level ("Modified · newest first"), faint, before the ›. A row that shares its name with another
- * row says its `address` here, in mono and faint as a list row's address is, before any words (" · " between them).
+ * row says its `address` here, in mono and subtle (faint fails contrast on a highlighted row), before any words (" · " between them).
  */
 function MenuValue({
 	className,
