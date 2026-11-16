@@ -19,7 +19,7 @@ function FolderTabs({ className, ...props }: TabsPrimitive.Root.Props) {
 }
 
 /**
- * The row of tabs. `add` is the button that adds a tab (`FolderTabsAdd`). While a tab is dragged with the keyboard, the arrow keys move it instead of
+ * The row of tabs: it scrolls sideways when the tabs do not fit, never up and down (its focus rings are inside the tabs, so nothing is cut). `add` is the button that adds a tab (`FolderTabsAdd`). While a tab is dragged with the keyboard, the arrow keys move it instead of
  * the focus.
  */
 function FolderTabsList({
@@ -33,7 +33,7 @@ function FolderTabsList({
 	return (
 		<TabsPrimitive.List
 			data-slot="folder-tabs-list"
-			className={cn("relative z-1 -mb-px flex items-end gap-monti-4", className)}
+			className={cn("relative z-1 -mb-px flex items-end gap-monti-4 overflow-x-auto overflow-y-hidden", className)}
 			onKeyDown={(event) => {
 				onKeyDown?.(event);
 				if (active && event.key.startsWith("Arrow")) event.preventBaseUIHandler();
@@ -91,7 +91,7 @@ function FolderTab({
 			style={motion}
 			className={cn(
 				FOLDER_TAB,
-				"data-active:border-b-(color:--monti-bg-page) cursor-pointer bg-monti-muted text-monti-muted outline-none transition-colors hover:text-monti-default focus-visible:ring-2 focus-visible:ring-monti-contrast/60 data-active:bg-monti-page data-active:font-semibold data-active:text-monti-default",
+				"data-active:border-b-(color:--monti-bg-page) cursor-pointer bg-monti-muted text-monti-muted outline-none transition-colors hover:text-monti-default focus-visible:ring-2 focus-visible:ring-monti-contrast/60 focus-visible:ring-inset data-active:bg-monti-page data-active:font-semibold data-active:text-monti-default",
 				dragging && SLOT,
 				dropTarget && "bg-monti-selected text-monti-default ring-[1.5px] ring-monti-contrast ring-inset",
 				className,
@@ -166,7 +166,7 @@ function FolderTabsAdd({ className, ...props }: Omit<ButtonPrimitive.Props, "chi
 			data-slot="folder-tabs-add"
 			type="button"
 			className={cn(
-				"inline-flex h-monti-control-lg cursor-pointer items-center border-0 bg-transparent px-monti-12 text-monti-body text-monti-subtle outline-none hover:text-monti-default focus-visible:rounded-monti-sm focus-visible:ring-2 focus-visible:ring-monti-contrast/60",
+				"inline-flex h-monti-control-lg cursor-pointer items-center border-0 bg-transparent px-monti-12 text-monti-body text-monti-subtle outline-none hover:text-monti-default focus-visible:rounded-monti-sm focus-visible:ring-2 focus-visible:ring-monti-contrast/60 focus-visible:ring-inset",
 				className,
 			)}
 			{...props}

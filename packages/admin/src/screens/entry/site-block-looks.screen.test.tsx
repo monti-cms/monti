@@ -85,6 +85,15 @@ describe("the looks of the site's blocks in the editor (doc 18)", () => {
 		// The row has no scroll of its own up and down.
 		const row = text.querySelector<HTMLElement>('[data-slot="folder-tabs-list"]') as HTMLElement;
 		expect(row.scrollHeight).toBeLessThanOrEqual(row.clientHeight + 1);
+		expect(getComputedStyle(row).overflowX).toBe("auto");
+		expect(getComputedStyle(row).overflowY).toBe("hidden");
+		// Narrowed until the tabs overflow, the row scrolls sideways, not up and down, and not the block.
+		const block = text.querySelector<HTMLElement>('[data-block="tabs"]') as HTMLElement;
+		block.style.width = "120px";
+		await expect.poll(() => row.scrollWidth > row.clientWidth).toBe(true);
+		expect(row.scrollHeight).toBeLessThanOrEqual(row.clientHeight + 1);
+		expect(box.getBoundingClientRect().width).toBeLessThanOrEqual(block.getBoundingClientRect().width + 1);
+		expect(open.getBoundingClientRect().bottom).toBeLessThanOrEqual(row.getBoundingClientRect().bottom + 0.5);
 	});
 
 	it("18-4 code in a callout is one grey box with no line of its own, as on the site", async () => {

@@ -402,7 +402,7 @@ describe("settings › collections: what an action does", () => {
 		await expect.element(sheet.getByRole("textbox", { name: /^식별자/ })).toHaveFocus();
 	});
 
-	it("[overflow-after-add] six tabs added: the tab row still fits the page, and nothing scrolls sideways", async () => {
+	it("[overflow-after-add] six tabs added: the tab row stays in the page and scrolls on its own, and nothing else scrolls sideways", async () => {
 		await Fields.run();
 		for (let count = 0; count < 6; count++) {
 			await userEvent.click(page.getByRole("button", { name: "탭 추가" }));
@@ -411,7 +411,9 @@ describe("settings › collections: what an action does", () => {
 		await expect.poll(() => page.getByRole("tab").elements().length).toBeGreaterThanOrEqual(7);
 		const row = page.getByRole("tablist").last().element();
 		expect(row.getBoundingClientRect().right).toBeLessThanOrEqual(window.innerWidth);
-		expect(scrollsSideways(row)).toEqual([]);
+		// The row is the one box that scrolls sideways (up and down it never does); not the page, not what holds it.
+		expect(scrollsSideways(row).filter((box) => !box.includes(`${row.scrollWidth} > ${row.clientWidth}`))).toEqual([]);
+		expect(row.scrollHeight).toBeLessThanOrEqual(row.clientHeight + 1);
 	});
 });
 
