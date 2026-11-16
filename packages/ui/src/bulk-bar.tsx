@@ -12,9 +12,11 @@ import { Spark } from "./spark";
 import { TableHead, TableHeader } from "./table";
 import { TextButton } from "./text-button";
 
-/** What takes Esc for itself: a field, a menu, a dialog. */
+/** What takes Esc for itself: a field, a menu, a dialog, a panel beside the list (an Esc there is the panel's). */
 const OWN_ESCAPE =
-	"input, textarea, select, [contenteditable], [role=menu], [role=menuitem], [role=dialog], [role=alertdialog], [role=listbox], [role=combobox]";
+	"input, textarea, select, [contenteditable], [role=menu], [role=menuitem], [role=dialog], [role=alertdialog], [role=listbox], [role=combobox], aside, [data-slot=side-panel]";
+/** What the keyboard stops on, in the head that takes the bar's place. */
+const FIRST_STOP = 'button:not([disabled]), [href], [role=checkbox], [tabindex]:not([tabindex="-1"])';
 
 /**
  * What replaces a list's head once rows or tiles are picked, in the same place, so what is below does not move. How many are picked in bold, the assistant's
@@ -56,11 +58,22 @@ function BulkBar({
 }) {
 	const clear = React.useRef(onClear);
 	clear.current = onClear;
+	const bar = React.useRef<HTMLDivElement>(null);
 	React.useEffect(() => {
 		const onKeyDown = (event: KeyboardEvent) => {
 			if (event.key !== "Escape" || event.defaultPrevented || event.isComposing) return;
 			if (event.target instanceof Element && event.target.closest(OWN_ESCAPE)) return;
+			const held = bar.current?.contains(document.activeElement) ?? false;
+			const home = bar.current?.closest("table") ?? bar.current?.parentElement;
 			clear.current();
+			// The bar goes with the pick and takes the focus it held: it goes to the first stop of the head that comes back, not to the page.
+			if (held && home)
+				requestAnimationFrame(() =>
+					requestAnimationFrame(() => {
+						if (document.activeElement && document.activeElement !== document.body) return;
+						home.querySelector<HTMLElement>(FIRST_STOP)?.focus();
+					}),
+				);
 		};
 		document.addEventListener("keydown", onKeyDown);
 		return () => document.removeEventListener("keydown", onKeyDown);
@@ -111,6 +124,7 @@ function BulkBar({
 		return (
 			<PageToolbar
 				inset
+				ref={bar}
 				data-slot="bulk-bar"
 				role="toolbar"
 				aria-label={label}
@@ -125,6 +139,7 @@ function BulkBar({
 			<tr>
 				<TableHead colSpan={colSpan} className="relative p-0 first:pl-0 last:pr-0">
 					<div
+						ref={bar}
 						data-slot="bulk-bar"
 						role="toolbar"
 						aria-label={label}
