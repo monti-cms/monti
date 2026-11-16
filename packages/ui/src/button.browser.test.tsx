@@ -229,3 +229,63 @@ describe("a button while it works", () => {
 			expect(document.activeElement).toBe(busy.element());
 		});
 });
+
+describe("a split button that cannot be pressed", () => {
+	it("[TR-29] the menu half of a greyed pill takes no focus and opens nothing: Tab passes both halves, and a press shows no menu", async () => {
+		render(
+			<>
+				<Button>앞</Button>
+				<SplitButton disabled menuLabel="발행 방식" menu={<DropdownMenuItem>오늘 날짜로 다시 발행</DropdownMenuItem>}>
+					발행됨
+				</SplitButton>
+				<Button>뒤</Button>
+			</>,
+		);
+		const menuHalf = page.getByRole("button", { name: "발행 방식" });
+		await expect.element(menuHalf).toBeDisabled();
+		await expect.element(page.getByRole("button", { name: "발행됨" })).toBeDisabled();
+		(page.getByRole("button", { name: "앞" }).element() as HTMLElement).focus();
+		await userEvent.keyboard("{Tab}");
+		expect(document.activeElement).toBe(page.getByRole("button", { name: "뒤" }).element());
+		// Nothing a script or a pointer does gives it the focus or opens its menu.
+		(menuHalf.element() as HTMLElement).focus();
+		expect(document.activeElement).not.toBe(menuHalf.element());
+		await menuHalf.click({ force: true });
+		(menuHalf.element() as HTMLElement).click();
+		await expect.element(menuHalf).toHaveAttribute("aria-expanded", "false");
+		await expect.element(page.getByRole("menuitem", { name: "오늘 날짜로 다시 발행" })).not.toBeInTheDocument();
+	});
+
+	it("[TR-29] a publish started from the menu with the keyboard: while it works the caret half keeps the focus and opens nothing", async () => {
+		function FromMenu() {
+			const [busy, setBusy] = useState(false);
+			return (
+				<SplitButton
+					loading={busy}
+					menuLabel="발행 방식"
+					menu={<DropdownMenuItem onClick={() => setBusy(true)}>오늘 날짜로 다시 발행</DropdownMenuItem>}
+				>
+					{busy ? "발행 중" : "발행하기"}
+				</SplitButton>
+			);
+		}
+		render(<FromMenu />);
+		const menuHalf = page.getByRole("button", { name: "발행 방식" });
+		const row = page.getByRole("menuitem", { name: "오늘 날짜로 다시 발행" });
+		await expect.element(menuHalf).toBeVisible();
+		(menuHalf.element() as HTMLElement).focus();
+		await userEvent.keyboard("{Enter}");
+		await expect.element(row).toBeVisible();
+		await userEvent.keyboard("{Enter}");
+		await expect.element(page.getByRole("button", { name: "발행 중" })).toHaveAttribute("aria-busy", "true");
+		await expect.element(row).not.toBeInTheDocument();
+		// The focus came back to the half that opened the menu and did not fall to the page.
+		await expect.poll(() => document.activeElement).toBe(menuHalf.element());
+		await expect.element(menuHalf).toHaveAttribute("aria-disabled", "true");
+		await userEvent.keyboard("{Enter}");
+		await userEvent.keyboard("{ArrowDown}");
+		await menuHalf.click({ force: true });
+		await expect.element(row).not.toBeInTheDocument();
+		expect(document.activeElement).toBe(menuHalf.element());
+	});
+});

@@ -37,10 +37,10 @@ const buttonVariants = cva(
 				 */
 				ghost:
 					"bg-transparent px-monti-12 font-normal text-monti-muted not-data-loading:not-disabled:hover:bg-monti-muted not-data-loading:not-disabled:hover:text-monti-default not-data-loading:not-disabled:active:bg-monti-selected not-data-loading:not-disabled:active:text-monti-default aria-pressed:bg-monti-selected aria-pressed:text-monti-default aria-expanded:bg-monti-selected aria-expanded:text-monti-default",
-				/** A `ghost` that deletes or empties something (empty the trash, delete forever): red words, the red wash under the pointer. */
+				/** A `ghost` that deletes (a sheet foot's "delete", a question's risky way out): red words, the red wash under the pointer. Standing alone in a page head or a danger block it is `outline-danger`. */
 				"ghost-danger":
 					"bg-transparent px-monti-12 font-normal text-monti-danger not-data-loading:not-disabled:hover:bg-monti-danger-muted not-data-loading:not-disabled:active:bg-monti-danger-muted",
-				/** The quiet version of `danger`. */
+				/** The quiet version of `danger`: a deleting button outside a dialog that stands alone (empty the trash, delete the collection). */
 				"outline-danger":
 					"border border-monti-danger px-[18px] font-semibold text-monti-danger not-data-loading:not-disabled:hover:bg-monti-danger-muted",
 			},

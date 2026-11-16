@@ -1,7 +1,7 @@
 "use client";
 
 import { Button as ButtonPrimitive } from "@base-ui/react/button";
-import { type ReactNode, useRef } from "react";
+import { type ReactNode, useRef, useState } from "react";
 import { BUSY_GUARD } from "./busy";
 import { Caret } from "./caret";
 import { cn } from "./cn";
@@ -45,6 +45,8 @@ function SplitButton({
 	align?: "start" | "center" | "end";
 }) {
 	const inert = disabled || loading;
+	// A pill that cannot be pressed shows no menu, whatever reaches its caret half (TR-29).
+	const [open, setOpen] = useState(false);
 	// The menu hangs under the whole pill, not under the caret half: its edge lines up with the pill's edge.
 	const pill = useRef<HTMLDivElement>(null);
 	return (
@@ -77,7 +79,7 @@ function SplitButton({
 				{loading && <Spinner />}
 				{children}
 			</ButtonPrimitive>
-			<DropdownMenu>
+			<DropdownMenu open={open && !inert} onOpenChange={setOpen}>
 				<Tooltip>
 					<TooltipTrigger
 						render={
@@ -87,6 +89,9 @@ function SplitButton({
 										type="button"
 										aria-label={menuLabel}
 										disabled={inert}
+										// Working: a publish started from the menu came back to this half, and it keeps the focus as the main half does.
+										focusableWhenDisabled={Boolean(loading) && !disabled}
+										{...(loading && !disabled ? BUSY_GUARD : {})}
 										className={cn(HALF, "relative rounded-r-monti-full pr-[13px] pl-monti-12")}
 									/>
 								}

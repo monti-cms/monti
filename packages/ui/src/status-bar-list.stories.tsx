@@ -11,14 +11,17 @@ type Story = StoryObj<typeof meta>;
 
 const bar = (list: React.ReactNode) => <StatusBar aria-label="상태">{list}</StatusBar>;
 
-/** To do: a row that blocks publishing makes the count red; an assistant's action is blue. */
+/**
+ * To do: what blocks publishing heads the list with a red count, and what only tells is a second group under it with its own name and count
+ * (TP-04); an assistant's action is blue.
+ */
 export const Todo: Story = {
 	render: () =>
 		bar(
 			<StatusBarList
 				trigger={<StatusBarCell tone="danger">할 일 3</StatusBarCell>}
-				label="할 일"
-				count={3}
+				label="발행 전에 고칠 것"
+				count={1}
 				countTone="danger"
 				defaultOpen
 				footer={
@@ -32,9 +35,11 @@ export const Todo: Story = {
 					</>
 				}
 			>
-				<TodoItem title="표지 이미지 없음" detail="발행에 필요" blocking onOpen={() => {}} />
-				<TodoItem title="요약 · 비어 있음" proposal actionLabel="채우기" onAction={() => {}} />
-				<TodoItem title="검색 제목 60자 넘음" detail="68자" onOpen={() => {}} />
+				<TodoItem title="표지 이미지 없음" detail="속성 · 비어 있음" blocking onOpen={() => {}} />
+				<StatusBarListGroup label="확인할 것" count={2}>
+					<TodoItem title="요약 · 비어 있음" proposal actionLabel="채우기" onAction={() => {}} />
+					<TodoItem title="검색 제목 60자 넘음" detail="68자" onOpen={() => {}} />
+				</StatusBarListGroup>
 			</StatusBarList>,
 		),
 };
