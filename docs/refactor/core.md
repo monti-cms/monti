@@ -205,11 +205,16 @@ export interface MontiConfig {
 
 ```ts
 // 설명용 의사 코드
+const createConversations = async (db) => { /* 테이블 만들기 */ };
+const addConversationModel = async (db) => { /* 컬럼 더하기 */ };
+
 migrations: {
-  "0001_conversations": async (db) => { /* 테이블 만들기 */ },
-  "0002_conversation_model": async (db) => { /* 컬럼 더하기 */ },
+  "0001_conversations": createConversations,
+  "0002_conversation_model": addConversationModel,
 }
 ```
+
+- 객체 안에는 함수를 직접 적지 않고 이름 붙은 함수를 넣는다(린트가 막는다).
 
 - 단계는 이름순으로 **한 번씩만** 실행되고, 나간 단계는 고치지 않는다. 바꿀 일은 새 단계로 쓴다.
 - 앱이 시작될 때 core 먼저, 그다음 플러그인을 자동으로 실행한다.
@@ -226,9 +231,11 @@ migrations: {
 // 설명용 의사 코드
 type AiTables = { ai_conversations: { id: string; title: string; model: string | null } }
 
+const run = (_input, ctx) => ctx.db.selectFrom("ai_conversations").selectAll().execute();
+
 const list = defineRead<AiTables>({
   input: z.object({}),
-  run: (_input, ctx) => ctx.db.selectFrom("ai_conversations").selectAll().execute(),
+  run,
 })
 ```
 
@@ -434,7 +441,7 @@ flowchart TD
 **규칙**
 1. 폴더는 층이다: `db/`·`rich-text/` → `engine/` → `resources/` → `index.ts`. 파일은 자기 층 아래만 import한다. `resources/` 안에서는 리소스끼리 import할 수 있고, 순환은 검사 도구로 막는다.
 2. 타입은 그것을 쓰는 가장 낮은 층에 둔다. 한 파일만 쓰는 타입은 그 파일 안에 둔다. 리소스끼리 공유하는 타입은 그것을 소유한 리소스 폴더에 두고 다른 리소스가 import한다.
-3. `db/`·`rich-text/`·`engine/`에는 타입만 있는 `types.ts`가 하나씩 있고, 그 밖의 파일은 실행 코드다. `types.ts`가 250줄을 넘으면 주제별로 나눈다.
+3. `db/`·`rich-text/`·`engine/`에는 타입만 있는 `types.ts`가 하나씩 있고, 그 밖의 파일은 실행 코드다.
 4. 한 단어는 한 개념이다. `schema`는 사용자 스키마(`monti.schema.ts`)만 가리키고, DB 쪽은 `database`라고 부른다.
 5. 테스트는 구현 옆에 두고, 공용 도우미만 `__test__/`에 모은다.
 
@@ -445,7 +452,8 @@ flowchart TD
 - `Migration` 타입은 `db/types.ts`에 두고 `Plugin`이 이를 참조한다. `db/migrate.ts`는 `{주인, 단계}`만 받아서 `Plugin`을 모른다.
 - 외부 패키지와 사이트는 공개 Operation을 직접 호출한다.
 - CLI는 `packages/cli/`, HTTP 입구는 `packages/next/`에 둔다. 두 패키지가 core를 사용한다.
-- 파일 하나에 역할 하나를 두고, 100~250줄을 읽기 좋은 길이의 목표로 삼는다. 줄 수를 맞추려고 쪼개거나 합치지 않는다.
+- 파일 하나에 역할 하나를 둔다. 함수 본문은 30줄까지이고(빈 줄 제외) 린트가 검사한다.
+- 이 절의 폴더 규칙과 코드 규칙은 린트가 검사한다. 규칙은 `packages/core/biome.json`, `packages/core/biome-plugins/`, `packages/core/.dependency-cruiser.cjs`에 있다. 에이전트는 이 파일들과 `agent-guard/`를 고치지 못하고, 소유자가 고친다.
 - 엔진 안의 파일 구성은 2단계, 리소스 폴더 안의 파일 구성은 3단계 테스트 계획에서 확정한다(11절).
 
 ## 9. 작업 방식
@@ -479,6 +487,7 @@ flowchart TD
 | 2026-11-18 | 타입은 `db/`·`rich-text/`·`engine/`의 `types.ts` 하나에 둔다. `schema`는 사용자 스키마만 가리키고 DB 쪽은 `database`라고 부른다. | 소유자와 정함 |
 | 2026-11-18 | 폴더는 층으로 나누고(`db/`·`rich-text/` → `engine/` → `resources/`), 타입은 그것을 쓰는 가장 낮은 층에 둔다. | 만들며 정함 |
 | 2026-11-18 | `resources/` 안에서 리소스끼리 import할 수 있고, 순환은 검사 도구로 막는다. | 소유자와 정함 |
+| 2026-11-18 | 구조와 코드 규칙은 린트가 검사한다: 폴더 import 방향과 순환(타입만의 순환 포함), `types.ts`는 타입만, 객체 안 함수 금지, 함수 본문 30줄, 이중 단언 금지. 테스트는 뒤의 셋에서 제외한다. 우회는 도구 단계의 거절 스크립트와 CI로 막는다. | 소유자와 정함 |
 | 2026-11-18 | 본문 검증은 core가 한다(AI·가져오기도 같은 경로를 지난다). | 소유자와 정함 |
 | 2026-11-18 | 본문 검사 함수는 오류를 던지지 않고 문제 목록을 돌려준다. 저장은 목록이 있으면 `BAD_REQUEST`로 멈추고, 가져오기는 틀린 글만 건너뛴다. | 소유자와 정함 |
 | 2026-11-18 | 본문 속 글 링크는 색인하지 않는다. | 만들며 정함 |
@@ -492,7 +501,8 @@ flowchart TD
 - **본문 검사의 문제 목록을 `BAD_REQUEST`로 바꿔 던지는 도우미의 위치.** 문제 목록 전체를 오류의 `details`에 실어서 던진다(첫 문제만 던지지 않는다). 위치는 3단계 `entries` 테스트 계획에서 정한다.
 - **core의 `BlockDefinition`에 담을 범위**. 검사에 쓰는 것만 담고 화면 정보는 담지 않는다. 2단계에서 설정 타입을 정할 때 함께 정한다.
 - **엔진 안의 파일 구성**(스키마·설정 파일을 읽고 검증하고 쓰는 코드, 상태 관리, 플러그인 모으기, 명세)과 **리소스 폴더 안의 파일 구성**. 각각 2단계와 3단계 테스트 계획에서 확정한다.
-- **순환 import 검사 규칙**(Biome `noImportCycles`)이 실제로 동작하는지. 울타리 작업에서 가장 먼저 확인하고, 동작하지 않으면 `resources/` 안의 import도 금지한다.
+- **죽은 코드 검사**(`knip`). 코어의 공개 출구(`index.ts`)가 생긴 뒤 코어에만 더한다. 그 전에는 아래층 코드가 아직 쓰이지 않아 오류만 난다.
+- **Codex의 프로젝트 훅.** 연결된 워크트리에서는 `.codex/hooks.json`이 읽히지 않는다는 보고가 있다. 이 브랜치가 `main`에 합쳐진 뒤 워크트리에서 `git commit --no-verify`가 거절되는지 확인한다. 안 되면 사용자 단위 훅을 정한다.
 - **사이트 이름을 스키마로 옮길지**. 옮기면 `config.update`와 `setConfig`가 필요 없어진다. 2단계 전에 정한다.
 - **DB 커밋 뒤 스키마·설정 파일 쓰기가 실패하면** 어떤 상태를 돌려줄지, **플러그인 Operation의 경로가 겹치면** 조립 때 거절할지. 2단계 테스트 계획 전.
 - **`loose_files`의 실제 삭제** 시점·실행 주체·실패 처리. `dryRun`에서는 외부 삭제가 일어나지 않아야 한다. 3단계 미디어·휴지통 테스트 계획 전.
