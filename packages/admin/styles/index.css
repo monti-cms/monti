@@ -1,0 +1,20 @@
+/*
+ * @monti-cms/admin styles: the source of the prebuilt `dist/styles.css` (built by `scripts/build-styles.mjs`).
+ * The host imports the built file, so it needs no Tailwind, typography or tw-animate setup.
+ */
+@layer theme, base, components, utilities;
+
+@import "../../ui/styles/theme.css";
+@import "tailwindcss/preflight.css" layer(base);
+@import "tailwindcss/utilities.css" layer(utilities) source(none);
+
+@import "../../ui/styles/tokens.css";
+@import "../../ui/styles/admin.css";
+
+/* The classes of this package's sources and of the design system's parts, compiled here once. A plugin ships its own CSS with only classes of its own. */
+@source "../src";
+@source "../../ui/src";
+@source not "../src/**/__test__";
+@source not "../../*/src/**/__test__";
+@source not "../../*/src/**/*.stories.tsx";
+@source not "../../*/src/**/*.test.tsx";

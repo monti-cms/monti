@@ -1,0 +1,122 @@
+"use client";
+
+import { Popover as PopoverPrimitive } from "@base-ui/react/popover";
+import * as React from "react";
+import { cn } from "./cn";
+import { Count } from "./count";
+import { MENU_CARD, MENU_LABEL, MENU_MOTION, MENU_SEPARATOR } from "./menu-parts";
+import { FIRST_PASS, FIT_HEIGHT, usePlacementPadding } from "./placement";
+
+/**
+ * The list that opens upward from a status bar cell ("To do 3"): a card with the group's name and its count in the head (no count once nothing is
+ * left), then the rows to do (`TodoItem`), or one `TodoDone` line when nothing is, and under a rule the actions that belong to the whole list
+ * (`footer`: a link to its settings, "Fix all"). `trigger` is the cell that opens it.
+ */
+function StatusBarList({
+	trigger,
+	label,
+	count,
+	countTone = "warning",
+	open,
+	defaultOpen,
+	onOpenChange,
+	align = "start",
+	footer,
+	children,
+}: {
+	/** The element that opens the list; it receives the open state and the press. */
+	trigger: React.ReactElement;
+	/** The group's name. */
+	label: string;
+	/** How many rows need work. */
+	count: number;
+	/** `danger` while any of them blocks publishing. */
+	countTone?: "warning" | "danger";
+	open?: boolean;
+	defaultOpen?: boolean;
+	onOpenChange?: (open: boolean) => void;
+	align?: "start" | "end";
+	/** Text buttons for the whole list, under a rule: they sit at the two ends of the row. */
+	footer?: React.ReactNode;
+	children: React.ReactNode;
+}) {
+	// Focus lands on the card itself, not on its first row's action: the row's focus ring would otherwise show as a box around it when the list
+	// opens (and with `defaultOpen`). Tab then goes row by row.
+	const popup = React.useRef<HTMLDivElement>(null);
+	const placement = usePlacementPadding();
+	return (
+		<PopoverPrimitive.Root open={open} defaultOpen={defaultOpen} onOpenChange={onOpenChange}>
+			<PopoverPrimitive.Trigger render={trigger} />
+			<PopoverPrimitive.Portal>
+				<PopoverPrimitive.Positioner
+					collisionPadding={placement}
+					style={FIRST_PASS}
+					side="top"
+					align={align}
+					sideOffset={6}
+					className="isolate z-50"
+				>
+					<PopoverPrimitive.Popup
+						ref={popup}
+						initialFocus={popup}
+						data-slot="status-bar-list"
+						className={cn(
+							MENU_CARD,
+							MENU_MOTION,
+							"z-50",
+							FIT_HEIGHT,
+							"w-85 overflow-y-auto p-monti-6 text-left outline-none",
+						)}
+					>
+						<div data-slot="status-bar-list-head" className={MENU_LABEL}>
+							<PopoverPrimitive.Title render={<span />}>{label}</PopoverPrimitive.Title>
+							{count > 0 && <Count tone={countTone}>{count}</Count>}
+						</div>
+						{children}
+						{footer && (
+							<>
+								<div aria-hidden className={MENU_SEPARATOR} />
+								<div
+									data-slot="status-bar-list-foot"
+									className="flex items-center justify-between gap-monti-12 px-[9px] pt-monti-4 pb-monti-4 text-monti-note"
+								>
+									{footer}
+								</div>
+							</>
+						)}
+					</PopoverPrimitive.Popup>
+				</PopoverPrimitive.Positioner>
+			</PopoverPrimitive.Portal>
+		</PopoverPrimitive.Root>
+	);
+}
+
+/**
+ * A second group in a `StatusBarList`, under a rule: its own name and count in a head like the list's, then its rows. The editor's to-do list keeps what
+ * stops publishing first, then what only tells, then what changed in the source (translation.md, 2026-11-10 owner): one list of what is left in
+ * the entry. Rows that block and rows that do not are never mixed under one head: the ring's colour alone does not tell them apart (TP-04).
+ */
+function StatusBarListGroup({
+	label,
+	count,
+	countTone = "warning",
+	children,
+}: {
+	label: string;
+	count: number;
+	countTone?: "warning" | "danger";
+	children: React.ReactNode;
+}) {
+	return (
+		<div role="group" aria-label={count > 0 ? `${label} ${count}` : label} data-slot="status-bar-list-group">
+			<div aria-hidden className={MENU_SEPARATOR} />
+			<div data-slot="status-bar-list-head" aria-hidden className={MENU_LABEL}>
+				<span>{label}</span>
+				{count > 0 && <Count tone={countTone}>{count}</Count>}
+			</div>
+			{children}
+		</div>
+	);
+}
+
+export { StatusBarList, StatusBarListGroup };

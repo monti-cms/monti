@@ -1,7 +1,7 @@
 {
 	"compilerOptions": {
 		"target": "ES2022",
-		"lib": ["dom", "dom.iterable", "esnext"],
+		"lib": ["esnext", "dom"],
 		"skipLibCheck": true,
 		"strict": true,
 		"noEmit": true,
@@ -10,12 +10,7 @@
 		"moduleResolution": "bundler",
 		"resolveJsonModule": true,
 		"isolatedModules": true,
-		"jsx": "react-jsx",
-		"types": ["node", "next", "vitest/globals", "@testing-library/jest-dom"],
-		"paths": {
-			"@cms-config": ["./test/cms.config.ts"],
-			"@cms-server": ["../core/test/cms.server.ts"]
-		}
+		"types": ["node"]
 	},
-	"include": ["src", "test", "vitest.config.ts", "vitest.othersite.config.ts"]
+	"include": ["src"]
 }

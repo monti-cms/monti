@@ -1,0 +1,352 @@
+/**
+ * The open design system: every component with `className` and `style`, for the design system's own parts (the admin's error notice,
+ * panel resize, editor drawing). Screens import from `@monti-cms/ui`, where the same components take no classes.
+ *
+ * Monti's design system: the components the admin and its extensions are built from, and (in `styles/`) the tokens they read.
+ * Values come only from the tokens: see `styles/theme.css` for the names and the README for the rules.
+ */
+
+export { Affix } from "./affix";
+export { AiFailed, AiWorking } from "./ai-status";
+export {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogOverlay,
+	AlertDialogPortal,
+	AlertDialogTitle,
+	AlertDialogTrigger,
+} from "./alert-dialog";
+export { type Anchor, Anchored, type Spot } from "./anchored";
+export { AssistantSlot } from "./assistant-slot";
+export { Banner } from "./banner";
+export { BlockBarPlace, BlockBox, ResizeCorner } from "./block-bar";
+export { Block, BlockHandle, PickBox } from "./block-handle";
+export { useBarScope } from "./body-scope";
+export { Box } from "./box";
+export { BulkBar } from "./bulk-bar";
+export { Button } from "./button";
+export { Calendar, CalendarDayButton } from "./calendar";
+export { Caret } from "./caret";
+export { ChangeActions, ChangeGroup, ChangeLabel, ChangeLine, ChangeLines, ChangeNote } from "./change";
+export { ChangeDot } from "./change-dot";
+export { ChangesGroup, type ChangesItem, type ProposalsItem } from "./changes-group";
+export { ChatMessageActions, ChatQueueItem } from "./chat-actions";
+export { ChatInput } from "./chat-input";
+export { ChatMessage, StreamCaret } from "./chat-message";
+export { ChatThread } from "./chat-thread";
+export { CHECK_MARK_PATH, Checkbox } from "./checkbox";
+export { Chip } from "./chip";
+export { cn } from "./cn";
+export { CodeBlock } from "./code-block";
+export {
+	CodeArea,
+	CodeAside,
+	type CodeFoldEdge,
+	CodeFrame,
+	CodeGround,
+	CodeLine,
+	type CodeLineTone,
+	CodeMark,
+	CodeNumber,
+	CodeRefText,
+	CodeToken,
+} from "./code-frame";
+export { Collapsible, CollapsibleContent, CollapsibleTrigger } from "./collapsible";
+export {
+	Combobox,
+	ComboboxChip,
+	ComboboxChips,
+	ComboboxChipsInput,
+	ComboboxCollection,
+	ComboboxContent,
+	ComboboxCreate,
+	ComboboxEmpty,
+	ComboboxGroup,
+	ComboboxInput,
+	ComboboxItem,
+	ComboboxLabel,
+	ComboboxList,
+	ComboboxSeparator,
+	ComboboxTrigger,
+	ComboboxValue,
+	useComboboxAnchor,
+} from "./combobox";
+export {
+	Command,
+	CommandEmpty,
+	CommandFooter,
+	CommandGroup,
+	CommandInput,
+	CommandItem,
+	CommandList,
+	CommandSeparator,
+} from "./command";
+export {
+	Compare,
+	CompareBlock,
+	CompareBody,
+	CompareProperty,
+	CompareRow,
+	CompareRows,
+	CompareShared,
+	CompareSide,
+	CompareText,
+	CompareTitle,
+	CompareValues,
+} from "./compare";
+export {
+	ContextMenu,
+	ContextMenuContent,
+	ContextMenuGroup,
+	ContextMenuItem,
+	ContextMenuLabel,
+	ContextMenuSeparator,
+	ContextMenuSub,
+	ContextMenuSubContent,
+	ContextMenuSubTrigger,
+	ContextMenuTrigger,
+} from "./context-menu";
+export { Count } from "./count";
+export { type CropCorner, type CropGrip, type CropRect, CropStage } from "./crop-stage";
+export { CutWords } from "./cut-words";
+export { DangerBlock, DangerRow } from "./danger-block";
+export { CountRow, DescriptionItem, DescriptionList } from "./description-list";
+export {
+	Dialog,
+	DialogClose,
+	DialogContent,
+	DialogDescription,
+	DialogFooter,
+	DialogHeader,
+	DialogOverlay,
+	DialogPortal,
+	DialogTitle,
+	DialogTrigger,
+} from "./dialog";
+export { DialogFormFooter } from "./dialog-form-footer";
+export { DragHandle } from "./drag-handle";
+export { DropArea } from "./drop-area";
+export {
+	DropdownMenu,
+	DropdownMenuCheckboxItem,
+	DropdownMenuContent,
+	DropdownMenuGroup,
+	DropdownMenuItem,
+	DropdownMenuLabel,
+	DropdownMenuPortal,
+	DropdownMenuRadioGroup,
+	DropdownMenuRadioItem,
+	DropdownMenuScroll,
+	DropdownMenuSearch,
+	DropdownMenuSeparator,
+	DropdownMenuSub,
+	DropdownMenuSubContent,
+	DropdownMenuSubTrigger,
+	DropdownMenuTrigger,
+} from "./dropdown-menu";
+export { EditorBody } from "./editor-body";
+export { EditorHeader, EditorTitleRule } from "./editor-header";
+export { DropLine, EditorMargin, EditorMarginLine, HeldBlock } from "./editor-overlay";
+export { Empty, EmptyStep } from "./empty";
+export { EntryStatus, type EntryStatusKind } from "./entry-status";
+export { ErrorBox } from "./error-box";
+export { ErrorNote } from "./error-note";
+export {
+	FormField,
+	FormFieldDescription,
+	FormFieldError,
+	FormFieldGroup,
+	FormFieldLabel,
+	FormFieldLegend,
+	FormFieldSet,
+	FormFieldTitle,
+	FormFieldWas,
+} from "./field";
+export { FieldGroup, FieldRow, FieldTree } from "./field-tree";
+export { FileBlock } from "./file-block";
+export { FilePreview } from "./file-preview";
+export { FileTree, FileTreeRow } from "./file-tree";
+export { FileUseList, FileUseRow } from "./file-use-row";
+export { FilterButton } from "./filter-button";
+export { FloatingBar, FloatingBarButton } from "./floating-bar";
+export {
+	FolderTab,
+	FolderTabEdit,
+	FolderTabLifted,
+	FolderTabs,
+	FolderTabsAdd,
+	FolderTabsBody,
+	FolderTabsList,
+} from "./folder-tabs";
+export {
+	FormatBarRequest,
+	FormatButton,
+	type FormatMark,
+} from "./format-bar";
+export { Grid } from "./grid";
+export { HeadingIcon, headingIcons } from "./heading-icon";
+export { whenKeysAreUp } from "./held-key";
+export { Icon } from "./icon";
+export { IconButton } from "./icon-button";
+export { Image } from "./image";
+export { Input } from "./input";
+export { Label, RequiredMark } from "./label";
+export { DEFAULT_UI_LABELS, type UiLabels, UiLabelsProvider, useUiLabels } from "./labels";
+export { LanguageRow, LanguageSource } from "./language-row";
+export { type LayoutProps, layoutVariants } from "./layout";
+export { List, ListItem } from "./list";
+export {
+	LIST_COLUMN_SIZE,
+	type ListColumnSize,
+	ListHead,
+	type ListHeadAdd,
+	type ListHeadColumn,
+} from "./list-head";
+export { ListSection, ListSectionRow } from "./list-section";
+export { LocaleCodes } from "./locale-codes";
+export { LockMark } from "./lock-mark";
+export { IssueRow, MapRow } from "./map-row";
+export { Marker, Untranslated } from "./marker";
+export { MediaInput } from "./media-input";
+export { MediaPicker, type MediaPickerFolder } from "./media-picker";
+export { MemoCard, MemoCardPopover, MemoDiff, MemoMessage, MemoThread } from "./memo-card";
+export { MenuShortcut, MenuTick, MenuValue } from "./menu-parts";
+export type { ModelMenuGroup, ModelMenuItem } from "./model-menu";
+export { MenuField, ModelMenu, ModelMenuButton, ThinkingMenu } from "./model-menu";
+export type { MontiIcon } from "./monti-icon";
+export { NavLink } from "./nav-link";
+export { Option } from "./option";
+export { OptionRow, OptionTable } from "./option-table";
+export { OrderedRow } from "./ordered-row";
+export { PageBanner, StandalonePage } from "./page-banner";
+export {
+	PageBody,
+	PageColumn,
+	PageHeader,
+	PageToolbar,
+	PageToolbarEnd,
+	type SelectAll,
+	type SelectAllState,
+} from "./page-header";
+export {
+	ListFooter,
+	PageSizeMenu,
+	Pagination,
+	PaginationContent,
+	PaginationEllipsis,
+	PaginationItem,
+	PaginationLink,
+	PaginationNext,
+	PaginationPrevious,
+} from "./pagination";
+export { Patch, type PatchLine } from "./patch";
+export { PickList, PickListItem, PickListLabel, PickListSeparator } from "./pick-list";
+export { Popover, PopoverContent, PopoverDescription, PopoverHeader, PopoverTitle, PopoverTrigger } from "./popover";
+export { Progress } from "./progress";
+export { PropertyGroup, PropertyPanel } from "./property-list";
+export { ProposalBar } from "./proposal-bar";
+export { ProposalBubble, ProposalBubbleDock } from "./proposal-bubble";
+export { ProposalCard } from "./proposal-card";
+export { CurrentProposal, Del, Fill, Highlight, Ins, PROPOSAL_MARK_CLASSES, RequestAnchor } from "./proposal-marks";
+export { RadioGroup, RadioItem } from "./radio-group";
+export { RailAction, RailLayout } from "./rail-layout";
+export { ReadValue } from "./read-value";
+export { RenameField } from "./rename-field";
+export { ResizablePane, type ResizeEdge, ResizeHandle, useResizableWidth } from "./resize-handle";
+export { SearchBox, type SearchTarget, SearchToggle } from "./search-box";
+export { SavedValue, SecretInput } from "./secret-input";
+export { Section } from "./section";
+export { Segmented, type SegmentedOption } from "./segmented";
+export {
+	Select,
+	SelectContent,
+	SelectGroup,
+	SelectItem,
+	SelectLabel,
+	SelectScrollDownButton,
+	SelectScrollUpButton,
+	SelectSeparator,
+	SelectTrigger,
+	SelectValue,
+} from "./select";
+export { Separator } from "./separator";
+export {
+	Sheet,
+	SheetBody,
+	SheetClose,
+	SheetContent,
+	SheetFooter,
+	SheetHeader,
+	SheetSection,
+	SheetSplit,
+	SheetTitle,
+	SheetTrigger,
+} from "./sheet";
+export { formatShortcut, Shortcut, type ShortcutKey, type ShortcutKeys, useShortcut } from "./shortcut";
+export { PanelSlot, SidePanel, SidePanelSave } from "./side-panel";
+export {
+	folderTree,
+	Sidebar,
+	SidebarContent,
+	SidebarFoot,
+	SidebarFooter,
+	SidebarGroup,
+	SidebarGroupContent,
+	SidebarHeader,
+	SidebarInset,
+	SidebarMenu,
+	SidebarMenuBadge,
+	SidebarMenuButton,
+	SidebarMenuItem,
+	SidebarMenuSub,
+	SidebarMenuSubButton,
+	SidebarProvider,
+	SidebarRailToggle,
+	SidebarScreenMode,
+	SidebarTrigger,
+	useSidebar,
+} from "./sidebar";
+export { Sortable, type SortableEvent, SortableList, type SortableRef, useSortableItem } from "./sortable";
+export { BlockFrameBox, BlockTitleField, SourceBox } from "./source-box";
+export { Spinner } from "./spinner";
+export { SplitButton } from "./split-button";
+export { Inline, Stack, type StackProps, stackVariants } from "./stack";
+export { StatusBar, StatusBarCell, StatusBarLive, StatusBarPluginCell, StatusBarSpacer } from "./status-bar";
+export { StatusBarList, StatusBarListGroup } from "./status-bar-list";
+export { Suggest } from "./suggest";
+export { Switch } from "./switch";
+export {
+	ListScroll,
+	RowActions,
+	RowCheck,
+	RowLink,
+	RowMore,
+	RowThumb,
+	RowTitle,
+	Table,
+	TableBody,
+	TableCell,
+	TableHead,
+	TableHeader,
+	TableRow,
+} from "./table";
+export { TableAddStrip, TableColumnBorder, TableGrip } from "./table-tools";
+export { TabLink, TabLinks, Tabs, TabsContent, TabsList, TabsTrigger } from "./tabs";
+export { TagInput } from "./tag-input";
+export { Heading, Text, textVariants } from "./text";
+export { TextButton } from "./text-button";
+export { Textarea } from "./textarea";
+export { FolderTile, Tile } from "./tile";
+export { Toaster, toast } from "./toast";
+export { TodoDone, TodoItem } from "./todo-item";
+export type { Background, Spacing } from "./tokens.generated";
+export { type ToolCallDetail, ToolCallLine, type ToolCallStatus } from "./tool-call-line";
+export { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./tooltip";
+export { TrashRowDate, TrashRowTitle } from "./trash-row";
+export { UploadingImage } from "./uploading-image";
+export { useIsMobile } from "./use-mobile";

@@ -1,0 +1,70 @@
+# 공통 틀
+
+여러 화면이 함께 쓰는 자리다. 각 화면의 지도는 이 자리들을 "공통 틀"이라고만 적고, 다시 풀어 쓰지 않는다.
+
+## 화면 틀
+
+| 자리 | 부품 | 이렇게 쓴다 |
+|---|---|---|
+| 왼쪽 내비게이션 | `Sidebar`와 그 가족(`SidebarProvider`, `SidebarHeader`, `SidebarContent`, `SidebarGroup`, `SidebarMenu`, `SidebarMenuItem`, `SidebarMenuButton`, `SidebarMenuSub`, `SidebarMenuSubButton`, `SidebarMenuBadge`, `SidebarFooter`, `SidebarScreenMode`, `SidebarRailToggle`) | 자리마다의 쓰임은 [sidebar.md](sidebar.md). 현재 위치는 `SidebarMenuButton`의 활성 상태다. |
+| 페이지 단 | `PageColumn` | 목록 화면(글, 미디어, 휴지통, 활동 기록, 도구의 표)은 `width="list"`, 설정과 입력 화면은 `width="content"`. 페이지 전체가 하나로 스크롤한다. 틀의 페이지 자리(사이드바 옆, 붙은 패널이 있으면 그 옆)가 스크롤하고, 스크롤바는 그 오른쪽 끝에 위에서 아래까지 하나뿐이다. 머리(제목, 검색, 새 글)는 위로 같이 올라가고, 표의 열 이름 줄만 위에 붙어 남는다. 페이지 번호는 목록 끝에 온다. 단 안의 상자(`PageBody`, `ListScroll`)는 스크롤하지 않는다(2026-11-06 소유자: 단 가운데에 선 표의 스크롤바는 이상하다. GitHub 이슈 목록, WordPress 관리자 목록과 같은 방식). |
+| 제목 행 | `PageHeader` | `title`은 화면 이름, `address`는 목록의 주소 규칙(`/posts/:slug`, mono), `trail`은 폴더 경로(밑줄 `TextButton`)나 검토 화면의 "어시스턴트"(`TextButton variant="quiet"`, 앞에 `ChevronLeft` 아이콘) 같은 돌아가는 길, `children`은 오른쪽 동작(보조 알약 먼저, 검은 알약 하나 마지막). |
+| 제목 아래 탭 (설정, 도구) | `PageToolbar` 안의 `TabLinks`와 `TabLink` | 탭 하나가 페이지 하나다(주소가 바뀐다). 고른 탭은 굵기만 다르다(밑줄 없음). 저장하지 않은 것이 있는 다른 탭은 이름 뒤에 `ChangeDot`. 열린 탭에는 점을 붙이지 않는다. 그 바뀐 곳은 페이지와 저장 묶음이 이미 보인다(원칙 8). |
+| 설정 한 절 | `Section` | 왼쪽에 제목, 오른쪽에 필드. 절마다 위아래 24px과 아래 가는 선, 마지막 절은 `last`로 선이 없다. `stacked`·`dense` 절은 선 없이 여백만으로 나뉜다(원칙 10). 절 이름은 사람이 하는 일이다(원칙 9). 잠긴 값은 절 제목이 아니라 그 줄에 `LockMark`를 붙인다(라벨 뒤, 또는 식별자처럼 값 뒤). 잠긴 스위치는 스위치 대신 글 "켜짐" · "꺼짐"으로 읽히고 그 줄에 자물쇠가 있다. |
+| 저장 묶음 (설정) | `ChangesGroup` | "변경 사항 N ▾" · "모두 되돌리기" · "저장하고 적용". 바뀐 것이 없으면 나타나지 않는다. 저장이 가는 동안 알약은 흐려지지 않고 돌아가는 표시와 "저장 중…"을 보인다(`saving`). 포커스는 알약에 그대로 있고, 다시 눌러도 아무 일도 없다. 막는 것(칸의 오류)이 있어도 알약은 흐리지 않고 누를 수 있다. 누르면 무엇을 고칠지 보인다: 설정 › 컬렉션처럼 검토 맨 위의 "고칠 곳"이, 시트가 없는 탭에서는 그 칸으로 포커스가 가고 칸 아래 오류 줄이 보인다(원칙 7). |
+| 줄 안의 세로 구분선 | `Separator orientation="vertical"`: 툴바와 머리는 `length="control"`, 뜬 막대는 `length="bar"`. 줄의 간격이 띄우면 `flush` | 선 양옆의 자리는 줄의 `gap`이 정한다. |
+| 가운데 낱말이 있는 가로 줄 | `Separator label`("또는") | 두 가지 길 사이(로그인의 비밀번호와 GitHub). 낱말은 캡션 크기, 흐린 색, 양쪽 선에서 12px. |
+| ✦ 어시스턴트 열기 | `IconButton`(`label` "어시스턴트 열기", 아이콘 `Spark`) | 모든 화면에서 머리 줄의 맨 끝에 선다: `PageHeader`의 제목 행(그 화면의 알약들 뒤), `EditorHeader`(편집기의 도구들 뒤). 화면이 놓지 않는다. 앱이 버튼을 `AssistantSlot`에 한 번 주면 두 머리가 그린다. 그래서 어느 화면이든 같은 줄, 같은 끝, 콘텐츠 폭 안이다. 옆 패널(미디어, 휴지통, 활동 기록, 분류, 설정의 미리보기)은 페이지 옆에 서므로 ✦를 가리지 않는다. 누르면 어시스턴트 사이드 패널이 열리고 버튼은 사라진다. 닫으면 돌아와 포커스를 받는다. (만들며 정함 (2026-11-16): 감사에서 소유자가 모든 화면에서 ✦가 콘텐츠 폭 밖에 뜬다고 지적했다. MN-6, TB-12, LM-04, RD-27). |
+
+## 뜨는 면
+
+| 자리 | 부품 | 이렇게 쓴다 |
+|---|---|---|
+| 확인 질문 | `AlertDialog`(`AlertDialogContent`, `AlertDialogHeader`, `AlertDialogTitle`, `AlertDialogDescription`, `AlertDialogFooter`, `AlertDialogCancel`, `AlertDialogAction`) | 몇 초 안에 끝나는 결정에만 쓴다. 되돌릴 수 없는 것과 발행된 글을 내리는 것만 묻는다. 위험하면 `AlertDialogAction`이 `Button variant="danger"`다. 휴지통으로 옮기기(초안, 메모, 미디어, 폴더)는 묻지 않고 토스트의 "되돌리기"를 준다. |
+| 작은 폼 창 | `Dialog`(`DialogContent`, `DialogHeader`, `DialogTitle`, `DialogFooter`)와 `DialogFormFooter` | 입력이 한두 개인 창(고른 글 내보내기, 언어 직접 입력). 포커스는 첫 텍스트 필드로 간다. 입력이 여럿이거나 길면 시트를 쓴다. |
+| 시트 | `Sheet`(`SheetContent`, `SheetHeader`, `SheetTitle`, `SheetBody`, `SheetSection`, `SheetSplit`, `SheetFooter`) | 만드는 일(필드 추가, 저장 검토, 가져오기). 오른쪽에서 열리고 뒤를 흐린다. 발에는 "취소"(`Button variant="ghost"`)와 알약 하나. 시트에 위험한 동작(필드 지우기)이 있으면 발의 왼쪽 끝에 `Button variant="ghost-danger"`로 홀로 선다([overlay.md](../components/overlay.md) "시트"). 일하는 동안 `SheetHeader closable={false}`. |
+| 사이드 패널 | `SidePanel`(`width` `side`·`panel`·`assistant`) | 화면 옆에서 함께 보는 것(파일, 활동 자세히, 항목, 어시스턴트). 머리 끝의 ×로 닫는다. 저장할 것이 있으면 `footer`에 알약 하나. |
+| 결과 한 줄 | `toast`(`Toaster`가 그린다), 실패는 `toast.error` | 동작 직후의 한 줄과, 있으면 `action` 하나("되돌리기", "보기"). 꼭 봐야 하는 것은 할 일이나 상태 줄에도 남긴다. |
+| 그릴 수 없는 미리보기 | `ErrorBox` | 블록 미리보기가 오류로 그려지지 않을 때. 줄바꿈을 지키고 `role="alert"`. |
+| 화면의 알림 띠 | `Banner`(`tone` `warning`·`danger`·`neutral`) | 화면에 대한 띠는 모두 화면 맨 위 한 자리에, 가장자리에서 가장자리까지 선다. 사이드바 틀이 있는 화면은 틀의 띠 자리다(사이트 전체의 일은 틀의 `SidebarInset banner`, 그 페이지의 일은 페이지가 `PageBanner`로 준다). 편집기처럼 틀 밖의 화면은 머리 줄보다 위다(`StandalonePage banner`). 그릴 수 없어 띠만 남은 화면(`ScreenBoundary`)과 아직 읽는 중인 제안 검토도 띠 아래에 제 이름을 단 머리 줄을 둔다: 모든 화면의 머리 줄 끝에 ✦가 서기 때문에 머리 줄이 없는 화면을 만들지 않는다(만들며 정함 (2026-11-16)). 여럿이면 위아래로 쌓고 넓은 일이 위다(로그인 풀림 › 스키마 변경 › 이 글의 충돌 · 임시 저장본 · 휴지통). 오른쪽 끝에 `TextButton` 동작. 경고도 실패도 아닌 상태(휴지통에 있는 글)는 `neutral`. 칸 하나, 행 하나의 문제는 띠가 아니라 그 옆 한 줄이다(status.md). 화면의 읽기가 거절되거나 답이 없으면 어느 화면이든 맨 위에 "불러오지 못했습니다 · 다시 시도" 띠 하나가 선다(`ReadFailedBanner`. status.md의 "읽지 못한 화면", T154). 화면이 그려지다 오류로 멈춰도 같은 띠가 서고 그 화면만 빠진다: 사이드바는 그대로고, 틀 밖의 편집기는 머리의 돌아가기가 남는다(`ScreenBoundary`. status.md의 "그리지 못한 화면", 만들며 정함 (2026-11-16)). 2026-11-06 소유자: 머리 위와 아래를 나누지 않는다. 맨 위가 가장 잘 보인다. 2026-11-12 소유자: 목록에 대해 일하는 띠도 탭 아래나 목록 위가 아니라 맨 위다. `pnpm check:design`(`banner-place`)이 지킨다(status.md). |
+| 아이콘만 있는 버튼의 이름 | `Tooltip`(`TooltipTrigger`, `TooltipContent`) — `IconButton`의 `label`이 이미 그린다 | 한두 낱말과 단축키. |
+
+### 고른 글 내보내기 (Dialogs)
+
+- 보드: `Dialogs.dc.html`의 왼쪽 창. 상태: [screens.md › Dialogs](../screens.md#dialogs). 같은 보드의 "휴지통으로 옮길까요?"와 "저장하지 않은 변경이 있습니다"는 위 확인 질문이다.
+- 목록의 일괄 막대 ⋯ "내보내기"가 연다([list.md](list.md)).
+
+| 자리 | 부품 | 이렇게 쓴다 |
+|---|---|---|
+| 창 | `Dialog`(`DialogContent`, `DialogHeader`, `DialogTitle` "고른 글 2개 내보내기") | 입력은 두 가지 고르기뿐이라 시트가 아니라 창이다. |
+| "보관 파일의 용도" | `FormFieldSet` + `FormFieldLegend variant="field"`, `RadioGroup` + `RadioItem`(`label` "백업용" · "공개용", `description` "초안 포함" · "발행본만") | 하나를 고른다. 처음에는 백업용. |
+| "담을 파일" | `FormFieldSet` + `FormFieldLegend variant="field"`, 줄마다 `Option` + `Checkbox` | "JSON 문서"는 늘 담기므로 `Checkbox checked disabled`와 `Text variant="note" tone="subtle"` "항상 담겨요". 플러그인 형식은 이름 뒤 확장자 `Text variant="caption" tone="subtle"` ".mdx". |
+| "담기는 것" | `Label`, 그 아래 종류마다 `CountRow`(`label` 왼쪽 이름, `count` 오른쪽 mono 개수) | 종류마다 한 줄이다: "글 1", "분류 1", "번역 1", "폴더 1", "주소 3", "미디어 정보(파일 제외) 4". 두 종류를 한 줄에 더하지 않는다(보드의 "글과 분류 2" 대신, 2026-11-04 소유자 결정). |
+| "취소" · "내보내기" | `DialogFooter`: `DialogClose`(`TextButton`) "취소", `Button variant="primary"` "내보내기"(만드는 동안 `loading`) | 만들면 파일을 받고 창이 닫힌다. |
+
+## 메뉴
+
+| 자리 | 부품 | 이렇게 쓴다 |
+|---|---|---|
+| ⋯ 메뉴, 글자 버튼이 여는 메뉴 | `DropdownMenu`(`DropdownMenuTrigger`, `DropdownMenuContent`, `DropdownMenuItem`, `DropdownMenuSeparator`, `DropdownMenuSub`, `DropdownMenuSubTrigger`, `DropdownMenuSubContent`, `DropdownMenuRadioGroup`, `DropdownMenuRadioItem`, `DropdownMenuCheckboxItem`, `DropdownMenuLabel`, `DropdownMenuSearch`, `DropdownMenuScroll`), 끝의 표시는 `MenuShortcut`·`MenuTick`·`MenuValue` | 할 수 있는 것만 둔다. 위험한 것은 맨 아래 `variant="danger"`. 둘째 단계까지만. 할 수 없는 행은 숨긴다. |
+| 행 오른쪽 클릭 | `ContextMenu`(`ContextMenuTrigger`, `ContextMenuContent`, `ContextMenuItem`, `ContextMenuSeparator`, `ContextMenuSub`, `ContextMenuSubTrigger`, `ContextMenuSubContent`, `ContextMenuLabel`) | 같은 항목이 행의 ⋯에도 있다. 메뉴가 열린 동안 그 행은 호버 바탕을 유지한다. |
+| 값을 여는 버튼 (모델, 쪽마다) | `ModelMenuButton`(`Button variant="ghost" size="sm"`, 입력 상자 안쪽 여백으로 6px 당기고, 글자 쪽 10px · 꺾쇠 쪽 6px 여백, 꺾쇠는 글자에서 6px), `PageSizeMenu`(`TextButton variant="quiet" size="caption"`) + `Caret` | 12px. 모델 이름은 적힌 그대로의 값이라 mono, 쪽마다("25개씩")는 말이라 sans다(만들며 정함 (2026-11-16)). 메뉴가 열린 동안 잉크(모델 버튼은 ghost 바탕). |
+| 검색이 있는 고르기 | `Popover`의 `PopoverContent padding="menu"` 안에 `Command`(`CommandInput`, `CommandList`, `CommandGroup`, `CommandItem`, `CommandEmpty`, `CommandFooter`) | 값이 많은 고르기(언어 코드, 태그, 링크할 글). |
+
+## AI 버튼
+
+어시스턴트에게 시키는 버튼은 하는 일에 따라 모양이 하나씩이다. ✦는 언제나 `Spark`다.
+
+| 자리 | 부품 | 이렇게 쓴다 |
+|---|---|---|
+| 필드 하나 채우기 (속성 패널, 이미지 카드의 대체 텍스트, 폼 필드, 캡션) | `FillAction`(`TextButton tone="proposal" size="caption"`, 일하는 동안 그 자리에 `AiWorking size="caption"`), 칸 아래 `FillFailed`(`AiFailed`) | "✦ 채우기", 값이 있으면 "↻ 다시", 일하는 동안 "생성 중 · 멈추기"(멈추면 칸은 그대로). 못 채우면 칸 아래 실패 한 줄과 "다시 시도". 라벨이 있으면 라벨 줄 끝(`FormFieldLabel action`), 라벨이 없는 캡션은 같은 줄 끝. 값은 제안 없이 곧바로 들어간다. |
+| 글 여러 곳을 한 번에 ("✦ 번역") | `TextButton tone="proposal"`(앞에 `Spark`; 일하는 동안 그 자리에 `AiWorking`, 가지 못하면 `AiFailed`) | 누르면 어시스턴트가 여러 곳을 바꾸고, 바뀐 것은 파란 제안으로 남는다. 값 칸의 제안은 그 입력 부품의 `proposal`이다(`Input`, `Textarea`, `ComboboxInput`). |
+| 고른 글자에 묻기 | `FormatBarRequest` | 서식 카드 끝 "✦ 요청". |
+| 할 일 행의 동작 | 없음 | 행은 그 자리로 데려가기만 한다. 채우기와 번역은 그 자리의 ✦로 한다. |
+| 메모 카드에서 받으며 다시 시키기 | `MemoCard`(`acceptSpark`) | 검은 작은 알약 "✦ 다시 번역". |
+| 목록에서 고른 것에 시키기 | `BulkBar`의 `request`(`TextButton tone="proposal"`) | "✦ 요청", 미디어는 "✦ 대체 텍스트". |
+| 빈 어시스턴트 패널의 시작 요청 | `Suggest` | 앞에 ✦가 붙은 한 줄. |
+
+## 테마
+
+모든 화면에 어두운 테마가 있다. 사이드바의 화면 모드(`SidebarScreenMode`)로 고른다. 보드의 `dark` prop이 그 모양이고, 부품은 같다.

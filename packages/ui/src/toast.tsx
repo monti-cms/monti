@@ -1,0 +1,165 @@
+"use client";
+
+import { type ReactNode, useLayoutEffect, useState, useSyncExternalStore } from "react";
+import { Toaster as Engine, toast as engine, useSonner } from "sonner";
+import { dockShown, watchDock } from "./bottom-dock";
+import { cn } from "./cn";
+import { HIT_AREA } from "./hit-area";
+import { FolderMoveTo } from "./icons";
+
+/**
+ * The id of this `Toaster`. Every toast of this file is addressed to it, so a `Toaster` of the site's own (a plain `sonner` one, which shows
+ * the toasts that name no toaster) never shows the admin's toasts as well, and the admin never shows the site's.
+ */
+const TOASTER_ID = "monti-admin";
+
+/** What a toast may carry besides its message. */
+type ToastOptions = {
+	/** One text button after the message (undo, view, open). Clicking it runs `onClick` and closes the toast. */
+	action?: { label: string; onClick: () => void };
+	/** Milliseconds before it closes by itself; `Infinity` keeps it until `toast.dismiss`. The `Toaster`'s `duration` by default (four seconds). */
+	duration?: number;
+	/** Showing a toast with the id of an open one replaces that one (an upload counting up, then done). */
+	id?: string | number;
+};
+
+/** Every toast is the same pill: one message, at most one action. It is ink; an error is the same pill on the danger background. */
+const PILL =
+	"pointer-events-auto flex w-fit max-w-full items-center rounded-monti-lg bg-monti-emphasis px-monti-16 py-monti-10 text-monti-label font-normal text-monti-on-emphasis shadow-monti-floating";
+
+/** The pill, centered in the width the engine gives a toast. */
+function Frame({ className, children }: { className?: string; children: ReactNode }) {
+	return (
+		<div data-slot="toast" className="flex w-full justify-center">
+			<div className={cn(PILL, className)}>{children}</div>
+		</div>
+	);
+}
+
+function render(message: ReactNode, { action, duration, id }: ToastOptions, error: boolean): string | number {
+	return engine.custom(
+		(toastId) => (
+			<Frame className={cn("gap-monti-16 whitespace-pre-line", error && "bg-monti-danger-emphasis")}>
+				<span>{message}</span>
+				{action && (
+					<button
+						type="button"
+						data-slot="toast-action"
+						className={cn(
+							HIT_AREA,
+							"shrink-0 cursor-pointer rounded-monti-full font-semibold outline-none focus-visible:ring-2 focus-visible:ring-monti-on-emphasis/50",
+						)}
+						onClick={() => {
+							action.onClick();
+							engine.dismiss(toastId);
+						}}
+					>
+						{action.label}
+					</button>
+				)}
+			</Frame>
+		),
+		{ id, duration, toasterId: TOASTER_ID },
+	);
+}
+
+function show(message: ReactNode, options: ToastOptions = {}): string | number {
+	return render(message, options, false);
+}
+
+/** A message about something that went wrong: the same pill on the danger background, with the same options. */
+function error(message: ReactNode, options: ToastOptions = {}): string | number {
+	return render(message, options, true);
+}
+
+/**
+ * The hint shown while files are dragged over a folder: an icon and a sentence, the folder's name in bold (`<b>`). It stays until `toast.dismiss(id)`.
+ */
+function dropHint(
+	message: ReactNode,
+	{
+		icon = <FolderMoveTo aria-hidden className="size-monti-icon-md shrink-0" />,
+		id,
+		duration = Number.POSITIVE_INFINITY,
+	}: {
+		icon?: ReactNode;
+		id?: string | number;
+		duration?: number;
+	} = {},
+): string | number {
+	return engine.custom(
+		() => (
+			<Frame className="gap-monti-8">
+				{icon}
+				<span className="[&_b]:font-semibold">{message}</span>
+			</Frame>
+		),
+		{ id, duration, toasterId: TOASTER_ID },
+	);
+}
+
+/**
+ * Shows a message at the bottom of the window. `toast("Moved to the trash", { action: { label: "Undo", onClick } })`; `toast.error(...)` for a failure.
+ * Returns the id, for `toast.dismiss(id)` or to replace the message by showing another with that `id`.
+ */
+export const toast = Object.assign(show, { error, dropHint, dismiss: engine.dismiss });
+
+/** How far the stack stands from the window's bottom edge, and from the top of what is docked there (the proposal bubble) while it is shown. */
+const EDGE = 32;
+const OVER_DOCK = 12;
+
+/**
+ * Mount once where the admin's pages are. The look is set by `toast`; this only places the stack, bottom center, 32px above the window's bottom edge.
+ * While something is docked at the bottom centre (the proposal bubble, `bottom-dock.ts`) the stack stands 12px above it instead, and comes back
+ * down when it is gone: a toast never covers a control a person is about to press. It shows only the toasts of this
+ * file, so it can sit beside a `sonner` `Toaster` of the site's own. `duration` is how long a toast stays
+ * unless it says otherwise (four seconds; Storybook keeps them up).
+ */
+export function Toaster({ duration }: { duration?: number }) {
+	const docked = useSyncExternalStore(watchDock, dockShown, () => null);
+	const { toasts } = useSonner();
+	const [bottom, setBottom] = useState(EDGE);
+	useLayoutEffect(() => {
+		if (!docked) {
+			setBottom(EDGE);
+			return;
+		}
+		// Measured, not known: what is docked stands over the end of its column, which is the window's bottom on one screen and the top of a
+		// status bar on another.
+		const measure = () => {
+			const held = docked.firstElementChild;
+			setBottom(
+				held ? Math.max(EDGE, Math.ceil(window.innerHeight - held.getBoundingClientRect().top) + OVER_DOCK) : EDGE,
+			);
+		};
+		measure();
+		// It moves without changing size when its column does (a bar comes in under the column): the column is watched too.
+		const watch = new ResizeObserver(measure);
+		watch.observe(docked);
+		if (docked.parentElement) watch.observe(docked.parentElement);
+		window.addEventListener("resize", measure);
+		return () => {
+			watch.disconnect();
+			window.removeEventListener("resize", measure);
+		};
+		// And measured again whenever a toast comes or goes: where it stands is right at the moment it matters, whatever moved it.
+	}, [docked, toasts.length]);
+	return (
+		<Engine
+			id={TOASTER_ID}
+			position="bottom-center"
+			offset={{ bottom }}
+			duration={duration}
+			// The engine gives a custom toast the width of its content, at the left of the stack: this puts the pill in the middle of it.
+			// Only the pill takes the pointer (`PILL`): the row is as wide as the stack, and what stands beside the pill or under the row's
+			// ends (the proposal bubble's buttons while a toast comes up over it) is pressed through it. A pointer beside the pill does not
+			// keep the toast open either.
+			toastOptions={{ classNames: { toast: "flex! w-full justify-center pointer-events-none!" } }}
+			visibleToasts={3}
+			// One over the other, each readable: a toast behind another would say nothing until pointed at.
+			expand
+			// Important: the engine's own stylesheet sets the width of the stack (`width: var(--width)`) and is not in a layer.
+			className="pointer-events-none! w-[min(560px,calc(100vw-32px))]!"
+		/>
+	);
+}

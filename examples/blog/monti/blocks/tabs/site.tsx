@@ -1,0 +1,69 @@
+import type { BlockProps } from "@monti-cms/core/render";
+import { Children, type ReactNode } from "react";
+import { style } from "./style";
+import { TabsView } from "./tabs.client";
+
+/** One tab: `Tabs` reads its name and draws its blocks as a panel, so on its own it is only its blocks. */
+function TabDrawing({ lang, children }: BlockProps & { children?: ReactNode }) {
+	return (
+		<div className="monti-block-tabs-panel" lang={lang}>
+			{children}
+		</div>
+	);
+}
+
+/**
+ * Tabs: the row of the tabs' names (`label`) and one panel per tab. The tab shown first is the one named by `defaultValue`, or the first. Every panel is
+ * in the page's HTML (the hidden ones only hidden), so a reader without scripts, a search engine and a feed read them all; the switching is `TabsView`.
+ */
+function TabsDrawing({ block, attrs, lang, children }: BlockProps & { children?: ReactNode }) {
+	const panels = Children.toArray(children);
+	const tabs = (block.children ?? []).flatMap((tab, index) =>
+		tab.type === "tab"
+			? [{ label: typeof tab.attrs?.label === "string" ? tab.attrs.label : "", panel: panels[index] }]
+			: [],
+	);
+	// The tabs of a block that holds no tab to name (the editor's stand-in while the block's own view loads, or a read-only body): the box all the same, so the
+	// block has its own root, which takes the body's gap like any site block's, whatever its last tab does.
+	if (tabs.length === 0)
+		return (
+			<div className="monti-block-tabs" lang={lang}>
+				{children}
+			</div>
+		);
+	const labels = tabs.map((tab) => tab.label);
+	return (
+		<TabsView
+			lang={lang}
+			labels={labels}
+			panels={tabs.map((tab) => tab.panel)}
+			// One holder with every tab in it (the editor's stand-in), not a panel for each tab.
+			holder={panels.length === 1 && tabs.length > 1}
+			defaultIndex={Math.max(0, labels.indexOf(typeof attrs.defaultValue === "string" ? attrs.defaultValue : ""))}
+		/>
+	);
+}
+
+/** Tabs with its look (`style.ts`): React puts it into the page once, however many of the block there are. */
+export function Tabs(props: Parameters<typeof TabsDrawing>[0]) {
+	return (
+		<>
+			<style href="monti-block-tabs" precedence="monti-blocks">
+				{style}
+			</style>
+			<TabsDrawing {...props} />
+		</>
+	);
+}
+
+/** Tab with its look (`style.ts`): React puts it into the page once, however many of the block there are. */
+export function Tab(props: Parameters<typeof TabDrawing>[0]) {
+	return (
+		<>
+			<style href="monti-block-tabs" precedence="monti-blocks">
+				{style}
+			</style>
+			<TabDrawing {...props} />
+		</>
+	);
+}

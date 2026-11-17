@@ -1,0 +1,226 @@
+# @monti-cms/next
+
+Monti on a Next.js site (App Router, Next 16): the admin as a page of the site, the admin API as a route, the preview in draft mode, and the
+site's cached pages refreshed when something is published. The example site in [`examples/blog`](../../examples/blog) uses everything here.
+
+## Setting a site up
+
+```sh
+npx monti init          # in the site's folder, after installing @monti-cms/core, admin and next
+```
+
+It reads the site (Next 16, `app/` or `src/app/`, the language of its root layout), asks a few things (`--admin-path`, `--locale`,
+`--login password|github`, `--storage local|s3|none`, and `--plugins seo,mdx|none` when a plugin is installed; `-y` takes the defaults,
+and nothing is asked when nobody is at the terminal). It also finds posts the site keeps as `.md` and `.mdx` files and says how to import
+them. It
+writes what the site lacks:
+
+| File | What it is |
+|---|---|
+| `monti.schema.ts` | The site's structure: its language, one collection `post` to start from |
+| `monti.config.ts` | The database, how the admin signs in, where media files go |
+| `lib/monti.ts` | Opens Monti once (under `src/` when the site has one) |
+| `app/admin/page.tsx`, `app/admin/api/[...path]/route.ts` | The admin and its API. The folder's name is the admin's address |
+| `app/admin/layout.tsx` | The admin's own frame, only where the site has no top-level `app/layout.tsx` |
+| `.env.example` | The names of the values the site reads |
+
+A file that is there is never written over. `.env` is not touched; `.env.local` gets only the values neither file names (`DATABASE_URL`,
+a new `MONTI_SECRET`); `.gitignore` and `package.json` get the lines and the two `db:` scripts they lack. Then it makes the tables when the
+database answers, runs the check below, and lists what is left. Run it again at any time: it writes only what is missing.
+
+Under a top-level `app/layout.tsx` the admin is drawn inside the site's layout. If its header shows in the admin, move the site's pages
+and that layout into `app/(site)/` and run `monti init` again: it then writes the admin's own layout.
+
+```sh
+npx monti doctor        # --json for a machine, --origin https://example.com for the site's own address
+```
+
+One line for each check (`ok`, `warn`, `FAIL`, `skip`), the fix under a failure, and it ends with 1 when a check failed, so a deploy can
+stop on it: Next and the packages' versions, the config and schema, the admin's files and layout, `MONTI_SECRET`, the database (reachable,
+its tables, the changes it has followed), the storage (there, answering, not a folder on a host with no disk), the sign-in. It writes
+nothing and prints no secret.
+
+The `monti` command reads the site's env files as Next does: the environment first, then `.env.<mode>.local`, `.env.local`, `.env.<mode>`,
+`.env`. `--env-file <path>` names one more, read first.
+
+## The three files
+
+What `monti init` writes, by hand:
+
+```ts
+// lib/monti.ts
+import { openSite } from "@monti-cms/next";
+import config from "../monti.config";
+
+export const { monti, reader } = openSite(config);
+```
+
+```tsx
+// app/admin/page.tsx
+import { AdminPage } from "@monti-cms/next/admin";
+
+export default () => <AdminPage siteName="My blog" />;
+```
+
+```ts
+// app/admin/api/[...path]/route.ts
+import { adminRoute } from "@monti-cms/next";
+import { monti } from "@/lib/monti";
+
+export const { GET, POST, PUT } = adminRoute(monti);
+```
+
+The folder of the admin page is the admin's address (`app/admin` is `/admin`), and its API is `api` under it. To move the admin, rename the
+folder.
+
+## Pages
+
+The site's pages are the site's own. `entryPage` reads one entry for a page:
+
+```tsx
+// app/posts/[slug]/page.tsx
+import { renderDocument, tocOf } from "@monti-cms/core/render";
+import { entryPage } from "@monti-cms/next";
+import { createElement } from "react";
+import { reader } from "@/lib/monti";
+
+export default async function Post({ params }: { params: Promise<{ slug: string }> }) {
+	const post = await entryPage(reader, { collection: "post", slug: (await params).slug });
+	return (
+		<article>
+			<h1>{post.title}</h1>
+			{post.doc && renderDocument(post.doc, { createElement, media: post.media, entryPath: post.entryPath })}
+		</article>
+	);
+}
+```
+
+- No entry at that address: `notFound()`. An address the entry had before: `permanentRedirect()` to where it is now.
+- `locale` is the source language unless given. `reader.locales()` says which languages the site has.
+- `reader.page({ collection, locale, limit, after })` reads a list a page at a time; `reader.entries` reads all of it. Each entry has its public
+  address (`path`).
+- `tocOf(post.doc)` gives the table of contents; the headings `renderDocument` draws carry the same ids.
+
+### Languages
+
+An entry names its pages in the site's other languages: `entry.translations` is `{ locale, path }[]`, the published ones only, its own
+language left out.
+
+```tsx
+import { languageLinks } from "@monti-cms/next";
+
+// Each language goes to this same entry in it, and to that language's first page when the entry is not published in it.
+languageLinks(reader.locales(), entry).map((link) => (
+	<Link key={link.locale} href={link.href} aria-current={link.current ? "page" : undefined}>
+		{link.name}
+	</Link>
+));
+```
+
+Draw the switcher in the page, not in the layout: only the page knows which entry it shows. `homePath(reader.locales(), locale)` is a
+language's first page.
+
+### Search and share values
+
+```ts
+import { pageMetadata } from "@monti-cms/next";
+
+export async function generateMetadata({ params }) {
+	const found = await reader.entry({ collection: "post", slug: (await params).slug, locale: "ko" });
+	if (!found || !("entry" in found)) return {};
+	const { entry } = found;
+	return pageMetadata({ title: entry.title, locale: entry.locale, path: entry.path, translations: entry.translations });
+}
+```
+
+`pageMetadata` gives Next the title and description, the canonical address (the page's own unless `canonical` names another), the other
+languages (`hreflang`, left out for a page with `noindex` or a canonical address elsewhere), and `og:title`, `og:url`, `og:image` and the
+card. With the SEO plugin, spread `seoOf(entry)` into it. The addresses are paths: set `metadataBase` in the site's layout to the site's
+own address and Next makes them whole.
+
+### The page that is not found
+
+`entryPage` calls `notFound()`, and Next draws the nearest `not-found.tsx` inside that route's layout, so a `not-found.tsx` beside the
+site's layout keeps the site's header on it. Two things Next does not do for it:
+
+- A `notFound()` called by a layout is not drawn by that layout's own `not-found.tsx`. Check the language of the address in the page, and
+  let the layout draw any address.
+- A site with more than one root layout (`app/(site)/layout.tsx` and `app/[locale]/layout.tsx`) has no `app/not-found.tsx` for addresses
+  no route takes. A catch-all page that only calls `notFound()` (`app/[locale]/[...rest]/page.tsx`) gives them the same page.
+
+`not-found.tsx` is handed nothing of the address; a client component in it reads the language with `useParams()`. The example sites do
+all of this.
+
+## Preview
+
+"Preview" in the editor opens `<admin>/api/preview?token=…&path=…`. A good token turns Next's draft mode on for that browser and goes to the
+entry's public address, where `entryPage` then reads the working copy. Nobody else sees it, another entry opened meanwhile is what the site
+shows, and the token ends after an hour.
+
+- `<PreviewBar />` in the site's layout shows one line while a preview is open, with the way out (`labels` for its two words, `admin` when the
+  admin is not at `/admin`). The preview works without it.
+- A site with a preview page of its own names its address in the schema (`previewPath: "/preview/:slug"` on a document collection, also editable
+  in the admin's settings) and reads the entry there with `previewPage`, which is not found for anyone who did not open the preview.
+
+## Code blocks
+
+`<CodeTools />` in the site's layout gives the code blocks `renderDocument` draws their copy button, folded words and code links: pointing at a link
+lights its lines (and shows them beside the words when they are off screen), pressing it goes there, and the linked line gets a button back to
+the words (`labels.back` names it). It draws nothing. A site that is not React calls `attachCodeTools(document)`. The look is
+`@monti-cms/core/render.css`.
+
+## The site's cache
+
+A Next site keeps the pages it has drawn, so something must tell it when an entry is published. `openSite` does: Monti's events reach the
+site inside the admin API's request.
+
+What is drawn again is the site's to decide:
+
+```ts
+// lib/monti.ts
+export const { monti, reader } = openSite(config, {
+	refresh: (event) => {
+		// event.type, event.ids, event.paths (public addresses)
+		for (const path of event.paths ?? []) revalidatePath(path);
+	},
+});
+```
+
+- **Nothing given** (the default): every cached page of the site is marked to be drawn again (`refreshSite()`), and each is drawn when it is next
+  visited. Nothing stays old, without a line of the site's: a list, a post that names a category, a translation that follows its source all
+  show an entry besides its own page.
+- **A function**: it runs instead, for every event a visitor could see (not for a save alone, an uploaded file or the admin's own values).
+  Call `refreshSite()` in it for the cases the site does not narrow.
+- **`false`**: the adapter does nothing; listen with a receiver of the site's own (`receivers` in `monti.config.ts`).
+
+The mark is on this server process's cache. A site run as several processes or machines needs a cache they share (a Next cache handler);
+with the stock one, an entry published through one process stays old on the others.
+
+## The dev server and the live site
+
+`next dev` with a `monti.schema.ts` it can write is the dev server; anything else is the live site.
+
+| | dev server | live site |
+|---|---|---|
+| structure (collections, fields, addresses) | edited in the admin, written to `monti.schema.ts` | locked |
+| signing in | a browser on this machine gets in without it (`auth: { devBypass: false }` turns that off) | always |
+| the first call of the admin API | follows a schema file edited by hand, and says so | says to run `monti db:migrate` when the database is behind |
+
+A browser proves it is on this machine with a one-time ticket it fetches from a listener on the loopback address, which nothing outside the
+machine reaches. What a request says of itself (`Host`, `X-Forwarded-For`) lets nobody in: the sender writes those. When the ticket cannot be
+fetched (another machine, a server in a container) the admin asks to sign in.
+
+Open the dev server's admin at `localhost`. Next's dev server runs a page's code in the browser only for the hosts it knows, and the admin is
+drawn in the browser: under another host (`127.0.0.1`, a LAN address, a tunnel) it stays blank until that host is named in `next.config`:
+
+```ts
+// next.config.ts
+allowedDevOrigins: ["127.0.0.1"],
+```
+
+## Styles
+
+`AdminPage` brings the admin's stylesheet (`@monti-cms/admin/styles.css`). It touches nothing outside the admin: every rule applies only in a
+document that holds the admin, and its variables, keyframes and fonts are its own. The other way round is the site's to keep: the admin is a
+page of the same app, so a bare rule of the site's (`main { max-width: … }`, `td { border: … }`) reaches it. Keep the site's styles under the
+site's own layout, as the example does with `.site`.

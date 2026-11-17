@@ -1,44 +1,40 @@
-import { type CollectionSchema, SUMMARY_ROLE, valueWithRole } from "@monti-cms/core";
-import { SEO_ROLES } from "./fields";
+import { type SiteEntry, type SiteImage, siteImage } from "@monti-cms/core";
+import { SEO_FIELDS, SEO_FOLLOWS, type SeoFollows } from "./names";
 
-/** SEO values for the public page. Empty values are `undefined`. */
-export interface SeoValues {
-	/** Search title. Falls back to the title (`title`, a library convention) when empty. */
-	readonly title?: string;
-	/** Search description. Falls back to the summary role (`summary`) value when empty. */
-	readonly description?: string;
-	/** Share image (media ID). The site builds the public URL from the media storage. */
-	readonly imageId?: string;
-	/** Canonical URL. */
-	readonly canonical?: string;
-	/** Hide from search engines. */
-	readonly noindex: boolean;
-}
+/** An entry's SEO values as a page's metadata takes them. What is empty is left out. */
+export type SeoValues = {
+	/** The search title; the entry's title when none was written. */
+	title: string;
+	/** The search description; the followed field's (the summary's) when none was written. */
+	description?: string;
+	/** The share image; the followed field's (the cover's) when none was chosen. Its `src` is the file's address. */
+	image?: SiteImage;
+	canonical?: string;
+	/** The page asks search engines to leave it out. */
+	noindex: boolean;
+};
 
-const filled = (value: string) => value.trim() || undefined;
+const words = (value: unknown) => (typeof value === "string" && value.trim() !== "" ? value.trim() : undefined);
 
 /**
- * Reads SEO values from a collection definition (the result of `defineCollection`) and stored metadata. Fields are found by role, not by name, so
- * renaming them with `seoFields({ keys })` changes nothing. An empty title or description is filled from the title or summary.
+ * Reads an entry's SEO values on the site (`generateMetadata`). Give the same `follows` as the plugin was given, when it was given any.
  *
  * ```ts
- * const seo = seoOf(post, entry.metadata);
+ * const seo = seoOf(entry);
+ * return { title: seo.title, description: seo.description, robots: seo.noindex ? { index: false } : undefined };
  * ```
  */
-export function seoOf(
-	schema: Pick<CollectionSchema, "fields">,
-	metadata: { readonly [key: string]: unknown },
-): SeoValues {
-	const role = (name: string) => filled(valueWithRole(schema, name, metadata));
-	const title = role(SEO_ROLES.title) ?? (typeof metadata.title === "string" ? filled(metadata.title) : undefined);
-	const description = role(SEO_ROLES.description) ?? role(SUMMARY_ROLE);
-	const imageId = role(SEO_ROLES.image);
-	const canonical = role(SEO_ROLES.canonical);
+export function seoOf(entry: Pick<SiteEntry, "title" | "values" | "media">, follows: SeoFollows = {}): SeoValues {
+	const from = { ...SEO_FOLLOWS, ...follows };
+	const { values } = entry;
+	const description = words(values[SEO_FIELDS.description]) ?? words(values[from.description]);
+	const image = siteImage(values[SEO_FIELDS.image], entry.media) ?? siteImage(values[from.image], entry.media);
+	const canonical = words(values[SEO_FIELDS.canonical]);
 	return {
-		...(title ? { title } : {}),
+		title: words(values[SEO_FIELDS.title]) ?? entry.title,
 		...(description ? { description } : {}),
-		...(imageId ? { imageId } : {}),
+		...(image ? { image } : {}),
 		...(canonical ? { canonical } : {}),
-		noindex: role(SEO_ROLES.noindex) === "noindex",
+		noindex: values[SEO_FIELDS.noindex] === "noindex",
 	};
 }

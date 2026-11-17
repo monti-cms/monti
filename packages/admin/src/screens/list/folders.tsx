@@ -1,0 +1,218 @@
+import type { FolderNode } from "@monti-cms/core";
+import {
+	ContextMenuItem,
+	ContextMenuSeparator,
+	ContextMenuSub,
+	ContextMenuSubContent,
+	ContextMenuSubTrigger,
+	DropdownMenuItem,
+	DropdownMenuSeparator,
+	DropdownMenuSub,
+	DropdownMenuSubContent,
+	DropdownMenuSubTrigger,
+	MenuTick,
+	toast,
+} from "@monti-cms/ui";
+import { Edit, Folder, FolderOpen, TrashCan } from "@monti-cms/ui/icons";
+import { useMemo, useState } from "react";
+import { useAdmin } from "../../operations/admin-context";
+import { reasonOf, useOperation, useRead } from "../../operations/use-operation";
+import { useTrashMove } from "../../trash/use-trash";
+
+/** Whose folders (doc 07, principle 2: one shape for both): a collection's entries, or the media library's files. */
+export type FolderScope = { collection: string } | "media";
+
+/** A collection's or the library's folders (doc 07): the tree in order, and the ways to read it. */
+export type Folders = {
+	list: FolderNode[];
+	byId: Map<string, FolderNode>;
+	/** The folder's ancestors, top first, then the folder itself. */
+	path: (id: string) => FolderNode[];
+	/** The folders right inside one (`null`: the top level). */
+	children: (id: string | null) => FolderNode[];
+};
+
+/** The folders of a scope, read again after every write (a move changes the counts). Off when a collection does not use folders. */
+export function useFolders(scope: FolderScope, on: boolean): Folders {
+	const read = useRead<{ folders: FolderNode[] }>("folders.tree", { scope }, { skip: !on });
+	return useMemo(() => {
+		const list = on ? (read.data?.folders ?? []) : [];
+		const byId = new Map(list.map((folder) => [folder.id, folder]));
+		const path = (id: string) => {
+			const chain: FolderNode[] = [];
+			for (let at = byId.get(id); at; at = at.parentId === null ? undefined : byId.get(at.parentId)) chain.unshift(at);
+			return chain;
+		};
+		return { list, byId, path, children: (id) => list.filter((folder) => folder.parentId === id) };
+	}, [on, read.data]);
+}
+
+/**
+ * Where a search inside a folder looks, as the chip in the search box offers it (components/list.md, 2026-11-10 owner): that folder and those under it, or all of them.
+ * Filters with no words look in the open folder; all folders are the top's.
+ */
+export const searchScopes = (folder: string, t: (key: "folders.everywhere") => string) =>
+	[
+		{ value: "here", label: folder },
+		{ value: "all", label: t("folders.everywhere") },
+	] as const;
+
+/**
+ * A folder being named (flow 5·01, 5·04, 6·09): a new one where the person is (`id` null), or one being renamed. Enter or leaving keeps the name, Esc drops it, and the
+ * server says if the name is taken.
+ */
+export function useFolderNaming(scope: FolderScope, parentId: string | null) {
+	const { t } = useAdmin();
+	const create = useOperation<{ output: { id: string } }>("folders.create");
+	const rename = useOperation("folders.rename");
+	const [naming, setNaming] = useState<{ id: string | null; name: string } | null>(null);
+	const keep = async (value: string) => {
+		const name = value.trim();
+		const target = naming;
+		setNaming(null);
+		if (!target || !name) return;
+		const result =
+			target.id === null ? await create.run({ scope, parentId, name }) : await rename.run({ id: target.id, name });
+		if (!result.ok) toast.error(t(reasonOf(result.refusal)));
+	};
+	return {
+		naming,
+		start: (folder?: { id: string; name: string }) =>
+			setNaming(folder ? { id: folder.id, name: folder.name } : { id: null, name: t("folders.new") }),
+		type: (name: string) => setNaming((current) => (current ? { ...current, name } : current)),
+		keep,
+		cancel: () => setNaming(null),
+	};
+}
+
+/** A folder's name with the folders above it, for a menu where nested names would read alike: "Series / drafts". */
+export const folderPath = (folders: Folders, id: string) =>
+	folders
+		.path(id)
+		.map((folder) => folder.name)
+		.join(" / ");
+
+/** The places a row can go: the top level and every folder (but `except` and what is under it), the current one ticked. */
+export function FolderTargets({
+	context,
+	folders,
+	current,
+	except,
+	onPick,
+}: {
+	context: boolean;
+	folders: Folders;
+	/** Where the rows are now; `undefined` when they are in different places. */
+	current: string | null | undefined;
+	except?: string;
+	onPick: (folder: string | null) => void;
+}) {
+	const { t } = useAdmin();
+	const Item = context ? ContextMenuItem : DropdownMenuItem;
+	const shown = folders.list.filter((folder) => !except || !folders.path(folder.id).some((up) => up.id === except));
+	return (
+		<>
+			<Item onClick={() => onPick(null)}>
+				{t("folders.top")}
+				{current === null && <MenuTick />}
+			</Item>
+			{shown.map((folder) => (
+				<Item key={folder.id} onClick={() => onPick(folder.id)}>
+					{folderPath(folders, folder.id)}
+					{current === folder.id && <MenuTick />}
+				</Item>
+			))}
+		</>
+	);
+}
+
+/**
+ * "To folder ▸" (screens/list.md, row menus): a sub-menu of {@link FolderTargets}, in a right-click menu or a ⋯ menu. `icon` only in one row's
+ * menu: the picked rows' menu has no icons.
+ */
+export function MoveToFolderMenu({
+	context,
+	label,
+	icon = true,
+	...targets
+}: Parameters<typeof FolderTargets>[0] & { label: string; icon?: boolean }) {
+	const Sub = context ? ContextMenuSub : DropdownMenuSub;
+	const Trigger = context ? ContextMenuSubTrigger : DropdownMenuSubTrigger;
+	const Content = context ? ContextMenuSubContent : DropdownMenuSubContent;
+	return (
+		<Sub>
+			<Trigger>
+				{icon && <Folder aria-hidden />}
+				{label}
+			</Trigger>
+			<Content>
+				<FolderTargets context={context} {...targets} />
+			</Content>
+		</Sub>
+	);
+}
+
+/** A folder row's menu, from a right click or its ⋯ (flow 5·04): open, rename, move ▸ | remove. */
+export function FolderMenuItems({
+	context,
+	folder,
+	folders,
+	onOpen,
+	onRename,
+	onMove,
+	onRemove,
+}: {
+	context: boolean;
+	folder: FolderNode;
+	folders: Folders;
+	onOpen: () => void;
+	onRename: () => void;
+	onMove: (parent: string | null) => void;
+	onRemove: () => void;
+}) {
+	const { t } = useAdmin();
+	const Item = context ? ContextMenuItem : DropdownMenuItem;
+	const Separator = context ? ContextMenuSeparator : DropdownMenuSeparator;
+	return (
+		<>
+			<Item onClick={onOpen}>
+				<FolderOpen aria-hidden />
+				{t("list.open")}
+			</Item>
+			<Item onClick={onRename}>
+				<Edit aria-hidden />
+				{t("folders.rename")}
+			</Item>
+			<MoveToFolderMenu
+				context={context}
+				label={t("folders.move")}
+				folders={folders}
+				current={folder.parentId}
+				except={folder.id}
+				onPick={onMove}
+			/>
+			<Separator />
+			<Item variant="danger" onClick={onRemove}>
+				<TrashCan aria-hidden />
+				{/* The words of every other move to the trash (MD-40). */}
+				{t("trash.toTrash")}
+			</Item>
+		</>
+	);
+}
+
+/**
+ * Removing a folder (doc 07, flow 5·05–06): through the trash like everything else (doc 11). A folder with published entries asks first, saying how many go off the
+ * site; a folder of drafts goes at once. Either way the toast takes it back. A media folder never asks (flow 6·11), and files in use stay with it: then the toast
+ * shows it (`onKept`, flow 6·12).
+ */
+export function useRemoveFolder({ onKept }: { onKept?: (folder: FolderNode) => void } = {}) {
+	const trash = useTrashMove();
+	const start = (folder: FolderNode) =>
+		void trash.start({
+			rows: [{ kind: "folder", id: folder.id }],
+			folder: { name: folder.name, count: folder.count },
+			onKept: () => onKept?.(folder),
+		});
+	return { start, dialog: trash.dialog };
+}

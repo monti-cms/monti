@@ -1,0 +1,90 @@
+/*
+ * Document-wide base rules only, compiled into the prebuilt bundle (`index.css`): the base text of the body and the admin root (popups are portaled
+ * to the body), the default border and outline color, and the scrollbars. Parts style themselves with token utilities, never here. Every selector
+ * here is scoped to a document that contains `.monti-admin`.
+ */
+
+/*
+ * The admin's base text, on its root and on the body, because popups (menus, dialogs, tooltips) are portaled to the body: the sans stack, smooth glyphs, and Korean broken between words, not inside them (`keep-all`), except a long
+ * token (an address, an identifier) that has no space and breaks where it must (`anywhere`).
+ * The body also keeps the app's background from showing through at the admin edges.
+ * Digits are tabular everywhere (equal widths), so a count that grows from 9 to 10, a column of sizes or a clock does not shift what is beside it (F9, 2026-11-16).
+ */
+html:has(.monti-admin) body {
+	background-color: var(--monti-bg-page);
+	font-family: var(--monti-font-sans);
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+	word-break: keep-all;
+	overflow-wrap: anywhere;
+	font-variant-numeric: tabular-nums;
+}
+
+/*
+ * Default color for borders and focus outlines. Makes places that use only `border` use the admin color instead of the app's global rule (shadcn's `* { @apply border-border }`) or `currentColor`.
+ * Applied to the whole document because popups are portaled to body; its selector has zero specificity, so utility classes win.
+ */
+@layer base {
+	:where(html:has(.monti-admin)) * {
+		border-color: var(--monti-border-muted);
+		outline-color: color-mix(in srgb, var(--monti-border-contrast) 60%, transparent);
+	}
+}
+
+.monti-admin {
+	font-family: var(--monti-font-sans);
+	font-size: 14px;
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+	word-break: keep-all;
+	overflow-wrap: anywhere;
+	font-variant-numeric: tabular-nums;
+}
+
+/*
+ * Text picked by dragging takes the admin's own ground, never the browser's blue (tokens.md, `bg-selection`): a step stronger than the highlight, so
+ * it shows on the page, the tool ground, the block being written and highlighted words alike. On the whole document, as popups are portaled to the body.
+ */
+html:has(.monti-admin) ::selection {
+	background-color: var(--monti-bg-selection);
+	color: inherit;
+}
+
+/*
+ * Thin scrollbar, shown whenever the box scrolls (not only under the pointer: it is how the person knows there is more). On the whole document
+ * that holds the admin, not only its root: popups (menus, the "/" menu, popovers, dialogs) are portaled to the body and scroll too.
+ */
+html:has(.monti-admin) body,
+html:has(.monti-admin) body * {
+	scrollbar-width: thin;
+	scrollbar-color: var(--monti-gray-8) transparent;
+}
+html:has(.monti-admin) body ::-webkit-scrollbar {
+	width: 8px;
+	height: 8px;
+}
+html:has(.monti-admin) body ::-webkit-scrollbar-track {
+	background: transparent;
+}
+html:has(.monti-admin) body ::-webkit-scrollbar-thumb {
+	background: var(--monti-gray-8);
+	border-radius: 999px;
+}
+
+/*
+ * Reduced motion: when the person asks their system for less motion, nothing in the admin slides, fades or spins. Popups are portaled to the
+ * body, so the rule covers the whole document that holds the admin. A changing state still shows; it just does not travel.
+ */
+/* design-allow: the person's reduced-motion setting reaches every part at once; a utility on each element could miss one */
+@media (prefers-reduced-motion: reduce) {
+	html:has(.monti-admin) *,
+	html:has(.monti-admin) *::before,
+	html:has(.monti-admin) *::after {
+		/* biome-ignore lint/complexity/noImportantStyles: the setting must beat every part's own duration utility */
+		animation-duration: 0.01ms !important;
+		/* biome-ignore lint/complexity/noImportantStyles: the setting must beat every part's own duration utility */
+		animation-iteration-count: 1 !important;
+		/* biome-ignore lint/complexity/noImportantStyles: the setting must beat every part's own duration utility */
+		transition-duration: 0.01ms !important;
+	}
+}

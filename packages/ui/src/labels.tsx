@@ -1,0 +1,91 @@
+"use client";
+
+import { createContext, type ReactNode, useContext } from "react";
+
+/**
+ * The few words the components write themselves: screen reader names and default button labels. English by default; an app passes its own
+ * language through `UiLabelsProvider` (the admin does, from its message dictionaries), so the design system never depends on a translation library.
+ */
+export interface UiLabels {
+	close: string;
+	cancel: string;
+	save: string;
+	saving: string;
+	loading: string;
+	clear: string;
+	deselect: string;
+	/** What AI work says while it runs ("Generating"), the same on every task. */
+	aiWorking: string;
+	/** The button that stops AI work while it runs. */
+	aiStop: string;
+	/** The button that asks failed AI work again. */
+	aiRetry: string;
+	/** What a control in the `proposal` state says besides its blue: the assistant set this value and nobody has touched it. */
+	proposal: string;
+	/** What a to-do row marked `blocking` says besides its red ring. */
+	blocking: string;
+	/** The footnote button of the format bar: a short word with its number raised ("Note¹"). */
+	footnoteMark: string;
+	paginationLabel: string;
+	paginationPrevious: string;
+	paginationPreviousPage: string;
+	paginationNext: string;
+	paginationNextPage: string;
+	paginationMore: string;
+	sidebarTitle: string;
+	sidebarDescription: string;
+	sidebarToggle: string;
+	sidebarFold: string;
+	sidebarUnfold: string;
+	sidebarResize: string;
+	resize: string;
+	/** How to move a sortable thing with the keyboard, read when its handle takes focus. */
+	sortInstructions: string;
+	/** Said when a thing is lifted (`{name}`), moved over another (`{over}`), dropped there, or put back. */
+	sortLifted: string;
+	sortOver: string;
+	sortDropped: string;
+	sortCancelled: string;
+}
+
+export const DEFAULT_UI_LABELS: UiLabels = {
+	close: "Close",
+	cancel: "Cancel",
+	save: "Save",
+	saving: "Saving…",
+	loading: "Loading",
+	clear: "Clear",
+	deselect: "Remove",
+	aiWorking: "Generating",
+	aiStop: "Stop",
+	aiRetry: "Try again",
+	proposal: "AI suggestion",
+	blocking: "Blocks publishing",
+	footnoteMark: "Note¹",
+	paginationLabel: "Pagination",
+	paginationPrevious: "Previous",
+	paginationPreviousPage: "Previous page",
+	paginationNext: "Next",
+	paginationNextPage: "Next page",
+	paginationMore: "More pages",
+	sidebarTitle: "Sidebar",
+	sidebarDescription: "Shows the mobile sidebar.",
+	sidebarToggle: "Open sidebar",
+	sidebarFold: "Collapse sidebar",
+	sidebarUnfold: "Expand sidebar",
+	sidebarResize: "Resize sidebar",
+	resize: "Resize",
+	sortInstructions: "Press Space to lift, the arrow keys to move, Space to drop, Escape to put it back.",
+	sortLifted: "Lifted {name}.",
+	sortOver: "{name} is over {over}.",
+	sortDropped: "Dropped {name} on {over}.",
+	sortCancelled: "Put {name} back.",
+};
+
+const LabelsContext = createContext<UiLabels>(DEFAULT_UI_LABELS);
+
+export function UiLabelsProvider({ labels, children }: { labels: Partial<UiLabels>; children: ReactNode }) {
+	return <LabelsContext.Provider value={{ ...DEFAULT_UI_LABELS, ...labels }}>{children}</LabelsContext.Provider>;
+}
+
+export const useUiLabels = (): UiLabels => useContext(LabelsContext);

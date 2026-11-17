@@ -1,0 +1,64 @@
+"use client";
+
+import { Checkbox as CheckboxPrimitive } from "@base-ui/react/checkbox";
+import { cn } from "./cn";
+import { CHECK_HOVER } from "./hover";
+import { useProposalDescription } from "./proposal-cue";
+
+/** The ✓ of a ticked box, in its 14px view box: `Checkbox` and a checklist's box in the editor (`EditorBody`, `data-check`) draw the same mark. */
+const CHECK_MARK_PATH = "M2.3 6.9 5.1 9.7 10.7 4.1";
+
+/**
+ * A checkbox: 14px, a ✓ when on and a bar when only some are on (`indeterminate`, the select-all of a list with part of it picked). The mark
+ * is drawn, so the state never rests on color alone. The root is a `span`, not a `button`, so a disabled one is dimmed through `data-disabled`.
+ * The keyboard's focus is a line around the box, where a ring would be (2px, ink at 60%): a line, not a ring's shadow, so an invalid one can keep its red ring on or off, under the
+ * pointer and the keyboard too, with the focus's line outside it: 4px off, so 2px of paper part the red ring (0 to 2px) from the line (4 to 6px) and the two do
+ * not read as one band of two colours. The line is never unset here (no `outline-none`). `proposal` marks a choice the assistant made and nobody has touched: the same mark in blue. A `readOnly` one
+ * shows a choice that can no longer change (an applied proposal): gray when on, a light border when off.
+ */
+function Checkbox({
+	className,
+	proposal = false,
+	...props
+}: CheckboxPrimitive.Root.Props & {
+	/** The assistant made this choice and nobody has touched it yet. Turn it off when it is changed. */
+	proposal?: boolean;
+}) {
+	return (
+		<CheckboxPrimitive.Root
+			data-slot="checkbox"
+			data-proposal={proposal || undefined}
+			aria-description={useProposalDescription(proposal)}
+			className={cn(
+				cn(
+					CHECK_HOVER,
+					"group/check peer data-checked:data-proposal:border-(color:--monti-fg-proposal) data-indeterminate:data-proposal:border-(color:--monti-fg-proposal) data-checked:data-readonly:border-(color:--monti-fg-faint) relative flex size-3.5 shrink-0 items-center justify-center rounded-monti-sm border-[1.5px] border-monti-faint bg-transparent transition-colors after:absolute after:-inset-x-3 after:-inset-y-2 focus-visible:outline-2 focus-visible:outline-monti-contrast/60 aria-invalid:border-monti-danger aria-invalid:ring-2 aria-invalid:ring-monti-danger aria-invalid:focus-visible:outline-offset-4 data-checked:data-proposal:bg-(--monti-fg-proposal) data-checked:data-readonly:bg-(--monti-fg-faint) data-indeterminate:data-proposal:bg-(--monti-fg-proposal) data-disabled:cursor-default data-readonly:cursor-default data-checked:border-monti-contrast data-indeterminate:border-monti-contrast data-readonly:border-monti-muted data-checked:bg-monti-emphasis data-indeterminate:bg-monti-emphasis data-disabled:opacity-45",
+				),
+				className,
+			)}
+			{...props}
+		>
+			<CheckboxPrimitive.Indicator
+				data-slot="checkbox-indicator"
+				className="flex text-monti-on-emphasis"
+				render={(indicatorProps) => (
+					<span {...indicatorProps}>
+						<svg
+							viewBox="0 0 14 14"
+							fill="none"
+							stroke="currentColor"
+							strokeWidth="1.5"
+							className="size-3.5"
+							aria-hidden="true"
+						>
+							<path className="group-data-indeterminate/check:hidden" d={CHECK_MARK_PATH} />
+							<path className="hidden group-data-indeterminate/check:block" d="M4 7h6" />
+						</svg>
+					</span>
+				)}
+			/>
+		</CheckboxPrimitive.Root>
+	);
+}
+
+export { CHECK_MARK_PATH, Checkbox };

@@ -1,0 +1,72 @@
+"use client";
+
+import type * as React from "react";
+import { cn } from "./cn";
+
+const SIZE = {
+	label: "text-monti-label",
+	caption: "text-monti-caption",
+	body: "text-monti-body",
+} as const;
+
+/**
+ * The red `*` that says a field must be filled in: the one required mark of the admin (a label, a field's line in the schema outline). It is
+ * decorative: the control carries `required` itself.
+ */
+function RequiredMark({ className }: { className?: string }) {
+	return (
+		<span data-slot="required-mark" aria-hidden="true" className={cn("ml-[2px] text-monti-danger", className)}>
+			*
+		</span>
+	);
+}
+
+/**
+ * A form label, by default the design system's: sans 12 in the subtle ink (`caption` and `subtle`), the label above a field. `size` and `tone` pick another
+ * role for a label that reads as text (a checkbox's); `hidden` keeps it for screen readers only. `required` ends the label with a red `*` 2px after the
+ * text, for a form that also has optional fields (a form whose every field is required, and a select that always holds a value, get no mark). The star
+ * is decorative: the control itself carries `required`, so a screen reader does not depend on it.
+ */
+function Label({
+	className,
+	size = "caption",
+	tone = "subtle",
+	hidden = false,
+	required = false,
+	children,
+	...props
+}: React.ComponentProps<"label"> & {
+	size?: keyof typeof SIZE;
+	tone?: "default" | "muted" | "subtle";
+	hidden?: boolean;
+	/** The field must be filled in: shows the red star. Put the real `required` on the control too. */
+	required?: boolean;
+}) {
+	return (
+		<label
+			data-slot="label"
+			className={cn(
+				// A lock after the words stands 6px from them (field.md): its own 6px less the row's gap.
+				"flex select-none items-center gap-monti-8 peer-disabled:cursor-default peer-disabled:opacity-45 *:data-[slot=lock-mark]:ml-[-2px] group-data-[disabled=true]:pointer-events-none group-data-[disabled=true]:opacity-45",
+				SIZE[size],
+				tone === "default" && "text-monti-default",
+				tone === "muted" && "text-monti-muted",
+				tone === "subtle" && "text-monti-subtle",
+				hidden && "sr-only",
+				className,
+			)}
+			{...props}
+		>
+			{required ? (
+				<span>
+					{children}
+					<RequiredMark />
+				</span>
+			) : (
+				children
+			)}
+		</label>
+	);
+}
+
+export { Label, RequiredMark };

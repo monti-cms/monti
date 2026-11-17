@@ -1,0 +1,145 @@
+import type * as React from "react";
+import { cn } from "./cn";
+import { CutWords } from "./cut-words";
+import { HIT_LAYER } from "./hit-area";
+import { Checkmark } from "./icons";
+import { useUiLabels } from "./labels";
+import { Spark } from "./spark";
+
+/**
+ * One thing to fix, in the list a status bar cell opens: a ring, the title, one short line under it, and the one action that goes to it at the
+ * right. `blocking` draws the ring in red for what stops publishing; the others are warning-colored. `tag` replaces the ring with a word in its
+ * `tagTone` ("Changed", "Removed", "New": a translated block whose source moved, as the changes lists write them), and the title is cut to one line. `current` is the row whose place is open on the page. `proposal` puts a spark in front of the action and
+ * makes it blue: the assistant does it. With `onOpen` the title and the line are a button that stretches over the row and goes to the place, and the
+ * row takes the selected ground under the pointer like a menu row; the action underlines under the pointer.
+ */
+function TodoItem({
+	title,
+	detail,
+	blocking = false,
+	tag,
+	tagTone = "warning",
+	current = false,
+	onOpen,
+	actionLabel,
+	onAction,
+	proposal = false,
+	className,
+	...props
+}: Omit<React.ComponentProps<"div">, "title"> & {
+	title: React.ReactNode;
+	/** One line under the title; a longer one is cut. */
+	detail?: React.ReactNode;
+	/** Stops publishing. */
+	blocking?: boolean;
+	/** A word in front of the title, instead of the ring; the title is then one line. */
+	tag?: React.ReactNode;
+	tagTone?: "warning" | "danger" | "success";
+	current?: boolean;
+	/** Goes to where the problem is. */
+	onOpen?: () => void;
+	actionLabel?: string;
+	onAction?: () => void;
+	/** The action is the assistant's. */
+	proposal?: boolean;
+}) {
+	const labels = useUiLabels();
+	const text = (
+		<>
+			{/* Above the button's cover layer, so the pointer finds the words; a press on them is still the button's. A title with no tag wraps. */}
+			<CutWords cut={tag !== undefined} className="relative z-1">
+				{title}
+			</CutWords>
+			{detail && <CutWords className="relative z-1 text-monti-caption text-monti-subtle">{detail}</CutWords>}
+		</>
+	);
+	return (
+		<div
+			data-slot="todo-item"
+			data-current={current || undefined}
+			className={cn(
+				"relative flex items-center gap-monti-10 rounded-monti-md px-[9px] py-monti-8 text-monti-body text-monti-default data-current:bg-monti-selected",
+				// A row that goes somewhere takes the selected ground under the pointer, as a menu's row does (the changes lists).
+				onOpen && "hover:bg-monti-selected",
+				className,
+			)}
+			{...props}
+		>
+			{tag !== undefined ? (
+				<span
+					data-slot="todo-mark"
+					className={cn(
+						"w-11 shrink-0 whitespace-nowrap text-monti-caption",
+						tagTone === "danger"
+							? "text-monti-danger"
+							: tagTone === "success"
+								? "text-monti-success"
+								: "text-monti-warning",
+					)}
+				>
+					{tag}
+				</span>
+			) : (
+				<span
+					aria-hidden={blocking ? undefined : true}
+					data-slot="todo-mark"
+					data-blocking={blocking || undefined}
+					className={cn(
+						"size-3.5 shrink-0 rounded-monti-full border-(--monti-bg-warning-emphasis) border-[1.5px]",
+						blocking && "border-monti-danger",
+					)}
+				>
+					{/* The red ring is the only visible cue, so what it means is also said in words. */}
+					{blocking && <span className="sr-only">{labels.blocking}</span>}
+				</span>
+			)}
+			{onOpen ? (
+				<button
+					type="button"
+					onClick={onOpen}
+					className="flex min-w-0 grow cursor-pointer flex-col items-stretch gap-monti-2 border-0 bg-transparent p-0 text-left text-inherit outline-none after:absolute after:inset-0 after:rounded-monti-md focus-visible:after:ring-2 focus-visible:after:ring-monti-contrast/60"
+				>
+					{text}
+				</button>
+			) : (
+				<span className="flex min-w-0 grow flex-col gap-monti-2">{text}</span>
+			)}
+			{actionLabel && (
+				<button
+					type="button"
+					onClick={onAction}
+					className={cn(
+						HIT_LAYER,
+						"relative inline-flex shrink-0 cursor-pointer items-center gap-monti-4 border-0 bg-transparent p-0 text-monti-note decoration-1 underline-offset-4 outline-none hover:underline focus-visible:rounded-monti-full focus-visible:ring-2 focus-visible:ring-monti-contrast/60",
+						proposal ? "text-monti-proposal" : "text-monti-muted hover:text-monti-default",
+					)}
+				>
+					{proposal && <Spark className="size-monti-icon-xs" />}
+					{actionLabel}
+				</button>
+			)}
+		</div>
+	);
+}
+
+/**
+ * The list's line when nothing is left to do: a green ✓ and one small line. Done things are not listed (2026-11-10, owner: a row that is done goes); set off
+ * by a rule if it ever stands under rows.
+ */
+function TodoDone({ className, children, ...props }: React.ComponentProps<"div">) {
+	return (
+		<div
+			data-slot="todo-done"
+			className={cn(
+				"relative flex items-center gap-monti-8 px-[9px] pt-monti-6 pb-monti-4 text-monti-caption text-monti-subtle [[data-slot=todo-item]+&]:mt-[11px] [[data-slot=todo-item]+&]:before:absolute [[data-slot=todo-item]+&]:before:inset-x-[2px] [[data-slot=todo-item]+&]:before:-top-[6px] [[data-slot=todo-item]+&]:before:h-px [[data-slot=todo-item]+&]:before:bg-monti-divider",
+				className,
+			)}
+			{...props}
+		>
+			<Checkmark aria-hidden className="size-3.5 shrink-0 text-monti-success" />
+			{children}
+		</div>
+	);
+}
+
+export { TodoDone, TodoItem };

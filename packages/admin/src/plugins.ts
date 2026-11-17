@@ -1,53 +1,101 @@
-import { assertPluginPagesFree, type CmsPlugin } from "@monti-cms/core";
-import { cmsConfig } from "@monti-cms/core/client";
-import type { ComponentType, ReactNode } from "react";
+import type { Doc, StoredField } from "@monti-cms/core";
+import type { ComponentType } from "react";
+
+/** The entry a plugin's input or view is drawn in, as the editor holds it now: what is typed, saved or not. */
+export type EntryView = {
+	collection: string;
+	locale: string | null;
+	title: string;
+	slug: string;
+	/** Every field's value by its name. In a translation a field that is the same in every language holds the source's value. */
+	values: Record<string, unknown>;
+	/** The public address the entry has or would have; `null` without a slug or a public page. */
+	address: string | null;
+	/** Each field's name as the admin shows it. */
+	labels: Record<string, string>;
+	siteName: string;
+};
 
 /**
- * The admin UI side of a plugin. Loads the module that the plugin definition's (`definePlugin`) `admin` provides as its default export.
- * This module also ends up in the browser bundle, so do not put server-only code (DB, secrets) in it.
+ * What an input a plugin brings is given (doc 14, a field's own input). It draws the input part alone, from the admin's parts
+ * (`@monti-cms/ui`): the row and its label are the panel's. `id` goes on the control, so the label and a to-do row reach it.
  */
-export interface CmsAdminPlugin {
+export type FieldInputProps = {
+	id: string;
+	field: string;
+	definition: StoredField;
+	/** The field's `inputOptions`, as the schema or the plugin gave them. */
+	options: Record<string, unknown>;
+	value: unknown;
+	/** `null` empties the field. */
+	onChange: (value: unknown) => void;
 	/**
-	 * A `<path>` screen under the admin path (default `/admin/<path>`, a client component). The sidebar item is the plugin definition's `nav`.
-	 * The admin login check happens before the admin UI renders.
+	 * The entry cannot be changed (archived, in the trash): the value is to be read. Hand it to the part as its `readOnly` (`Input`,
+	 * `Textarea`, `Select`, `Combobox`, `Switch`, `Checkbox`, `MediaInput` take one), never as `disabled`: a read-only field stays in full
+	 * ink and the keyboard stops on it, and nothing changes its value. The label row shows no `Note` then.
 	 */
-	readonly pages?: Readonly<Record<string, ComponentType>>;
+	readOnly: boolean;
 	/**
-	 * A provider that wraps the whole admin UI (client component). Inside it, use `CmsAdminComponentsProvider` to add field inputs and edit screen extensions,
-	 * or attach behavior to slots (`SlotRegistryProvider`).
+	 * The value is one the assistant proposed and nobody has taken or changed yet (doc 05). The input shows it as its part's `proposal`
+	 * (`Input`, `Textarea`, `Switch` … take one); the field's label row already has the proposal's dot and "discard". Changing the value
+	 * takes the proposal first, as in any field.
 	 */
-	readonly Provider?: ComponentType<{ readonly children: ReactNode }>;
-}
-
-/** Creates an admin plugin (only type-checks). */
-export const defineAdminPlugin = (plugin: CmsAdminPlugin): CmsAdminPlugin => plugin;
-
-/** The site config's plugins. A config without plugins has an empty tuple type, so it is widened when read. */
-const PLUGINS: readonly CmsPlugin[] = cmsConfig.plugins ?? [];
-
-let loaded: Promise<readonly (CmsAdminPlugin & { readonly name: string })[]> | undefined;
+	proposal: boolean;
+	entry: EntryView;
+};
 
 /**
- * Loads the admin side of the site config's plugins. On success it is read once and reused.
- * If loading fails or a screen path collides with the core or another plugin, nothing is remembered so the next call retries, and the error is thrown as is.
+ * An input a plugin brings: the input part itself, or that with a `Note` drawn at the end of the field's label row (a character count).
+ * Both are given the same props.
  */
-export function loadAdminPlugins(): Promise<readonly (CmsAdminPlugin & { readonly name: string })[]> {
-	loaded ??= Promise.all(
-		PLUGINS.map(async (plugin) => ({
-			name: plugin.name,
-			...((await plugin.admin?.())?.default as CmsAdminPlugin | undefined),
-		})),
-	)
-		.then((plugins) => {
-			assertPluginPagesFree(
-				plugins.flatMap((plugin) => Object.keys(plugin.pages ?? {}).map((path) => ({ plugin: plugin.name, path }))),
-			);
-			return plugins;
-		})
-		.catch((error) => {
-			loaded = undefined;
-			console.error("[@monti-cms/admin] failed to load admin plugins", error);
-			throw error;
-		});
-	return loaded;
+export type FieldInput =
+	| ComponentType<FieldInputProps>
+	| {
+			Input: ComponentType<FieldInputProps>;
+			Note?: ComponentType<FieldInputProps>;
+			/** The input is a switch: a choice of one option with it stands as a switch row, its name at the start and the switch at the end. */
+			switch?: true;
+	  };
+
+/** What a view field's component is given: it shows something of the entry and holds no value. */
+export type FieldViewProps = {
+	field: string;
+	/** The view field's `options`, as the plugin gave them. */
+	options: Record<string, unknown>;
+	entry: EntryView;
+};
+
+/** What a view of the document is given: the body as it is typed now, saved or not, and the entry's (or the template's) title. */
+export type DocumentViewProps = { doc: Doc; title: string };
+
+/**
+ * A view of the document a plugin brings to the editors' ⋯ (doc 14, the document tools): a switch row by its name; on, the view stands
+ * beside the body and shows something of it (the body as MDX). It reads and changes nothing.
+ */
+export type DocumentView = {
+	id: string;
+	/** The row's name and the pane's, in each language of the admin. */
+	label: { ko: string; en: string };
+	View: ComponentType<DocumentViewProps>;
+};
+
+/**
+ * A plugin's half in the browser (doc 14): the components its server half names. It comes from a `"use client"` module and is handed to the
+ * admin page (`<AdminPage plugins={[…]} />`), as a site's own blocks are.
+ */
+export type AdminPlugin = {
+	/** The plugin's code name, as `definePlugin` has it. */
+	name: string;
+	/** Inputs by the name a field's `input` gives. */
+	inputs?: Record<string, FieldInput>;
+	/** Views by the name a view field's `view` gives. */
+	views?: Record<string, ComponentType<FieldViewProps>>;
+	/** The screens of its tool pages, by the page's id. */
+	toolPages?: Record<string, ComponentType>;
+	/** Views of the document, each a switch in the editors' ⋯. */
+	documentViews?: DocumentView[];
+};
+
+export function defineAdminPlugin(plugin: AdminPlugin): AdminPlugin {
+	return plugin;
 }

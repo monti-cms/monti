@@ -1,0 +1,86 @@
+import { ChangesBar } from "../../changes-group";
+import {
+	Button,
+	ChangeGroup,
+	ChangeNote,
+	RadioGroup,
+	RadioItem,
+	Sheet,
+	SheetBody,
+	SheetContent,
+	SheetFooter,
+	SheetHeader,
+	SheetTitle,
+	Stack,
+} from "../../index";
+import { AdminFrame } from "./frame";
+import { CHANGED_FIELDS, SchemaPage } from "./schema";
+import { ShownSelect } from "./settings";
+
+/** Settings, Collections tab, with the review sheet open over three changes to the post collection; removing a field deletes its values. */
+export function SchemaReviewScreen() {
+	return (
+		<AdminFrame open="settings">
+			<SchemaPage
+				fields={CHANGED_FIELDS}
+				changed
+				head={<ChangesBar label="변경 사항" count={3} discardLabel="모두 되돌리기" saveLabel="저장하고 적용" />}
+			/>
+			<Sheet open>
+				<SheetContent>
+					<SheetHeader>
+						<SheetTitle
+							of={
+								<>
+									{"· "}
+									{"게시글 · 변경 사항 3"}
+								</>
+							}
+						>
+							검토
+						</SheetTitle>
+					</SheetHeader>
+					<SheetBody>
+						<Stack gap={12}>
+							<Stack gap={0}>
+								<ChangeGroup kind="edit" tag="이름 변경" title="요약" identifier="summary → excerpt">
+									<RadioGroup aria-label="요약 값" value="move" height="md">
+										<RadioItem value="move" label="값 옮기기" hint="148편" />
+										<RadioItem value="empty" label="빈 칸으로 시작" />
+									</RadioGroup>
+								</ChangeGroup>
+								<ChangeGroup kind="drop" tag="삭제" title="부제" identifier="subtitle">
+									{/* Keeping the values comes first; the choice that loses them says so under the group. */}
+									<RadioGroup aria-label="부제 값" value="drop" height="md">
+										<RadioItem
+											value="move"
+											label="다른 필드로 옮기기"
+											control={<ShownSelect value="필드" size="md" width="fit" />}
+										/>
+										<RadioItem value="drop" label="값 지우기" hint="132편" />
+									</RadioGroup>
+									<ChangeNote danger>값이 사라집니다. 되돌릴 수 없습니다.</ChangeNote>
+								</ChangeGroup>
+								<ChangeGroup kind="new" tag="필수" title="글 종류" identifier="format · select">
+									<RadioGroup aria-label="빈 글" value="fill" height="md">
+										<RadioItem
+											value="fill"
+											label="빈 글 148편 채우기"
+											control={<ShownSelect value="메모" size="md" width="fit" />}
+										/>
+										<RadioItem value="leave" label="비워 두기" />
+									</RadioGroup>
+								</ChangeGroup>
+							</Stack>
+						</Stack>
+					</SheetBody>
+					<SheetFooter>
+						<Button variant="ghost">취소</Button>
+						{/* A removed field's values go with it (doc 01), so the apply that deletes them is red. */}
+						<Button variant="danger">지우고 적용</Button>
+					</SheetFooter>
+				</SheetContent>
+			</Sheet>
+		</AdminFrame>
+	);
+}

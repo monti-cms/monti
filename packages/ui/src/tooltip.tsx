@@ -1,0 +1,76 @@
+"use client";
+
+import { Tooltip as TooltipPrimitive } from "@base-ui/react/tooltip";
+import { cn } from "./cn";
+import { Shortcut, type ShortcutKeys } from "./shortcut";
+
+function TooltipProvider({ delay = 0, ...props }: TooltipPrimitive.Provider.Props) {
+	return <TooltipPrimitive.Provider data-slot="tooltip-provider" delay={delay} {...props} />;
+}
+
+/**
+ * A tooltip only says something: the pointer passes through it to what is under it, and it closes when the pointer leaves its trigger. In a list of
+ * 41px rows the name of a row's ⋯ stands over the ⋯ of the row above, and a tooltip that held the pointer took the press meant for that one.
+ */
+function Tooltip({ disableHoverablePopup = true, ...props }: TooltipPrimitive.Root.Props) {
+	return <TooltipPrimitive.Root data-slot="tooltip" disableHoverablePopup={disableHoverablePopup} {...props} />;
+}
+
+function TooltipTrigger({ ...props }: TooltipPrimitive.Trigger.Props) {
+	return <TooltipPrimitive.Trigger data-slot="tooltip-trigger" {...props} />;
+}
+
+/**
+ * The name of an icon button, a small black pill: 12px, one line, with its key combination after it in mono when it has one. Only names go in it (one or two
+ * words), never a sentence; a text button needs no tooltip. It also says whole the words a box shows cut (`CutWords`: a row's title, a cut cell, a banner's
+ * sentence, a row's languages), which lets long ones wrap and stands against its box (`anchor`) with no trigger. And on a lock (`LockMark`) it says why the
+ * value is locked.
+ */
+function TooltipContent({
+	className,
+	side = "top",
+	sideOffset = 6,
+	align = "center",
+	alignOffset = 0,
+	anchor,
+	shortcut,
+	children,
+	...props
+}: TooltipPrimitive.Popup.Props &
+	Pick<TooltipPrimitive.Positioner.Props, "align" | "alignOffset" | "anchor" | "side" | "sideOffset"> & {
+		/** The keys that do the same (`["mod", "S"]`), written for the system: "⌘S" on a Mac, "Ctrl+S" elsewhere. */
+		shortcut?: ShortcutKeys;
+	}) {
+	return (
+		<TooltipPrimitive.Portal>
+			<TooltipPrimitive.Positioner
+				align={align}
+				alignOffset={alignOffset}
+				anchor={anchor}
+				side={side}
+				sideOffset={sideOffset}
+				className="isolate z-50"
+			>
+				<TooltipPrimitive.Popup
+					// The library leaves the popup without a role; a tooltip says it is one, to a screen reader and to a test that asks for it.
+					role="tooltip"
+					data-slot="tooltip-content"
+					className={cn(
+						"data-[side=bottom]:slide-in-from-top-2 data-[side=inline-end]:slide-in-from-left-2 data-[side=inline-start]:slide-in-from-right-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:fade-in-0 data-open:zoom-in-95 data-closed:fade-out-0 data-closed:zoom-out-95 pointer-events-none z-50 inline-flex w-fit origin-(--transform-origin) items-center gap-monti-6 whitespace-nowrap rounded-monti-md bg-monti-emphasis px-monti-8 py-monti-4 text-monti-caption text-monti-on-emphasis shadow-monti-floating data-closed:animate-out data-open:animate-in",
+						className,
+					)}
+					{...props}
+				>
+					{children}
+					{shortcut && (
+						<span className="text-monti-micro opacity-70">
+							<Shortcut keys={shortcut} />
+						</span>
+					)}
+				</TooltipPrimitive.Popup>
+			</TooltipPrimitive.Positioner>
+		</TooltipPrimitive.Portal>
+	);
+}
+
+export { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider };

@@ -1,0 +1,40 @@
+import type { UiLabels } from "../src/labels";
+
+/**
+ * The words the components write themselves, in Korean: what the admin shows when its language is Korean. Storybook gives them to every story by default
+ * (the toolbar can switch to the English defaults). The admin's own dictionaries are the source; `packages/admin/src/__test__/ui-labels.test.ts` fails
+ * when this list and what `AdminUiLabels` gives the components differ.
+ */
+export const KO_UI_LABELS: UiLabels = {
+	close: "닫기",
+	cancel: "취소",
+	save: "저장",
+	saving: "저장 중…",
+	loading: "불러오는 중",
+	clear: "지우기",
+	deselect: "선택 해제",
+	aiWorking: "생성 중",
+	aiStop: "멈추기",
+	aiRetry: "다시 시도",
+	proposal: "AI 제안",
+	blocking: "발행 막음",
+	footnoteMark: "각¹",
+	paginationLabel: "페이지 이동",
+	paginationPrevious: "이전",
+	paginationPreviousPage: "이전 페이지",
+	paginationNext: "다음",
+	paginationNextPage: "다음 페이지",
+	paginationMore: "다른 페이지",
+	sidebarTitle: "사이드바",
+	sidebarDescription: "모바일 사이드바를 보여 줍니다.",
+	sidebarToggle: "사이드바 열기",
+	sidebarFold: "사이드바 접기",
+	sidebarUnfold: "사이드바 펼치기",
+	sidebarResize: "사이드바 너비 조절",
+	resize: "패널 너비 조절",
+	sortInstructions: "Space로 들고, 화살표로 옮기고, Space로 놓습니다. Esc를 누르면 제자리로 돌아갑니다.",
+	sortLifted: "{name} 들었습니다.",
+	sortOver: "{name}, {over} 자리로 왔습니다.",
+	sortDropped: "{name}, {over} 자리에 놓았습니다.",
+	sortCancelled: "{name}, 제자리로 돌아갔습니다.",
+};

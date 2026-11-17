@@ -1,0 +1,153 @@
+import type { ApplyEvent, ProposalItemView, ProposalView } from "@monti-cms/core";
+import { toast } from "@monti-cms/ui";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useAdmin } from "../operations/admin-context";
+import { reasonOf, useOperation, useRead } from "../operations/use-operation";
+import { followersOf } from "./change-words";
+import { useAssistant } from "./use-assistant";
+
+/** How often a proposal that is being applied somewhere else (another tab, an apply whose listener went away) is read again. */
+const POLL_MS = 2000;
+
+/**
+ * One proposal as its card and its review page hold it: what it would change, and the three things a person does with all of it (apply what is
+ * kept in, discard, undo). Both read the same proposal, so a check taken out on the review page is counted out on the card. Applying is a
+ * stream: each item's result comes as it lands.
+ */
+export function useProposal(id: string) {
+	const { streams, t, wrote } = useAdmin();
+	const { proposalTick, touchProposals } = useAssistant();
+	const read = useRead<ProposalView>("proposals.get", { id }, { quiet: true });
+	const reload = read.reload;
+	const discarding = useOperation<{ output: { discarded: string[] } }>("proposals.discard");
+	const reverting = useOperation<{ output: { reverted: string[]; kept: string[] } }>("proposals.revert");
+	const including = useOperation("proposals.include");
+	/** How far an apply this page started has come. */
+	const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
+	const view = read.data;
+
+	// The run adds to it, another place changes it: it is read again.
+	const first = useRef(true);
+	// biome-ignore lint/correctness/useExhaustiveDependencies: it follows the tick
+	useEffect(() => {
+		if (first.current) first.current = false;
+		else void reload();
+	}, [proposalTick]);
+
+	// An apply that goes on without this page listening is read until it is over.
+	const applyingElsewhere = view?.applying === true && progress === null;
+	useEffect(() => {
+		if (!applyingElsewhere) return;
+		const timer = setInterval(() => void reload(), POLL_MS);
+		return () => clearInterval(timer);
+	}, [applyingElsewhere, reload]);
+
+	const apply = useCallback(async () => {
+		// Counted by rows, as the button that started it: a translation is done when it and the words written into it are.
+		const { follows, followers } = followersOf(view?.items ?? []);
+		const going = (item: ProposalItemView) => item.state === "pending" && item.included && !item.stale;
+		const rows = (view?.items ?? [])
+			.filter((item) => !follows(item) && going(item))
+			.map((item) => [
+				item.id,
+				...followers(item.id)
+					.filter(going)
+					.map((each) => each.id),
+			]);
+		const ended = new Set<string>();
+		const total = rows.length;
+		setProgress({ done: 0, total });
+		const answer = await streams("proposals.apply", { id });
+		if (!("events" in answer)) {
+			setProgress(null);
+			const reason = ((answer.body ?? {}) as { reason?: Parameters<typeof t>[0] }).reason;
+			toast.error(t(reason ?? "errors.unexpected"));
+			return void reload();
+		}
+		let saved = 0;
+		try {
+			for await (const event of answer.events as AsyncIterable<ApplyEvent>) {
+				if (event.type === "item") {
+					ended.add(event.itemId);
+					setProgress({ done: rows.filter((ids) => ids.every((each) => ended.has(each))).length, total });
+				} else {
+					const applied = new Set(
+						event.results.filter((result) => result.state === "applied").map((result) => result.itemId),
+					);
+					saved = rows.filter((ids) => ids.every((each) => applied.has(each))).length;
+				}
+			}
+		} catch {
+			// The connection went; the apply goes on by itself (doc 00), and the proposal is read until it is over.
+		}
+		setProgress(null);
+		await reload();
+		// Applying writes to the server at once, unlike taking a proposal on the screen: one line says so (AS-48).
+		if (saved > 0) toast(t("card.appliedSaved", { count: saved }));
+		// What it changed shows wherever it is listed.
+		wrote();
+		touchProposals();
+	}, [streams, id, view?.items, reload, wrote, touchProposals, t]);
+
+	/**
+	 * Discards what still waits. `true` when something was discarded; a refusal is said, and the proposal is read again as it is. When
+	 * nothing waited any more (another tab discarded it, or applied it, a moment ago) the server answers with an empty list: one line says
+	 * so, and the card shows what became of the proposal (doc 10, T166).
+	 */
+	const discard = useCallback(async (): Promise<boolean> => {
+		const done = await discarding.run({ proposal: id });
+		const discarded = done.ok && done.body.output.discarded.length > 0;
+		if (!done.ok) toast.error(t(reasonOf(done.refusal)));
+		else if (!discarded) toast.error(t("card.nothingWaiting"));
+		await reload();
+		touchProposals();
+		return discarded;
+	}, [discarding.run, id, reload, touchProposals, t]);
+
+	/** Undoes what was applied. When there was nothing left to undo (undone elsewhere a moment ago) one line says so; what stayed says why on its row. */
+	const revert = useCallback(async () => {
+		const done = await reverting.run({ id });
+		if (!done.ok) toast.error(t(reasonOf(done.refusal)));
+		else if (done.body.output.reverted.length === 0 && done.body.output.kept.length === 0)
+			toast.error(t("card.nothingToUndo"));
+		await reload();
+		touchProposals();
+	}, [reverting.run, id, reload, touchProposals, t]);
+
+	const include = useCallback(
+		async (items: ProposalItemView[], included: boolean) => {
+			const ids = items.filter((item) => item.state === "pending" && item.included !== included).map((item) => item.id);
+			if (ids.length === 0) return;
+			const done = await including.run({ ids, included });
+			if (!done.ok) toast.error(t(reasonOf(done.refusal)));
+			await reload();
+			touchProposals();
+		},
+		[including.run, reload, touchProposals, t],
+	);
+
+	return {
+		view,
+		reload,
+		/** While it is being applied, here or elsewhere: how far, when this page knows. */
+		applying: progress !== null || view?.applying === true,
+		progress,
+		apply,
+		discard,
+		revert,
+		include,
+		/** The request that runs: its button is loading, and no button of the row starts another meanwhile. */
+		pending: discarding.pending ? ("discard" as const) : reverting.pending ? ("revert" as const) : null,
+	};
+}
+
+/** Where a proposal stands, from what its items became. */
+export type ProposalStanding = "waiting" | "applying" | "applied" | "reverted" | "discarded";
+
+export function standingOf(view: ProposalView, applying: boolean): ProposalStanding {
+	if (applying) return "applying";
+	if (view.items.some((item) => item.state === "pending" || item.state === "stale")) return "waiting";
+	if (view.status === "discarded") return "discarded";
+	if (view.status === "reverted") return "reverted";
+	return "applied";
+}

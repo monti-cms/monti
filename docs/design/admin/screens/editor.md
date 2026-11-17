@@ -1,0 +1,194 @@
+# 글 편집기 (EditorNotion)
+
+- 보드: `EditorNotion.dc.html`. 상태와 흐름 단계: [screens.md › EditorNotion](../screens.md#editornotion).
+- 공통 틀: [common.md](common.md)의 ✦ 어시스턴트 열기, 토스트, 알림 띠, 메뉴. 편집기는 `PageHeader`를 쓰지 않는다. 머리가 편집기 자신의 줄이다. 틀은 사이드바 밖의 따로 된 페이지(`StandalonePage`)이고, 알림 띠는 그 `banner` 자리(머리 줄보다 위)에 선다.
+
+## 기본 틀
+
+### 머리 줄
+
+| 자리 | 부품 | 이렇게 쓴다 |
+|---|---|---|
+| "‹ 게시글" | `TextButton variant="quiet"`(`href`, 앞 아이콘) | 목록으로 돌아간다. |
+| 주소 `/posts/…` | `Text mono variant="caption" tone="faint"` | 읽기만 한다. 고치는 곳은 속성 패널의 "주소"다. |
+| 발행 상태 | `EntryStatus`(`published`·`editing`·`draft`) | 상태 말과 점. |
+| "저장" | `Button variant="ghost"` | 머리 줄에서 한 줄 높이(36px)의 홀로 선 동작이라 글자 버튼이 아니라 ghost 버튼이다(`button.md`의 모양 기준. TB-01, 만들며 정함 (2026-11-16). 앞서는 `TextButton`이었다). 글을 읽어 온 뒤에 있다: 저장 · 미리보기 · 발행 알약과 그 뒤 구분선, ⋯는 글을 읽기 전에는 없다(발행했는지, 보관했는지, 휴지통에 있는지 아직 모른다. T153). 누르면 저장한다. 라벨은 "저장"이고, 단축키는 툴팁에만 있다(보드의 "⌘S"는 [button.md](../components/button.md)를 따라 뺀다). 툴팁은 다른 툴팁처럼 이름 "저장" 뒤에 흐린 단축키다(`TooltipContent shortcut`, [overlay.md](../components/overlay.md). 전에는 "⌘S"만 있었다, 만들며 정함 (2026-11-14)). |
+| "미리보기" | `Button variant="secondary"` | 공개 화면을 연다. 볼 것이 없으면(제목도 본문도 빈 새 글) 알약이 없다. 흐리게 두지 않는다(원칙 7, 2026-11-05 소유자). |
+| "발행하기 ▾" | `SplitButton`(`menu`에 `DropdownMenuItem` 둘: "발행하기" · "오늘 날짜로 다시 발행", 각각 아래에 발행일) | 한 번 발행한 글에만 ▾가 있다. 초안은 `Button variant="primary"` "발행하기". 발행일이 오늘인 글도 같은 `Button`이다: 두 행의 날짜가 같아 고를 것이 없다(TB-04, 만들며 정함 (2026-11-16)). 바뀐 것이 없으면 "발행됨"으로 비활성. 키보드로 발행했으면 포커스는 "발행됨"에 남는다(`aria-disabled`, [button.md](../components/button.md). 만들며 정함 (2026-11-16)). 발행하는 동안 `loading`. 두 말("발행하기" · "발행됨")은 `reserve`로 넓은 쪽의 폭을 차지해, 말이 바뀌어도 옆의 단추가 움직이지 않는다(TB-02, 만들며 정함 (2026-11-16)). 발행일은 이 메뉴로만 정한다. |
+| 속성 | `IconButton pressed` | 속성 패널을 열고 닫는다. 열린 동안 눌린 바탕. |
+| ⋯ | `IconButton` + `DropdownMenu` | 행: "AI가 바꾼 기록"(활동 기록을 새 탭에서 연다) · "복제" · "보관"(보관하면 토스트 "보관했습니다"와 "되돌리기"가 뜬다. 되돌리면 보관 전 그대로, 발행된 글이었으면 다시 사이트에 나온다. 휴지통으로 옮길 때와 같은 토스트다. 만들며 정함 (2026-11-16). 파일이 올라가는 동안에는 보관하지 않고 토스트 "파일을 올리는 중입니다"를 띄운다. 그 밖에는 아무것도 하지 않는다. 다 올라간 뒤 다시 누른다. 소유자, 2026-11-12: "파일을 올리는 중입니다라고만 하면 되지") · "내보내기" │ 문서 도구(플러그인 행 `DropdownMenuCheckboxItem` "MDX로 보기"(앞 아이콘 `DocumentView`: 플러그인의 보기마다 같은 아이콘, 만들며 정함 (2026-11-14)), "본문 폭" `DropdownMenuSub` + `DropdownMenuRadioGroup` "보통" · "꽉 차게", 지금 값은 `MenuValue`, 앞 아이콘 `FitToWidth`) │ "휴지통으로"(`variant="danger"`). 플러그인이 없으면 그 행도 없다. "MDX로 보기"를 켜면 본문 오른쪽, 속성 패널의 자리에 그 보기의 판이 선다: `ResizablePane edge="start"`(너비는 브라우저에 남는다) 안의 `Box as="aside" background="tool"`, 위에 보기 이름 `Text variant="caption" tone="subtle"`, 그 아래 플러그인이 그린 것(MDX는 `CodeBlock`). 속성을 열면 보기가 닫히고 스위치도 꺼진다. "본문 폭"은 이 브라우저에 남고, "꽉 차게"는 글 쓰는 단의 최대 너비를 푼다. 템플릿 편집기의 ⋯에도 "복제" 아래 같은 묶음이 있다(만들며 정함 2026-11-13, T71). 스토리: Screens/Editor/DocumentTools. |
+| 머리 끝 구분선 | `Separator orientation="vertical" length="control"` | 발행 알약 뒤, 화면 도구(속성 · ⋯ · ✦) 앞. 주 동작 알약은 혼자 서고, 화면 도구는 선 너머 오른쪽 끝에 한 묶음으로 선다. ⋯의 행은 발행의 변형이 아니므로 `발행하기 ▾` 안에 넣지 않는다(2026-11-05, 소유자). |
+| ✦ 어시스턴트 열기 | [common.md](common.md)의 ✦ 어시스턴트 열기(화면 코드 `AssistantButton`) | 머리 줄 끝. 누르면 어시스턴트 패널이 편집기 옆에 열리고 버튼은 사라진다. 닫으면 돌아와 포커스를 받는다. 어시스턴트가 없는 사이트에는 없다([assistant.md](assistant.md) 편집기 안에서). |
+| 휴지통 글의 머리 | `Button variant="primary"` "복원", ⋯ `DropdownMenu`에 "영구 삭제"(`variant="danger"`) 하나 | 저장 · 미리보기 · 발행 대신 "복원"이 그 자리에 온다(보관 글의 "보관 풀기"와 같은 자리. "보관 풀기"도 토스트 "보관을 풀었습니다"와 "되돌리기"로 답한다, 만들며 정함 (2026-11-16)). 영구 삭제는 ⋯ 안에 있고 `AlertDialog`로 묻는다(2026-11-11 소유자). 돌아가기는 "휴지통"이고 휴지통 화면으로 간다. 휴지통은 글을 열 때 주소에 `?from=trash`를 붙인다: 편집기가 그려지지 못해도 돌아가기는 "휴지통"이다(만들며 정함 (2026-11-16)). 복원하면 그 자리에서 초안으로 열린다. |
+
+### 글 단
+
+| 자리 | 부품 | 이렇게 쓴다 |
+|---|---|---|
+| 언어 탭 | `TabLinks` + `TabLink`(언어마다, 상태 점은 `EntryStatus` 표시만, 원문이 바뀐 언어는 `ChangeDot`) | 언어 하나가 글 하나다(주소가 바뀐다). 휴지통 글의 탭은 그 글의 언어 가운데 휴지통에 함께 든 것들이다(휴지통의 한 줄 "KO +1"이 세는 언어, `trash.get`의 `locales`). 사이트의 언어 순서로 서고, 누르면 그 언어가 같은 읽기 전용 편집기로 열린다. 휴지통에 없는 언어의 탭은 없다. 전에는 탭이 하나도 없어 함께 버린 번역을 그 글에서 읽을 길이 없었다(만들며 정함 (2026-11-16)). 탭의 이름은 화면 언어로 쓴 언어 이름이다("한국어" · "영어" · "일본어". 2026-11-16 소유자: "어디서나 한국어 이름", TR-01). |
+| "언어"(앞에 `Add`) | 탭 줄 끝의 `TabLink`(기준 화면대로 탭과 같은 모양) + `DropdownMenu`(`DropdownMenuLabel` "번역 추가", 언어 행 끝에 코드 `MenuShortcut`, 구분선, "언어 관리") | 고르면 그 언어의 새 번역을 만든다. 고칠 수 없는 글(보관 글, 휴지통 글)에는 이 탭이 없다: 서버가 번역을 만들지 않는다(AT-30, 만들며 정함 (2026-11-16)). 더할 언어가 없으면 메뉴에 "언어 추가 · 설정" 한 행. "언어 관리"와 "언어 추가 · 설정"은 설정 › 언어 탭으로 간다. 메뉴의 언어 행도 화면 언어로 쓴 이름이다("일본어", 끝에 `ja`. 2026-11-16 소유자, TR-01). |
+| 제목 | 편집기 제목 칸(`Input appearance="inline" size="display"`와 같은 모양) | 늘 입력 칸이다. 포커스는 캐럿만 보인다. 고칠 수 없는 글(보관 글, 휴지통 글)에서는 `readOnly`다: 글자는 그대로 잉크색이고 골라 복사할 수 있다(AT-29, 만들며 정함 (2026-11-16)). 글을 읽어 오기 전에는 본문처럼 제목 칸과 그 아래 선이 없다. 빈 제목 칸은 제목 없는 글로 읽히고, 거기 친 글자가 저장된 제목을 덮었다(T153). 그동안 누른 키는 받을 칸이 없어 버려진다. 빈 제목의 자리 글자는 목록이 그런 글을 부르는 말 "제목 없음"이고, 흐린 잉크에 보통 굵기다(번역은 원문의 제목이 자리 글자다. EH-03, 만들며 정함 (2026-11-16)). |
+| 본문 블록 | `Block`(메뉴가 열린 블록은 `active`) | 글자 모양은 편집기의 것. |
+| 그 사이 고쳐진 본문 제안 (T87) | 블록 왼쪽 여백 `EditorMargin` 안 `Marker`(이름 "그 사이 고쳐짐", 다시 만드는 동안 "…"), `MemoCardPopover`(`where` "그 사이 고쳐짐", `discardLabel` "버리기", `acceptLabel` "다시 만들기"와 `acceptSpark`), 안에 `MemoDiff`(`beforeLabel` "그때", `afterLabel` "제안", 블록을 지우는 제안은 `none` "지움"). 다시 만드는 동안 머리의 버튼이 없고 `MemoDiff` 아래에 `AiWorking` "생성 중 · 멈추기"가 선다. 가지 못하면 머리에 "버리기"만 남고 아래에 `AiFailed`(까닭 한 줄, "다시 시도" 또는 "이어서 하기")가 선다 | 제안이 만들어진 뒤 그 블록의 글이 바뀌었으면 글 위에 그리지 않고 블록 옆에 표시를 건다. 누르면 카드: 그때의 글과 제안한 글, "버리기"와 "✦ 다시 만들기". "다시 만들기"는 저장 전 변경이 있으면 먼저 저장하고, 어시스턴트가 지금 글에 맞춰 다시 만든다. 어시스턴트가 없는 사이트에는 "버리기"만 있다. 나란히 보기에는 여백이 없어 표시도 없다. 같은 블록에 표시가 둘이면(번역의 "변경"이나 "원문", 다른 요청의 고쳐진 제안) 겹치지 않고 4px 띄어 왼쪽에 나란히 선다(`EditorMargin beside`). 이야기: `Screens/Entry`의 `StaleProposal`, 표시 둘은 `StaleProposalsSideBySide`. |
+| 제안 말풍선 | `ProposalBubbleDock` + `ProposalBubble` | 이 글에 그려진 제안을 만든 차례대로 오간다: 본문의 바뀜, 그 사이 고쳐진 본문 제안, 제목과 속성 칸의 제안(T86). ↑↓는 그 자리로 간다(본문은 그 블록으로, 고쳐진 제안은 카드를 열고, 칸은 그 탭을 열어 칸에 포커스). "모두 받기"는 받을 수 있는 것을 모두 받고(고쳐진 제안은 남는다), "모두 버리기"는 오가는 것을 모두 버린다. 편집기가 그리지 않는 제안(옮기기, 발행, 휴지통, 본문을 통째로 바꾸는 저장, 패널에 없는 칸)은 세지 않는다: 대화의 카드와 검토 화면에 있다. 이야기: `FieldProposals`, `BodyProposals`, 맨 앞에 넣는 줄은 `BodyProposalAtStart`. |
+| 블록 손잡이 | `Anchored place="block-left"` 안 `BlockHandle`(이름 "블록 메뉴"가 툴팁, `trigger`로 `DropdownMenuTrigger`를 감싼다, 메뉴가 열린 동안 `active`) | 그립 하나다(+는 없다, 2026-11-06 소유자). 20 × 24 둥근 네모(2026-11-14 소유자). 누르면 블록 메뉴, 끌면 옮긴다. Shift를 누른 채 누르면 고른 블록이 그 블록까지 는다. 블록 줄과 그 왼쪽 여백에 포인터가 있으면 뜬다. |
+| 고르는 상자 (T80) | `Anchored place="over-box"` 안 `PickBox` | 글 바깥 여백에서 끌면 그려지는 가는 선이다. 닿는 블록이 골라진다(editor-tools.md "여러 블록 고르기"). |
+| 고른 블록 (T80) | `EditorBody`의 `data-picked`(선택 바탕, 둘레 4px), 고르는 동안 본문에 `data-picking` | 상자, Shift+손잡이, 글자를 고른 채 Esc로 고른다. Backspace · Delete로 지운다. |
+| "블록 n개" 메뉴 (T80) | `DropdownMenu`: `DropdownMenuLabel` "블록 n개" │ "위로" · "아래로" · "복제" · "삭제"(이것만 `MenuShortcut keys` Backspace) | 고른 블록 중 하나의 손잡이가 연다. 할 수 없는 "위로" · "아래로"는 숨긴다. 고르지 않은 블록의 손잡이를 누르면 고른 것이 놓이고 그 블록 하나의 메뉴가 열린다. |
+| 블록 메뉴 | `DropdownMenu`: `DropdownMenuLabel`(블록 종류) · `DropdownMenuSub` "다른 블록으로 바꾸기"(`DropdownMenuRadioGroup`, 행 앞에 블록 아이콘: 제목은 `HeadingIcon`. 행 끝에 마크다운 단축 `MenuShortcut typed`) · `DropdownMenuSub` "정렬"(왼쪽 · 가운데 · 오른쪽) · 표에서는 `DropdownMenuCheckboxItem` "머리 행"(앞 아이콘 `Row`, 켜져 있으면 끝에 ✓) · 번역에서 원문을 따르는 블록에는 "따로 고치기"(앞 아이콘 `Unlink`) │ "위로" · "아래로" · "복제" · "삭제"(각각 `MenuShortcut keys`) | 할 수 없는 행(첫 블록의 "위로")은 숨긴다. 행마다 앞에 아이콘이 있다([menu.md](../components/menu.md)). "머리 행"은 표의 첫 행을 머리로 켜고 끈다. 만들며 정함 (2026-11-14): 지도에 없던 행을 코드대로 적었다. |
+| 서식 카드 | `Anchored place="selection-above" within`(본문 상자) 안 `FloatingBar`: `FormatButton`(B, I, U, S, 코드, 서식이 있을 때 `clear` / 위 첨자, 아래 첨자, 링크, 각주, `more`의 ⋯) · `Separator orientation="vertical" length="bar"` · `FormatBarRequest`("✦ 요청") | 글자를 고르면 그 위에 뜬다. 켜진 서식은 `pressed`. 본문에 코드 블록이 있으면 링크 다음에 "코드 줄 링크"(`FloatingBarButton`, `CodeReference`). 코드 안에서는 굵게 · 기울임 · 밑줄 · 취소선만(문서 17). 서식 지우기(⌘\)는 고른 범위 안의 서식을 링크만 남기고 모두 뺀다(editor-tools.md). ⋯의 행(사이트가 더한 서식)은 앞에 `Pen` 아이콘을 둔다: 사이트의 서식은 제 아이콘을 말하지 않으므로 모두 같은 서식 표시다(만들며 정함 (2026-11-14)). |
+| 코드 블록 | `CodeFrame`(머리 줄: 언어(없으면 "일반 텍스트"), 파일 이름. 코드 탐색기 안의 파일은 그 위의 경로 줄이 이름을 말하므로 언어만, 17 · 18 문서) · `CodeArea`(`CodeNumber`, `CodeGround`, `CodeAside`) · 도구 행 `BlockBarPlace` + `FloatingBar` + `FloatingBarButton`(언어 `Popover` + `Command`, 파일 이름 `Popover` + `Input`, 줄 번호, 줄 효과, 규칙 `Popover` + `Command` / `FormField`, 툴팁 `Popover` + `Input`, 글자 접기, 복사) · 줄 메뉴 `DropdownMenu`(`DropdownMenuCheckboxItem box`) | 커서가 코드 안에 있으면 도구 행이 뜬다. 줄 번호를 누르거나 끌면 줄을 고르고 손을 떼면 줄 메뉴. 코드 링크를 만드는 동안 화면 맨 위에 `Banner tone="neutral"`("연결" · "취소"). 자세한 것은 [17-code-tools.md](../../features/17-code-tools.md)의 "편집기"와 "코드 링크". |
+| "/" 메뉴 | `Command`(`CommandInput`, `CommandList`, `CommandGroup` "글" · "넣기" · "컴포넌트" · "템플릿", `CommandItem`(행 앞에 블록 아이콘, 제목은 `HeadingIcon`, 사이트의 블록("컴포넌트")은 제 아이콘(`BlockDefinition.Icon`, 블록 패키지의 블록은 모두 가진다)이고, 아이콘을 주지 않은 블록은 `Box`. 아이콘 없는 행이 없게 하는 것은 만들며 정함 (2026-11-14). 행 끝에 마크다운 단축 `MenuShortcut typed`), `CommandSeparator`, 맞는 블록이 없을 때 `CommandEmpty` "맞는 블록 없음") | 한 단계뿐이다. 포커스는 본문에 남고 화살표 · Enter · Esc로 움직인다. "템플릿"을 치면 템플릿만 남는다. 친 말에 맞는 블록이 없으면 "맞는 블록 없음" 한 줄을 보이고, 마지막으로 맞은 말(없으면 "/") 뒤로 두 글자까지만 두었다가 메뉴를 닫는다(ES-04, 만들며 정함 (2026-11-16)). |
+| 올리는 중에 묻기 | `AlertDialog`(`AlertDialogCancel variant="danger"` "그만 올리기", `AlertDialogAction` "계속 올리기") | 파일이 올라가는 동안 비교 화면이나 나란히 보기로 가면 묻는다. 그러면 본문이 새로 그려져 올라가던 파일이 끝나기 때문이다. 글은 그대로이고 파일만 멈춘다. |
+| 올리는 중인 이미지 | `UploadingImage` | 붙여 넣거나 끌어 넣은 그림은 창 없이 커서 자리에 들어가고 아래에 막대가 흐른다. 캡션 칸은 그때부터 있다. 빈 줄이면 그 줄을 대신하고, 글이 있는 줄이면 그 줄 바로 뒤에 간다. 목록 항목은 글자만 담으므로(03번 문서) 그 항목 바로 뒤에서 목록이 나뉘고, 번호 목록은 번호가 이어진다. 넣은 뒤 커서는 그림 다음 글로 간다. 글이 없으면 새 줄을 만든다. 그래서 바로 이어 써도 그림이 지워지지 않는다. 여러 개를 함께 놓으면 순서대로 들어간다. 편집 대화상자에서 돌리면 잡아 둔 자를 곳도 그림과 함께 돈다. 시트가 닫히면 포커스는 본문으로 간다. 그래서 캡션을 쓰다가 열었어도 ⌘Z가 방금 한 일을 되돌린다. |
+| 올리지 못한 파일 | `BlockBox` 안의 `FileBlock tone="danger"`(세부에 "올리기 실패", 고르면 `BlockBox selected`의 2px 선: 고른 파일, 그림과 같은 선이다, 만들며 정함 (2026-11-14), `action`에 `IconButton` `Renew` "다시 올리기") | 제자리에 남는다. 이미지도 파일도 같고, 실패한 동안 캡션 칸은 없다(2026-11-09). 다른 블록처럼 눌러 고른 뒤 Backspace나 핸들 메뉴로 지운다(2026-11-09 소유자). 올라가다 끊긴 파일만 남는다(네트워크가 끊겼거나 서버가 받지 못한 파일). 읽기 전용 편집기(그 사이 보관한 글)에서는 블록이 "올리기 실패"로 남고 "다시 올리기" 버튼은 없다. 받지 않는 파일은 블록이 되지 않고 토스트로 막히며, 깨진 그림은 알게 된 때 블록이 사라지고 같은 토스트가 뜬다(2026-11-09 소유자). 파일이 끝나며 블록이 바뀌거나 사라지는 것은 실행 취소에 남지 않는다. 속성 패널에서는 `FormFieldError`에 "올리기 실패", `MediaInput`의 `action`에 같은 버튼이다. 받지 않는 파일이면 칸은 그대로고 토스트만 뜬다. 격자와 같은 버튼이고 줄을 따로 쓰지 않는다(2026-11-09). 빼는 것은 칸의 ×가 한다. ×는 그 파일만 빼고, 칸은 전의 그림과 대체 텍스트로 돌아간다(2026-11-09 소유자). |
+| 이미지 도구 행 | `BlockBarPlace` 안 `FloatingBar`: `FloatingBarButton`(왼쪽 · 가운데 · 오른쪽 정렬 `pressed` / 편집 / 설정) · `Separator orientation="vertical" length="bar"`, 모서리 `ResizeCorner`(`corner`, 가운데 그림은 넷, 한쪽에 붙은 그림은 움직이는 쪽 둘), `BlockBox selected`의 2px 진한 선 | 설정은 카드(`Popover`)를 연다. 읽기 전용 본문에서는 `BlockBox`가 Tab 자리이고(`tabIndex`, `role="group"`, 이름은 어느 이미지인지 말한다: "이미지: 대체 텍스트", 대체 텍스트가 없으면 "이미지: 파일 이름") 포커스를 가진 것은 보통 포커스 고리를 그리며, Enter · Space나 포인터가 그것을 골라 진한 선과 "설정" 하나뿐인 도구 행(이름 "이미지 도구", 파일은 "파일 도구")을 띄우고 Escape가 닫으며 푼다(본문 어디에 키보드가 있든 고른 것을 푼다. 2026-11-12, T133. [editor-tools.md](../components/editor-tools.md)). 편집(자르기 · 돌리기 · 비율 · 크기)은 대화상자(`Dialog` + `CropStage`, 돌리기는 `IconButton size="sm"`, 비율과 단위는 `Segmented size="sm"`, 가로 · 세로는 `Input size="sm" width="number" mono`, "크기"와 "×"는 `Text variant="note" tone="subtle"`)로 연다. 삭제는 블록 메뉴에 있다. |
+| 이미지 설정 카드 | `Popover` 안에 그림의 속성만(2026-11-10 소유자: 모양은 "편집"이다): "대체 텍스트" `Input`(라벨 줄 `FormFieldLabel action`에 `TextButton tone="proposal" size="caption"` "✦ 채우기", 비었으면 `FormFieldError`), "장식 이미지" `Option` + `Switch` | 장식 이미지를 켜면 대체 텍스트 칸이 사라지고 커서는 스위치에 남는다. 안내 문구는 없다. 대체 텍스트를 쓰는 동안 라벨 줄에 글자 수("23 / 80"). 다른 빈 이미지가 있으면 끝에 "다음 이미지"(`TextButton`). |
+| 캡션 | `Input appearance="inline" size="sm" align="center"`, 같은 줄 끝에 `FillAction`(`TextButton tone="proposal" size="caption"`) | 이미지 아래 그 자리에서 고친다. AI 버튼은 다른 필드와 같은 "✦ 채우기"이고, 캡션에 글이 있으면 대체 텍스트처럼 "↻ 다시"다(보드의 ✦만 있는 버튼 대신. 커서가 그 줄에 있을 때만 보인다). 채운 캡션이 있는 동안은 커서가 떠나도 "버리기 · ↻ 다시"가 남는다(2026-11-15). 채우지 못하면 캡션 아래에 캡션과 같은 정렬로 `Text variant="caption" tone="danger"` 한 줄이 까닭을 말한다(그림을 읽지 못하는 모델이면 그렇게). 만들며 정함 (2026-11-14): "↻ 다시"는 [common.md](common.md)의 필드 채우기를 따랐고, 까닭 줄은 코드대로 적었다. 빈 캡션의 자리 글자 "캡션"은 그림을 골랐거나 커서가 캡션에 있을 때만 보인다(EI-03, 만들며 정함 (2026-11-16)). |
+| 파일 블록 | `FileBlock`. 누르면 통째로 선택되고(`BlockBox selected`의 2px 진한 선. 고른 그림과 같은 선이다, 만들며 정함 (2026-11-14)) `BlockBarPlace` 안 `FloatingBar`의 설정 `Popover`에서 보이는 이름을 쓴다(2026-11-09 소유자) | 고르는 창은 `MediaPicker`를 담은 `Dialog`([media.md](media.md)). |
+| 라이브러리에 없는 그림 | `FileBlock tone="danger"`(앞 아이콘 `Image`, 이름은 대체 텍스트이고 없으면 "이미지", 세부에 "파일 없음". 고르면 `BlockBox selected`의 선) | 파일이 라이브러리에서 사라진 그림이다(옛 백업을 되살렸을 때처럼). 빈 틀은 그림이 오는 중으로 읽히므로 그리지 않고, 파일 블록처럼 빨간 말로 알린다(원칙 7). 다른 블록처럼 눌러 고른 뒤 지운다. 캡션은 그 글의 값이라 남아 읽고 고칠 수 있지만, 볼 그림이 없어 "✦ 채우기"는 없다. 만들며 정함 (2026-11-14). |
+| 사이트 블록의 도구 행 (18) | `BlockFrameBox` 위 `BlockBarPlace` 안 `FloatingBar`: 단추는 모두 `FloatingBarButton named`(아이콘과 이름, 툴팁 없음): 켜고 끄는 값은 `pressed`(접기의 "처음부터 펼치기", 탭의 "★ 처음 열 탭"), 하는 일("탭 지우기", 단 나누기의 "고르게") · 값 하나를 고르는 메뉴(`BlockBarMenu named`: `DropdownMenu` + `DropdownMenuRadioGroup`, 지금 값 오른쪽 ✓. 콜아웃의 "종류"는 지금 종류의 이름을, 코드 탐색기는 제 이름 "★ 처음 보일 파일"을 단다, `text`) · 글로 쓰는 블록의 `FormatBarRequest`("✦ 요청"), 통째로 골라지면 `BlockBox selected` | 포인터가 블록 위에 있거나 커서가 안에 있거나 블록이 골라졌을 때, 그리고 그 메뉴가 열린 동안 뜬다. 읽기 전용 본문에는 없다. 사이트가 고친 블록도 이 부품으로 그린다(`@monti-cms/admin/blocks`, [editor-tools.md](../components/editor-tools.md) "사이트 블록의 도구 행과 소스 칸"). 이야기: Screens/Entry/Site blocks. |
+| 블록 안의 이름 칸 (18) | `BlockTitleField` | 콜아웃 · 접기의 제목, 고른 탭의 이름, 코드 탐색기 파일의 경로. 블록의 글자 그대로이고 비면 흐린 자리 글(빈 제목은 그 글의 언어의 종류 이름). Enter는 글로, Esc는 처음 값으로. 탭 이름은 비운 채 떠나면 처음 이름으로 돌아간다. |
+| 탭 (18) | `FolderTabs` · `FolderTabsList`(끝에 `FolderTabsAdd`, 여덟이면 없다) · `FolderTab`(`draggable={false}`) · 고른 탭은 `FolderTabEdit` 안의 `BlockTitleField` · `FolderTabsBody` | 고른 탭은 아래 선 없이 상자에 붙는다. 다른 탭을 누르거나 커서가 그 탭 안으로 가면 그 탭이 열린다. |
+| 단 나누기 (18) | 표의 부품: `TableColumnBorder`(경계, 끌기와 ←→ 5%), `TableGrip along="column"` + `DropdownMenu`("왼쪽에 단 넣기" · "오른쪽에 단 넣기" · "단 지우기" `variant="danger"`), 오른쪽 `TableAddStrip`, 끄는 동안 `BlockBox measure`("60 : 40") | 단은 2~4개. 할 수 없는 행과 띠는 숨긴다. 지운 단의 블록은 옆 단 끝으로 간다. 도구 행에는 폭을 정했을 때만 "고르게"(`FloatingBarButton named`). |
+| 코드 탐색기 (18) | `FileTree` · `FileTreeRow`(`more`에 `IconButton size="xs" tone="danger"` "… 지우기") · `Button variant="ghost" size="sm"` "파일"(앞에 `Add`) · "폴더"(앞에 `FolderAdd`) · 고른 파일의 경로 `BlockTitleField` | 파일 줄을 누르면 그 파일의 코드가 옆에 보인다(코드 블록은 17의 것). 본문의 코드 링크가 숨은 파일의 줄을 가리키면(가리키거나 누르면) 그 파일로 바뀐다. |
+| 글로 쓰는 블록 (18) | `SourceBox`(그림 칸, 골라진 동안 그 아래 "소스" 칸: `Textarea mono size="sm"`, 까닭은 줄마다 `FormFieldError`) | 수식 · 다이어그램 · 차트. 누르면 열리고 소스 칸에 포커스가 간다. 0.4초 쉬거나 떠나면 쓴다. 비면 그림 칸에 "수식 입력" 같은 말. |
+| 글자색 카드 (18) | 서식 카드 ⋯의 "글자색" 행이 여는 `Popover`: `Stack` 안 "글자색" · "배경색" 줄(`Label`), 줄마다 `IconButton size="sm"` 아홉(기본과 여덟 색, 칸은 그 색의 "가", 지금 것은 `pressed`와 ✓, 이름은 툴팁) | 누르면 걸리고 카드가 닫힌다. 글자색과 배경색은 따로 정한다. |
+| 툴팁 카드 (18) | 서식 카드 ⋯의 "툴팁" 행이 여는 `Popover`: `PopoverHeader` · `PopoverTitle`("툴팁 넣기" / "툴팁 수정") · `Label` "설명" + `Textarea size="sm" rows={2}` · `Button variant="ghost" size="sm"` "취소" · `Button variant="primary" size="sm"` "넣기" / "저장" | Enter가 넣고 Shift+Enter가 줄을 바꾼다. 빈 설명은 누른 그때 칸 아래 `FormFieldError` "설명이 비어 있음". 떼기는 서식 지우기다. |
+
+### 속성 패널
+
+글의 속성이다. **값 자리는 처음부터 기본 입력칸이다**(옅은 밑줄이 늘 보이고, 포커스하면 잉크 밑줄). 누르면 그 입력칸 안에 캐럿이 들어가거나 그 목록이 열리고, 다른 것으로 바뀌지 않는다. 보드는 쉴 때 밑줄 없는 글자로 그렸지만, 기본 입력칸을 따른다(2026-11-03 소유자 결정).
+
+| 자리 | 부품 | 이렇게 쓴다 |
+|---|---|---|
+| 패널 | `PropertyPanel`(300px `SidePanel`, 제목과 ×가 없다) | 머리의 속성 버튼으로 열고 닫는다. 글을 읽어 오기 전과 읽지 못했을 때는 속성 버튼도 패널도 없다(2026-11-12: 눌린 모양으로 서서 아무것도 열지 않았다. 읽기 전에 누를 것이 없다는 말은 하나도 없다는 말이다). 패널은 열려 있어도 그리지 않는다: 값이 없는 칸은 빈 칸으로 읽히고, 그때 고른 파일이 읽어 온 값을 덮는다(T153). |
+| 탭 줄 "기본 · SEO" | `PropertyPanel`의 `tabs`(속은 `TabsList variant="bar"`, 탭마다 `dot`) | 다른 탭에 제안이 있으면 그 탭에 `dot` "proposal"(파란 점), 고칠 곳이 있으면 `dot` "warning"(주황 점, 이름 "할 일 있음"). 고칠 곳은 발행 할 일이 가리키는 필드다(빈 필수 필드, 비어 있는 주소, 대체 텍스트 없는 대표 이미지). 조건부 필드의 선택지 필드는 그 고르는 칸의 탭에 센다. 한 탭에 둘 다 있으면 발행을 막는 주황 점이다. 열려 있는 탭에는 점이 없다(그 칸의 오류 줄이 보인다). 만들며 정함 (2026-11-14). |
+| 속성 한 행 | `FormField` + `FormFieldLabel`(`htmlFor`, 라벨 줄 끝 `action`) + 입력 부품 + `FormFieldError` | 라벨은 sans 12(`text-caption`), 값은 14(`text-body`, 입력 부품이 그렇다. tokens.md와 같다. 앞서 문서는 13이라고 했다). 라벨을 mono 11로 쓰던 문서가 field.md와 어긋나 있었다(PP-52 (2026-11-16 만들며 정함)). 라벨 줄 끝의 어시스턴트 버튼은 포인터나 키보드가 행 안에 있을 때만 보인다. 고칠 수 없는 글(보관 글, 휴지통 글)에서는 어느 종류의 필드든 읽는 값이다: 입력 부품에 `readOnly`를 주고(`FieldInput readOnly`가 글자 · 주소 · 고르기 · 관계에, `FieldToggle`이 스위치에, `MediaInput readOnly`가 미디어에, 플러그인의 입력에는 `readOnly` prop) `disabled`는 쓰지 않는다. 글자는 잉크색 그대로이고 흐려지지 않으며, 키보드가 칸에 멈추고 글자를 골라 복사할 수 있다. 값을 바꾸는 길은 없다: 칠 수 없고, 고르기와 관계의 목록은 열리지 않으며 끝의 캐럿 · 지우기 · 칩의 ×가 없고, 순서가 있는 관계는 손잡이와 ×와 더하는 칸 없이 항목만 순서대로 선다(값이 없을 때만 빈 칸이 "비어 있음"을 보인다). 스위치는 켜짐과 꺼짐을 그대로 보이고 눌러도 바뀌지 않는다. 글자 수와 "✦ 채우기"도 없다. 플러그인의 입력이 라벨 줄 끝에 그리는 것(`Note`: SEO의 "9/60")도 없다: 플러그인이 아니라 패널이 정하므로 어느 플러그인의 필드든 같다. 순서가 있는 관계의 읽는 목록은 라벨이 `htmlFor`로 가리킬 수 없으므로 목록이 라벨로 이름을 얻는다(`aria-labelledby`). 전에는 `disabled`라 45%로 흐리고 Tab이 건너뛰었다(T131). 그 뜻은 "꺼진 칸은 키보드로도 값을 받지 않는다"였고, 지금은 읽기 전용이 그것을 지킨다(AT-29, 만들며 정함 (2026-11-16)). |
+| 하나를 켜고 끄는 선택(문서 19의 `control: "toggle"`, 또는 플러그인이 입력을 가져온 선택지 하나짜리 고르기) | `Option spread`: 이름이 줄의 앞에, 스위치가 줄의 끝에 한 줄로 선다 | 플러그인의 스위치(SEO의 "검색에서 숨기기")도 같은 줄에 선다. 앞서는 라벨 아래에 스위치가 따로 있었다(PP-55, 만들며 정함 (2026-11-16)). |
+| 조건부 필드(문서 19) | 고르는 칸은 고르기 필드와 같은 `Select`. 그 아래에 고른 선택지의 필드가 속성 행으로 바로 이어진다. 속성 행은 `PropertyRow` 하나가 짠다(설정의 미리보기와 같다, ST-22). 고르는 칸 밑 한 줄은 `Text variant="caption" tone="warning"` | 고른 선택지의 필드만 보인다. 선택을 바꾸면 다른 선택지에 남은 값이 저장할 때 지워지므로, 저장 전까지 고르는 칸 바로 밑에 "저장하면 동영상의 값 2개가 지워집니다"가 선다. 되돌려 고르면 값이 그대로 다시 보이고 줄은 사라진다. 저장하면 줄도 값도 없다. 만들며 정함 (2026-11-13). 레퍼런스: Keystatic은 고른 선택지의 필드만 보이고 알리지 않는다. 선택지의 필드가 조건부 필드면 그 고르는 칸 아래에 제 선택지의 필드가 같은 방식으로 이어진다. 스위치로 켜고 끄는 조건부 필드(`control: "toggle"`)는 고르는 칸 대신 `Option spread height="md"`(라벨, 끝에 `Switch`) 한 줄이다: 켜면 그 아래에 필드가 이어지고, 끄면 사라지며 밑 한 줄이 "저장하면 첫 화면에 올리기의 값 1개가 지워집니다"처럼 필드 이름으로 말한다. 원문과 같은 값을 읽기만 하는 번역 글에서는 "켜짐" / "꺼짐" 글이다. 만들며 정함 (2026-11-13). |
+| 선택지에 없는 값을 쥔 고르기(문서 19) | 같은 `Select`에 그 값이 항목으로 하나 더 있고, 밑 한 줄은 `Text variant="caption" tone="warning"` | 저장된 값을 그대로 보이고 "podcast: 선택지에 없는 값"이라고 적는다. 다른 선택지로 보이지 않는다. 선택지를 고르면 줄이 사라진다. 만들며 정함 (2026-11-13). |
+| 묶음 이름 "분류" | `PropertyGroup` | 조용한 소제목. |
+| 주소 | `Input mono`(슬러그만, 끝 `action`은 다시 만들기 `IconButton`). 앞뒤 고정 글자가 없어 `Affix`가 아니다 | 늘 입력 칸이다. "/posts/"는 붙이지 않는다. 전체 주소는 머리의 주소 줄에 있고, 패널 폭은 긴 슬러그에 쓴다. 고정 글자가 없으니 밑줄은 아이콘까지 행 전체다. |
+| 대표 이미지 | `MediaInput size="md"`(고른 파일이면 썸네일과 파일 이름과 ×, 비었으면 "비어 있음") | 다른 필드와 같은 밑줄 한 줄이다(2026-11-05, 소유자). 누르면 `MediaPicker`를 담은 `Dialog`가 열린다. |
+| 대표 이미지의 대체 텍스트 | `MediaInput`의 `action`에 `IconButton`(`Settings`, 이름 "대표 이미지 설정")과 `Popover`. 카드 안은 본문 이미지 설정 카드와 같은 `AltFields`: 글자 수를 세는 `FormFieldLabel`과 `Input size="md"`, `Option spread`의 `Switch` "장식 이미지" | 이미지를 고르면 줄 끝에 설정 버튼이 생긴다. 패널에 칸을 늘어놓지 않고, 본문 이미지처럼 설정 카드에서 쓴다(2026-11-09, 소유자). 카드는 줄 바로 밑에, 줄과 같은 폭으로 열린다(`PopoverContent anchor`에 줄, `width="anchor"`, `align="start"`, 2026-11-09 소유자). 카드가 열리면 칸에 커서가 있고, Enter로 닫는다. 할 일의 행을 누르면 이 카드가 열린다. 다른 파일을 고르면 비운다. 비었으면 `MediaInput` 아래에 `FormFieldError`를 둔다(카드를 닫은 채로도 보인다). 새 파일이 올라가지 못하고 멈춘 동안에는 줄이 그 파일을 보이므로 설정 버튼도 이 말도 없다. 올라가는 동안에는 있어서, 그동안 쓴 말이 남는다. 장식 이미지를 켜면 칸이 잠기고 묻지 않는다. 파일(이미지가 아닌 것)에는 없다. 읽기 전용 편집기(보관 글, 휴지통 글)에서는 값을 바꿀 수 없다: 줄은 버튼이 아니라 눌러도 창이 열리지 않고 ×가 없다. 설정 버튼은 남고, 카드는 칸이 읽기 전용인 채로 열려 그 글이 그림에 대해 적은 것을 읽을 수 있다(`MediaInput readOnly`, 2026-11-11 소유자: "아니 버튼을 없애랬다고 그걸 다 없애는게 말이 됨? … readonly로 만들면 되는거지"). 본문 이미지도 같다: 읽기 전용에서 고르면 막대에 설정 하나만 있고, 카드의 칸은 읽기 전용이다(정렬 · 편집 · 크기 조절은 없다). |
+| 번역의 대표 이미지 (원문 따름) | 위와 같은 것들. 비어 있는 동안 `MediaInput`은 원문의 파일을 흐리게 보이고 ×가 없으며, 설정 카드의 대체 텍스트는 원문의 글이 플레이스홀더다. 라벨 오른쪽의 `Text variant="micro" tone="faint"`이 누구의 값인지 말한다. "✦ 채우기"(`TextButton size="caption"`)가 놓이는 자리라 같은 크기다(2026-11-09 소유자). 값이 없는 동안은 "원문 발행본 따름"(원문이 사이트에 없으면 필드 설정과 같은 말 "원문 따름")이고, 값이 있으면 아무것도 없다: 번역이 직접 쓴 값은 평소 상태다([translation.md](translation.md), 2026-11-10 소유자. 전에 이곳은 "이 언어 값"이라고 적었다). 파일이 올라가는 동안은 없다. ×의 이름은 "대표 이미지 원문으로 되돌리기"처럼 필드 이름으로 시작한다. 원문을 저장만 하고 발행하지 않은 값이 왜 안 보이는지가 여기서 설명된다(04번 문서 원칙 5) | 고르거나 쓰면 번역의 값이 되고 ×가 생긴다. ×로 지우면 다시 원문을 따른다(2026-11-09, 소유자). |
+| 요약 | `Textarea size="md"` | 늘 입력 칸이다. 비었으면 플레이스홀더 "비어 있음"(`fg-faint`). 포커스하면 라벨 줄 끝의 글자 수 "28 / 120". 라벨 줄 끝 `action`은 `TextButton tone="proposal" size="caption"`("✦ 채우기", 값이 있으면 "↻ 다시"). 본문에서 채우는 일은 이 "✦ 채우기"가 한다. 입력 줄 끝의 "본문에서 가져오기" 버튼은 없앴다(2026-11-05 소유자). |
+| 한 줄 글 필드 | `Input size="md"` | 요약과 같다. Enter로 끝내고, 포커스를 떠나면 그대로 남는다. |
+| 카테고리 (관계 하나) | `Combobox` + `ComboboxInput` | 늘 입력 칸이다. 치지 않을 때는 고른 항목의 이름이 보이고(목록을 읽는 동안은 비어 있다), 치면 거르고, 목록에서 고른다. 없음이 허락되면 지우기 버튼. 글을 가리키는 관계에서 발행 안 된 글은 행 끝에 `MenuValue` "초안"이다(괄호 없이. 링크 카드의 "게시글 · 초안"처럼 행 끝의 값이다, 만들며 정함 (2026-11-14)). |
+| 태그 (관계 여럿) | `Combobox` + `ComboboxChips`(`ComboboxChip`, `ComboboxChipsInput`) | 고른 값은 칩, 끝의 입력 칸에서 더한다. |
+| 시리즈 (관계 하나) | 카테고리와 같다. 비었으면 고치는 글에서는 "고르기…", 고칠 수 없는 글에서는 "비어 있음" | 다른 필드처럼 라벨 줄 끝에 "✦ 채우기"(`TextButton tone="proposal" size="caption"`)가 늘 보인다(2026-11-15, AS-27). 채운 동안은 "버리기 · ↻ 다시"다. 고른 값은 `proposal`(파란 글자)로 남고 버튼은 "↻ 다시"가 된다. 보드의 값 옆 "✦ 추천"은 이 버튼으로 바뀐다(2026-11-03 소유자 결정). |
+| 고르기 필드 (`select`) | `Select` + `SelectTrigger size="md" width="full"` | 늘 트리거가 있다. 누르면 목록. |
+| 켜기/끄기 필드 ("검색에서 숨기기") | `Switch` | 바로 바뀐다. |
+| 다른 값을 따르는 값 (SEO 제목 · 설명) | 그 종류의 입력 부품(`Input size="md"`, `Textarea size="md"`)에 플레이스홀더로 따르는 값("제목과 같음 · 10/60") | 비어 있는 동안 따르는 값을 플레이스홀더로 읽힌다. 치면 그 값이 되고, 라벨 줄 끝에 글자 수 `Text variant="micro"`("9/60", 권장 길이를 넘으면 `tone="warning"`)가 선다. SEO 플러그인의 입력이다(기능 설계 14). 공유 이미지는 다른 미디어 필드와 같은 `MediaInput`이고 따르는 그림은 미리보기가 보인다(만들며 정함 2026-11-13). |
+| 플러그인의 탭 ("SEO") | `PropertyPanel`의 `tabs` 끝에 플러그인마다 하나. 안은 `PropertyGroup` 하나에 플러그인의 필드가 플러그인의 순서로 | 컬렉션의 탭 뒤에 선다. 필드는 다른 속성 행과 같은 `FormField`이고, 값 자리는 플러그인의 브라우저 쪽이 준 입력(`@monti-cms/ui` 부품)이거나 종류의 기본 입력이다. 번역 글에서 원문의 것인 필드는 다른 필드처럼 원문 값을 글로 보인다. |
+| 플러그인의 화면 필드 (SEO 미리보기) | `FormField`(이름이 있으면 `FormFieldLabel`) 안에 플러그인의 화면. SEO의 것은 `Stack` 둘이고 테두리가 없다(테두리는 떠 있는 것에만 쓴다, 원칙 3. 사이는 16px이고 저마다 위에 `Text variant="micro" tone="faint"` 이름 "검색 결과" · "공유 카드"): 검색 결과(`Text variant="micro"` 사이트 이름 › 주소, 제목 `weight="semibold" lines={2}`, 설명 `variant="note" lines={2}`, 숨겼으면 `Text variant="micro" tone="warning"` "검색에서 숨김")와 공유 카드(`Image ratio="share"`, 사이트 이름, 제목, 설명) | 값이 없는 필드다. 편집기가 든 값으로 그리므로 칠 때마다 따라 바뀐다. 누를 것이 없다. 플러그인의 브라우저 쪽이 없으면 그려지지 않는다. |
+| 어시스턴트가 쓴 값, 받기를 기다리는 제안 | 각 입력 부품의 `proposal`(파란 글자, 파란 밑줄. 값이 여럿인 칸은 `ComboboxChips proposal`, 대표 이미지는 `MediaInput proposal`) | 제안은 입력칸 안에 들어 있고 바로 고칠 수 있다. 고치거나 받으면 보통 색, 버리면 옛 값으로 돌아간다. |
+| 받기를 기다리는 제안의 라벨 줄과 옛 값 (T86) | `FormFieldLabel changed`(`tone` "proposal", `undoLabel` "버리기", `undoName` "요약 제안 버리기"), 입력 아래 `FormFieldWas` | 라벨 뒤에 파란 점, 줄 끝에 "버리기"(그 제안 하나만 버린다). 입력 아래에 글이 지금 가진 값을 줄 그어 둔다(글자 칸, 주소, 고르기. 파일과 관계 값은 이름이 없어 두지 않는다). 제안이 있는 동안 그 줄은 제안의 것뿐이다: 글자 수, "✦ 채우기", 번역의 "변경" 표시와 "원문 따름"이 없다(제안을 받거나 버리면 돌아온다). 순서 있는 관계 칸은 더하는 입력의 밑줄과 아래 줄들의 글자가 파랗다. 제목 제안은 제목 칸의 `proposal`이다(파란 글자뿐. 버리는 길은 말풍선이다). 플러그인의 탭에 있는 필드(14)도 같다: 플러그인이 가져온 입력은 `proposal`을 받아 제 부품으로 파랗게 그리고, 라벨 줄과 말풍선은 편집기의 것이다. 값 없는 화면 필드에는 표시가 없다. 이야기: `Screens/Plugins`의 `SeoProposed`. 스위치로 고르는 필드(19)의 제안은 스위치가 제안된 대로 서고(`Switch proposal`) 이름 옆에 파란 점(`ChangeDot tone="proposal"`), 스위치 앞에 글자 버튼 "버리기"가 있다(이름 "(필드) 제안 버리기". 그 제안 하나만 버린다). 줄은 `Inline`이고 이름은 `Label htmlFor`다: 제안된 스위치는 어디서나 같다([field.md](../components/field.md), 2026-11-13). 말풍선도 받고 버린다. 조건부 필드의 고르기나 스위치가 제안된 동안 그 아래에는 글이 지금 가진 선택지의 필드가 그대로 서고, 받으면 지워질 값이 있으면 `Text variant="caption" tone="warning"` "받으면 (선택지)의 값 n개가 지워집니다"가 선다. 이야기: `ProposedSwitch`, `ProposedChoice`. |
+| 사람이 바꿀 수 없는 값 (번역에서 원문과 함께 쓰는 필드) | `FormField` + `FormFieldLabel`(`action`에 `Text variant="micro" tone="faint"` "언어 공통") + 값의 글 `Text variant="note"`(파일과 관계는 그 이름) | 입력 부품이 없다. 누구의 값인지는 라벨 줄 끝의 "언어 공통"이 말한다([translation.md](translation.md)의 "필드가 누구 값인가"와 같다. 전에 이곳은 아래 `FormFieldDescription` 한 줄이라고 적었다). |
+
+### 상태 표시줄
+
+| 자리 | 부품 | 이렇게 쓴다 |
+|---|---|---|
+| 줄 | `StatusBar` | 담을 칸이 없으면 그리지 않는다. |
+| 저장 상태 | `StatusBarCell`(편집 충돌이면 `tone`). 알리기만 할 때는 `render={<span />}` | "저장 전 변경 사항" · "저장됨" · "제안 n건 대기" · "브라우저에만 임시 저장됨" · "편집 충돌" · "로그인 풀림". 저장된 글에 어시스턴트 제안이 남아 있으면 "저장됨" 대신 "제안 n건 대기"이고, 누르면 첫 제안으로 간다(AS-18). 누를 일이 있으면 칸이 버튼이다(저장 전 변경 사항은 누르면 저장, 로그인이 풀렸으면 로그인 화면). 소리 알림은 칸을 감싼 `StatusBarLive`다: 말은 화면에 한 번만 있고 그 자리에서 보이고 읽힌다. 고칠 수 없는 글에는 이 칸이 없으므로 읽히는 것도 없다(TP-10, 만들며 정함 (2026-11-16). 전에는 숨은 `StatusBarAnnouncer`가 같은 말을 한 번 더 가졌고, 칸이 없는 글에서도 남았다). |
+| "할 일 N" | `StatusBarCell` + `StatusBarList`(`TodoItem`, 할 일이 없을 때만 `TodoDone`) | 누르면 위로 목록이 열린다. 발행을 막는 것("발행 전에 고칠 것")이 먼저 오고, 막지 않는 것은 그 아래 묶음 "확인할 것"(`StatusBarListGroup`)으로 따로 선다([status-bar.md](../components/status-bar.md), TP-04). 행을 누르면 그 자리로 간다. 행 끝에 동작은 두지 않는다: 여러 곳을 한꺼번에 채우는 버튼은 무엇이 어디서 바뀌는지 보여 줄 수 없어서, 채우기는 그 자리의 ✦(필드 라벨 줄의 "✦ 채우기", 이미지의 대체 텍스트 칸) 하나로만 한다. 발행을 막는 행은 `blocking`. 행의 덧말(`detail`)은 그 자리만 말한다("속성 · 비어 있음", "대표 이미지 · 본문 1"). 번역의 빈 제목은 "제목 · 번역 전"이다: 칸에 원문 제목이 자리표시로 흐리게 보이므로 "비어 있음"은 틀린 말이다(2026-11-14 만들며 정함, TR-16). 칸의 수와 행은 저장 전 입력을 따른다(02의 할 일). 제목이 이미 말한 필드 이름("요약 쓰기"의 "요약")은 되풀이하지 않는다(원칙 8). 끝난 것은 행이 사라질 뿐 따로 적지 않는다. 남은 것이 없으면 `TodoDone` "할 일 없음" 한 줄만(2026-11-10 소유자). |
+| 플러그인 칸 ("맞춤법 2") | `StatusBarPluginCell` | 플러그인의 본문 검사(`textCheck`)마다 칸 하나, 찾은 것이 있을 때만. 행은 "틀린 말 → 바꿀 말"과 그 아래 "본문", 끝에 "고치기". 행을 누르면 본문의 그 말이 골라진다. 아래에 "모두 고치기". "설정"은 없다(플러그인의 설정은 코드다). 고치면 본문에 바로 들어가고 행이 사라진다. 그 글의 언어를 읽지 않는 검사는 칸이 없고, 읽기 전용 글에도 없다(만들며 정함 2026-11-13). |
+| 글자 수 | `StatusBarSpacer` 뒤 `StatusBarCell end` | 좁은 화면에서 먼저 숨는다. |
+
+### 늘 있는 자리의 값
+
+흐름마다 값만 바뀐다.
+
+| 값 | 바뀌는 것 | 스토리 |
+|---|---|---|
+| `pub` | 머리의 `EntryStatus`와 발행 알약(초안 `Button`, 발행된 글 `SplitButton`) | Controls/Status/EntryStatus, Controls/Button/Button, Controls/Button/SplitButton |
+| `save` | 저장 칸의 글, "편집 충돌"이면 충돌 `Banner` | Patterns/Frame/Banner |
+
+스토리: Controls/Button/TextButton, Primitives/Text, Controls/Status/EntryStatus, Controls/Button/Button, Controls/Button/SplitButton, Controls/Menu/DropdownMenu, Controls/Button/IconButton, Primitives/Separator, Controls/Overlay/AlertDialog, Controls/Tabs/Tabs, Controls/Status/ChangeDot, Controls/Field/Input, Monti/EditorTools/BlockHandle, Monti/EditorTools/FloatingBar, Monti/EditorTools/FormatBar, Controls/Menu/Command, Patterns/Frame/UploadingImage, Monti/EditorTools/BlockBar, Controls/Overlay/Popover, Controls/Overlay/Sheet, Patterns/Sheet/CropStage, Controls/Field/Field, Controls/Field/Select, Controls/Field/Textarea, Controls/Choice/Option, Controls/Choice/Switch, Patterns/Frame/FileBlock, Patterns/Sheet/MediaPicker, Controls/Overlay/Dialog, Monti/Proposal/PropertyPanel, Controls/Overlay/SidePanel, Primitives/AI mark, Controls/Field/Affix, Patterns/Frame/Image, Controls/Field/Combobox, Patterns/Frame/StatusBar, Patterns/Frame/StatusBarList, Monti/EditorTools/TodoItem, Patterns/Frame/Banner.
+
+## 뜨는 자리
+
+흐름이 여는 자리다. 언제 열리는지는 아래 흐름 표가 적는다.
+
+### 알림 띠 (화면 맨 위, 머리 줄보다 위, 가장자리에서 가장자리까지)
+
+화면의 띠는 모두 이 한 자리에 쌓인다. 넓은 일이 위다([common.md](common.md)의 "화면의 알림 띠").
+
+| 자리 | 부품 | 이렇게 쓴다 |
+|---|---|---|
+| 로그인 풀림 | `Banner tone="danger"`(`title` "로그인이 풀렸습니다", `meta` "저장하지 않은 입력은 이 브라우저에 남아 있습니다" `plainMeta`) | 맨 위. 화면을 바로 빼앗지 않아 쓰던 문장을 마저 쓸 수 있다. 끝에 `TextButton variant="underline"` "다시 로그인"은 평소 로그인 화면으로 간다(GitHub도 평소처럼 다녀온다). 로그인하면 주소가 같은 글을 다시 열고, 쓰던 입력은 묻지 않고 다시 들어간다(그 사이 다른 곳에서 저장하지 않았을 때. 저장했으면 임시 저장본 띠가 묻는다). 저장 칸도 "로그인이 풀렸습니다"이고 누르면 같은 곳으로 간다. 모든 화면에서 같다(15). 2026-11-06 소유자: 로그인 창은 두지 않는다. |
+| 편집 충돌 | `Banner tone="danger"`(`title` "다른 곳에서 10:41에 먼저 저장했습니다", `meta` "이 글은 저장할 수 없습니다" `plainMeta`) | 끝에 `TextButton variant="underline"` "비교하기"(비교 화면으로), `TextButton` "서버 최신본 불러오기". 답하기 전에는 사라지지 않는다. 저장이 거절될 때만이 아니라, 저장 전 변경이 있는 동안 관리자의 다른 곳(어시스턴트 패널의 적용 등)이 이 글을 바꿨을 때도 미리 선다(02의 "열린 편집기와 다른 곳의 쓰기", 2026-11-14 만들며 정함). |
+| 나가기 확인 | `AlertDialog`(세 답이면 `AlertDialogContent size="wide"`): `AlertDialogTitle` "저장하지 않은 변경 사항이 있습니다", `AlertDialogDescription` "나가면 변경 사항이 사라집니다.", `AlertDialogCancel variant="danger"` "저장하지 않고 나가기", `AlertDialogAction variant="secondary"` "계속 고치기", `AlertDialogAction` "저장하고 나가기" | 바뀐 곳이 있는 채 떠날 때 묻는다(흐름 11·04). "저장하고 나가기"는 저장한 뒤 떠나고, 저장이 거절되면 남는다([05번 문서](../../features/05-changes-and-proposals.md)). |
+| 임시 저장본 | `Banner`(`title` "이 브라우저에 저장하지 않은 편집이 있습니다", `meta` 시각, 받은 제안이 들어 있으면 " · AI 제안 n건 포함"(AS-20)) | 끝에 "비교하기"(underline) · "불러오기" · "버리기"(`variant="quiet"`). "불러오기"는 한 번에 들어간다: 임시 저장본의 본문이 쓰는 파일은 띠가 뜰 때 미리 읽어 두므로 누른 뒤에 기다리는 상태가 없다(T135). "버리기"는 묻지 않고, 토스트 "이 브라우저의 편집을 버렸습니다"의 "되돌리기"가 띠를 다시 띄운다(TC-09). 비교 화면의 "버리기"도 같다. "불러오기"나 "버리기"를 키보드로 눌러 띠가 사라지면 포커스는 본문으로 간다(본문이 아직 없으면 제목으로). 포인터로 누른 것은 옮기지 않는다([tokens.md](../tokens.md) 상태의 규칙, `useFocusHandOff`). 비교 화면에서 키보드로 답하면(버리기, 불러오기, 서버 최신본 불러오기) 편집기로 돌아와 본문이 포커스를 받는다. "서버 최신본 불러오기"도 같다. |
+| 휴지통에 있는 글 | `Banner tone="neutral"`(`title` "휴지통에 있는 글입니다", 남은 날) | 읽기 전용 화면의 상태. |
+| 글을 읽지 못함 | `Banner tone="danger"`(`title` "글을 불러오지 못했습니다", `plainMeta`), 끝에 `TextButton` "다시 시도". 이미 읽은 글에서 "서버 최신본 불러오기"가 읽지 못하면 같은 말의 토스트(내 입력과 충돌 띠는 그대로 남는다), 저장은 됐는데 다시 읽지 못하면 토스트 "저장했지만 글을 다시 읽지 못했습니다"(내 입력은 화면에 남고, 다음 저장은 내 저장이 만든 버전 위에 보내므로 충돌이 아니다) | 글을 읽지 못했을 때만(거절, 답이 없는 연결). 글이 없으므로 제목 · 본문 · 속성 · 언어 탭과 "언어"(앞에 `Add`) · 머리의 저장 · 미리보기 · 발행 · 속성 버튼 · ⋯와 상태 표시줄이 없고, 돌아가기와 ✦만 남는다(글을 읽어 오기 전도 같다). 비교 화면도 제 읽기가 오지 않으면 같은 띠를 맨 위에 보이고 "편집기로"가 남는다. "다시 시도"를 키보드로 눌렀으면 글이 온 뒤 포커스는 본문으로 간다(비교 화면에서는 비교 화면의 첫 컨트롤로). 포인터로 누른 것은 옮기지 않는다. "다시 시도"가 다시 읽는다. |
+
+### 링크 칸 (서식 카드의 링크 버튼 아래)
+
+기준 화면: `Screens/Reference/Editor` › LinkCardOpen · LinkCardSearch · LinkCardAddress · LinkCardLinked. 칸은 하나이고, 친 것이 링크를 정한다(노션과 같다, 2026-11-06 소유자).
+
+| 자리 | 부품 | 이렇게 쓴다 |
+|---|---|---|
+| 칸 | `Popover`(링크 `FormatButton`이 트리거, `padding="menu"`, `width="md"`) 안 `Command`: `CommandInput`(플레이스홀더 "주소를 붙여 넣거나 글 찾기", 이름 "링크 주소") | `/` 메뉴와 같은 모양이다. 화살표와 Enter로 행을 고른다. |
+| 막 열었을 때 | `CommandGroup` "최근에 고친 글": `CommandItem`(앞 `Document` 아이콘, 글 제목, 끝 `MenuValue` 컬렉션 이름) | 문서 컬렉션마다 가장 최근에 고친 글을 모아 다섯 줄. |
+| 글자를 쳤을 때 | `CommandGroup` "글": 제목에 그 글자가 있는 글. 발행 안 된 글은 끝이 "게시글 · 초안". 없으면 `CommandEmpty` "맞는 글 없음" | 고르면 그 글 자체를 가리키는 링크(`monti:entry/<묶음 id>`)가 걸린다. 글의 주소가 바뀌어도 끊기지 않는다. |
+| 주소를 쳤을 때 | `CommandGroup` "주소": `CommandItem`(앞 `Link` 아이콘, 주소, 끝 `MenuShortcut` "↵") | `https://` · `mailto:` · `/` · `#`로 시작하거나 `react.dev` 같은 도메인이면 주소다(도메인에는 `https://`를 붙인다). Enter로 바깥 링크를 건다. |
+| 이미 링크가 걸린 글자 | 글 링크면 칸에 그 글 제목, `CommandGroup` "지금 링크"에 그 글(`checked`). 바깥 링크면 칸에 그 주소 | 아래에 `CommandSeparator`와 "링크 떼기"(`Unlink` 아이콘) 행. |
+
+## 흐름 1 · 글 쓰고 발행하기
+
+단계: 1.02, 1.03, 1.04, 1.05, 1.06, 1.07, 1.08, 1.09, 1.10, 1.11, 1.12, 1.13, 1.14, 1.15, 1.16, 1.18. 단계마다 보이는 것은 [flows/01-write-and-publish.md](../flows/01-write-and-publish.md)에 있다.
+
+| 상태 | 단계 | 더해지는 것 | 스토리 |
+|---|---|---|---|
+| `state` "글자 고름 + 블록 메뉴" | 1.03 | `FloatingBar`, `BlockHandle active`, 블록 메뉴 `DropdownMenu` | Monti/EditorTools/FloatingBar, Monti/EditorTools/BlockHandle, Controls/Menu/DropdownMenu |
+| `state` "블록 바꾸기" · "블록 정렬" | 1.04, 1.05 | 블록 메뉴의 `DropdownMenuSub`가 열림 | Controls/Menu/DropdownMenu |
+| `state` "/ 를 쳤을 때" · "템플릿 고르기" | 1.02 | "/" 메뉴 `Command`(템플릿은 "템플릿" 그룹만) | Controls/Menu/Command |
+| `doc` "새 글" | 1.02 | 빈 제목과 "/ 를 눌러 블록 넣기" 줄 |  |
+| `pubMenu` | 1.15 | `SplitButton`의 메뉴 | Controls/Button/SplitButton |
+| `dialog` "편집 충돌" · "임시 저장본 복구" | 1.16, 1.18 | 해당 `Banner` | Patterns/Frame/Banner |
+| `fix` "요약" | 1.11 | 요약 `Textarea`에 포커스, 라벨 줄 끝 "28 / 120" | Controls/Field/Textarea |
+| `fix` "대체 텍스트" | 1.12 | 그 이미지 `Block active`와 대체 텍스트 `Popover`. "✦ 채우기"(`TextButton tone="proposal" size="caption"`)는 이미지 설정 카드처럼 라벨 줄 끝에 있다(보드의 필드 아래 자리 대신). | Monti/EditorTools/BlockHandle, Controls/Overlay/Popover, Controls/Button/TextButton |
+| `todo` · `todoOpen` | 1.10, 1.13, 1.14, 1.15, 1.16, 1.18 | "할 일" `StatusBarList`(남음: `TodoItem`만, 다 채움: `TodoDone` "할 일 없음" 한 줄) | Patterns/Frame/StatusBarList, Monti/EditorTools/TodoItem |
+| `pluginOpen` | 1.06 | 플러그인 칸의 `StatusBarList` | Patterns/Frame/StatusBarList |
+| `panel` · `panelTab` | 1.08 | `PropertyPanel`과 고른 탭 | Monti/Proposal/PropertyPanel |
+| `seriesPending` | 1.07 | 시리즈 값이 `proposal`, 라벨 줄 끝 `TextButton tone="proposal" size="caption"`("↻ 다시") | Controls/Button/TextButton |
+| `toast` "발행 막힘" · "발행됨" | 1.10, 1.14 | `toast.error` "발행할 수 없습니다 …" · `toast` "발행되었습니다"와 "보기" | Controls/Status/Toast |
+
+## 흐름 2 · 어시스턴트
+
+단계: 2.04, 2.07, 2.05. 단계마다 보이는 것은 [flows/02-assistant.md](../flows/02-assistant.md)에 있다.
+
+함께 열리는 화면: `AssistantPanel`([assistant.md](assistant.md)).
+
+이 화면에서는 기본 틀만 쓴다.
+
+## 흐름 3 · 번역
+
+단계: 3.01, 3.08, 3.14. 단계마다 보이는 것은 [flows/03-translation.md](../flows/03-translation.md)에 있다.
+
+| 상태 | 단계 | 더해지는 것 | 스토리 |
+|---|---|---|---|
+| `langMenu` "열림" · "언어 하나뿐" | 3.01, 3.14 | "언어"(앞에 `Add`) `DropdownMenu` | Controls/Menu/DropdownMenu |
+| `todo` · `todoOpen` | 3.01, 3.08, 3.14 | "할 일" `StatusBarList`(남음: `TodoItem`만, 다 채움: `TodoDone` "할 일 없음" 한 줄) | Patterns/Frame/StatusBarList, Monti/EditorTools/TodoItem |
+| `toast` "발행 막힘" · "발행됨" | 3.08 | `toast.error` "발행할 수 없습니다 …" · `toast` "발행되었습니다"와 "보기" | Controls/Status/Toast |
+
+## 흐름 5 · 휴지통
+
+단계: 5.18. 단계마다 보이는 것은 [flows/05-trash.md](../flows/05-trash.md)에 있다.
+
+| 상태 | 단계 | 더해지는 것 | 스토리 |
+|---|---|---|---|
+| `trashed` | 5.18 | 휴지통 머리와 `Banner`(남은 날), 제목과 본문은 읽는 글이다: 제목은 `Input readOnly`라 본문처럼 잉크색 그대로이고 칠 수 없으며(전에는 `disabled`라 45%로 흐렸다), 본문은 고칠 수 없는 편집기다. 속성 패널도 읽는 값이다(보관 글도 같다, 아래 "속성 한 행"): 입력 부품마다 `readOnly`라 잉크색 그대로이고 아무것도 값을 바꾸지 못한다. 언어 탭 줄에 "언어"(앞에 `Add`)가 없다(AT-29 · AT-30, 만들며 정함 (2026-11-16)). 가리키는 항목이 휴지통에 있으면 관계 필드가 "임시 · 휴지통에 있음"으로 그 이름을 보인다 | Patterns/Frame/Banner, Screens/Trash › TrashedEntry |
+| `todo` · `todoOpen` | 5.18 | "할 일" `StatusBarList`(남음: `TodoItem`만, 다 채움: `TodoDone` "할 일 없음" 한 줄) | Patterns/Frame/StatusBarList, Monti/EditorTools/TodoItem |
+
+## 흐름 6 · 미디어
+
+단계: 6.05, 6.06, 6.38. 단계마다 보이는 것은 [flows/06-media.md](../flows/06-media.md)에 있다.
+
+| 상태 | 단계 | 더해지는 것 | 스토리 |
+|---|---|---|---|
+| `img` "올리는 중" · "설정" · "파일" | 6.05, 6.06, 6.38 | `UploadingImage` · `FloatingBar`와 설정 `Popover` · `FileBlock` | Patterns/Frame/UploadingImage, Monti/EditorTools/FloatingBar, Controls/Overlay/Popover, Patterns/Frame/FileBlock |
+| `todo` · `todoOpen` | 6.05, 6.06, 6.38 | "할 일" `StatusBarList`(남음: `TodoItem`만, 다 채움: `TodoDone` "할 일 없음" 한 줄) | Patterns/Frame/StatusBarList, Monti/EditorTools/TodoItem |

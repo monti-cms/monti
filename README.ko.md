@@ -2,65 +2,109 @@
 
 [English](README.md) | 한국어
 
-개발 블로그를 위한 CMS.
+개발자 블로그를 위한 CMS.
 
-이름은 몽테뉴(Montaigne)를 줄인 것이다. 이탈리아어로 "산들"이라는 뜻이기도 하다.
+이름은 몽테뉴(Montaigne)를 줄인 것입니다. 이탈리아어로 "monti"는 "산들"이라는 뜻이기도 합니다.
+
+## 상태: 다시 만드는 중
+
+Monti는 다시 만들고 있습니다. 이전 패키지는 지웠고, 그것이 있는 마지막 커밋은 `9c69629f`입니다. core(`packages/core`)를 먼저
+[`docs/refactor/core.md`](docs/refactor/core.md)대로 새로 쓰고, 나머지 패키지는 [`docs/refactor`](docs/refactor)의 각자 문서로 이어서 만듭니다.
+첫 릴리스가 나오기 전까지 [릴리스 페이지](https://github.com/monti-cms/monti/releases)는 비어 있습니다.
+
+- 설계는 [`docs/refactor`](docs/refactor)에 있습니다. `core.md`가 먼저이고, 이어지는 패키지마다 문서 하나입니다.
+- 기준이 되는 화면은 디자인 시스템 Storybook의 기준 화면(`Screens/Reference`)입니다.
 
 ## 패키지
 
-| 패키지 | 하는 일 |
-| --- | --- |
-| [`@monti-cms/core`](packages/core/README.ko.md) | 본체. 설정, 글 저장·발행, MDX 변환, 관리자 API, 명령줄(`monti`) |
-| [`@monti-cms/admin`](packages/admin/README.ko.md) | 관리자 화면. 편집기, 글 목록, 미디어, 템플릿 |
-| [`@monti-cms/blocks`](packages/blocks/README.ko.md) | 블록 확장. 콜아웃, 접기, 탭, 단 나누기, 코드 탐색기, Mermaid, 차트 |
-| [`@monti-cms/ai`](packages/ai/README.ko.md) | AI 확장. 글쓰기·번역 같은 AI 기능 |
-| [`@monti-cms/seo`](packages/seo/README.ko.md) | SEO 확장. 검색·공유 필드와 미리보기 |
-| [`@monti-cms/bareun`](packages/bareun/README.ko.md) | 바른(Bareun) 맞춤법 검사 |
-| [`@monti-cms/syntax-directive`](packages/syntax-directive/README.ko.md) | 지시자 문법 확장. `:::callout`·`::image{…}`·`:u[글자]`를 읽고 쓴다 |
-| [`@monti-cms/syntax-shiki`](packages/syntax-shiki/README.ko.md) | Shiki 코드 표기 확장. 코드 펜스의 `// [!code ++]` 등을 Monti 코드 주석으로 읽는다 |
+| 패키지 | 무엇인가 |
+|---|---|
+| [`@monti-cms/core`](packages/core) | 기능(`defineOperation`), 기능을 돌리는 엔진(버전, 되돌리기 스냅숏, 활동 기록, 전송, 제안), 기능에서 나오는 입구들(관리자 API, 에이전트 도구, CLI) |
+| [`@monti-cms/ui`](packages/ui) | 디자인 시스템. 토큰, 관리자 화면을 만드는 부품, 기준 화면 |
+| [`@monti-cms/admin`](packages/admin) | 관리자 화면. 기능으로만 서버에 닿는다 |
+| [`@monti-cms/next`](packages/next) | Next.js 사이트에 Monti 붙이기. 관리자 페이지, 관리자 API 라우트, 초안 모드의 미리보기, 발행할 때의 캐시 갱신 |
+| [`@monti-cms/ai`](packages/ai) | 어시스턴트. 사이트의 기능 위에서 모델을 돌리고, 검토할 제안을 돌려준다 |
+| [`@monti-cms/storage-s3`](packages/storage-s3) | S3와 그 API를 말하는 저장소(Cloudflare R2, MinIO)에 미디어 파일을 둡니다. 파일은 브라우저에서 버킷으로 곧장 올라갑니다 |
+| [`@monti-cms/mdx`](packages/mdx) | MDX 플러그인. 가져올 때 `.md`, `.mdx` 파일을 본문으로 읽고, 편집기에 "MDX로 보기"를 더합니다 |
+| [`@monti-cms/seo`](packages/seo) | SEO 플러그인. 검색과 공유 필드를 제 탭에 두고, 편집기에서 미리 보이고, 사이트 페이지는 `seoOf`로 값을 읽습니다 |
 
-## 설치
+[`examples/blog`](examples/blog)는 Monti를 붙인 Next.js 블로그다. 흐름 테스트(`pnpm test:e2e`)가 이 앱에서 돈다.
+[`examples/showcase`](examples/showcase)는 모든 기능을 쓰는 앱이다. 씨앗 명령(`pnpm seed`)이 채우고, QA 목록이 있다.
 
-아직 npm에 올리지 않았다. 공개 전에는 `release` 브랜치의 배포 묶음을 GitHub 주소로 설치한다(pnpm만 된다).
+## 릴리스 설치하기
 
-```json
-{
-	"dependencies": {
-		"@monti-cms/core": "github:monti-cms/monti#release/v0.1.0&path:/core",
-		"@monti-cms/admin": "github:monti-cms/monti#release/v0.1.0&path:/admin"
-	}
-}
+릴리스는 패키지마다 압축 파일 하나이고, npm이 아니라 [릴리스 페이지](https://github.com/monti-cms/monti/releases)에 있습니다. 사이트는 그 파일을
+주소로 적습니다. 패키지끼리도 같은 주소로 서로를 가리키므로, 사이트가 적지 않은 패키지는 따라옵니다. 릴리스를 증명한
+패키지 매니저는 npm입니다. pnpm과 yarn으로는 아직 해 보지 않았습니다.
+정확한 줄은 릴리스마다 그 글에 있습니다. Next.js 사이트(App Router, Next 16 이상)라면:
+
+```sh
+npm install \
+  https://github.com/monti-cms/monti/releases/download/v<버전>/monti-cms-core-<버전>.tgz \
+  https://github.com/monti-cms/monti/releases/download/v<버전>/monti-cms-admin-<버전>.tgz \
+  https://github.com/monti-cms/monti/releases/download/v<버전>/monti-cms-next-<버전>.tgz
+npx monti init        # 사이트의 Monti 파일을 쓰고, .env.local에 없는 값을 더하고, 남은 일을 말한다
+npx monti doctor      # 설정 점검: 파일, 환경 값, 데이터베이스, 저장소
 ```
 
-다른 패키지도 `path:/<폴더 이름>`만 바꿔 같은 태그로 넣는다.
+`monti init`은 넷을 묻습니다(관리자 주소, 사이트의 언어, 관리자가 로그인하는 법, 미디어 파일을 둘 곳). 저마다 명령줄 값이 있고,
+`-y`는 기본값을 씁니다. 사이트에 없는 파일만 쓰고 있는 파일은 덮어쓰지 않으므로 다시 돌려도 됩니다. 무엇을 쓰는지는
+[`packages/next`](packages/next)에 있고, [`examples/blog`](examples/blog)는 사이트 하나 전체입니다. 관리자 화면은 이미 만들어진 제
+스타일시트를 가져옵니다. 그것 때문에 사이트에 Tailwind가 있어야 하지 않습니다.
 
-설치 방법과 설정은 각 패키지의 README에 있다. 모두 붙인 예시 앱은 [`examples/other-site`](examples/other-site/README.ko.md)다.
+`monti` 명령은 사이트의 환경 파일을 Next가 읽는 순서로 읽습니다. 환경에 이미 있는 값, 그다음 `.env.<mode>.local`, `.env.local`,
+`.env.<mode>`, `.env`입니다(`<mode>`는 `NODE_ENV`, 없으면 `development`). `--env-file <경로>`는 하나를 더 가리키고, 가장 먼저 읽습니다.
 
 ## 개발
 
 ```sh
-pnpm install          # 설치
-pnpm lint             # 코드 검사 (고치려면 pnpm lint:fix)
-pnpm check:korean     # 실행 코드의 한국어 문구가 문구 사전에만 있는지 검사
-pnpm typecheck        # 모든 패키지 타입 검사
-pnpm build            # 모든 패키지 빌드 (core → syntax-directive → syntax-shiki → admin → ai → blocks → bareun → seo)
-pnpm test:run         # 테스트 (Postgres 필요)
-pnpm example:check    # 패키지를 묶어 예시 앱에 설치하고 빌드까지 확인
+pnpm install            # 설치
+pnpm lint               # 린트 (pnpm lint:fix로 고침)
+pnpm check:design       # 관리자 화면 규칙 (docs/design/admin)
+pnpm check:review       # 관리자 화면이 디자인 검토가 읽은 그대로인지
+pnpm typecheck          # 모든 패키지 타입 검사
+pnpm build              # 모든 패키지 빌드
+CMS_TEST_DATABASE_URL=postgres://localhost/monti_test pnpm test   # core 테스트, Postgres 테스트 데이터베이스에서
+pnpm --filter @monti-cms/ui storybook                             # 디자인 시스템과 기준 화면
 ```
 
-커밋할 때 코드 검사(lint-staged)와 커밋 메시지 검사(commitlint)가 자동으로 돈다. 커밋 메시지는 영어로 `type(scope): subject` 꼴로 쓴다(예: `feat(core): add thing`). 범위(scope)는 `core`, `admin`, `ai`, `blocks`, `seo`, `bareun`, `syntax`, `example`, `scripts`, `ci`, `deps`, `release`, `repo` 중에서 고르고 생략해도 된다. push할 때는 lint·check:korean·typecheck가 돈다.
-
-테스트는 `.env.local`에 테스트용 DB 주소(`CMS_TEST_DATABASE_URL`)가 있어야 전부 돈다. 테스트는 이 DB에 임시 스키마를 만들고 끝나면 지운다.
-
-## 버전 내기
+### 릴리스 내기
 
 ```sh
-node scripts/version.mjs 0.1.0   # 모든 패키지 버전을 한 번에 바꾼다
-git commit -am "chore(release): v0.1.0"
-git tag v0.1.0 && git push origin main v0.1.0
+node scripts/version.mjs 0.2.0     # 모든 패키지가 같은 버전이 된다
+git commit -am "chore(release): 0.2.0" && git tag v0.2.0 && git push --follow-tags
 ```
 
-`v*` 태그가 올라가면 배포 워크플로(`.github/workflows/release.yml`)가 패키지를 빌드·묶어 `release` 브랜치에 커밋하고 `release/v0.1.0` 태그를 붙인다.
+태그가 릴리스 작업을 시작합니다. 버전을 확인하고, 빌드하고, 세 관문을 지나야만 릴리스가 나갑니다. 관문은 push마다도 돌고, 손으로도 돌립니다.
+
+```sh
+pnpm build
+pnpm check:packages                # 압축 파일마다 publint와 arethetypeswrong
+DATABASE_URL=postgres://localhost/postgres pnpm try:release --shot admin.png
+                                   # 저장소 밖의 새 Next 앱이 압축 파일을 npm으로 설치해 빌드되고 뜨고,
+                                   # 브라우저가 그 관리자 화면을 연다(제 데이터베이스를 만들고 끝나면 지운다)
+node scripts/pack-release.mjs out --base <주소>   # 묶음 자체: 패키지마다 압축 파일 하나
+```
+
+커밋하면 코드 검사(lint-staged)와 커밋 메시지 검사(commitlint)가 저절로 돕니다. 커밋 메시지는 영어로 `type(scope): subject`처럼 씁니다
+(예: `feat(core): add thing`). scope 목록은 `commitlint.config.mjs`에 있습니다.
+
+## 미디어 저장소
+
+미디어 라이브러리는 플러그인이 가져오는 저장소에 파일을 둡니다. 저장소가 없는 사이트도 돌아갑니다. 라이브러리가 연결하는 법을 알려 주고, 올리기만 안 됩니다.
+
+```ts
+import { createMonti, definePlugin, localFolderStorage } from "@monti-cms/core";
+
+const monti = createMonti({
+	// ...사이트의 나머지
+	plugins: [definePlugin({ name: "media", storage: localFolderStorage({ dir: "./media" }) })],
+});
+```
+
+`localFolderStorage`는 개발 서버나 디스크가 있는 호스트용입니다. 파일을 폴더에 두고 관리자 API로 내줍니다. 디스크가 남지 않거나 작은 요청만 받는
+호스트는 [`@monti-cms/storage-s3`](packages/storage-s3)를 씁니다(`npx monti init --storage s3`가 써 줍니다). 파일은 브라우저에서 버킷으로 곧장
+올라가고, 서버는 도착한 파일을 확인한 뒤에야 항목이 그 파일을 가리키게 합니다. 다른 곳에 두려면 `Storage`를 구현한 플러그인을 씁니다.
 
 ## 라이선스
 

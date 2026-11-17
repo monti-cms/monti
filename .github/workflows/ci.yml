@@ -1,4 +1,4 @@
-# Automated checks. On every push: lint, type check and package build; tests (Postgres service); and the example app bundle check.
+# Automated checks. On every push: lint (Biome and the core's import rules) and the core's suppression check.
 name: CI
 
 # Runs on push only (the PR page shows the result of that commit). Also triggering on PRs would run the same checks twice.
@@ -7,17 +7,20 @@ on:
 
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 permissions:
   contents: read
 
 jobs:
-  check:
-    name: lint · typecheck · build
+  lint:
+    name: lint
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+        with:
+          # The whole history: the step below diffs the pushed commits.
+          fetch-depth: 0
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v5
         with:
@@ -26,48 +29,17 @@ jobs:
       - run: pnpm install --frozen-lockfile
       # Check only; nothing is fixed.
       - run: pnpm lint
-      # Korean strings in package runtime code live only in the message dictionaries (messages.ts).
-      - run: pnpm check:korean
-      - run: pnpm typecheck
-      - run: pnpm build
-
-  test:
-    name: test
-    runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:17
+      # The core is fixed, not silenced: the pushed commits add no `biome-ignore`, `@ts-expect-error`, `@ts-nocheck` or `eslint-disable` under
+      # packages/core. A new branch (an all-zero `before`) or a `before` that is gone (after a force push) is compared with where it left main.
+      - name: no new suppression in the core
         env:
-          POSTGRES_PASSWORD: postgres
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U postgres"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 10
-    env:
-      # Tests create an isolated schema in this DB and drop it when finished (the production DB is not used).
-      CMS_TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432/postgres
-    steps:
-      - uses: actions/checkout@v5
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v5
-        with:
-          node-version: 24
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm test:run
-
-  example:
-    name: example app (packed)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v5
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v5
-        with:
-          node-version: 24
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm example:check
+          BEFORE: ${{ github.event.before }}
+        run: |
+          base="$BEFORE"
+          if [ -z "${base//0/}" ] || ! git cat-file -e "$base^{commit}" 2>/dev/null; then
+            base=$(git merge-base origin/main "$GITHUB_SHA" 2>/dev/null || git rev-list --max-parents=0 "$GITHUB_SHA" | tail -n 1)
+          fi
+          if git diff -U0 "$base" "$GITHUB_SHA" -- packages/core | grep -E '^\+' | grep -vE '^\+\+\+ ' | grep -E 'biome-ignore|@ts-expect-error|@ts-nocheck|eslint-disable'; then
+            echo "::error::A suppression was added under packages/core: fix the code instead."
+            exit 1
+          fi

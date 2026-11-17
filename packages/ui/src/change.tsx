@@ -1,0 +1,140 @@
+import { cva, type VariantProps } from "class-variance-authority";
+import type { ComponentProps, ReactNode } from "react";
+import { cn } from "./cn";
+import { CutWords } from "./cut-words";
+import { OptionContext } from "./option";
+
+const changeVariants = cva(
+	"grid grid-cols-[48px_minmax(0,1fr)] items-baseline gap-monti-12 border-monti-muted border-b py-monti-16 first:pt-0 *:data-[slot=change-body]:col-start-2",
+	{
+		variants: {
+			/** What the change is: a new field (green), an edit (yellow), a removal (red). */
+			kind: {
+				new: "*:data-[slot=change-tag]:text-monti-success",
+				edit: "*:data-[slot=change-tag]:text-monti-warning",
+				drop: "*:data-[slot=change-tag]:text-monti-danger",
+			},
+		},
+	},
+);
+
+/** What a change's choice rows are told: quiet words. One object, so the rows do not render again for nothing. */
+const QUIET = { text: "quiet" } as const;
+
+/**
+ * One change in the review that opens before a schema is saved: a tag for the kind, the name in bold with its key at the end of the line, and under
+ * them, from the same left edge, what to do with the data already saved (radio choices, a result line, a list of what is affected). `tag` is the app's word
+ * ("New", "Edit", "Removed"). Choices are `Option` rows with a radio or a check: the block tells them to read `quiet` (13px, one step under the name,
+ * muted until picked). Blocks follow each other with 16px above and below and a line between; the first of a run has none above, so it starts where its
+ * container's padding ends.
+ */
+function ChangeGroup({
+	kind,
+	tag,
+	title,
+	identifier,
+	className,
+	children,
+	...props
+}: Omit<ComponentProps<"section">, "title"> &
+	VariantProps<typeof changeVariants> & {
+		kind: "new" | "edit" | "drop";
+		tag: string;
+		title: ReactNode;
+		/** The key as written in the schema ("summary → excerpt"). */
+		identifier?: string;
+	}) {
+	return (
+		<section data-slot="change-group" data-kind={kind} className={cn(changeVariants({ kind }), className)} {...props}>
+			<span data-slot="change-tag" className="whitespace-nowrap text-monti-micro">
+				{tag}
+			</span>
+			<span className="flex min-w-0 items-baseline gap-monti-12 text-monti-body">
+				<CutWords render={<b className="min-w-0 truncate font-semibold" />}>{title}</CutWords>
+				{identifier && (
+					<span className="ml-auto whitespace-nowrap font-mono text-monti-caption text-monti-subtle">{identifier}</span>
+				)}
+			</span>
+			<div data-slot="change-body" className="flex min-w-0 flex-col gap-monti-10">
+				<OptionContext value={QUIET}>{children}</OptionContext>
+			</div>
+		</section>
+	);
+}
+
+/** The result of the choice, in one line. `danger` when it cannot be undone. */
+function ChangeNote({ danger = false, className, ...props }: ComponentProps<"p"> & { danger?: boolean }) {
+	return (
+		<p
+			data-slot="change-note"
+			className={cn("m-0 text-monti-note", danger ? "text-monti-danger" : "text-monti-subtle", className)}
+			{...props}
+		/>
+	);
+}
+
+/** The name of a part of a change ("what goes", "keep a copy"), over the `ChangeLines` it labels: small, in the subtle ink. */
+function ChangeLabel({ className, ...props }: ComponentProps<"span">) {
+	return (
+		<span
+			data-slot="change-label"
+			className={cn("not-first:mt-monti-6 text-monti-micro text-monti-subtle first:mt-0", className)}
+			{...props}
+		/>
+	);
+}
+
+/** What the change touches: `ChangeLine`s, the thing on the left and what happens to it on the right. */
+function ChangeLines({ className, ...props }: ComponentProps<"div">) {
+	return (
+		<div
+			data-slot="change-lines"
+			className={cn("m-0 flex flex-col gap-monti-6 text-monti-note", className)}
+			{...props}
+		/>
+	);
+}
+
+/**
+ * One line of `ChangeLines`: `what` on the left, `then` on the right, 40px apart at least. `then` is what happens: plain, `danger` for what is deleted,
+ * `warning` for what blocks the change (put the button that clears it there). A value too long for the line (a before and after of the writing
+ * rules) wraps, still right-aligned; mark the words that differ with `Highlight`.
+ */
+function ChangeLine({
+	what,
+	then,
+	tone = "default",
+}: {
+	what: ReactNode;
+	then: ReactNode;
+	tone?: "default" | "danger" | "warning";
+}) {
+	return (
+		<div data-slot="change-line" className="flex items-baseline justify-between gap-monti-40">
+			<span className="min-w-0 text-monti-muted">{what}</span>
+			<span
+				className={cn(
+					"min-w-0 text-right",
+					tone === "default" && "text-monti-default",
+					tone === "danger" && "text-monti-danger",
+					tone === "warning" && "text-monti-warning",
+				)}
+			>
+				{then}
+			</span>
+		</div>
+	);
+}
+
+/** The buttons a change ends with, in one row. */
+function ChangeActions({ className, ...props }: ComponentProps<"div">) {
+	return (
+		<div
+			data-slot="change-actions"
+			className={cn("flex items-center gap-monti-16 text-monti-note", className)}
+			{...props}
+		/>
+	);
+}
+
+export { ChangeActions, ChangeGroup, ChangeLabel, ChangeLine, ChangeLines, ChangeNote };

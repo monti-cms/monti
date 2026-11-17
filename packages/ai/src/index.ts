@@ -1,37 +1,36 @@
-/**
- * AI plugin authoring API. The entry point imported by the site config file (`cms.config.ts`). Both server and browser read it, so
- * it must not contain secrets or the AI SDK.
- */
-
+export { aiSdkProvider } from "./ai-sdk";
+export { ScreenContext } from "./context";
+export type { AiFailure } from "./failure";
+export { type Scripted, type ScriptedProvider, type ScriptedTurn, scriptedProvider } from "./fake";
+export { assistantMessages } from "./messages";
 export {
-	type AiActionDefinition,
-	type AiActionFactory,
-	type AiActionSource,
-	type AiAttach,
-	type AiChoices,
-	type AiConfig,
-	type AiContentLookup,
-	type AiContribution,
-	type AiInputSpec,
-	type AiSharedText,
-	type AiSiteView,
-	type AiValidator,
-	type AiValidatorContext,
-	type AiValidatorResult,
-	aiAction,
-	aiInput,
-	defineValidator,
-} from "./action";
-export { aiPlugin } from "./plugin";
+	type AssistantOptions,
+	type AssistantState,
+	assistant,
+	type Conversation,
+	type ConversationOutcome,
+	type ConversationRow,
+	KEEP_CHOICES,
+	KEEP_DAYS,
+	type RunState,
+	type TranscriptPart,
+	type TranscriptRun,
+} from "./operations";
 export {
-	type AiFieldTarget,
-	aiPresets,
-	DEFAULT_AI_ACTIONS,
-	fieldAttachOf,
-	fieldTargets,
-	KEBAB_PATTERN,
-	smallestMax,
-	translatableAttributes,
-} from "./presets";
-export { resolveAiActions, resolveAiConfig } from "./resolve";
-export { type RegexRunsRule, regexRuns, sameStructure, uniqueSlug } from "./validators";
+	type AnswerRequest,
+	type ChatMessage,
+	type ModelProvider,
+	type Picture,
+	ProviderError,
+	type ProviderFor,
+	THINKING,
+	type Thinking,
+	type ToolAnswer,
+	type ToolCall,
+	type ToolSpec,
+	type TurnEvent,
+	type TurnRequest,
+	type Usage,
+} from "./provider";
+export type { QuickInput, QuickOutput } from "./quick";
+export { DEFAULT_LIMITS, type RunEnd, type RunEvent, type RunInput, type RunLimits } from "./run";

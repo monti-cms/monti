@@ -1,0 +1,126 @@
+"use client";
+
+import type { ComponentProps, ReactNode, Ref } from "react";
+import { cn } from "./cn";
+import { TOOL_ROW_ROOM } from "./placement";
+
+/** A corner of a block, by the compass. */
+type BlockCorner = "nw" | "ne" | "sw" | "se";
+
+/**
+ * A square handle on a corner of a selected block (an image); dragging it changes the block's width. Each of the four corners has one, so the nearest
+ * is at hand from wherever the pointer comes (2026-11-10, owner). The parent is `relative`; the handle sits half outside its corner. The editor reads the
+ * drag from the pointer events. The top two answer the pointer only, with no name: the bottom two take the keyboard, so a screen reader hears each side once.
+ */
+function ResizeCorner({
+	corner,
+	label,
+	className,
+	...props
+}: Omit<ComponentProps<"button">, "aria-label" | "children"> &
+	({ corner: "nw" | "ne"; label?: never } | { corner: "sw" | "se"; label: string })) {
+	const top = corner === "nw" || corner === "ne";
+	return (
+		<button
+			data-slot="resize-corner"
+			data-corner={corner}
+			type="button"
+			aria-label={top ? undefined : label}
+			aria-hidden={top || undefined}
+			tabIndex={top ? -1 : undefined}
+			className={cn(
+				"absolute z-1 size-[11px] rounded-monti-sm border border-monti-strong bg-monti-page p-0 outline-none focus-visible:ring-2 focus-visible:ring-monti-contrast/60",
+				top ? "-top-[5px]" : "-bottom-[5px]",
+				corner === "nw" || corner === "sw" ? "-left-[5px]" : "-right-[5px]",
+				corner === "nw" || corner === "se" ? "cursor-nwse-resize" : "cursor-nesw-resize",
+				className,
+			)}
+			{...props}
+		/>
+	);
+}
+
+/** A block's width: in px, or a share of the column. */
+type BlockWidth = `${number}px` | `${number}%`;
+
+/**
+ * The box of a block with a size of its own (an image): its corners and tool row hang off it. `width` is its width in px or a share of the column, as the
+ * site draws it, and a narrower column shrinks it; with none it fills the column. `selected` draws a 2px ink line around it, as a picked file block's
+ * border, so a picked picture reads as picked. Where the keyboard stops at the box itself (`tabIndex`, in a body that cannot be written in), holding the
+ * keyboard's focus draws the ordinary focus ring (2px, ink 50%) around it, on the same layer: where the keyboard is and what is picked are two states,
+ * and a picked box that holds the focus shows the line. `measure` is what a corner being dragged makes of it ("420 × 280", "62%"), shown at its top right; `spoken`
+ * is what a screen reader hears of its size as it changes by keys or by pointer, read from a region that is always there so the first change is heard too.
+ */
+function BlockBox({
+	width,
+	selected = false,
+	pointable = false,
+	toolRow = false,
+	measure,
+	spoken,
+	ref,
+	children,
+	...props
+}: {
+	width?: BlockWidth;
+	selected?: boolean;
+	/** The block can be picked and changed here: pointed at, a thin ring (1px, the emphasis line) says so, a step under the picked line (EI-04). */
+	pointable?: boolean;
+	/** A tool row can appear on this block (the body is written, or a picked picture of a read-only body has its settings): it keeps the row's room above it, whether the row shows or not (`TOOL_ROW_ROOM`). */
+	toolRow?: boolean;
+	measure?: string;
+	spoken?: string;
+	ref?: Ref<HTMLDivElement>;
+	children: ReactNode;
+} & Omit<ComponentProps<"div">, "children" | "className" | "style" | "ref">) {
+	return (
+		<div
+			ref={ref}
+			data-slot="block-box"
+			data-selected={selected || undefined}
+			data-pointable={pointable || undefined}
+			className={cn("group/block-box relative w-full max-w-full outline-none", toolRow && TOOL_ROW_ROOM)}
+			// design-allow: the block's own width, chosen by the person or the picture's own.
+			style={width ? { width } : undefined}
+			{...props}
+		>
+			{children}
+			<span aria-live="polite" className="sr-only">
+				{spoken}
+			</span>
+			{measure && (
+				<span
+					aria-hidden="true"
+					className="pointer-events-none absolute top-monti-8 right-monti-8 z-1 rounded-monti-md bg-monti-emphasis px-monti-8 py-monti-4 font-mono text-monti-caption text-monti-on-emphasis"
+				>
+					{measure}
+				</span>
+			)}
+			<div
+				aria-hidden="true"
+				// Its own box's state only (the parent): a picture or a file inside a picked block draws no line of its own.
+				data-slot="block-line"
+				className="pointer-events-none absolute inset-0 hidden rounded-monti-md outline-offset-0 [:focus-visible>&]:block [:focus-visible>&]:ring-2 [:focus-visible>&]:ring-monti-contrast/60 [[data-pointable]:hover>&]:block [[data-pointable]:hover>&]:ring-1 [[data-pointable]:hover>&]:ring-monti-emphasis [[data-selected]>&]:block [[data-selected]>&]:outline-2 [[data-selected]>&]:outline-monti-contrast"
+			/>
+		</div>
+	);
+}
+
+/**
+ * Where a selected block's tool row stands: over the block's top left, outside it, in the room the block keeps for it (`TOOL_ROW_ROOM`, set by the
+ * block's `toolRow`: the row's height and the gap under it), where it covers no text. Its parent is the block's picture box (position relative), so it stands on the block it
+ * belongs to by the box itself and scrolls with it. `lifted` stands it 16px higher, above a lane of the block's own tools on its top edge (`TOOL_ROW_ROOM_LANE`).
+ */
+function BlockBarPlace({ lifted = false, children }: { lifted?: boolean; children: ReactNode }) {
+	return (
+		<div
+			data-slot="block-bar-place"
+			contentEditable={false}
+			className={cn("absolute bottom-full left-0 z-1", lifted ? "mb-monti-24" : "mb-monti-8")}
+		>
+			{children}
+		</div>
+	);
+}
+
+export { BlockBarPlace, BlockBox, type BlockCorner, type BlockWidth, ResizeCorner };

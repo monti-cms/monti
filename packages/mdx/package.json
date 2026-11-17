@@ -1,0 +1,53 @@
+{
+	"name": "@monti-cms/mdx",
+	"version": "0.2.0-next.16",
+	"private": true,
+	"description": "Monti's MDX plugin: reads .md and .mdx files (with :::directive blocks) into the body on import, and writes a body back as MDX.",
+	"license": "MIT",
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts",
+		"./admin": "./src/admin.tsx"
+	},
+	"files": [
+		"dist",
+		"README.md"
+	],
+	"scripts": {
+		"typecheck": "tsc --noEmit -p .",
+		"build": "node ../../scripts/build-package.mjs"
+	},
+	"peerDependencies": {
+		"@monti-cms/admin": "workspace:*",
+		"@monti-cms/core": "workspace:*",
+		"@monti-cms/ui": "workspace:*",
+		"react": ">=19",
+		"react-dom": ">=19"
+	},
+	"devDependencies": {
+		"@monti-cms/admin": "workspace:*",
+		"@monti-cms/core": "workspace:*",
+		"@monti-cms/ui": "workspace:*",
+		"@types/node": "^20",
+		"@types/pg": "^8.23.1",
+		"@types/react": "^19",
+		"kysely": "^0.29.6",
+		"pg": "^8.23.0",
+		"react": "^19.0.0",
+		"typescript": "^7.0.2",
+		"zod": "^4.2.1"
+	},
+	"sideEffects": false,
+	"publishConfig": {
+		"exports": {
+			".": {
+				"types": "./dist/index.d.ts",
+				"default": "./dist/index.js"
+			},
+			"./admin": {
+				"types": "./dist/admin.d.ts",
+				"default": "./dist/admin.js"
+			}
+		}
+	}
+}

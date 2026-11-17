@@ -1,0 +1,261 @@
+import { altIsMissing, cleanMediaValue, type MediaDetail, type MediaValue, mediaValueOf } from "@monti-cms/core";
+import {
+	FormField,
+	FormFieldError,
+	FormFieldLabel,
+	IconButton,
+	MediaInput,
+	Popover,
+	PopoverContent,
+	PopoverTrigger,
+	Stack,
+	Text,
+} from "@monti-cms/ui";
+import { Settings } from "@monti-cms/ui/icons";
+import { type ComponentProps, type ReactNode, useRef, useState } from "react";
+import type { FillState } from "../../assistant/use-fill";
+import { AltFields } from "../../editor/alt-fields";
+import { previewUrl } from "../../media/file-text";
+import { MediaPickerDialog } from "../../media/media-picker-dialog";
+import { RetryButton, useAcceptFiles } from "../../media/upload-problem";
+import type { FieldUploads } from "../../media/use-field-uploads";
+import { useAdmin } from "../../operations/admin-context";
+import { useRead } from "../../operations/use-operation";
+
+/** A file as a field shows it: its name, and its picture when it has one. */
+const shownFile = (file: MediaDetail | null) =>
+	file ? { name: file.name, thumbnail: file.kind === "image" ? previewUrl(file) : null } : null;
+
+/**
+ * A media field in the property panel (doc 09, screens/editor.md): the file on one line, opening the library's window, and what this entry says of the picture in the settings
+ * card at the end of that line, as a body's image has it (2026-11-09, owner). In a translation, an empty field follows the source's file (2026-11-09, owner): choosing or writing makes it this translation's own, and taking it out follows again.
+ */
+export function MediaField({
+	id,
+	field,
+	label,
+	required,
+	accept,
+	change,
+	proposed,
+	value,
+	source,
+	following,
+	readOnly,
+	uploads,
+	card,
+	onCard,
+	onChange,
+	fill,
+}: {
+	id: string;
+	field: string;
+	label: string;
+	required: boolean;
+	accept?: "image" | "any";
+	/** The mark on a translation's own value when the source's moved on: in the place of whose value it is. */
+	change?: ReactNode;
+	/** The file is one the assistant proposed and nobody has taken yet: the label row says so and discards it, and the file's name is blue. */
+	proposed?: ComponentProps<typeof FormFieldLabel>["changed"];
+	value: unknown;
+	/** What it follows while empty. */
+	source?: unknown;
+	/** In a translation following its source: the mark while it follows (empty, or showing the source's file); its own value needs none. */
+	following?: string;
+	readOnly: boolean;
+	uploads: FieldUploads;
+	/** Whether the picture's settings card is open: the editor's, so a to-do row can open it. */
+	card: boolean;
+	onCard: (open: boolean) => void;
+	onChange: (next: MediaValue | null) => void;
+	/** "✦ Fill" for the picture's words, in its settings card (doc 10, quick tasks); left out where there is nobody to ask. */
+	fill?: {
+		state: FillState;
+		/** `put` puts the words in and gives what was there and how to put it back, or `null` when the field holds another picture now. */
+		run: (media: string, put: (alt: string) => { before: unknown; back: () => void } | null) => void;
+		/** Typed by hand: an answer on its way is not put in, and what was filled is the person's. */
+		forget: () => void;
+		stop: () => void;
+		discard: () => void;
+		again: () => void;
+	};
+}) {
+	const { t } = useAdmin();
+	const acceptFiles = useAcceptFiles();
+	const line = useRef<HTMLDivElement>(null);
+	const [picking, setPicking] = useState(false);
+	const own = mediaValueOf(value);
+	const followed = own ? null : mediaValueOf(source);
+	const shown = own ?? followed;
+	const latest = useRef({ own, shown });
+	latest.current = { own, shown };
+	const read = useRead<MediaDetail>("media.get", { id: shown?.media ?? "" }, { skip: !shown, quiet: true });
+	const file = read.data?.id === shown?.media ? read.data : null;
+	// A read-only entry shows what it has saved: a file that was still going up when it was archived is not its value, and has no place here.
+	const going = readOnly ? undefined : uploads.of(field);
+	const isImage = file?.kind === "image";
+	const said = uploads.saidOf(field);
+	const altMissing = going ? going.preview !== null && altIsMissing(said) : isImage && shown && altIsMissing(shown);
+	return (
+		<>
+			<FormField>
+				<FormFieldLabel
+					// Read-only the line is not a control, and a label's `for` names only controls: the field is named by the label's id instead.
+					id={`${id}-label`}
+					htmlFor={readOnly ? undefined : id}
+					required={required}
+					changed={going ? undefined : proposed}
+					// While a proposal waits the row is the proposal's alone (as any field's).
+					action={
+						proposed && !going ? undefined : change && !going ? (
+							change
+						) : following && !own && !going ? (
+							<Text variant="micro" tone="faint">
+								{following}
+							</Text>
+						) : undefined
+					}
+				>
+					{label}
+				</FormFieldLabel>
+				<MediaInput
+					ref={line}
+					id={id}
+					size="md"
+					following={followed !== null && !going}
+					proposal={proposed !== undefined && !going}
+					value={going ? { name: going.name, thumbnail: going.preview } : shownFile(file)}
+					placeholder={t("entry.empty")}
+					accept={accept}
+					readOnly={readOnly}
+					aria-labelledby={readOnly ? `${id}-label` : undefined}
+					onOpen={() => setPicking(true)}
+					// On a file going up or stopped, × takes out that file: the field goes back to what it had.
+					onClear={going ? () => uploads.clear(field) : readOnly || !own ? undefined : () => onChange(null)}
+					// In a translation × on its own file does not empty the field: it follows the source again, and says so (screens/editor.md).
+					clearLabel={t(following !== undefined && own && !going ? "library.field.restore" : "library.field.clear", {
+						label,
+					})}
+					action={
+						// Read-only the settings stay, to read what the entry says of its picture: the card's fields are read-only there (2026-11-11, owner).
+						going?.status === "failed" ? (
+							<RetryButton onRetry={() => uploads.retry(going)} />
+						) : isImage && shown ? (
+							<Popover open={card} onOpenChange={onCard}>
+								<IconButton
+									label={t("library.field.settings", { label })}
+									pressed={card}
+									trigger={(button) => <PopoverTrigger render={button} />}
+								>
+									<Settings aria-hidden />
+								</IconButton>
+								{/* As wide as the line it belongs to, right under it (2026-11-09, owner). */}
+								<PopoverContent anchor={line} align="start" width="anchor">
+									<Stack gap={12}>
+										<AltFields
+											// While a new file goes up, these are about it, and wait with it.
+											value={(going ? said.alt : own?.alt) ?? ""}
+											decorative={(going ? said.decorative : shown.decorative) === true}
+											readOnly={readOnly}
+											placeholder={(!going && followed?.alt) || t("entry.empty")}
+											// Of a file the library has: one still going up has nothing to look at yet.
+											fill={
+												fill && !going
+													? {
+															state: fill.state,
+															onFill: () =>
+																fill.run(shown.media, (alt) => {
+																	// As the field is when the answer comes, and only if it still holds the picture that was asked about.
+																	const now = latest.current;
+																	if (now.shown?.media !== shown.media) return null;
+																	const before = now.own?.alt;
+																	onChange(cleanMediaValue({ ...now.own, media: shown.media, alt }));
+																	// Back to the words it had, on the picture as it is then (resized or made decorative since).
+																	return {
+																		before: before ?? "",
+																		back: () => {
+																			const then = latest.current;
+																			if (then.shown?.media !== shown.media) return;
+																			onChange(cleanMediaValue({ ...then.own, media: shown.media, alt: before }));
+																		},
+																	};
+																}),
+															onStop: fill.stop,
+															onDiscard: fill.discard,
+															onRetry: fill.again,
+														}
+													: undefined
+											}
+											onChange={(alt) => {
+												// Typed by hand: an answer still on its way is not put over it.
+												fill?.forget();
+												if (going) uploads.say(field, { alt });
+												else onChange(cleanMediaValue({ ...own, media: shown.media, alt }));
+											}}
+											onDecorative={(decorative) =>
+												going
+													? uploads.say(field, { decorative })
+													: onChange(cleanMediaValue({ ...own, media: shown.media, decorative }))
+											}
+											onEnter={() => onCard(false)}
+										/>
+									</Stack>
+								</PopoverContent>
+							</Popover>
+						) : undefined
+					}
+				/>
+				{altMissing && !readOnly && going?.status !== "failed" && (
+					<FormFieldError>{t("editor.image.altMissing")}</FormFieldError>
+				)}
+				{going?.status === "failed" && <FormFieldError>{t("library.failed")}</FormFieldError>}
+			</FormField>
+			{picking && (
+				<MediaPickerDialog
+					kind={accept === "any" ? "any" : "image"}
+					title={label}
+					confirmLabel={t("library.field.pick")}
+					onClose={() => setPicking(false)}
+					onPick={(item) => {
+						setPicking(false);
+						uploads.clear(field);
+						// Alt text says what a picture shows, so another file starts with none (2026-11-09, owner). The same file keeps it.
+						onChange(item.id === own?.media ? own : { media: item.id });
+					}}
+					onFiles={([chosen], folder) => {
+						setPicking(false);
+						if (!chosen) return;
+						const only = accept === "any" ? undefined : "image";
+						// One the library refuses leaves the field as it was.
+						void acceptFiles([chosen], only).then(([taken]) => {
+							if (taken) uploads.add(field, taken, folder, only);
+						});
+					}}
+				/>
+			)}
+		</>
+	);
+}
+
+/** A media field that is the same in every language, in a translation: the source's file, read only (doc 04). */
+export function SharedMediaValue({
+	value,
+	empty,
+	withAlt = false,
+}: {
+	value: unknown;
+	empty: string;
+	/** Says what the entry says of it too: a change card, where that may be all that changed. */
+	withAlt?: boolean;
+}) {
+	const { t } = useAdmin();
+	const shown = mediaValueOf(value);
+	const read = useRead<MediaDetail>("media.get", { id: shown?.media ?? "" }, { skip: !shown, quiet: true });
+	const name = read.data?.id === shown?.media ? read.data?.name : undefined;
+	const words = shown?.decorative ? t("editor.image.decorative") : shown?.alt;
+	return (
+		<Text variant="note" tone={name ? undefined : "faint"}>
+			{name && withAlt && words ? `${name} · ${words}` : (name ?? empty)}
+		</Text>
+	);
+}

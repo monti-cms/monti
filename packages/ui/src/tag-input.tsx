@@ -1,0 +1,93 @@
+"use client";
+
+import { type KeyboardEvent, useState } from "react";
+import { CHIPS_FIELD, CHIPS_INPUT, Chip } from "./chip";
+import { cn } from "./cn";
+import { CutWords } from "./cut-words";
+
+/**
+ * A list of short values in one underline field: each value is a `Chip`, and a text entry at the end adds the next one on Enter or a comma
+ * (and when the field loses focus). Backspace in the empty entry removes the last chip.
+ */
+function TagInput({
+	items,
+	onChange,
+	placeholder,
+	removeLabel,
+	disabled = false,
+	mono = false,
+	size = "default",
+	className,
+	"aria-label": ariaLabel,
+}: {
+	items: readonly string[];
+	onChange: (items: string[]) => void;
+	/** Shown in the entry while there is no chip yet. */
+	placeholder?: string;
+	/** The accessible name of a chip's remove button. */
+	removeLabel: (item: string) => string;
+	disabled?: boolean;
+	/** Values are code (keys, identifiers): the chips and the entry are fixed-width. */
+	mono?: boolean;
+	/** `sm` stands 28px high, as a small `Input` does. */
+	size?: "sm" | "md" | "default";
+	className?: string;
+	"aria-label"?: string;
+}) {
+	const [input, setInput] = useState("");
+
+	const add = (value: string) => {
+		const trimmed = value.trim();
+		if (trimmed && !items.includes(trimmed)) onChange([...items, trimmed]);
+		setInput("");
+	};
+	const remove = (index: number) => onChange(items.filter((_, i) => i !== index));
+
+	const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+		// Korean typing: Enter only finishes the composition.
+		if (event.nativeEvent.isComposing || event.key === "Process" || event.keyCode === 229) return;
+		if (event.key === "Enter" || event.key === ",") {
+			event.preventDefault();
+			add(input);
+		} else if (event.key === "Backspace" && !input && items.length > 0) {
+			remove(items.length - 1);
+		}
+	};
+
+	return (
+		<div
+			data-slot="tag-input"
+			data-size={size}
+			data-disabled={disabled || undefined}
+			className={cn(CHIPS_FIELD, mono && "font-mono", disabled && "cursor-default opacity-45", className)}
+		>
+			{items.map((item, index) => (
+				<Chip
+					size="sm"
+					key={item}
+					className={mono ? "font-mono" : undefined}
+					onRemove={disabled ? undefined : () => remove(index)}
+					removeLabel={removeLabel(item)}
+				>
+					<CutWords className="max-w-40 truncate">{item}</CutWords>
+				</Chip>
+			))}
+			{!disabled && (
+				<input
+					type="text"
+					value={input}
+					aria-label={ariaLabel}
+					placeholder={items.length === 0 ? placeholder : undefined}
+					onChange={(event) => setInput(event.target.value)}
+					onKeyDown={handleKeyDown}
+					onBlur={() => {
+						if (input.trim()) add(input);
+					}}
+					className={CHIPS_INPUT}
+				/>
+			)}
+		</div>
+	);
+}
+
+export { TagInput };

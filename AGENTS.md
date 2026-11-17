@@ -1,9 +1,7 @@
-When working with code, prefer LSP for symbol navigation, references, type information, rename, and diagnostics when applicable.
+Monti's core (`packages/core`) is being rewritten from scratch, and its design is `docs/refactor/core.md`. That document and what the owner says are the only authority. The old code, `docs/design/features` and the old tracker are gone and were wrong where they differ: do not rebuild anything from memory of them. The other documents in `docs/refactor` say what goes to the other packages and are worked on only after the core. Before any work, read the stage you are in (core.md, "작업 방식"): the owner approves each stage's test plan first, the tests are written first, and you add nothing the document does not state. Write down any work you put off in the document it belongs to (core.md, "정하지 않은 것", or the receiving document), never only in a PR description.
 
-Commit messages must be written in English and follow Conventional Commits (`type(scope): subject`). Allowed scopes (optional): core, admin, ai, blocks, seo, bareun, syntax, example, scripts, ci, deps, release, repo. Checked by commitlint (`commitlint.config.mjs`).
+Docs under `docs/` are written in Korean: the owner reads and approves them. Code names, file paths, tokens and commands in them stay as they are in the code. Everything else is in English (code comments, test titles, READMEs, error messages, commits, PRs); Korean appears elsewhere only in the `ko` message dictionaries, test data, Storybook stories and `README.ko.md`. When a `README.md` changes, update its `README.ko.md` in the same change.
 
-Pull request titles and descriptions must also be written in English. PR titles follow the same Conventional Commits format.
+Commit messages and PR titles follow Conventional Commits (`type(scope): subject`). The scopes are in `commitlint.config.mjs`; a new package adds its own.
 
-All documentation, code comments, test titles and developer-facing text are written in English. Korean appears only in the `ko` message dictionaries, in test data, and in the `README.ko.md` translations.
-
-When a `README.md` changes, update the matching `README.ko.md` in the same change.
+Prefer LSP for symbol navigation, references, types, rename and diagnostics.

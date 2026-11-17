@@ -2,27 +2,12 @@
 
 English | [한국어](README.ko.md)
 
-SEO extension for `@monti-cms/core`. It adds a field set for search engines and sharing, the search result and share previews in the edit screen, character counts for the search title and description,
-and a switch to hide the page from search engines. With `@monti-cms/ai`, search title and description suggestions are attached too. Public pages read values with `seoOf`.
-
-## Registration
+Monti's SEO plugin: search and share fields in a tab of their own, their preview in the editor, and `seoOf` for the site's pages.
 
 ```ts
-// cms.config.ts
-import { seo, seoFields } from "@monti-cms/seo";
-
-const article = defineCollection({
-	label: "Article",
-	kind: "document",
-	fields: {
-		title: fields.text({ label: "Title" }),
-		slug: fields.slug({ label: "Slug", from: "title" }),
-		excerpt: fields.text({ label: "Excerpt", role: "summary" }),
-		...seoFields(),
-	},
-	layout: [{ fields: ["title", "slug", "excerpt"] }], // SEO fields gather in the SEO tab even if not listed
-	list: { columns: ["title", "status"] },
-});
+// monti.config.ts
+import { defineConfig } from "@monti-cms/core";
+import { seo } from "@monti-cms/seo";
 
 export default defineConfig({
 	// …
@@ -30,70 +15,72 @@ export default defineConfig({
 });
 ```
 
-```css
-@import "@monti-cms/seo/styles.css"; /* after the admin package styles (finds classes in the published bundle) */
+```tsx
+// app/admin/page.tsx
+import { AdminPage } from "@monti-cms/next/admin";
+import { seoAdmin } from "@monti-cms/seo/admin";
+
+export default function Page() {
+	return <AdminPage plugins={[seoAdmin]} />;
+}
 ```
 
-## Field set `seoFields(options?)`
+The first is the plugin's server half; the second is its half in the browser (the inputs and the preview). Without the second the fields
+are still there, drawn with their kinds' own inputs, and the preview is not.
 
-| Slot | Default name | Field | Role (`role`) | Edit screen |
-| --- | --- | --- | --- | --- |
-| `preview` | `seoPreview` | view field `search` | - | Search result and share preview. An empty title or description falls back to the title or summary role value |
-| `title` | `seoTitle` | text | `seoTitle` | When empty, shows the title as a hint, and a character count (recommended 60) |
-| `description` | `seoDescription` | multi-line text | `seoDescription` | When empty, shows the summary as a hint, and a character count (recommended 155) |
-| `image` | `seoImage` | media (`fields.media`, image) | `ogImage` | Media picker. An image in use cannot be deleted |
-| `noindex` | `seoNoindex` | select (`index`, `noindex`) | `noindex` | A switch in the label row. On means `noindex` |
-| `canonical` | `seoCanonical` | text | `canonical` | Canonical URL |
+## What it adds
 
-Every field has a `tab` (default `SEO`), so they gather in that tab of the edit screen even without a `layout`. Values are found by role, not by field name,
-so names are up to the site.
+A tab "SEO" in the property panel of every document collection. The tab is the plugin's: the settings show it locked, and its fields are
+not written to `monti.schema.ts`. Taking the plugin out takes the tab out; the values stay in the entries.
+
+| Field | Name | What it is |
+|---|---|---|
+| Preview | `seoPreview` | How the entry looks as a search result and as a shared link. It holds no value |
+| SEO title | `seoTitle` | Text, per language. Empty, the site uses the entry's title, and the field says so with its length ("Same as Title · 10/60") |
+| SEO description | `seoDescription` | Text, per language. Empty, the site uses the `summary` field |
+| Share image | `seoImage` | A picture. Empty, the site uses the `cover` field |
+| Hide from search | `seoNoindex` | A switch: `noindex`, or nothing |
+| Canonical address | `seoCanonical` | The address of the page this one repeats |
+
+- The count beside a written title or description turns to a warning past the recommended length (60 and 160). Nothing is refused.
+- The lists can show the SEO title, the SEO description and the share image as columns ("add column"), each filtered by "empty".
+- A field of one of these names in the site's own schema stands in the plugin's place.
+
+## Options
 
 ```ts
-seoFields({
-	keys: { title: "metaTitle", image: "ogImageId" }, // field names (reuse the names of values already stored)
-	labels: { title: "Search title" }, // labels
-	tab: "Search", // tab name
-	localized: false, // keep title, description, image and canonical URL separate per language? (default true; hiding is always shared)
-	limits: { title: 70, description: 160 }, // recommended lengths: the count changes color when exceeded and it becomes the AI suggestion length (saving is not blocked)
-	omit: ["canonical"], // slots to omit
+seo({
+	collections: ["post"], // the document collections that get the tab; all of them when left out
+	language: "en", // the language of the fields' names; Korean when left out, as the admin is
+	limits: { title: 70, description: 155 }, // the recommended lengths the counts warn past
+	follows: { description: "lead", image: "hero" }, // the site's own fields an empty value falls back to
 });
 ```
 
-The recommended length is stored in the field's `inputOptions.limit`. If you need a limit that blocks saving, add a separate field that uses the field `max`.
-
-## Plugin `seo(options?)`
-
-- **Admin UI** (`@monti-cms/seo/admin`): registers the view field `search`, the input pieces `seo-title` and `seo-description` (hint and character count),
-  and `seo-noindex` (switch) through `CmsAdminComponentsProvider`. Without the registration (if the extension is removed) the same fields appear as default inputs.
-- **Config validation**: `seoTitle`, `seoDescription` and `canonical` must be text, `ogImage` must be media, and `noindex` must be a select
-  field with a `noindex` option (`validateSeoFields`).
-- **AI features**: with `@monti-cms/ai`, it adds `seoTitle` (search title suggestions, 3 candidates) and `seoDescription` (search description suggestions)
-  (`contributes.ai`). They attach to every collection that has the role fields, and the length is field `max` → recommended length → 60 / 155. To change one:
-  `aiPlugin({ actions: { seoTitle: seoAi.title({ prompt }) } })`; to turn it off: `seoTitle: false` or `seo({ ai: false })`.
-
-## Public pages `seoOf(collection, metadata)`
+## On the site's pages
 
 ```ts
+import { pageMetadata } from "@monti-cms/next";
 import { seoOf } from "@monti-cms/seo";
-import { post } from "@/cms.config";
 
-const { title, description, imageId, canonical, noindex } = seoOf(post, entry.metadata);
+export async function generateMetadata({ params }) {
+	const found = await reader.entry({ collection: "post", slug: (await params).slug, locale: "en" });
+	if (!found || !("entry" in found)) return {};
+	const { entry } = found;
+	return pageMetadata({ ...seoOf(entry), locale: entry.locale, path: entry.path, translations: entry.translations });
+}
 ```
 
-It reads values by role from the collection definition (the result of `defineCollection`) and the stored metadata. An empty title or description is filled from the title (`title`) or summary
-(`role: "summary"`), and empty values are `undefined`. The share image is a media ID, so the site builds the public URL
-(`resolvePublicMediaUrl` from `@monti-cms/core/runtime`).
+`seoOf(entry, follows?)` gives the title (the entry's own when none was written), and the description, the share image, the canonical
+address when there is one, and `noindex`. Give it the same `follows` as the plugin when the plugin was given any.
 
-## Entry points
-
-| Entry point | Contents |
-| --- | --- |
-| `@monti-cms/seo` | `seo`, `seoFields`, `seoOf`, `seoAi`, `SEO_ROLES`, `validateSeoFields` (site config and public pages, shared by server and browser) |
-| `@monti-cms/seo/admin` | Admin-side provider (the core loads it through the plugin definition's `admin`) |
+On a Next.js site `pageMetadata` (`@monti-cms/next`) makes the page's metadata of them: the canonical address (the page's own when the
+author named none), the entry's pages in the other languages (`hreflang`), `og:title`, `og:url` and the share image. A site on another
+framework writes those tags from the same values.
 
 ## Development
 
 ```sh
-pnpm --filter @monti-cms/seo test:run     # example blog config + other-site config
+pnpm --filter @monti-cms/seo test
 pnpm --filter @monti-cms/seo typecheck
 ```

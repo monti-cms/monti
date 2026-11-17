@@ -1,0 +1,81 @@
+import type * as React from "react";
+import { cn } from "./cn";
+import { CutWords } from "./cut-words";
+import { ArrowRight } from "./icons";
+
+/**
+ * A row of "match the fields" in an import: the key from the file (mono) on the left, an arrow, and what it goes into on the right (a `Select`,
+ * `size="sm"`), with one line under it: an example value, or a note in the warning color. A key that is not imported is `off`: its name dims; the
+ * select already says so in words ("Not imported"). Give the select `proposal` when the assistant matched it.
+ */
+function MapRow({
+	name,
+	example,
+	warning,
+	off = false,
+	children,
+}: {
+	/** The key as it is in the file. */
+	name: string;
+	/** An example value from the file. */
+	example?: string;
+	/** Something to look at before importing, in the warning color. It replaces the example. */
+	warning?: string;
+	/** This key is not imported. */
+	off?: boolean;
+	/** The select that picks the field it goes into, `size="sm"` (28px). */
+	children: React.ReactNode;
+}) {
+	return (
+		<div
+			data-slot="map-row"
+			data-off={off || undefined}
+			className="grid grid-cols-[120px_14px_minmax(0,1fr)] items-center gap-x-monti-12 gap-y-monti-2 border-monti-muted border-b py-monti-8"
+		>
+			<CutWords className={cn("truncate font-mono text-monti-default text-monti-note", off && "text-monti-faint")}>
+				{name}
+			</CutWords>
+			<ArrowRight aria-hidden className="size-3 justify-self-center text-monti-faint" />
+			{children}
+			{(warning ?? example) && (
+				<CutWords
+					className={cn("col-start-3 truncate text-monti-caption", warning ? "text-monti-warning" : "text-monti-faint")}
+				>
+					{warning ?? example}
+				</CutWords>
+			)}
+		</div>
+	);
+}
+
+/**
+ * A problem with a file to bring in that nothing can be picked for (what keeps a backup from being restored): its name on the first line, with the
+ * identifier it is about in mono after it (`code`, "series", "/about"), and one line under it in the warning color that says what it touches. The
+ * same lines as a `MapRow`, without the arrow and the select.
+ */
+function IssueRow({
+	name,
+	code,
+	warning,
+}: {
+	name: React.ReactNode;
+	code?: React.ReactNode;
+	warning: React.ReactNode;
+}) {
+	return (
+		<div data-slot="issue-row" className="flex flex-col gap-monti-2 border-monti-muted border-b py-monti-8">
+			<span className="min-w-0 text-monti-body text-monti-default">
+				{name}
+				{code !== undefined && (
+					<>
+						{" "}
+						<span className="font-mono">{code}</span>
+					</>
+				)}
+			</span>
+			<span className="text-monti-caption text-monti-warning">{warning}</span>
+		</div>
+	);
+}
+
+export { IssueRow, MapRow };

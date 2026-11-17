@@ -1,0 +1,1209 @@
+import { type Block, type Doc, defineMark, defineSchema, entryLink, plainText, type Schema } from "@monti-cms/core";
+import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, fireEvent, userEvent, waitFor, within } from "storybook/test";
+import { type StorySite, startAt, storySite } from "../../../.storybook/pglite-site";
+import { MontiAdmin } from "../../app";
+import { schema } from "../story-schema";
+
+type Loaded = { site: StorySite; id: string };
+type Monti = StorySite["monti"];
+
+export const admin = { actor: "admin" } as const;
+export const wait = { timeout: 15000 };
+
+let count = 0;
+const text = (value: string) => [{ type: "text" as const, text: value }];
+const p = (value: string) => ({ id: `b_${++count}`, type: "paragraph", content: text(value) });
+const h = (value: string) => ({ id: `b_${++count}`, type: "heading", attrs: { level: 2 }, content: text(value) });
+const doc = (...blocks: Doc["blocks"]): Doc => ({ type: "doc", blocks });
+
+/** The reference screen's entry (Editor › EditorNotion). */
+const firstPost = () =>
+	doc(
+		p("블로그를 다시 만들기로 한 건 글을 쓰는 시간보다 도구를 고치는 시간이 길어졌기 때문이다."),
+		h("무엇을 덜어냈나"),
+		p("목록에는 제목과 주소, 지금 상태만 남겼다. 나머지는 필요할 때 꺼내 본다."),
+		p("편집기도 같은 원칙으로 정리했다. 글을 쓰는 동안 보이는 건 글뿐이다."),
+	);
+
+/** An entry with a table (T62): versions and what changed, the first row its head row. */
+const changelog = (widths?: number[]) =>
+	doc(
+		p("버전마다 무엇이 바뀌었는지 적어 둔다."),
+		{
+			id: `b_${++count}`,
+			type: "table",
+			attrs: {
+				header: true,
+				rows: [
+					["버전", "바뀐 것", "날짜"],
+					["1.0", "처음 공개", "2024-03-02"],
+					["2.0", "편집기 다시 만들기", "2025-11-20"],
+				],
+				...(widths ? { widths } : {}),
+			},
+		},
+		p("다음 버전은 아직 정하지 않았다."),
+	);
+
+/** An entry with a checklist: one item ticked, one not. */
+const todo = () =>
+	doc(p("내보내기 전에 할 일."), {
+		id: `b_${++count}`,
+		type: "checklist",
+		children: [
+			{ id: `b_${++count}`, type: "listItem", attrs: { checked: true }, content: text("초안 쓰기") },
+			{ id: `b_${++count}`, type: "listItem", content: text("발행하기") },
+		],
+	});
+
+/** An entry with a code block (doc 17): TypeScript, a file name, an added line, a fold over lines 2–4, a label on line 5 the text links to. */
+const withCode = (broken = false) =>
+	doc(
+		{
+			id: "b_text",
+			type: "paragraph",
+			content: [
+				{ type: "text", text: "버튼을 누를 때마다 " },
+				{
+					type: "text",
+					text: "수를 하나 올린다",
+					marks: [{ type: "codeRef", block: "b_code", anchor: broken ? "gone" : "l1" }],
+				},
+				{ type: "text", text: "." },
+			],
+		},
+		{
+			id: "b_code",
+			type: "codeBlock",
+			attrs: {
+				language: "ts",
+				title: "src/counter.ts",
+				lines: [
+					{ name: "plus", start: 0, end: 1 },
+					{ name: "collapse", start: 1, end: 4, attrs: { open: true } },
+					{ name: "anchor", start: 4, end: 5, attrs: { id: "l1" } },
+				],
+			},
+			content: text(
+				"let count = 0;\nfunction reset() {\n  count = 0;\n}\nconst add = () => count++;\nexport { add, reset };",
+			),
+		},
+		p("다음 문단."),
+	);
+
+/** An entry with two footnotes, stored out of order: "처음" is noted second in the text but kept first (T62). */
+const noted = () =>
+	doc(
+		{
+			id: `b_${++count}`,
+			type: "paragraph",
+			content: [
+				{ type: "text", text: "목록에는 지금 상태만 남겼다." },
+				{ type: "footnoteRef", id: "fn_state" },
+			],
+		},
+		{
+			id: `b_${++count}`,
+			type: "footnote",
+			attrs: { id: "fn_first" },
+			content: text("처음 판은 정적 사이트 생성기로 만들었다."),
+		},
+		{
+			id: `b_${++count}`,
+			type: "paragraph",
+			content: [
+				{ type: "text", text: "처음 만든 건 2019년이다." },
+				{ type: "footnoteRef", id: "fn_first" },
+			],
+		},
+		{ id: `b_${++count}`, type: "footnote", attrs: { id: "fn_state" }, content: text("상태는 색 대신 글자로 적었다.") },
+	);
+
+/** A block's new text: its words with `text` in place of `from`–`to` (the reference entry's paragraphs have no marks, so no tags). */
+const reword = (block: Block, from: number, to: number, text: string) => {
+	const words = plainText(block.content);
+	return { op: "setText", block: block.id, text: words.slice(0, from) + text + words.slice(to) };
+};
+
+/**
+ * The assistant's body proposals on the reference entry (T32), from one request: a shorter phrase in the first paragraph, a line put in after the
+ * third, and the last paragraph taken out.
+ */
+async function proposeBody(monti: Monti, id: string) {
+	const read = (await monti.run("entries.get", { id }, admin)) as { entry: { doc: Doc; version: number } };
+	const [first, , third, last] = read.entry.doc.blocks;
+	if (!first || !third || !last) throw new Error("the reference entry has four blocks");
+	const proposal = await monti.proposals.create("conversation-1", "더 짧게 다듬기");
+	const edit = (ops: unknown[]) => monti.proposals.add(proposal, "body.edit", { id, version: read.entry.version, ops });
+	await edit([reword(first, 8, 14, "만든")]);
+	await edit([
+		{ op: "insert", after: third.id, blocks: [{ type: "paragraph", content: text("상태도 색 대신 글자로 적었다.") }] },
+	]);
+	await edit([{ op: "remove", blocks: [last.id] }]);
+}
+
+/** A line put in at the very start of the body, before its first block. */
+async function proposeAtStart(monti: Monti, id: string) {
+	const read = (await monti.run("entries.get", { id }, admin)) as { entry: { version: number } };
+	const proposal = await monti.proposals.create("conversation-1", "첫머리에 한 줄 더해 줘");
+	await monti.proposals.add(proposal, "body.edit", {
+		id,
+		version: read.entry.version,
+		ops: [{ op: "insert", after: null, blocks: [{ type: "paragraph", content: text("이 글은 다시 만든 기록이다.") }] }],
+	});
+}
+
+/** A proposal that keeps the first paragraph's words and makes two of them bold. */
+async function proposeFormat(monti: Monti, id: string) {
+	const read = (await monti.run("entries.get", { id }, admin)) as { entry: { doc: Doc; version: number } };
+	const [first] = read.entry.doc.blocks;
+	if (!first) throw new Error("the reference entry has a first block");
+	const words = plainText(first.content);
+	const proposal = await monti.proposals.create("conversation-1", "중요한 말 굵게");
+	await monti.proposals.add(proposal, "body.edit", {
+		id,
+		version: read.entry.version,
+		ops: [
+			{ op: "setText", block: first.id, text: words.replace("도구를 고치는 시간", "<bold>도구를 고치는 시간</bold>") },
+		],
+	});
+}
+
+/**
+ * One request's proposals for the title, a field and the body (T86): a new title, a shorter summary, and a shorter phrase in the first
+ * paragraph. The title and the summary are blue in their inputs; the bubble walks all three.
+ */
+async function proposeFields(monti: Monti, id: string) {
+	const read = (await monti.run("entries.get", { id }, admin)) as { entry: { doc: Doc; version: number } };
+	const [first] = read.entry.doc.blocks;
+	if (!first) throw new Error("the reference entry has a first block");
+	const proposal = await monti.proposals.create("conversation-1", "제목과 요약도 다듬어 줘");
+	const at = { id, version: read.entry.version };
+	await monti.proposals.add(proposal, "entries.save", { ...at, title: "블로그를 다시 만든 까닭" });
+	await monti.proposals.add(proposal, "entries.save", { ...at, values: { summary: "덜어낸 것과 남긴 것." } });
+	await monti.proposals.add(proposal, "body.edit", {
+		...at,
+		ops: [reword(first, 8, 14, "만든")],
+	});
+}
+
+/**
+ * A body proposal the text moved away from (T87): two changes were proposed, and the last paragraph was written again before anyone took
+ * them. The first is drawn over its words; the second hangs beside its paragraph as "changed in the meantime".
+ */
+async function proposeThenEdit(monti: Monti, id: string, twice = false) {
+	const read = (await monti.run("entries.get", { id }, admin)) as { entry: { doc: Doc; version: number } };
+	const [first, , , last] = read.entry.doc.blocks;
+	if (!first || !last) throw new Error("the reference entry has four blocks");
+	const proposal = await monti.proposals.create("conversation-1", "더 짧게 다듬기");
+	const edit = (ops: unknown[]) => monti.proposals.add(proposal, "body.edit", { id, version: read.entry.version, ops });
+	await edit([reword(first, 8, 14, "만든")]);
+	await edit([reword(last, 5, 17, "같다")]);
+	// Another request's change of the same paragraph: two marks then hang at one block.
+	if (twice) {
+		const other = await monti.proposals.create("conversation-2", "문장 끝 다듬기");
+		await monti.proposals.add(other, "body.edit", {
+			id,
+			version: read.entry.version,
+			ops: [reword(last, 31, 36, "글이다")],
+		});
+	}
+	await monti.run(
+		"entries.save",
+		{
+			id,
+			version: read.entry.version,
+			doc: {
+				...read.entry.doc,
+				blocks: read.entry.doc.blocks.map((block) =>
+					block.id === last.id
+						? {
+								...block,
+								content: text("편집기도 같은 원칙으로 정리했다. 글을 쓰는 동안 보이는 건 글과 지금 상태뿐이다."),
+							}
+						: block,
+				),
+			},
+		},
+		admin,
+	);
+}
+
+async function templates(monti: Monti) {
+	await monti.run(
+		"templates.save",
+		{ name: "기본 글", doc: doc(h("서론"), p("이 글에서 무엇을 다루는지."), h("본론")) },
+		admin,
+	);
+	await monti.run(
+		"templates.save",
+		{ name: "책 리뷰", doc: doc(h("한 줄 평"), h("줄거리"), h("인용"), h("생각")) },
+		admin,
+	);
+	await monti.run(
+		"templates.save",
+		{ name: "튜토리얼", doc: doc(h("준비물"), h("단계"), h("코드"), h("마무리")) },
+		admin,
+	);
+}
+
+type Kind =
+	| "draft"
+	| "new"
+	| "untitled"
+	| "toCheck"
+	| "toCheckOnly"
+	| "published"
+	| "changed"
+	| "archived"
+	| "table"
+	| "tableSized"
+	| "code"
+	| "codeBroken"
+	| "footnotes"
+	| "checklist"
+	| "addressInTab"
+	| "related"
+	| "relatedNames"
+	| "ownFormat"
+	| "proposed"
+	| "proposedFields"
+	| "proposedStale"
+	| "proposedStaleTwice"
+	| "proposedFormat"
+	| "proposedAtStart"
+	| "conditional"
+	| "nestedChoice"
+	| "strayOption";
+
+/** The blog whose posts point at other posts: a relation to documents, some of them drafts. */
+const withRelatedMany = defineSchema({
+	...schema,
+	collections: {
+		...schema.collections,
+		post: {
+			...schema.collections.post,
+			fields: {
+				...schema.collections.post?.fields,
+				related: { kind: "relation", to: "post" },
+				readNext: { kind: "relation", to: "post", many: true, ordered: true },
+			},
+		},
+	},
+});
+
+/** The blog with a conditional field on its posts (doc 19): what a post is, and what each kind of post asks for. */
+const withFormat = defineSchema({
+	...schema,
+	collections: {
+		...schema.collections,
+		post: {
+			...schema.collections.post,
+			fields: {
+				...schema.collections.post?.fields,
+				format: {
+					kind: "conditional",
+					required: true,
+					options: ["article", "video", "link"],
+					fields: {
+						video: { videoUrl: { kind: "text", required: true }, videoCredit: { kind: "text" } },
+						link: { linkUrl: { kind: "text", required: true } },
+					},
+				},
+			},
+		},
+	},
+} as Schema);
+
+/**
+ * The same with a choice inside the video's fields (where the video is), and a field turned on and off by a switch with a field of its
+ * own for "on" (doc 19).
+ */
+const withNested = defineSchema({
+	...withFormat,
+	collections: {
+		...withFormat.collections,
+		post: {
+			...withFormat.collections.post,
+			fields: {
+				...withFormat.collections.post?.fields,
+				format: {
+					kind: "conditional",
+					required: true,
+					options: ["article", "video", "link"],
+					fields: {
+						video: {
+							videoUrl: { kind: "text", required: true },
+							videoHost: {
+								kind: "conditional",
+								options: ["own", "embed"],
+								fields: { embed: { embedCode: { kind: "text" } } },
+							},
+						},
+						link: { linkUrl: { kind: "text", required: true } },
+					},
+				},
+				featured: {
+					kind: "conditional",
+					control: "toggle",
+					options: ["on"],
+					fields: { on: { featuredNote: { kind: "text" } } },
+				},
+			},
+		},
+	},
+} as Schema);
+
+/** Makes the story's entry and returns its id. */
+async function entry(monti: Monti, kind: Kind): Promise<string> {
+	await templates(monti);
+	await monti.run(
+		"collections.updateAdminValues",
+		{
+			collection: "post",
+			values: {
+				label: "게시글",
+				// The address in a tab of its own: a to-do for it marks that tab (screens/editor.md).
+				...(kind === "addressInTab"
+					? {
+							layout: [
+								{ tab: "기본", fields: ["summary", "subtitle", "cover", "category"] },
+								{ tab: "주소", fields: ["slug"] },
+							],
+						}
+					: {}),
+				fields: {
+					title: { label: "제목" },
+					slug: { label: "주소" },
+					summary: { label: "요약" },
+					subtitle: { label: "부제" },
+					cover: { label: "대표 이미지" },
+					category: { label: "카테고리" },
+					...(kind === "related" || kind === "relatedNames"
+						? { related: { label: "관련 글" }, readNext: { label: "이어 읽기" } }
+						: {}),
+					...(kind === "nestedChoice"
+						? {
+								videoHost: { label: "영상 위치", optionLabels: { own: "직접 올림", embed: "퍼가기" } },
+								// The order the fields list was dragged to: where the video is comes before its address.
+								format: {
+									label: "글 종류",
+									optionLabels: { article: "글", video: "동영상", link: "링크" },
+									optionFields: { video: ["videoHost", "videoUrl"] },
+								},
+								embedCode: { label: "퍼가기 코드" },
+								featured: { label: "첫 화면에 올리기" },
+								featuredNote: { label: "첫 화면 문구" },
+							}
+						: {}),
+					...(kind === "conditional" || kind === "nestedChoice" || kind === "strayOption"
+						? {
+								...(kind === "nestedChoice"
+									? {}
+									: { format: { label: "글 종류", optionLabels: { article: "글", video: "동영상", link: "링크" } } }),
+								videoUrl: { label: "동영상 주소" },
+								videoCredit: { label: "출처" },
+								linkUrl: { label: "링크 주소" },
+							}
+						: {}),
+				},
+			},
+		},
+		admin,
+	);
+	let devCategoryGroup = "";
+	for (const [name, slug] of [
+		["개발", "dev"],
+		["일상", "life"],
+		["회고", "retro"],
+	] as const) {
+		const cat = (await monti.run(
+			"items.saveGroup",
+			{ collection: "category", locales: { ko: { title: name, slug } } },
+			admin,
+		)) as { output: { group: string } };
+		if (name === "개발") devCategoryGroup = cat.output.group;
+	}
+	const made = (await monti.run(
+		"entries.create",
+		kind === "new"
+			? { collection: "post", locale: "ko" }
+			: {
+					collection: "post",
+					locale: "ko",
+					title: kind === "untitled" || kind === "toCheck" ? "" : "첫 번째 글",
+					...(kind === "untitled" || kind === "toCheck" || kind === "addressInTab" ? {} : { slug: "first-post" }),
+					values: {
+						summary: "리액트로 블로그를 다시 만들며 덜어낸 것과 남긴 것.",
+						...(devCategoryGroup ? { category: devCategoryGroup } : {}),
+						...(kind === "conditional"
+							? { format: "video", videoUrl: "https://example.dev/talk.mp4", videoCredit: "example.dev" }
+							: {}),
+						...(kind === "nestedChoice"
+							? {
+									format: "video",
+									videoUrl: "https://example.dev/talk.mp4",
+									videoHost: "embed",
+									embedCode: "<iframe src='https://example.dev/talk'></iframe>",
+									featured: "on",
+									featuredNote: "이번 주의 글",
+								}
+							: {}),
+					},
+					doc:
+						kind === "table"
+							? changelog()
+							: kind === "tableSized"
+								? changelog([20, 50, 30])
+								: kind === "footnotes"
+									? noted()
+									: kind === "code" || kind === "codeBroken"
+										? withCode(kind === "codeBroken")
+										: kind === "checklist"
+											? todo()
+											: firstPost(),
+				},
+		admin,
+	)) as { output: { id: string } };
+	const id = made.output.id;
+	// Other entries a link can find (T63).
+	const others: string[] = [];
+	for (const title of ["리액트 다시 만들기 1편 · 상태", "리액트 다시 만들기 2편 · 렌더링", "읽을 것"]) {
+		const other = (await monti.run(
+			"entries.create",
+			{ collection: title === "읽을 것" ? "memo" : "post", locale: "ko", title },
+			admin,
+		)) as { output: { id: string } };
+		others.push(other.output.id);
+	}
+	// Posts a relation can point at: one with no title, and two with the same title (told apart by their addresses).
+	if (kind === "relatedNames") {
+		let noTitle = "";
+		for (const [title, slug] of [
+			["", "no-title"],
+			["같은 이름", "same-one"],
+			["같은 이름", "same-two"],
+		] as const) {
+			const made = (await monti.run("entries.create", { collection: "post", locale: "ko", title, slug }, admin)) as {
+				output: { id: string };
+			};
+			if (slug === "no-title") noTitle = made.output.id;
+		}
+		// The post with no title is already on the ordered field.
+		const target = (await monti.run("entries.get", { id: noTitle }, admin)) as { entry: { translationGroup: string } };
+		await monti.run("entries.save", { id, version: 1, values: { readNext: [target.entry.translationGroup] } }, admin);
+	}
+	// Words that link to a draft: a to-do that only tells and does not stop the publish (doc 02).
+	if (kind === "toCheck" || kind === "toCheckOnly") {
+		const linked = (await monti.run("entries.get", { id: others[0] }, admin)) as {
+			entry: { translationGroup: string };
+		};
+		await monti.run(
+			"entries.save",
+			{
+				id,
+				version: 1,
+				doc: doc(
+					{
+						id: `b_${++count}`,
+						type: "paragraph",
+						content: [
+							{
+								type: "text",
+								text: "앞선 글",
+								marks: [{ type: "link", href: entryLink(linked.entry.translationGroup) }],
+							},
+							{ type: "text", text: "에서 이어진다." },
+						],
+					},
+					p("목록에는 제목과 주소, 지금 상태만 남겼다."),
+				),
+			},
+			admin,
+		);
+	}
+	if (kind === "published" || kind === "changed")
+		await monti.run("entries.publish", { ids: [id], date: "keep" }, admin);
+	if (kind === "changed")
+		await monti.run("entries.save", { id, version: 2, values: { subtitle: "도구보다 글" } }, admin);
+	if (kind === "archived") await monti.run("entries.archive", { ids: [id] }, admin);
+	if (kind === "proposed") await proposeBody(monti, id);
+	if (kind === "proposedFields") await proposeFields(monti, id);
+	if (kind === "proposedStale") await proposeThenEdit(monti, id);
+	if (kind === "proposedFormat") await proposeFormat(monti, id);
+	if (kind === "proposedAtStart") await proposeAtStart(monti, id);
+	if (kind === "proposedStaleTwice") await proposeThenEdit(monti, id, true);
+	return id;
+}
+
+/** The site, the entry, and the admin's address on it. `kept` is input this browser kept from an earlier visit. */
+export const site = (kind: Kind, kept?: { version: number; mine: [string, unknown][]; accepted?: string[] }) => [
+	async (): Promise<Loaded> => {
+		let id = "";
+		const made = await storySite({
+			schema:
+				kind === "nestedChoice"
+					? withNested
+					: kind === "conditional" || kind === "strayOption"
+						? withFormat
+						: kind === "related" || kind === "relatedNames"
+							? withRelatedMany
+							: schema,
+			auth: { password: true },
+			// A site with a text format of its own: the format bar's ⋯ lists it (editor-tools.md).
+			...(kind === "ownFormat" ? { marks: [defineMark({ type: "highlight", label: "형광펜" })] } : {}),
+			// A site signs its preview links: without a secret "Preview" has nothing to open.
+			secret: "story secret",
+			signedIn: true,
+			setup: async (monti) => {
+				id = await entry(monti, kind);
+			},
+		});
+		// A word the field no longer lists, as older data or a hand-edited schema file leaves it: written past the save's check.
+		if (kind === "strayOption")
+			await made.db
+				.updateTable("entries")
+				.set({ values: JSON.stringify({ format: "podcast" }) })
+				.where("id", "=", id)
+				.execute();
+		// Published on an earlier day and changed since: publishing again can keep that date or take today's.
+		if (kind === "changed")
+			await made.db
+				.updateTable("entry_published")
+				.set({ published_at: new Date("2026-10-01T03:00:00.000Z") })
+				.where("entry_id", "=", id)
+				.execute();
+		startAt(`#/c/post/${id}`);
+		if (kept)
+			localStorage.setItem(
+				`monti.draft.entry:${id}`,
+				JSON.stringify({ accepted: [], ...kept, savedAt: "2026-10-26T01:12:00.000Z" }),
+			);
+		return { site: made, id };
+	},
+];
+
+const meta = {
+	excludeStories: /^[a-z]/,
+	tags: ["visual"],
+	title: "Screens/Entry/Editor",
+	render: (_args, { loaded }) => {
+		const { site: made } = loaded as Loaded;
+		return <MontiAdmin transport={made.transport} streams={made.streams} siteName="example.dev" />;
+	},
+} satisfies Meta;
+export default meta;
+type Story = StoryObj<typeof meta>;
+
+/** The save cell's words (a live region repeats them for screen readers, so the text is found twice). */
+const saveCell = (page: ReturnType<typeof within>, text: string) =>
+	page.findByText(text, { selector: "[data-slot=status-bar-cell]" }, wait);
+
+/** Waits for the editor: its title and body. */
+export async function opened(canvasElement: HTMLElement) {
+	const page = within(canvasElement);
+	const title = await page.findByRole("textbox", { name: "제목" }, wait);
+	const body = await page.findByRole("textbox", { name: "본문" }, wait);
+	return { page, title, body, all: within(canvasElement.ownerDocument.body) };
+}
+
+/** A draft as one writes it: the properties beside it, saved, with nothing left to do. */
+export const Draft: Story = {
+	loaders: site("draft"),
+	play: async ({ canvasElement }) => {
+		const { page } = await opened(canvasElement);
+		await saveCell(page, "저장됨");
+		await expect(page.getByText("초안")).toBeVisible();
+		await expect(page.getByRole("button", { name: "발행하기" })).toBeVisible();
+	},
+};
+
+/** A site with a text format of its own ("형광펜"): the format bar's ⋯ lists it, with the format mark before its name. */
+export const OwnFormat: Story = { loaders: site("ownFormat") };
+
+/** A checklist in the body: the ticked item's box has its ✓, and pressing a box ticks it. */
+export const Checklist: Story = {
+	loaders: site("checklist"),
+	play: async ({ canvasElement }) => {
+		const { page } = await opened(canvasElement);
+		await page.findByRole("checkbox", { name: "완료", checked: true }, wait);
+	},
+};
+
+/** The address in a tab of its own and empty: that tab's name has the orange dot of a publish to-do. */
+export const ToDoInTab: Story = {
+	loaders: site("addressInTab"),
+	play: async ({ canvasElement }) => {
+		const { page } = await opened(canvasElement);
+		await page.findByRole("tab", { name: /할 일 있음/ }, wait);
+	},
+};
+
+/** A relation to posts, its list open: the drafts say "초안" at their row's end. */
+export const RelationDrafts: Story = {
+	loaders: site("related"),
+	play: async ({ canvasElement }) => {
+		const { page, all } = await opened(canvasElement);
+		await userEvent.click(await page.findByRole("combobox", { name: "관련 글" }, wait));
+		await all.findByRole("option", { name: /리액트 다시 만들기 1편/ }, wait);
+	},
+};
+
+/** A relation to posts, its list open, with a post that has no title and two that share one. */
+export const RelationNames: Story = {
+	loaders: site("relatedNames"),
+	play: async ({ canvasElement }) => {
+		const { page, all } = await opened(canvasElement);
+		await userEvent.click(await page.findByRole("combobox", { name: "관련 글" }, wait));
+		await all.findAllByRole("option", { name: /같은 이름/ }, wait);
+	},
+};
+
+/** A post with a conditional field (doc 19): the fields of the kind it is stand directly under the choice. */
+export const Conditional: Story = {
+	loaders: site("conditional"),
+	play: async ({ canvasElement }) => {
+		const { page } = await opened(canvasElement);
+		await page.findByRole("textbox", { name: /동영상 주소/ }, wait);
+	},
+};
+
+/** The choice changed and not yet saved: the other kind's fields, and under the choice what the save takes away. */
+export const ConditionalChanged: Story = {
+	loaders: site("conditional"),
+	play: async ({ canvasElement }) => {
+		const { page, all } = await opened(canvasElement);
+		await userEvent.click(await page.findByRole("combobox", { name: "글 종류" }, wait));
+		await userEvent.click(await all.findByRole("option", { name: "링크" }, wait));
+		await page.findByRole("textbox", { name: /링크 주소/ }, wait);
+	},
+};
+
+/**
+ * A choice inside a choice, and a field turned on and off by a switch (doc 19): the inner choice's fields stand under it as the outer
+ * one's do, and the switch's field under the switch while it is on.
+ */
+export const ConditionalNested: Story = {
+	loaders: site("nestedChoice"),
+	play: async ({ canvasElement }) => {
+		const { page } = await opened(canvasElement);
+		await page.findByRole("textbox", { name: /퍼가기 코드/ }, wait);
+		await page.findByRole("switch", { name: /첫 화면에 올리기/ }, wait);
+	},
+};
+
+/** The switch turned off and not yet saved: its field is gone, and under the switch what the save takes away. */
+export const ConditionalSwitchOff: Story = {
+	loaders: site("nestedChoice"),
+	play: async ({ canvasElement }) => {
+		const { page } = await opened(canvasElement);
+		await userEvent.click(await page.findByRole("switch", { name: /첫 화면에 올리기/ }, wait));
+		await page.findByText("저장하면 첫 화면에 올리기의 값 1개가 지워집니다", {}, wait);
+	},
+};
+
+/**
+ * A switch the assistant proposed to turn off (T86 with doc 19's switch): the switch stands as proposed, with the proposal's dot by its
+ * name and "discard" before it; under it, what taking it would clear. The bubble walks to it.
+ */
+export const ProposedSwitch: Story = {
+	loaders: [
+		async (): Promise<Loaded> => {
+			const [load] = site("nestedChoice") as [() => Promise<Loaded>];
+			const made = await load();
+			const read = (await made.site.monti.run("entries.get", { id: made.id }, admin)) as { entry: { version: number } };
+			const proposal = await made.site.monti.proposals.create("conversation-1", "첫 화면에서 내려 줘");
+			await made.site.monti.proposals.add(proposal, "entries.save", {
+				id: made.id,
+				version: read.entry.version,
+				values: { featured: null },
+			});
+			return made;
+		},
+	],
+	play: async ({ canvasElement }) => {
+		const { page, all } = await opened(canvasElement);
+		await waitFor(() => expect(page.getByRole("switch", { name: /첫 화면에 올리기/ })).not.toBeChecked(), wait);
+		await all.findByText("1 / 1", {}, wait);
+	},
+};
+
+/** A stored word the field no longer lists: the choice shows it as it is, marked, never as another option. */
+export const StrayOption: Story = {
+	loaders: site("strayOption"),
+	play: async ({ canvasElement }) => {
+		const { page } = await opened(canvasElement);
+		await page.findByText("podcast: 선택지에 없는 값", {}, wait);
+	},
+};
+
+/** A new entry: no title, no body, nothing to preview yet (flow 1, step 02). */
+export const NewEntry: Story = {
+	loaders: site("new"),
+	play: async ({ canvasElement }) => {
+		const { page } = await opened(canvasElement);
+		await expect(page.queryByRole("button", { name: "미리보기" })).toBeNull();
+	},
+};
+
+/** "/" in a new entry's body: the templates are in the menu, put in where the cursor is (flow 1, step 02). */
+export const SlashTemplates: Story = {
+	loaders: site("new"),
+	play: async ({ canvasElement }) => {
+		const { body, all } = await opened(canvasElement);
+		await userEvent.click(body);
+		await userEvent.keyboard("/템플");
+		await all.findByRole("option", { name: /책 리뷰/ }, wait);
+	},
+};
+
+/** "/" and words no block answers to: the menu stays with one row that says so, for two characters past the last match. */
+export const SlashNoMatch: Story = {
+	loaders: site("new"),
+	play: async ({ canvasElement }) => {
+		const { body, all } = await opened(canvasElement);
+		await userEvent.click(body);
+		await userEvent.keyboard("/zz");
+		await all.findByText("맞는 블록 없음", {}, wait);
+	},
+};
+
+/** Typed and not saved: the save cell says so and saves when pressed (flow 1, step 03). */
+export const Unsaved: Story = {
+	loaders: site("draft"),
+	play: async ({ canvasElement }) => {
+		const { page, title } = await opened(canvasElement);
+		await userEvent.type(title, " 다시 쓰기");
+		await expect(await page.findByRole("button", { name: "저장 전 변경 사항" })).toBeVisible();
+	},
+};
+
+/** Publishing with something left to do: refused, and the to-do list opens on what blocks it (flow 1, step 10). */
+export const PublishBlocked: Story = {
+	loaders: site("untitled"),
+	play: async ({ canvasElement }) => {
+		const { page, all } = await opened(canvasElement);
+		await userEvent.click(page.getByRole("button", { name: "발행하기" }));
+		await all.findByText("할 일 2개가 남았습니다", {}, wait);
+		await all.findByRole("button", { name: /제목 쓰기/ }, wait);
+	},
+};
+
+/** What stops the publish, and under it what only tells (a link to a draft): two groups of one list, each with its name and count (TP-04). */
+export const ToDoGroups: Story = {
+	loaders: site("toCheck"),
+	play: async ({ canvasElement }) => {
+		const { page, all } = await opened(canvasElement);
+		await userEvent.click(await page.findByRole("button", { name: "할 일 3" }, wait));
+		await all.findByRole("group", { name: "확인할 것 1" }, wait);
+	},
+};
+
+/** Published: the toast, with the way to see it on the site (flow 1, steps 13–14). */
+export const Published: Story = {
+	loaders: site("draft"),
+	play: async ({ canvasElement }) => {
+		const { page, all } = await opened(canvasElement);
+		await userEvent.click(page.getByRole("button", { name: "발행하기" }));
+		await all.findByText("발행되었습니다", {}, wait);
+		await waitFor(
+			() => expect(page.getByRole("button", { name: "발행됨" })).toHaveAttribute("aria-disabled", "true"),
+			wait,
+		);
+	},
+};
+
+/** Published on an earlier day and changed since: "changed", and the publish menu with the date kept or today's (flow 1, step 15). */
+export const RepublishMenu: Story = {
+	loaders: site("changed"),
+	play: async ({ canvasElement }) => {
+		const { page, all } = await opened(canvasElement);
+		await page.findByText("수정 중", {}, wait);
+		await userEvent.click(page.getByRole("button", { name: "발행 방식" }));
+		await all.findByRole("menuitem", { name: /오늘 날짜로 다시 발행/ }, wait);
+	},
+};
+
+/** Saved elsewhere first: the save is refused and the banner offers the comparison (flow 1, step 16). */
+export const SavedElsewhere: Story = {
+	loaders: site("draft"),
+	play: async ({ canvasElement, loaded }) => {
+		const { site: made, id } = loaded as Loaded;
+		const { page, title } = await opened(canvasElement);
+		await saveCell(page, "저장됨");
+		await userEvent.type(title, " 다시 쓰기");
+		await made.monti.run(
+			"entries.save",
+			{ id, version: 1, values: { summary: "다른 탭에서 고친 요약." }, title: "첫 번째 글 (다른 탭)" },
+			admin,
+		);
+		await userEvent.keyboard("{Meta>}s{/Meta}");
+		await page.findByText(/먼저 저장했습니다/, {}, wait);
+		await expect(page.getByRole("button", { name: "편집 충돌" })).toBeVisible();
+	},
+};
+
+/** The comparison of my input and the latest save: the words that differ marked on both sides (flow 1, step 17). */
+export const CompareConflict: Story = {
+	loaders: site("draft"),
+	play: async (context) => {
+		await SavedElsewhere.play?.(context);
+		const page = within(context.canvasElement);
+		await userEvent.click(page.getByRole("button", { name: "비교하기" }));
+		await page.findByText("서버 최신본과 비교", {}, wait);
+		await page.findByText(/차이 \d곳/, {}, wait);
+	},
+};
+
+/**
+ * Doc 19: the comparison when the two sides chose different options of a conditional field: each side shows its choice and the fields of its own
+ * option, and the choice is the one place counted.
+ */
+export const ConditionalCompare: Story = {
+	loaders: site("conditional"),
+	play: async ({ canvasElement, loaded }) => {
+		const { site: made, id } = loaded as Loaded;
+		const { page, all } = await opened(canvasElement);
+		await saveCell(page, "저장됨");
+		await userEvent.click(await page.findByRole("combobox", { name: "글 종류" }, wait));
+		await userEvent.click(await all.findByRole("option", { name: "링크" }, wait));
+		await userEvent.type(await page.findByRole("textbox", { name: /링크 주소/ }, wait), "https://example.dev/reading");
+		await made.monti.run("entries.save", { id, version: 1, values: { videoCredit: "다른 탭" } }, admin);
+		await userEvent.keyboard("{Meta>}s{/Meta}");
+		await page.findByText(/먼저 저장했습니다/, {}, wait);
+		await userEvent.click(page.getByRole("button", { name: "비교하기" }));
+		await page.findByText("서버 최신본과 비교", {}, wait);
+		await page.findByText(/차이 \d곳/, {}, wait);
+	},
+};
+
+/** Opened again with input this browser kept: the banner asks what to do with it (flow 1, step 18). */
+export const BrowserCopy: Story = {
+	loaders: site("draft", {
+		version: 1,
+		mine: [
+			["title", "첫 번째 글 — 고쳐 쓰는 중"],
+			["values.summary", "브라우저에만 남은 요약."],
+		],
+	}),
+	play: async ({ canvasElement }) => {
+		const { page } = await opened(canvasElement);
+		await page.findByText("이 브라우저에 저장하지 않은 편집이 있습니다", {}, wait);
+		await expect(page.getByRole("button", { name: "브라우저에만 임시 저장됨" })).toBeVisible();
+	},
+};
+
+/** The kept input holds the assistant's proposals taken into it: the banner says how many (AS-20). */
+export const BrowserCopyWithProposals: Story = {
+	loaders: site("draft", {
+		version: 1,
+		mine: [["title", "첫 번째 글 — 제안을 받은 제목"]],
+		accepted: ["proposal-title"],
+	}),
+	play: async ({ canvasElement }) => {
+		const { page } = await opened(canvasElement);
+		await page.findByText(/AI 제안 1건 포함/, {}, wait);
+	},
+};
+
+/** The site of `site("draft")`, with what `entries.get` answers put in its place: no answer at all, or a refusal. */
+const withRead = (answer: "never" | "refused") => [
+	async (): Promise<Loaded> => {
+		const [load] = site("draft") as [() => Promise<Loaded>];
+		const loaded = await load();
+		const { transport } = loaded.site;
+		loaded.site.transport = async (name, input, options) => {
+			if (name !== "entries.get") return transport(name, input, options);
+			if (answer === "refused") return { status: 500, body: { error: "unexpected" } };
+			return new Promise(() => {});
+		};
+		return loaded;
+	},
+];
+
+/**
+ * Before the entry is read (T153): nothing of it is there to change. No title, no body, no properties, none of the head's controls of the entry and no status
+ * bar; the way back and the assistant stay.
+ */
+export const BeforeTheRead: Story = {
+	loaders: withRead("never"),
+	play: async ({ canvasElement }) => {
+		await within(canvasElement).findByRole("button", { name: "게시글" }, wait);
+	},
+};
+
+/** The entry could not be read: the banner says so and reads it again; the screen is otherwise as before the read. */
+export const ReadFailed: Story = {
+	loaders: withRead("refused"),
+	play: async ({ canvasElement }) => {
+		const page = within(canvasElement);
+		await page.findByText("글을 불러오지 못했습니다", {}, wait);
+		await expect(page.getByRole("button", { name: "다시 시도" })).toBeVisible();
+	},
+};
+
+/** Archived: off the site and read-only; the head has only "unarchive" (doc 02, decisions). */
+export const Archived: Story = {
+	loaders: site("archived"),
+	play: async ({ canvasElement }) => {
+		const { page, title } = await opened(canvasElement);
+		await page.findByRole("button", { name: "보관 풀기" }, wait);
+		await expect(title).toHaveAttribute("readonly");
+		await expect(page.queryByRole("button", { name: "발행하기" })).toBeNull();
+	},
+};
+
+/**
+ * The session ended while writing: the save is refused, the banner stands at the top of the screen and the save cell says so (T39). The screen
+ * stays, so a sentence can be finished first.
+ */
+export const SignedOut: Story = {
+	loaders: site("draft"),
+	play: async ({ canvasElement, loaded }) => {
+		const { site: made } = loaded as Loaded;
+		const { page, title } = await opened(canvasElement);
+		await saveCell(page, "저장됨");
+		await userEvent.type(title, " 다시 쓰기");
+		await made.db.deleteFrom("monti_session").execute();
+		await userEvent.keyboard("{Meta>}s{/Meta}");
+		await expect(await page.findByRole("button", { name: "로그인 풀림" }, wait)).toBeVisible();
+		await page.findByText("저장하지 않은 입력은 이 브라우저에 남아 있습니다", {}, wait);
+	},
+};
+
+/** Selects words in the body the way a drag does, so the format card shows. */
+async function select(body: HTMLElement, words: string) {
+	const walker = document.createTreeWalker(body, NodeFilter.SHOW_TEXT);
+	let textNode: Node | null = walker.nextNode();
+	while (textNode && !textNode.textContent?.includes(words)) textNode = walker.nextNode();
+	if (!textNode) throw new Error(`no text "${words}"`);
+	const start = textNode.textContent?.indexOf(words) ?? 0;
+	body.focus();
+	const range = document.createRange();
+	range.setStart(textNode, start);
+	range.setEnd(textNode, start + words.length);
+	const selection = document.getSelection();
+	selection?.removeAllRanges();
+	selection?.addRange(range);
+	document.dispatchEvent(new Event("selectionchange"));
+}
+
+/** Words typed in the link card find the site's entries (T63). */
+export const LinkSearch: Story = {
+	loaders: site("draft"),
+	play: async ({ canvasElement }) => {
+		const { body, all } = await opened(canvasElement);
+		await select(body, "지금 상태만");
+		await userEvent.click(await all.findByRole("button", { name: "링크" }, wait));
+		const field = await all.findByPlaceholderText("주소를 붙여 넣거나 글 찾기", {}, wait);
+		await userEvent.type(field, "리액트");
+		await all.findByRole("option", { name: /리액트 다시 만들기 2편/ }, wait);
+	},
+};
+
+/** An entry picked: the words link to it, and the card opened on them again shows it with the way to take the link off. */
+export const LinkedEntry: Story = {
+	loaders: site("draft"),
+	play: async (context) => {
+		await LinkSearch.play?.(context);
+		const all = within(context.canvasElement.ownerDocument.body);
+		const { body } = await opened(context.canvasElement);
+		await userEvent.click(await all.findByRole("option", { name: /리액트 다시 만들기 1편/ }, wait));
+		await waitFor(() => expect(body.querySelector("a")).not.toBeNull(), wait);
+		await select(body, "지금 상태만");
+		fireEvent.click(await all.findByRole("button", { name: "링크" }, wait));
+		await all.findByRole("option", { name: /링크 떼기/ }, wait);
+		await all.findByText("지금 링크", {}, wait);
+	},
+};
+
+/** Puts the caret at the end of a cell's text. */
+async function inCell(body: HTMLElement, words: string) {
+	const cell = [...body.querySelectorAll("td, th")].find((each) => each.textContent === words);
+	if (!cell) throw new Error(`no cell "${words}"`);
+	await userEvent.click(cell);
+	return cell;
+}
+
+/** The table's cells as rows of text. */
+const cells = (body: HTMLElement) =>
+	[...body.querySelectorAll("tr")].map((row) => [...row.querySelectorAll("td, th")].map((cell) => cell.textContent));
+
+/** The caret in a cell: a grip on its column's top edge and its row's left edge (T62). */
+export const TableGrips: Story = {
+	loaders: site("table"),
+	play: async ({ canvasElement }) => {
+		const { body, all } = await opened(canvasElement);
+		await inCell(body, "편집기 다시 만들기");
+		await all.findByRole("button", { name: "2번째 열" }, wait);
+		await all.findByRole("button", { name: "3번째 행" }, wait);
+	},
+};
+
+/** The column grip pressed: the column is picked whole and its menu is open. */
+export const TableColumnMenu: Story = {
+	loaders: site("table"),
+	play: async ({ canvasElement }) => {
+		const { body, all } = await opened(canvasElement);
+		await inCell(body, "편집기 다시 만들기");
+		await userEvent.click(await all.findByRole("button", { name: "2번째 열" }, wait));
+		await all.findByRole("menuitem", { name: "오른쪽에 열 넣기" }, wait);
+		await waitFor(() => expect(body.querySelectorAll(".selectedCell")).toHaveLength(3), wait);
+	},
+};
+
+/** The pointer over the table: + strips on its right and bottom edges; the bottom one adds a row. */
+export const TableAddRow: Story = {
+	loaders: site("table"),
+	play: async ({ canvasElement }) => {
+		const { body, all } = await opened(canvasElement);
+		const cell = await inCell(body, "처음 공개");
+		await userEvent.hover(cell);
+		await all.findByRole("button", { name: "열 더하기" }, wait);
+		await userEvent.click(await all.findByRole("button", { name: "행 더하기" }, wait));
+		await waitFor(() => expect(cells(body)).toHaveLength(4), wait);
+	},
+};
+
+/** The table's block menu turns its head row off: the first row is a plain row. */
+export const TableHeaderRow: Story = {
+	loaders: site("table"),
+	play: async ({ canvasElement }) => {
+		const { body, all } = await opened(canvasElement);
+		const table = body.querySelector("table");
+		if (!table) throw new Error("no table");
+		// The handle follows the line the pointer is on, so the move needs its place.
+		const box = table.getBoundingClientRect();
+		fireEvent.mouseMove(table, { clientX: box.left + 20, clientY: box.top + 10 });
+		await userEvent.click(await all.findByRole("button", { name: "블록 메뉴" }, wait));
+		await userEvent.click(await all.findByRole("menuitemcheckbox", { name: "머리 행" }, wait));
+		await waitFor(() => expect(body.querySelectorAll("th")).toHaveLength(0), wait);
+	},
+};
+
+/** The footnotes' numbers and texts, in the order the editor shows them. */
+const notes = (body: HTMLElement) => ({
+	refs: [...body.querySelectorAll("[data-footnote-ref]")].map((ref) => ref.getAttribute("data-n")),
+	notes: [...body.querySelectorAll("[data-footnote]")].map(
+		(note) => `${note.getAttribute("data-n")}. ${note.textContent}`,
+	),
+});
+
+/** Footnotes are numbered as their references come in the text, and sit together at the end in that order, whatever order they were kept in. */
+export const FootnoteNumbers: Story = {
+	loaders: site("footnotes"),
+	play: async ({ canvasElement }) => {
+		const { body } = await opened(canvasElement);
+		await waitFor(
+			() =>
+				expect(notes(body)).toEqual({
+					refs: ["1", "2"],
+					notes: ["1. 상태는 색 대신 글자로 적었다.", "2. 처음 판은 정적 사이트 생성기로 만들었다."],
+				}),
+			wait,
+		);
+	},
+};
+
+/** The assistant's body proposals drawn over the text: struck-through words out, pale blue words in, the first looked at (T32). */
+export const BodyProposals: Story = {
+	loaders: site("proposed"),
+	play: async ({ canvasElement }) => {
+		const { body, all } = await opened(canvasElement);
+		await waitFor(() => expect(body.querySelectorAll("ins")).toHaveLength(2), wait);
+		await expect(body.querySelector("ins")?.textContent).toBe("만든");
+		await all.findByText("더 짧게 다듬기", {}, wait);
+		await all.findByRole("button", { name: "모두 받기" }, wait);
+	},
+};
+
+/** A line proposed at the very start of the body: drawn above the first block, its mark beside that block. */
+export const BodyProposalAtStart: Story = {
+	loaders: site("proposedAtStart"),
+	play: async ({ canvasElement }) => {
+		const { body, all } = await opened(canvasElement);
+		await waitFor(
+			() => expect(body.querySelector("[data-proposal-item]")?.textContent).toContain("이 글은 다시 만든 기록이다."),
+			wait,
+		);
+		await all.findByText("첫머리에 한 줄 더해 줘", {}, wait);
+	},
+};
+
+/** A proposal that changes only formatting: the words that become bold stand on the pale blue ground, with nothing struck through or put in. */
+export const FormattingProposal: Story = {
+	loaders: site("proposedFormat"),
+	play: async ({ canvasElement }) => {
+		const { body, all } = await opened(canvasElement);
+		await all.findByText("중요한 말 굵게", {}, wait);
+		await waitFor(
+			() => expect(body.querySelector("span.bg-monti-proposal-muted")?.textContent).toBe("도구를 고치는 시간"),
+			wait,
+		);
+		await expect(body.querySelectorAll("ins")).toHaveLength(0);
+	},
+};
+
+/**
+ * The assistant's proposals for the title and a field (T86): each is in its input, blue, the field's saved value struck through under it
+ * and "discard" on its label row. The bubble walks them with the body's change.
+ */
+export const FieldProposals: Story = {
+	loaders: site("proposedFields"),
+	play: async ({ canvasElement }) => {
+		const { title, all } = await opened(canvasElement);
+		await waitFor(() => expect(title).toHaveValue("블로그를 다시 만든 까닭"), wait);
+		await waitFor(() => expect(all.getByRole("textbox", { name: "요약" })).toHaveValue("덜어낸 것과 남긴 것."), wait);
+		await all.findByText("1 / 3", {}, wait);
+	},
+};
+
+/**
+ * A body proposal the text moved away from (T87): its paragraph was written again since. It is not drawn over the words; a mark hangs
+ * beside the paragraph, and its card says what the paragraph was then and what was proposed, with the way to discard it.
+ */
+export const StaleProposal: Story = {
+	loaders: site("proposedStale"),
+	play: async ({ canvasElement }) => {
+		const { body, all } = await opened(canvasElement);
+		await waitFor(() => expect(body.querySelectorAll("ins")).toHaveLength(1), wait);
+		await all.findByText("1 / 2", {}, wait);
+		await userEvent.click(await all.findByRole("button", { name: "다음" }, wait));
+		await all.findByText("그때", {}, wait);
+	},
+};
+
+/** Two requests' stale proposals of one paragraph: their marks hang side by side at the paragraph, 4px apart, each with its own card. */
+export const StaleProposalsSideBySide: Story = {
+	loaders: site("proposedStaleTwice"),
+	play: async ({ canvasElement }) => {
+		const { all } = await opened(canvasElement);
+		await waitFor(() => expect(all.getAllByRole("button", { name: "그 사이 고쳐짐" })).toHaveLength(2), wait);
+	},
+};
+
+/**
+ * Another choice the assistant proposed for a conditional field (doc 19): the choice is blue with its discard, the fields under it are
+ * still those of the option the entry has, and the line under the choice says what taking it would clear.
+ */
+export const ProposedChoice: Story = {
+	loaders: [
+		async (): Promise<Loaded> => {
+			const [load] = site("nestedChoice") as [() => Promise<Loaded>];
+			const made = await load();
+			const read = (await made.site.monti.run("entries.get", { id: made.id }, admin)) as { entry: { version: number } };
+			const proposal = await made.site.monti.proposals.create("conversation-1", "링크 글로 바꿔 줘");
+			await made.site.monti.proposals.add(proposal, "entries.save", {
+				id: made.id,
+				version: read.entry.version,
+				values: { format: "link" },
+			});
+			return made;
+		},
+	],
+	play: async ({ canvasElement }) => {
+		const { all } = await opened(canvasElement);
+		await all.findByText("받으면 동영상의 값 3개가 지워집니다", {}, wait);
+	},
+};

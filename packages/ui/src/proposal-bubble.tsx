@@ -1,0 +1,132 @@
+"use client";
+
+import { type ComponentProps, useCallback, useEffect, useState } from "react";
+import { dock } from "./bottom-dock";
+import { Button } from "./button";
+import { cn } from "./cn";
+import { CutWords } from "./cut-words";
+import { HIT_AREA } from "./hit-area";
+import { Separator } from "./separator";
+import { Spark } from "./spark";
+import { TextButton } from "./text-button";
+
+const STEP = `${HIT_AREA} cursor-pointer border-0 bg-transparent p-0 text-monti-muted outline-none hover:text-monti-default focus-visible:rounded-monti-full focus-visible:ring-2 focus-visible:ring-monti-contrast/60 disabled:cursor-default disabled:opacity-45`;
+
+/**
+ * The pill that floats over the status bar while proposals are waiting: the name of the request (a spark and the words, cut with … when long, so the source is clear even
+ * with the panel closed; press it to open that conversation), "↑ 2 / 5 ↓" to step through the places the proposals touch, then discard all and accept
+ * all. It holds nothing for the single proposal: accepting, discarding or asking again about one is in the card that opens from its mark.
+ */
+function ProposalBubble({
+	name,
+	onOpen,
+	position,
+	total,
+	previousLabel,
+	nextLabel,
+	onPrevious,
+	onNext,
+	discardAllLabel,
+	onDiscardAll,
+	acceptAllLabel,
+	onAcceptAll,
+	className,
+	...props
+}: Omit<ComponentProps<"div">, "children"> & {
+	/** The words of the request the proposals came from. */
+	name: string;
+	onOpen?: () => void;
+	/** The proposal being looked at, from 1. */
+	position: number;
+	total: number;
+	previousLabel: string;
+	nextLabel: string;
+	onPrevious: () => void;
+	onNext: () => void;
+	discardAllLabel: string;
+	onDiscardAll: () => void;
+	acceptAllLabel: string;
+	onAcceptAll: () => void;
+}) {
+	const who = (
+		<>
+			<Spark className="size-monti-icon-sm" />
+			<CutWords className="max-w-60">{name}</CutWords>
+		</>
+	);
+	return (
+		<div
+			data-slot="proposal-bubble"
+			role="group"
+			className={cn(
+				"inline-flex h-11 max-w-full items-center gap-monti-12 whitespace-nowrap rounded-monti-full border border-monti-emphasis bg-monti-page pr-monti-6 pl-monti-16 text-monti-body text-monti-default shadow-monti-floating",
+				className,
+			)}
+			{...props}
+		>
+			{onOpen ? (
+				<TextButton
+					onClick={onOpen}
+					className="inline-flex min-w-0 items-center gap-[7px] font-semibold text-monti-proposal"
+				>
+					{who}
+				</TextButton>
+			) : (
+				<span className="inline-flex min-w-0 items-center gap-[7px] font-semibold text-monti-proposal">{who}</span>
+			)}
+			<Separator orientation="vertical" length="control" flush />
+			<span className="inline-flex items-center gap-monti-6 font-mono text-monti-caption text-monti-muted">
+				<button type="button" aria-label={previousLabel} className={STEP} disabled={total < 2} onClick={onPrevious}>
+					↑
+				</button>
+				<span>
+					{position} / {total}
+				</span>
+				<button type="button" aria-label={nextLabel} className={STEP} disabled={total < 2} onClick={onNext}>
+					↓
+				</button>
+			</span>
+			<Button variant="ghost" size="sm" onClick={onDiscardAll}>
+				{discardAllLabel}
+			</Button>
+			<Button size="sm" onClick={onAcceptAll}>
+				{acceptAllLabel}
+			</Button>
+		</div>
+	);
+}
+
+/**
+ * Where the bubble floats: at the bottom of the scrolling column, centered, 12px over its end, staying there as the content scrolls under it; on a page
+ * shorter than the window it still sits at the bottom. Put it last in the column; only the bubble takes the pointer. While it is shown the toasts
+ * stand above it. A screen whose proposals have no place of their own to hang a mark at (the settings: values in several tabs) puts the
+ * mark of the proposal the bubble points at before the bubble, 8px from it: it opens that proposal's card.
+ */
+function ProposalBubbleDock({ className, ref, ...props }: ComponentProps<"div">) {
+	// Known to the toasts, which come up at the same place: while this is shown they stand above it (`Toaster`).
+	const [node, setNode] = useState<HTMLDivElement | null>(null);
+	useEffect(() => (node ? dock(node) : undefined), [node]);
+	// A screen's own ref (where the focus goes when the bubble does) goes to the same box, beside this one: given alone, it took this
+	// one's place, and the toasts no longer knew the bubble was there.
+	const both = useCallback(
+		(box: HTMLDivElement | null) => {
+			setNode(box);
+			if (typeof ref === "function") return ref(box);
+			if (ref) ref.current = box;
+		},
+		[ref],
+	);
+	return (
+		<div
+			ref={both}
+			data-slot="proposal-bubble-dock"
+			className={cn(
+				"pointer-events-none sticky bottom-monti-12 z-10 mt-auto flex items-center justify-center gap-monti-8 px-monti-16 *:pointer-events-auto",
+				className,
+			)}
+			{...props}
+		/>
+	);
+}
+
+export { ProposalBubble, ProposalBubbleDock };

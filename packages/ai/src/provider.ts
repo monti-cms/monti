@@ -1,416 +1,116 @@
-import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
-import { createTranslator, slugify } from "@monti-cms/core/client";
-import { APICallError, generateText, NoObjectGeneratedError, Output, RetryError, streamText } from "ai";
-import { z } from "zod";
-import type { AiInputKind } from "./action";
-import type { AiModelInfo } from "./connection";
-import type { AiResult } from "./definition";
-import { AiError } from "./errors";
-import { providerMessages } from "./provider.messages";
+import type { Model, OpenKey } from "@monti-cms/core";
 
-const t = createTranslator(providerMessages);
+/** How much a model thinks before it answers; `off` for a model that cannot, or when the person turned it off. */
+export type Thinking = "off" | "low" | "medium" | "high";
+
+export const THINKING: readonly Thinking[] = ["off", "low", "medium", "high"];
 
 /**
- * AI service port. Built from a connection (URL, key) and one model. The connection comes from the AI screen settings (`settings.ts`).
- *
- * - Generate: calls an OpenAI-style URL through the Vercel AI SDK. Receives the answer in a fixed JSON shape.
- * - Decide: receives a probability per option from a System One URL (TypeSafe `/v1/systemone`, OpenRouter Decisions API).
- * - Fake: with `CMS_AI_FAKE=1` (dev only), gives a fixed answer without a key.
+ * The level a model is asked for: the one wanted when the model takes it, else the nearest it takes, harder first (AS-01: a model that must think
+ * is asked to think a little, not to stop, which its service refuses). A model that cannot think is asked for none.
  */
-
-export type AiContent =
-	| { type: "text"; text: string }
-	| { type: "image"; mediaType: "image/jpeg" | "image/png" | "image/gif" | "image/webp"; data: string };
-
-/** Material from which the fake connection (dev only) builds its answer. Real connections do not read it. */
-export interface AiFakeHint {
-	/** Material sent (input name -> kind, text). */
-	readonly inputs: Readonly<Record<string, { readonly kind: AiInputKind; readonly value: string }>>;
-	/** Selectable values (candidates with options). */
-	readonly choices?: readonly string[];
-	/** Fake answer defined by the action (`AiActionDefinition.fake`). */
-	readonly answer?: () => string;
+export function levelFor(model: Pick<Model, "thinking" | "levels"> | undefined, wanted: Thinking): Thinking {
+	if (!model?.thinking) return "off";
+	const levels = model.levels;
+	if (!levels || levels.length === 0 || levels.includes(wanted)) return wanted;
+	const at = THINKING.indexOf(wanted);
+	return (
+		[...THINKING.slice(at + 1), ...THINKING.slice(0, at).reverse()].find((level) => levels.includes(level)) ?? wanted
+	);
 }
 
-export interface AiRequest<T> {
+/** Whether a model is asked to think at all: one whose service lists no level the assistant has (only `max`, say) is left to its own default. */
+export const asksThinking = (model: Pick<Model, "thinking" | "levels"> | undefined) =>
+	(model?.thinking ?? false) && model?.levels?.length !== 0;
+
+/**
+ * Tokens a call spent, as its service counted them. `input` is everything the service took in, whether it read it anew or from what it had
+ * kept of an earlier request; `cached` says how much of `input` came from there (charged at a fraction), when the service says.
+ */
+export type Usage = { input: number; output: number; cached?: number };
+
+/** A tool as the model is told of it: a name its API accepts, what it does, and its input's JSON Schema. */
+export type ToolSpec = { name: string; description: string; inputSchema: unknown };
+
+export type ToolCall = { id: string; name: string; input: unknown };
+
+export type ToolAnswer = { id: string; name: string; output: unknown; error: boolean };
+
+export type Picture = { mime: string; base64: string };
+
+/**
+ * One message of a conversation, the same for every service. `raw` is what the service itself gave for an assistant message: handed back unchanged
+ * on the next request to the same service, so what it needs to see again (its thinking) is there.
+ */
+export type ChatMessage =
+	| { role: "user"; text: string; pictures?: Picture[] }
+	| { role: "assistant"; text: string; calls: ToolCall[]; raw?: unknown }
+	| { role: "tools"; answers: ToolAnswer[] };
+
+export type TurnRequest = {
+	model: string;
 	system: string;
-	content: AiContent[];
-	schema: z.ZodType<T>;
-	maxTokens: number;
-	/** Result shape. The fake connection uses it to decide the answer shape. */
-	result: AiResult;
-	fake: AiFakeHint;
+	messages: ChatMessage[];
+	tools: ToolSpec[];
+	thinking: Thinking;
+	/** Whether the model can think at all: one that cannot is asked for no thinking, whatever `thinking` says. */
+	thinks: boolean;
+	signal: AbortSignal;
+};
+
+/**
+ * What a turn gives as it comes: words, the tools it calls, a sign of life while it thinks or writes a call (nothing to show, but the service is
+ * there; `thinking` says it began to think, or is done, when the service says so), and its end with what it spent. `cut`: the service ended the answer itself, out of room or declining to go on.
+ */
+export type TurnEvent =
+	| { type: "text"; delta: string }
+	| { type: "call"; call: ToolCall }
+	| { type: "alive"; thinking?: boolean }
+	| { type: "end"; usage: Usage; raw?: unknown; cut?: "length" | "refusal" };
+
+export type AnswerRequest = {
+	model: string;
+	system: string;
+	prompt: string;
+	picture?: Picture;
+	/** The JSON Schema of the answer. */
+	schema: unknown;
+	/** How hard it thinks: the least the model takes (a quick task does not think when it can help it, AS-42). */
+	thinking?: Thinking;
+	/** Whether the model is asked to think at all, as for a turn. */
+	thinks?: boolean;
+	/** Ends the call: the quick task's deadline. */
 	signal?: AbortSignal;
-}
-
-/** Streaming request. Only text (MDX, long text) results are streamed. The answer is plain text, not JSON. */
-export type AiStreamRequest = Omit<AiRequest<unknown>, "schema">;
-
-export interface AiProvider {
-	readonly name: "openai-compatible" | "fake";
-	readonly model: string;
-	generate<T>(request: AiRequest<T>): Promise<T>;
-	/** Streams the answer piece by piece. Ends once everything is received. */
-	stream(request: AiStreamRequest): AsyncIterable<string>;
-}
-
-export type DecisionQuestion =
-	| { type: "noul"; instructions: string; criteria?: { true: string; false: string } }
-	| { type: "choice"; instructions: string; criteria: Record<string, string> };
-
-export type DecisionAnswer =
-	| { type: "noul"; noul: number }
-	| { type: "choice"; choice: string; probabilities: Record<string, number> };
-
-export interface DecisionRequest {
-	state: Record<string, string>;
-	questions: Record<string, DecisionQuestion>;
-	signal?: AbortSignal;
-}
-
-export interface AiDecider {
-	readonly name: "decisions" | "fake";
-	readonly model: string;
-	decide(request: DecisionRequest): Promise<Record<string, DecisionAnswer>>;
-}
-
-export const isFakeAi = () => process.env.CMS_AI_FAKE === "1" && process.env.NODE_ENV !== "production";
-
-/** Explanation the service put in the error body (`{"error": {"message": …}}` etc.). Empty string if none. */
-function serviceMessage(detail: string): string {
-	let message = detail;
-	try {
-		const body = JSON.parse(detail) as { error?: { message?: unknown } | string; message?: unknown };
-		const candidate = typeof body.error === "string" ? body.error : (body.error?.message ?? body.message);
-		if (typeof candidate === "string") message = candidate;
-	} catch {
-		// If it is not JSON, use the body as is.
-	}
-	return message.replace(/\s+/g, " ").trim().slice(0, 200);
-}
-
-/** Turns a service error into an AI error to show on screen. Appends the service's explanation and also logs it. */
-function providerError(status: number | undefined, detail: string): AiError {
-	const message = serviceMessage(detail);
-	console.error("AI provider error:", status, message);
-	const withDetail = (text: string) => (message ? `${text} — ${message}` : text);
-	if (status === 401 || status === 403) return new AiError("ai_unavailable", withDetail(t("service.key")));
-	if (status === 402) return new AiError("ai_unavailable", withDetail(t("service.credit")));
-	if (status === 404) return new AiError("ai_failed", withDetail(t("service.address")));
-	if (status === 429) return new AiError("ai_rate_limited", withDetail(t("service.rateLimited")));
-	return new AiError("ai_failed", withDetail(t("service.problem")));
-}
-
-const isAbort = (error: unknown) => error instanceof Error && error.name === "AbortError";
+};
 
 /**
- * How the answer is received. Support differs per model and service, so each is tried in order from the first.
- * - `schema`: a fixed JSON shape (json_schema)
- * - `json`: JSON mode (json_object). The shape is given by an example in the instructions
- * - `text`: receive plain text and extract only the JSON part
+ * A model service, as narrow as the assistant needs it (doc 10): one turn of a conversation with tools, and one answer in a fixed shape. The run
+ * engine and the quick tasks know only this; the real one is built on the AI SDK, and tests script one.
  */
-const OUTPUT_MODES = ["schema", "json", "text"] as const;
-type OutputMode = (typeof OUTPUT_MODES)[number];
+export interface ModelProvider {
+	turn(request: TurnRequest): AsyncIterable<TurnEvent>;
+	answer(request: AnswerRequest): Promise<{ value: unknown; usage: Usage }>;
+}
+
+/** The provider for a key: the service the key is for, with the key itself. */
+export type ProviderFor = (key: OpenKey) => ModelProvider;
 
 /**
- * Whether the error warrants retrying with the next mode. Either the request format was rejected (400, 422), nowhere supports that format (404, OpenRouter),
- * or the answer broke the shape. Key, credit and rate-limit errors are the same on retry, so they are reported right away.
+ * The service did not do what was asked. `refused`: it answered no (the key, the model, the request); the person can do something about it.
+ * `limit`: it answered no for a rate limit, a quota or credits. `unreachable`: it did not answer. `interrupted`: it began to answer and broke off,
+ * or went silent; what it said so far is no answer, and the run can be gone on with. `detail` is the service's own words: kept in the server's
+ * record of a run, never sent to the browser (`AiFailure`).
  */
-const shouldTryNext = (error: unknown) =>
-	APICallError.isInstance(error)
-		? [400, 404, 422].includes(error.statusCode ?? 0)
-		: !isAbort(error) && !isTruncated(error);
-
-/** An error the SDK wrapped after retrying is unwrapped to the last error (so a service error is not mistaken for a format error). */
-const unwrap = (error: unknown): unknown => (RetryError.isInstance(error) ? unwrap(error.lastError) : error);
-
-/** The answer was cut off by hitting the output limit. Retrying in another mode gives the same result, so it is reported right away. */
-class TruncatedAnswerError extends Error {}
-const isTruncated = (error: unknown) =>
-	error instanceof TruncatedAnswerError ||
-	(NoObjectGeneratedError.isInstance(error) && error.finishReason === "length");
-
-/** Short failure reason to log. The model's answer and the text sent are not logged. */
-function failureNote(error: unknown): string {
-	if (APICallError.isInstance(error))
-		return `${error.statusCode} ${serviceMessage(error.responseBody ?? error.message)}`;
-	if (NoObjectGeneratedError.isInstance(error)) {
-		return `no object (finish=${error.finishReason}, text=${error.text?.length ?? 0} chars)`;
+export class ProviderError extends Error {
+	constructor(
+		readonly kind: "refused" | "limit" | "unreachable" | "interrupted",
+		readonly detail: string,
+		readonly status?: number,
+		/** What the service counted for an answer that broke off, when it said. */
+		readonly usage?: Usage,
+	) {
+		super(
+			`The model service ${kind === "refused" ? "refused" : kind === "limit" ? "refused for a limit" : kind === "interrupted" ? "broke off" : "could not be reached"}: ${detail}`,
+		);
 	}
-	return error instanceof Error ? error.message : String(error);
-}
-
-/** Extracts a JSON object from text (ignoring code fences and surrounding words). */
-function extractJson(text: string): unknown {
-	const start = text.indexOf("{");
-	const end = text.lastIndexOf("}");
-	if (start < 0 || end <= start) throw new Error("No JSON object in the answer");
-	return JSON.parse(text.slice(start, end + 1));
-}
-
-export function createGenerator(config: { baseUrl: string; apiKey: string; model: string }): AiProvider {
-	const create = (supportsStructuredOutputs: boolean) =>
-		createOpenAICompatible({
-			name: "cms-ai",
-			baseURL: config.baseUrl,
-			apiKey: config.apiKey,
-			supportsStructuredOutputs,
-		});
-	const strict = create(true);
-	const loose = create(false);
-
-	const call = async <T>(request: AiRequest<T>, mode: OutputMode): Promise<T> => {
-		const base = {
-			model: (mode === "schema" ? strict : loose)(config.model),
-			system: request.system,
-			messages: [
-				{
-					role: "user" as const,
-					content: request.content.map((block) =>
-						block.type === "text"
-							? { type: "text" as const, text: block.text }
-							: { type: "image" as const, image: block.data, mediaType: block.mediaType },
-					),
-				},
-			],
-			maxOutputTokens: request.maxTokens,
-			maxRetries: 1,
-			abortSignal: request.signal,
-		};
-		if (mode !== "text") {
-			const { output } = await generateText({ ...base, output: Output.object({ schema: request.schema }) });
-			return output as T;
-		}
-		const { text, finishReason } = await generateText(base);
-		if (finishReason === "length") throw new TruncatedAnswerError();
-		return request.schema.parse(extractJson(text));
-	};
-
-	return {
-		name: "openai-compatible",
-		model: config.model,
-		async *stream(request: AiStreamRequest): AsyncIterable<string> {
-			const result = streamText({
-				model: loose(config.model),
-				system: request.system,
-				messages: [
-					{
-						role: "user" as const,
-						content: request.content.map((block) =>
-							block.type === "text"
-								? { type: "text" as const, text: block.text }
-								: { type: "image" as const, image: block.data, mediaType: block.mediaType },
-						),
-					},
-				],
-				maxOutputTokens: request.maxTokens,
-				maxRetries: 1,
-				abortSignal: request.signal,
-			});
-			for await (const part of result.fullStream) {
-				if (part.type === "text-delta") yield part.text;
-				else if (part.type === "error") {
-					const error = unwrap(part.error);
-					if (isAbort(error)) throw error;
-					console.warn(`[@monti-cms/ai] ${config.model} stream failed: ${failureNote(error)}`);
-					if (APICallError.isInstance(error)) {
-						throw providerError(error.statusCode, error.responseBody ?? error.message);
-					}
-					throw new AiError("ai_failed", t("streamCut"));
-				} else if (part.type === "finish" && part.finishReason === "length") {
-					throw new AiError("ai_failed", t("tooLong"));
-				}
-			}
-		},
-		async generate<T>(request: AiRequest<T>): Promise<T> {
-			let lastError: unknown;
-			for (const mode of OUTPUT_MODES) {
-				try {
-					return await call(request, mode);
-				} catch (caught) {
-					const error = unwrap(caught);
-					lastError = error;
-					if (isAbort(error)) throw error;
-					console.warn(`[@monti-cms/ai] ${config.model} ${mode} failed: ${failureNote(error)}`);
-					if (!shouldTryNext(error)) break;
-				}
-			}
-			if (APICallError.isInstance(lastError)) {
-				throw providerError(lastError.statusCode, lastError.responseBody ?? lastError.message);
-			}
-			if (isTruncated(lastError)) {
-				throw new AiError("ai_failed", t("tooLongModel"));
-			}
-			throw new AiError("ai_failed", t("unreadable"));
-		},
-	};
-}
-
-const decisionAnswerSchema = z.union([
-	z.object({ type: z.literal("noul"), noul: z.number() }),
-	z.object({ type: z.literal("choice"), choice: z.string(), probabilities: z.record(z.string(), z.number()) }),
-]);
-
-export function createDecider(config: { url: string; apiKey: string; model: string }): AiDecider {
-	return {
-		name: "decisions",
-		model: config.model,
-		async decide(request) {
-			let response: Response;
-			try {
-				response = await fetch(config.url, {
-					method: "POST",
-					headers: { Authorization: `Bearer ${config.apiKey}`, "Content-Type": "application/json" },
-					body: JSON.stringify({ model: config.model, state: request.state, questions: request.questions }),
-					signal: request.signal,
-				});
-			} catch (error) {
-				if (isAbort(error)) throw error;
-				throw new AiError("ai_failed", t("deciderUnreachable"));
-			}
-			const text = await response.text();
-			if (!response.ok) throw providerError(response.status, text);
-			const parsed = z.object({ answers: z.record(z.string(), decisionAnswerSchema) }).safeParse(
-				(() => {
-					try {
-						return JSON.parse(text);
-					} catch {
-						return null;
-					}
-				})(),
-			);
-			if (!parsed.success) {
-				console.error("Decision response has an unexpected shape:", text.slice(0, 500));
-				throw new AiError("ai_failed", t("deciderShape"));
-			}
-			return parsed.data.answers;
-		},
-	};
-}
-
-/** Model list of an OpenAI-style URL (`GET {baseUrl}/models`). Empty array for services that do not provide a list. */
-export async function listModels(baseUrl: string, apiKey: string | null, signal?: AbortSignal): Promise<AiModelInfo[]> {
-	let response: Response;
-	try {
-		response = await fetch(`${baseUrl.replace(/\/+$/, "")}/models`, {
-			headers: apiKey ? { Authorization: `Bearer ${apiKey}` } : {},
-			signal,
-		});
-	} catch (error) {
-		if (isAbort(error)) throw error;
-		throw new AiError("ai_failed", t("unreachable"));
-	}
-	if (response.status === 404) return [];
-	if (!response.ok) throw providerError(response.status, await response.text());
-	const body = (await response.json().catch(() => null)) as { data?: unknown } | null;
-	const items = Array.isArray(body?.data) ? body.data : [];
-	return items
-		.flatMap((item) => {
-			const record = item as { id?: unknown; name?: unknown };
-			return typeof record.id === "string"
-				? [{ id: record.id, ...(typeof record.name === "string" ? { name: record.name } : {}) }]
-				: [];
-		})
-		.sort((a, b) => a.id.localeCompare(b.id));
-}
-
-/** Extracts English words from the material (fake connection only). */
-const words = (text: string) => (text.match(/[A-Za-z][A-Za-z0-9]+/g) ?? []).map((word) => word.toLowerCase());
-
-/** First material of the matching kind. */
-const firstOf = (hint: AiFakeHint, kinds: readonly AiInputKind[]) =>
-	Object.values(hint.inputs).find((input) => kinds.includes(input.kind) && input.value.trim())?.value;
-
-/** All text material (text, MDX, current value) joined together. */
-const allText = (hint: AiFakeHint) =>
-	Object.values(hint.inputs)
-		.filter((input) => input.kind === "text" || input.kind === "mdx" || input.kind === "value")
-		.map((input) => input.value)
-		.join(" ");
-
-/** MDX that starts with letters (a paragraph). Prefixing a marker does not change the block shape. */
-const startsWithWords = (mdx: string) => /^[\p{L}\p{N}]/u.test(mdx.trim());
-
-/**
- * Fake text/MDX answer. Uses the action's own answer (`fake`) if it has one, otherwise builds it from the result shape and material kinds.
- * - If there is MDX material, that MDX (so even actions that must preserve the skeleton, like translation, pass validation). Streaming prefixes a marker to
- *   paragraphs so the changed parts are visible.
- * - Otherwise, a draft built from the first text material.
- */
-function fakeText(result: AiResult, hint: AiFakeHint, streaming: boolean): string {
-	if (hint.answer) return hint.answer();
-	const title = firstOf(hint, ["text"])?.trim().slice(0, 60);
-	if (result === "note") return "(fake) note";
-	if (result === "text") return `(fake) ${(title || firstOf(hint, ["mdx", "value"]) || "text").slice(0, 60)}`;
-	const source = firstOf(hint, ["mdx"]);
-	if (source !== undefined) return streaming && startsWithWords(source) ? `(fake) ${source}` : source;
-	const heading = title || "New post";
-	return `## ${heading}\n\n(fake) First paragraph about ${heading}. It fills in little by little while streaming.\n\n(fake) Second paragraph.`;
-}
-
-/** Fake candidates. Chosen in this order: the action's own answer (one per line), options, a regex found in the code, a word bundle made from text. */
-function fakeCandidates(hint: AiFakeHint): string[] {
-	if (hint.answer) {
-		return hint
-			.answer()
-			.split("\n")
-			.map((line) => line.trim())
-			.filter(Boolean);
-	}
-	if (hint.choices && hint.choices.length > 0) return hint.choices.slice(0, 3);
-	const code = firstOf(hint, ["code"]);
-	if (code !== undefined) {
-		const firstWord = words(code)[0];
-		return firstWord ? [firstWord, "\\d+"] : ["\\S+"];
-	}
-	const source = words(allText(hint));
-	const base = source.length > 0 ? source.slice(0, 3).join("-") : "sample";
-	return [base, `${base}-guide`, slugify(`fake ${base}`)];
-}
-
-/** Generation model that gives a fixed answer without a key. The same input always gives the same answer. */
-export function createFakeGenerator(): AiProvider {
-	return {
-		name: "fake",
-		model: "fake-generator",
-		async *stream(request: AiStreamRequest): AsyncIterable<string> {
-			// Pause briefly per word so the gradual display can be checked.
-			for (const piece of fakeText(request.result, request.fake, true).split(/(?<=\s)/)) {
-				if (request.signal?.aborted) throw new DOMException("Aborted", "AbortError");
-				await new Promise((resolve) => setTimeout(resolve, 40));
-				yield piece;
-			}
-		},
-		async generate<T>(request: AiRequest<T>): Promise<T> {
-			const { result, fake } = request;
-			if (result === "candidates") return { candidates: fakeCandidates(fake) } as T;
-			return { [result]: fakeText(result, fake, false) } as T;
-		},
-	};
-}
-
-/** Decision model that gives fixed probabilities without a key. The earlier the option, the higher the probability. */
-export function createFakeDecider(): AiDecider {
-	return {
-		name: "fake",
-		model: "fake-decider",
-		async decide(request) {
-			const answers: Record<string, DecisionAnswer> = {};
-			Object.entries(request.questions).forEach(([key, question], index) => {
-				if (question.type === "noul") {
-					answers[key] = { type: "noul", noul: Math.max(0.05, 0.95 - index * 0.2) };
-				} else {
-					const options = Object.keys(question.criteria);
-					answers[key] = {
-						type: "choice",
-						choice: options[0] ?? "",
-						probabilities: Object.fromEntries(
-							options.map((option, i) => [option, i === 0 ? 0.8 : 0.2 / options.length]),
-						),
-					};
-				}
-			});
-			return answers;
-		},
-	};
 }

@@ -11,7 +11,8 @@
 		"useIgnoreFile": true
 	},
 	"files": {
-		"ignoreUnknown": false
+		"ignoreUnknown": false,
+		"includes": ["**", "!!.claude"]
 	},
 	"formatter": {
 		"enabled": true,
@@ -46,7 +47,7 @@
 	},
 	"overrides": [
 		{
-			"includes": ["packages/admin/src/ui/**"],
+			"includes": ["packages/ui/src/**"],
 			"linter": {
 				"rules": {
 					"a11y": {

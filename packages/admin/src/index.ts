@@ -1,20 +1,33 @@
-/**
- * Browser-side entry point of the admin UI. Used when a site or plugin adds components to the admin UI (code fence previews, field inputs, edit screen extensions)
- * (`CmsAdminComponentsProvider`).
- */
+export { MontiAdmin } from "./app";
+export { adminMessages } from "./messages";
 export {
-	type CmsAdminComponents,
-	CmsAdminComponentsProvider,
-	type EditorExtension,
-	type EditorExtensionContext,
-	type EditorExtensionResult,
-	type EditorInsertAction,
-	type EditorSelectionAction,
-	type FieldInputEntry,
-	type FieldInputParts,
+	type AdminBlockComponent,
+	type AdminBlockDefinition,
+	type AdminMarkDefinition,
+	type AdminMarkEditorProps,
+	AdminProvider,
+	createScreenChannel,
+	type Language,
+	type ScreenChannel,
+	useAdmin,
+} from "./operations/admin-context";
+export {
+	type Answer,
+	type CallOptions,
+	httpTransport,
+	httpUploader,
+	type Transport,
+	type Uploader,
+} from "./operations/transport";
+export { type Refusal, useOperation, useRead } from "./operations/use-operation";
+export {
+	type AdminPlugin,
+	type DocumentView,
+	type DocumentViewProps,
+	defineAdminPlugin,
+	type EntryView,
+	type FieldInput,
+	type FieldInputProps,
 	type FieldViewProps,
-	type ListCellProps,
-	useCmsAdminComponents,
-} from "./admin-components";
-export type { CustomBlockEditorProps } from "./editor/blocks/added/view";
-export type { FieldContext, FieldInputProps } from "./screens/entries/field-inputs";
+} from "./plugins";
+export { type AuthState, useSession } from "./session";

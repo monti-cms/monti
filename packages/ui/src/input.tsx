@@ -1,0 +1,134 @@
+"use client";
+
+import { Input as InputPrimitive } from "@base-ui/react/input";
+import type * as React from "react";
+import { cn } from "./cn";
+import { FIELD_ACTION, FIELD_ACTION_BUTTON, FIELD_HOVER, FIELD_INSET } from "./hover";
+import { IconButtonContext } from "./icon-button";
+import { useProposalDescription } from "./proposal-cue";
+
+/** The text of an input that reads as text (no underline): the label size, or a heading's. */
+const INLINE_SIZE = {
+	sm: "text-monti-note",
+	md: "text-monti-body",
+	default: "text-monti-body",
+	// A heading's placeholder is not a heading: faint and regular, so "Untitled" does not read as a title someone typed (EH-03).
+	title: "text-monti-title placeholder:font-normal",
+	display: "text-monti-display placeholder:font-normal",
+	/** The type of the text it stands in: a block's own title or tab name, edited where it reads. */
+	inherit: "text-[length:inherit] font-[inherit] text-inherit placeholder:font-normal placeholder:text-monti-faint",
+} as const;
+
+/**
+ * A one-line field drawn as an underline, never a box. The underline turns ink on focus and danger when `aria-invalid`; the placeholder is
+ * faint. `proposal` marks a value the assistant wrote and nobody has touched: blue text and a 1.5px blue underline. `action` is a control at the
+ * end of the line (a button that makes the value again from the body); the underline then runs under it too, like a select's caret. A `readOnly`
+ * one is a value to read (a read-only entry's picture settings): it keeps its line and its text as they are (under the pointer and the focus too), and takes the caret to select.
+ */
+function Input({
+	className,
+	type,
+	size = "default",
+	mono = false,
+	width = "full",
+	appearance = "line",
+	proposal = false,
+	srOnly = false,
+	align = "start",
+	action,
+	...props
+}: Omit<React.ComponentProps<"input">, "size" | "width"> & {
+	/** `sm` (28px) beside small buttons in toolbars, filters and tables; `default` in forms. */
+	size?: keyof typeof INLINE_SIZE;
+	/** Fixed-width letters for slugs, paths, keys and code. */
+	mono?: boolean;
+	/** `number` for a short count or limit (96px), `short` for a word (the small panel width), `fit` as wide as what it holds (a tab's name). */
+	width?: "full" | "short" | "number" | "fit";
+	/**
+	 * `inline` reads as text until focused, with no line at all (a name edited in place); its size can be a heading's: `title` (a tab or
+	 * group name) or `display` (the post title), or `inherit`, the type of the text it stands in (a block's title). A heading-size field shows only its caret when focused, never a box around it; a smaller inline
+	 * field gets a faint ring.
+	 */
+	appearance?: "line" | "inline";
+	/** The assistant wrote this value and nobody has touched it yet. Turn it off when the value is edited. */
+	proposal?: boolean;
+	/** Hidden but usable (a file input behind a button that opens it). */
+	srOnly?: boolean;
+	/** Where the text sits in the field (a caption that follows its image's alignment). */
+	align?: "start" | "center" | "end";
+	/** A control at the end of the line, for a line field. */
+	action?: React.ReactNode;
+}) {
+	const inline = appearance === "inline" || size === "title" || size === "display" || size === "inherit";
+	const fieldHeight =
+		size === "sm" ? "h-monti-control-sm" : size === "md" ? "h-monti-control-md" : "h-monti-control-lg";
+	const input = (
+		<InputPrimitive
+			type={type}
+			data-slot="input"
+			data-size={size}
+			data-proposal={proposal || undefined}
+			aria-description={useProposalDescription(proposal)}
+			className={cn(
+				"w-full min-w-0 rounded-none bg-transparent outline-none transition-colors placeholder:text-monti-faint disabled:pointer-events-none disabled:cursor-default disabled:opacity-45",
+				inline
+					? cn(
+							// A proposed value read as text is blue text: an inline input has no rule to turn blue.
+							"h-auto border-0 px-0 focus-visible:rounded-monti-sm data-proposal:text-monti-proposal",
+							size !== "title" &&
+								size !== "display" &&
+								size !== "inherit" &&
+								"focus-visible:ring-2 focus-visible:ring-monti-contrast/60",
+						)
+					: cn(
+							// With an action the wrapper below draws the rule, the tint and the room; the input inside keeps none.
+							// A read-only one is a value to read: nothing to type, so no tint under the pointer.
+							!action && !props.readOnly && FIELD_HOVER,
+							// Read-only, the line stays as it is under the focus too: nothing is being written (field.md).
+							!props.readOnly && "focus-visible:border-monti-contrast",
+							"border-0 border-monti-strong border-b text-monti-default text-monti-reading aria-invalid:border-monti-danger data-proposal:border-monti-proposal data-proposal:border-b-[1.5px] data-proposal:text-monti-proposal md:text-monti-body",
+							!action && FIELD_INSET,
+						),
+				inline ? INLINE_SIZE[size] : size === "sm" && "md:text-monti-note",
+				// An underline field stands as high as a button of its size: 28px small, 32px medium (side panels), 36px otherwise, its rule inside. With an action the line around it holds the height.
+				!inline && (action ? "h-full self-stretch py-0" : cn("py-0", fieldHeight)),
+				width === "short" && "w-monti-menu",
+				width === "number" && "w-24",
+				width === "fit" && "field-sizing-content w-auto min-w-[4ch]",
+				// What is typed is a value, in mono; the placeholder is words, and stays in the sans face (tokens.md).
+				mono && "font-mono placeholder:font-sans",
+				srOnly && "sr-only",
+				align === "center" && "text-center",
+				align === "end" && "text-right",
+				action && "border-b-0 data-proposal:border-b-0",
+				className,
+			)}
+			{...props}
+		/>
+	);
+	if (!action || inline) return input;
+	return (
+		<div
+			data-slot="input-line"
+			className={cn(
+				cn(
+					!props.readOnly && FIELD_HOVER,
+					!props.readOnly && "focus-within:border-monti-contrast",
+					"flex w-full min-w-0 border-monti-strong border-b transition-colors has-[[aria-invalid=true]]:border-monti-danger has-data-proposal:border-monti-proposal has-data-proposal:border-b-[1.5px]",
+					FIELD_INSET,
+				),
+				"items-center",
+				fieldHeight,
+			)}
+		>
+			{input}
+			<span className={FIELD_ACTION}>
+				<IconButtonContext value={FIELD_ACTION_BUTTON[size === "sm" ? "sm" : size === "md" ? "md" : "lg"]}>
+					{action}
+				</IconButtonContext>
+			</span>
+		</div>
+	);
+}
+
+export { Input };

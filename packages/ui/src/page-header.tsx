@@ -1,0 +1,192 @@
+"use client";
+
+import * as React from "react";
+import { useAssistantSlot } from "./assistant-slot";
+import { cn } from "./cn";
+
+/**
+ * The head of a content page: the title (26px bold) with the ink rule under it, the only heavy line of a page. Two slots stand beside the title, one font each as `RowTitle`'s do: `address` is a list's address rule, a typed value, in mono; `note` is
+ * words (a count, the days left, a time), in sans. A header takes the one it needs, or both, address first. `children` are the page's actions on the right, the secondary pill first and the one primary pill last. The title row is as tall
+ * as a pill (36px) with or without one, so the rule sits at the same height on every page. The assistant's ✦ ends the row, after the actions (`AssistantSlot`). `trail` is the way back above the title (a folder path).
+ */
+function PageHeader({
+	title,
+	address,
+	note,
+	trail,
+	className,
+	children,
+	...props
+}: Omit<React.ComponentProps<"header">, "title"> & {
+	title: React.ReactNode;
+	/** After the title, in mono: what is typed or copied as it stands (a list's address rule, `/posts/:slug`). */
+	address?: React.ReactNode;
+	/** After the title, in sans: words a person reads (a count, the days left, a time). */
+	note?: React.ReactNode;
+	trail?: React.ReactNode;
+}) {
+	const assistant = useAssistantSlot();
+	return (
+		<header
+			data-slot="page-header"
+			className={cn("shrink-0 border-monti-contrast border-b pb-[18px]", className)}
+			{...props}
+		>
+			{trail && <div className="pb-monti-10 text-monti-faint text-monti-note">{trail}</div>}
+			<div className="flex flex-wrap items-end gap-monti-12">
+				<h1 className="pt-monti-4 text-monti-page">{title}</h1>
+				{address && (
+					<span data-slot="page-header-address" className="pb-[3px] font-mono text-monti-body text-monti-faint">
+						{address}
+					</span>
+				)}
+				{note && (
+					<span data-slot="page-header-note" className="pb-[3px] text-monti-body text-monti-faint">
+						{note}
+					</span>
+				)}
+				{(children || assistant) && (
+					<span className="ml-auto flex items-center gap-monti-16">
+						{children}
+						{assistant}
+					</span>
+				)}
+			</div>
+		</header>
+	);
+}
+
+/**
+ * The column every page sits in: centred, 40px above the title and below the page, and 48px at the sides (16px on a narrow screen). It is as tall as
+ * what it holds, at least the page's height. The page scrolls as a whole, in the frame's page area: one scrollbar at the page's right edge, the header
+ * going up with the rows (2026-11-06, owner).
+ *
+ * `width="content"` (the default) is 880px: settings and form pages, where a label must not drift from its value and a line must not grow long.
+ * `width="list"` is for a page of rows (entries, media, trash, the tables of tools): 880px until the page area leaves at least 240px on each side, then it
+ * grows with the area up to 1200px (880 at 1440 wide, 1200 at 1920). What runs out of the column sideways (a table wider than the room) is reached by scrolling the page sideways; a docked panel stands beside the page's
+ * scroller, not in it, so the scroller ends at the panel's edge and the table never runs under it. A row's ⋯ sticks to the scroller's right edge (`TableRow`),
+ * so it stays in reach (AT-01). The area is what is beside the sidebar and any docked panel, measured on the
+ * nearest `container` (the admin frame makes it), so a folded rail or an open panel runs the same rule on the room that is left.
+ */
+function PageColumn({
+	width = "content",
+	className,
+	children,
+	ref,
+	...props
+}: React.ComponentProps<"div"> & { width?: "content" | "list" }) {
+	const own = React.useRef<HTMLDivElement | null>(null);
+	// Whether the table runs past the column (under the sticky cell of a row's ⋯, which stands at the page area's edge): `data-clipping`, which that cell's
+	// edge line reads.
+	React.useLayoutEffect(() => {
+		const column = own.current;
+		if (!column) return;
+		const watch = new ResizeObserver(() => measure());
+		const measure = () => {
+			const right = column.getBoundingClientRect().right;
+			const tables = [...column.querySelectorAll<HTMLElement>("[data-slot=table]")];
+			column.toggleAttribute(
+				"data-clipping",
+				tables.length > 0
+					? tables.some((table) => table.getBoundingClientRect().right > right + 1)
+					: column.scrollWidth > column.clientWidth + 1,
+			);
+			// A table drawn after the column is watched from then on (observing again what is watched changes nothing).
+			for (const table of tables) watch.observe(table);
+		};
+		measure();
+		watch.observe(column);
+		for (const child of column.children) watch.observe(child);
+		return () => watch.disconnect();
+	}, []);
+	return (
+		<div
+			ref={(node) => {
+				own.current = node;
+				if (typeof ref === "function") ref(node);
+				else if (ref) ref.current = node;
+			}}
+			data-slot="page-column"
+			data-width={width}
+			className={cn("flex min-w-0 flex-1 flex-col px-monti-16 pt-monti-40 md:px-monti-48", className)}
+			{...props}
+		>
+			{/* The room below the page is this box's own, not the column's: the column is held to the page's height, and room that was the column's ended above
+			    the last row, with the page's last control at the very edge of the scroll (its focus ring cut). */}
+			<div
+				className={cn(
+					"mx-auto flex w-full flex-1 flex-col pb-monti-40",
+					width === "list"
+						? "max-w-[clamp(var(--monti-width-content),calc(100cqw_-_480px),var(--monti-width-list))]"
+						: "max-w-monti-content",
+				)}
+			>
+				{children}
+			</div>
+		</div>
+	);
+}
+
+/** What is under the header and the toolbar of a page: it takes the height left, and scrolls with the page (`relative`, so the screen-reader-only inputs inside move with it). */
+function PageBody({ className, ...props }: React.ComponentProps<"div">) {
+	return (
+		<div
+			data-slot="page-body"
+			// 8px of room at each side, taken back from the column by the negative margin: a text button's tint or a field's ring at the column's
+			// edge is not cut by the scroll, and the words stay where they were.
+			className={cn("relative -mx-monti-8 flex flex-1 flex-col px-monti-8 pb-monti-8", className)}
+			{...props}
+		/>
+	);
+}
+
+/** What a toolbar's select-all shows: nothing picked, some of this page picked, all of it. */
+type SelectAllState = "none" | "some" | "all";
+
+type SelectAll = {
+	state: SelectAllState;
+	/** Called with `true` to pick this page (every row of it, not the whole list), `false` to clear. */
+	onChange: (all: boolean) => void;
+	/** The name of the check, for screen readers ("Select all"). */
+	label: string;
+};
+
+/**
+ * The row under the page title: tabs on the left, filters on the right ({@link PageToolbarEnd}), 48px high with a rule below. Over a table, `inset` pulls
+ * it 12px inside like the rows, so the first letters line up with theirs while its rule runs to the edge.
+ */
+function PageToolbar({
+	inset = false,
+	className,
+	children,
+	...props
+}: React.ComponentProps<"div"> & {
+	inset?: boolean;
+}) {
+	return (
+		<div
+			data-slot="page-toolbar"
+			className={cn(
+				"flex min-h-monti-toolbar flex-wrap items-center gap-monti-20 border-monti-default border-b",
+				inset && "px-monti-12",
+				className,
+			)}
+			{...props}
+		>
+			{children}
+		</div>
+	);
+}
+
+/** The right group of a toolbar: filters, or the way to let go of a pick. */
+function PageToolbarEnd({ className, ...props }: React.ComponentProps<"span">) {
+	return (
+		<span
+			data-slot="page-toolbar-end"
+			className={cn("ml-auto flex flex-wrap items-center justify-end gap-x-monti-20 gap-y-monti-8", className)}
+			{...props}
+		/>
+	);
+}
+
+export { PageBody, PageColumn, PageHeader, PageToolbar, PageToolbarEnd, type SelectAll, type SelectAllState };

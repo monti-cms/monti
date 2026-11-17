@@ -21,15 +21,19 @@ export default {
 		"scope-enum": [
 			2,
 			"always",
+			// The packages that exist, and the repo's own areas. A new package adds its scope here.
 			[
 				"core",
+				"ui",
 				"admin",
 				"ai",
-				"blocks",
+				"next",
+				"storage-s3",
 				"seo",
-				"bareun",
-				"syntax",
-				"example",
+				"mdx",
+				"blocks",
+				"examples",
+				"showcase",
 				"scripts",
 				"ci",
 				"deps",

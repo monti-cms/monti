@@ -1,0 +1,90 @@
+import type * as React from "react";
+import { ChangeDot } from "./change-dot";
+import { cn } from "./cn";
+import { CutWords } from "./cut-words";
+import { LockMark } from "./lock-mark";
+import { HELD } from "./sortable";
+
+/**
+ * One content language in Settings › Languages. Its name as every screen calls it (in the admin's language) leads, then the code in mono and, when
+ * it differs, its name written in itself ("Japanese ja · 日本語"). Names come from the code and are never edited, so a row has no input. At the end of the row sits `children`: the × icon button that
+ * takes the language out, or the {@link LanguageSource} mark on the source row. `handle` is the drag handle (a {@link DragHandle}); a list whose rows can
+ * be moved sets `handled` on every row, so a row without a handle (the source) keeps its column. `dot` is the name of the change dot ("new", "source changed");
+ * `dotTone="proposal"` makes it the assistant's blue one. `locked` is the name of the lock after the language's name, on a list that cannot be changed here.
+ */
+function LanguageRow({
+	name,
+	code,
+	label,
+	dot,
+	dotTone,
+	locked,
+	gone = false,
+	handle,
+	handled = false,
+	drag,
+	className,
+	children,
+	...props
+}: Omit<React.ComponentProps<"li">, "children"> & {
+	/** The language's name as the screens call it: in the admin's language. */
+	name: React.ReactNode;
+	code: string;
+	/** The language's name written in itself; shown only when it differs from `name`. */
+	label?: string;
+	dot?: string;
+	/** `proposal`: the change is the assistant's and nobody has taken it yet. */
+	dotTone?: "warning" | "proposal";
+	/** The list cannot be changed here (the live site): a lock after the name, named by this. */
+	locked?: string;
+	/** The language is taken out and the file is not saved yet: the row stays, struck through and faint, with the dot saying so. */
+	gone?: boolean;
+	handle?: React.ReactNode;
+	handled?: boolean;
+	/** While the row is dragged: where the drag has moved it (the sortable's transform and transition) and whether it is the row in hand. */
+	drag?: { transform?: string; transition?: string; active?: boolean };
+	children?: React.ReactNode;
+}) {
+	return (
+		<li
+			data-slot="language-row"
+			className={cn(
+				// A row stands at the large control height (36px, its line inside), so the × icon button (32px) and a small button (28px) fit with no margins
+				// of their own. 8px in at both ends, as a field's words are, so a tint stays in the column. Only a row that can be moved answers the pointer.
+				"grid h-monti-control-lg items-center gap-x-monti-12 border-monti-muted border-b px-monti-8",
+				handle && "hover:bg-monti-muted",
+				handled ? "grid-cols-[16px_minmax(0,1fr)_auto]" : "grid-cols-[minmax(0,1fr)_auto]",
+				drag?.active && HELD,
+				className,
+			)}
+			style={drag ? { transform: drag.transform, transition: drag.transition } : undefined}
+			{...props}
+		>
+			{handled && <span className="flex items-center justify-center">{handle}</span>}
+			<CutWords className={cn("min-w-0 truncate whitespace-nowrap", gone && "text-monti-faint line-through")}>
+				<span className={cn("text-monti-body", !gone && "text-monti-default")}>{name}</span>{" "}
+				<span className="font-mono text-monti-caption text-monti-faint">{code}</span>
+				{label && label !== name && <span className="text-monti-note text-monti-subtle"> · {label}</span>}
+				{locked && <LockMark label={locked} />}
+				{dot && <ChangeDot tone={dotTone} label={dot} className="ml-monti-6 align-middle" />}
+			</CutWords>
+			<span className="flex items-center justify-end">{children}</span>
+		</li>
+	);
+}
+
+/**
+ * The end of the source language's row: the bold flag that says it is the source, then `children`, the small ghost button that changes it.
+ * The state and the button that changes it stand together at the end, apart from the pale language info at the start. Without `children` (a list that cannot be
+ * edited) only the flag shows.
+ */
+function LanguageSource({ flag, children }: { flag: React.ReactNode; children?: React.ReactNode }) {
+	return (
+		<span data-slot="language-source" className="inline-flex items-center gap-monti-8">
+			<span className="font-semibold text-monti-default text-monti-note">{flag}</span>
+			{children}
+		</span>
+	);
+}
+
+export { LanguageRow, LanguageSource };

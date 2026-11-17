@@ -1,0 +1,267 @@
+import { whenKeysAreUp } from "@monti-cms/ui";
+import type { Editor } from "@tiptap/react";
+import { useCallback, useRef } from "react";
+
+/**
+ * One rule, in one place (docs/design/admin/tokens.md, the states section; decided while building, 2026-11-12): when the control a person just used with the
+ * keyboard goes away, the focus goes to what it acted on, not to the page. A pointer's press holds no keyboard focus and moves nothing.
+ *
+ * - {@link useFocusHandOff} is the rule: a ref for the thing that goes away (a button, or the box around it: a banner), and where its focus goes.
+ * - {@link focusText}, {@link nextStop} and {@link firstStop} are the places it goes to.
+ * - {@link holdsKeyboardFocus} is its test of a press with the keyboard, for a question that closes around the control that asked.
+ */
+
+/** What can take the keyboard's focus, by what it is; whether the Tab key stops on each is asked of it (`stopsTab`). */
+const FOCUSABLE = 'a[href], button, input, select, textarea, [contenteditable="true"], [tabindex]';
+
+/** What is drawn over the page and is no part of it: the toasts. */
+const NOT_THE_PAGE = "[data-sonner-toaster]";
+
+/**
+ * Whether the Tab key stops on it in the page: in the tab order (not `tabindex="-1"`: an unpicked tab of a row the arrow keys move in, a part's own hidden
+ * input), not off, and drawn.
+ */
+function stopsTab(element: HTMLElement) {
+	const order = element.getAttribute("tabindex");
+	if (order !== null && Number(order) < 0) return false;
+	if (element.matches(':disabled, [aria-disabled="true"], input[type="hidden"]')) return false;
+	if (element.closest('[inert], [aria-hidden="true"]')) return false;
+	// A toast's button stands over the page, not in it: the Tab key comes to it last, and a focus handed to "the page's first control" is not its.
+	if (element.closest(NOT_THE_PAGE)) return false;
+	return element.getClientRects().length > 0 && getComputedStyle(element).visibility === "visible";
+}
+
+/** The first thing the Tab key stops on in the page: a screen's first control. */
+export function firstStop() {
+	return [...document.querySelectorAll<HTMLElement>(FOCUSABLE)].find(stopsTab) ?? null;
+}
+
+/** The first thing the Tab key stops on inside a node: a panel's first control, the first field of what a bubble sat over. */
+export function firstStopIn(root: Element) {
+	return [...root.querySelectorAll<HTMLElement>(FOCUSABLE)].find(stopsTab) ?? null;
+}
+
+/** The first thing the Tab key stops on after a node, outside it: under a banner at the top of the page area, the page's first control. */
+export function nextStop(after: Element) {
+	return (
+		[...document.querySelectorAll<HTMLElement>(FOCUSABLE)].find(
+			(stop) =>
+				Boolean(after.compareDocumentPosition(stop) & Node.DOCUMENT_POSITION_FOLLOWING) &&
+				!after.contains(stop) &&
+				stopsTab(stop),
+		) ?? null
+	);
+}
+
+/**
+ * Whether the keyboard's focus is on it: the rule's one test of "used with the keyboard". A control pressed with a pointer does not hold it,
+ * also where the press focuses it; one reached with Tab, the arrows or a screen reader's own keys does. Never told from the click (`detail`):
+ * a screen reader's press is a click like a pointer's.
+ */
+export const holdsKeyboardFocus = (element: Element) => element.matches(":focus-visible");
+
+/**
+ * Whether the focus is in something a control of the thing opened elsewhere in the page: its menu, which is named by its button
+ * (`aria-labelledby`, kept while the menu closes). That focus is the control's own: a row whose menu's "send again" is answered before the
+ * menu has closed goes while the focus is still in the menu, and the menu then has no button to give it back to.
+ */
+function inPopupOf(node: HTMLElement, focused: Element) {
+	const popup = focused.closest("[aria-labelledby]");
+	if (!popup || node.contains(popup)) return false;
+	return (popup.getAttribute("aria-labelledby") ?? "").split(/\s+/).some((id) => {
+		const named = id ? document.getElementById(id) : null;
+		return named !== null && node.contains(named);
+	});
+}
+
+/** A menu's card: it takes the focus while it is open, and gives it back to what it was opened on. */
+const MENU = '[role="menu"]';
+
+/** What a person does next with their own hands: after it, nothing is moved under them. */
+const THEIR_OWN = ["keydown", "pointerdown", "focusin"] as const;
+
+/** How long a view that takes another's place may take to draw its first control before the hand-off is let go. */
+const DRAWN_WITHIN = 10_000;
+
+/**
+ * Gives the focus to the page's first control, now or as soon as the page draws one: a view that takes another's place may draw nothing until
+ * its read is in (the comparison), and the focus handed to it must not be lost in that wait. Let go when the person does something of their
+ * own first (a key, a press, a focus elsewhere), or when nothing is drawn in `DRAWN_WITHIN`.
+ */
+function focusFirstStopWhenDrawn() {
+	const first = firstStop();
+	if (first) return first.focus();
+	const letGo = () => {
+		drawn.disconnect();
+		clearTimeout(limit);
+		for (const event of THEIR_OWN) removeEventListener(event, letGo, true);
+	};
+	const drawn = new MutationObserver(() => {
+		const found = firstStop();
+		if (!found) return;
+		letGo();
+		if (document.activeElement === document.body) found.focus();
+	});
+	// Drawn, or switched on: a first control that is there but off (a pill waiting for its read) becomes a stop by an attribute alone.
+	drawn.observe(document.body, {
+		childList: true,
+		subtree: true,
+		attributes: true,
+		attributeFilter: ["disabled", "aria-disabled", "aria-hidden", "inert", "hidden", "tabindex", "class", "style"],
+	});
+	const limit = setTimeout(letGo, DRAWN_WITHIN);
+	for (const event of THEIR_OWN) addEventListener(event, letGo, true);
+}
+
+/**
+ * Gives the focus to what `pick` finds in `spot`, now or as soon as the spot draws it: a row whose controls are away while it works
+ * ("Applying") draws the next ones when the work is over. Let go when the person does something of their own first (a key, a press, a focus
+ * elsewhere) or when the spot goes; when nothing is drawn in `DRAWN_WITHIN`, the focus goes to what stands after the spot.
+ */
+export function focusWhenDrawn(spot: HTMLElement, pick: (spot: HTMLElement) => HTMLElement | null) {
+	const found = pick(spot);
+	if (found) return found.focus();
+	const letGo = () => {
+		drawn.disconnect();
+		clearTimeout(limit);
+		for (const event of THEIR_OWN) removeEventListener(event, letGo, true);
+	};
+	const drawn = new MutationObserver(() => {
+		if (!spot.isConnected) return letGo();
+		const next = pick(spot);
+		if (!next) return;
+		letGo();
+		if (document.activeElement === document.body) next.focus();
+	});
+	drawn.observe(spot, { childList: true, subtree: true, attributes: true, attributeFilter: ["disabled"] });
+	const limit = setTimeout(() => {
+		letGo();
+		if (spot.isConnected && document.activeElement === document.body) nextStop(spot)?.focus();
+	}, DRAWN_WITHIN);
+	for (const event of THEIR_OWN) addEventListener(event, letGo, true);
+}
+
+/**
+ * Gives the focus to the text being written: the body, or the field with `titleId` when the body is not there; and when neither is (the
+ * editor gave way to another view: the comparison), to that view's first control, once it is drawn. Two frames on, not now: what took the
+ * control away may make the body anew (this browser's copy loaded or dropped), and the focus belongs in the one that stays. If the person has
+ * gone elsewhere by then, nothing moves.
+ */
+export function focusText(body: () => Editor | null, titleId: string) {
+	requestAnimationFrame(() =>
+		requestAnimationFrame(() => {
+			if (document.activeElement !== document.body) return;
+			const view = body();
+			// A body that gave its place away is taken down a task later, not at once: under load two frames can pass first, and the focus
+			// given to it then would go nowhere. Only a body still in the page takes it.
+			if (view && !view.isDestroyed && view.view.dom.isConnected) return view.commands.focus();
+			const title = document.getElementById(titleId);
+			if (title) title.focus();
+			else focusFirstStopWhenDrawn();
+		}),
+	);
+}
+
+/** Keys that press nothing by themselves. */
+const MODIFIERS = new Set(["Shift", "Control", "Alt", "Meta", "CapsLock", "AltGraph", "Fn"]);
+
+/** Where a focus goes: the thing that takes it, or what gives it (the text, two frames on), or nowhere. */
+type HandedTo = HTMLElement | (() => void) | null | undefined;
+
+/**
+ * Where the focus goes from a spot whose controls take turns (a button that gives way to "Generating · Stop", then to the button again or a
+ * failure line): to what stands in the spot once no key is down, the first of `controls` found, never the control that is going away. The
+ * work may be over by then (an answer that came at once): what stands is looked for then, not when the press went. When the spot itself
+ * has gone, `after` says what stands after it (looked for now, while the spot is still in the document). A focus the person moved elsewhere
+ * meanwhile is not taken from them.
+ */
+export function toWhatStands(
+	spot: HTMLElement,
+	controls: readonly string[] = ["button"],
+	after?: () => HTMLElement | null | undefined,
+): () => void {
+	const behind = after?.() ?? null;
+	return () => {
+		const on = document.activeElement;
+		if (on && on !== document.body && on.isConnected && !spot.contains(on)) return;
+		const here = spot.isConnected
+			? controls
+					.map((each) => spot.querySelector<HTMLElement>(each))
+					.find((found): found is HTMLElement => found !== null && found !== on)
+			: undefined;
+		(here ?? (behind?.isConnected ? behind : null))?.focus();
+	};
+}
+
+/**
+ * The ref of a thing that goes away by an action of its own, or whose own control does: a button that undoes the change it stands for, a cell
+ * that turns to words once saved, a banner whose button puts its matter right (the banner goes, or stays with that button gone). When the
+ * keyboard's focus leaves the page with it, `to` is called with the thing (still in the document, so what stands after it can be found) and
+ * says where the focus goes; it is given there once no key is down. Nothing is kept from the press: a press that fails leaves the thing and its
+ * focus where they were, and a pointer's press never held the keyboard's focus.
+ */
+export function useFocusHandOff(to: (gone: HTMLElement) => HandedTo) {
+	const latest = useRef(to);
+	latest.current = to;
+	// One callback for the thing's whole life: a new one each time the screen draws would be let go and taken again, focus and all.
+	return useCallback((node: HTMLElement | null) => {
+		if (!node) return;
+		const hand = () => {
+			const next = latest.current(node);
+			if (!next) return;
+			// Once no key is down (`whenKeysAreUp`, the one place that knows the held key): a held key would repeat into what takes the focus.
+			whenKeysAreUp((waited) => {
+				if (typeof next === "function") return next();
+				// After a wait the person may have gone elsewhere with another key: then nothing is moved under them.
+				if (!waited || document.activeElement === document.body) next.focus();
+			});
+		};
+		// What inside it holds the keyboard's focus. A control taken out of the page loses the focus without an event: only this remembers it.
+		let held: Element | null = null;
+		const keep = (event: FocusEvent) => {
+			const on = event.target;
+			// A menu opened on what the keyboard held (the row's own menu, Shift+F10) takes the focus for as long as it is open and gives it
+			// back: what was held stays held meanwhile.
+			if (held && on instanceof Element && on.closest(MENU)) return;
+			held = on instanceof Element && node.contains(on) && holdsKeyboardFocus(on) ? on : null;
+		};
+		addEventListener("focusin", keep, true);
+		// A pointer's press takes the keyboard's hold away, also where it moves no focus (a button in Safari and Firefox on macOS).
+		const letGo = () => {
+			held = null;
+		};
+		addEventListener("pointerdown", letGo, true);
+		// A key pressed with the focus still inside is the keyboard holding it again: a pointer's press that moved no focus (a table tool that
+		// keeps the caret, a scroll bar dragged) made this forget a control the keyboard never left.
+		// Only a key that does something with the focus, on a focus the keyboard shows: a pointer's user who holds Shift has not taken the
+		// keyboard up, and nothing is ever moved under a pointer.
+		const again = (event: KeyboardEvent) => {
+			if (MODIFIERS.has(event.key)) return;
+			const on = document.activeElement;
+			if (on instanceof Element && node.contains(on) && holdsKeyboardFocus(on)) held = on;
+		};
+		addEventListener("keydown", again, true);
+		// Its own control went and it stayed (a banner that still has something to say): the focus that control held is handed on the same way.
+		const inside = new MutationObserver(() => {
+			if (!held || held.isConnected || !node.isConnected) return;
+			held = null;
+			if (document.activeElement === document.body) hand();
+		});
+		inside.observe(node, { childList: true, subtree: true });
+		return () => {
+			removeEventListener("focusin", keep, true);
+			removeEventListener("pointerdown", letGo, true);
+			removeEventListener("keydown", again, true);
+			inside.disconnect();
+			const focused = document.activeElement;
+			const keyed = focused instanceof HTMLElement && holdsKeyboardFocus(focused);
+			if (keyed && (node.contains(focused) || inPopupOf(node, focused))) return hand();
+			// The thing went while the menu opened on it is still closing (its action answered at once): the menu has nothing to give the
+			// focus back to, and the focus it holds is the thing's.
+			if (keyed && held && focused.closest(MENU)) return hand();
+			// A part that takes its own node out before it lets the ref go (a menu's list, drawn outside the page): by now the focus has
+			// fallen to the page with no event. What the keyboard held in it is remembered, and is handed on the same.
+			if (held && !held.isConnected && (focused === null || focused === document.body)) hand();
+		};
+	}, []);
+}

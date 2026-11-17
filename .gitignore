@@ -8,14 +8,14 @@ dist
 next-env.d.ts
 *.tsbuildinfo
 
-# Env files (the example `.env.example` is committed)
-.env*.local
-
-# Tests
-coverage
+# Env files hold secrets: none is committed but the examples (`.env.example`)
+.env
+.env.*
+!.env.example
 
 # Bundle files installed by the example app (`pnpm example:pack`)
-examples/other-site/vendor
+examples/blog/vendor
+examples/**/AGENTS.md
 
 # misc
 .DS_Store
@@ -23,3 +23,7 @@ examples/other-site/vendor
 npm-debug.log*
 pnpm-debug.log*
 .vercel
+storybook-static
+
+# Personal Claude Code settings (the shared skills and agents in .claude are committed)
+.claude/settings.local.json

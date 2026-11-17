@@ -1,61 +1,45 @@
-import { defineMessages } from "@monti-cms/core";
-
-/**
- * Field labels, search preview and AI feature messages of the SEO extension. AI instructions are text given to the model, so there is only an English one, and the result language
- * follows the body.
- */
-export const seoMessages = defineMessages("cms-seo", {
+/** The plugin's words in the admin's two languages: the names of its fields, and what its inputs and preview say. */
+export const seoWords = {
 	en: {
-		"field.title": "Search title",
-		"field.description": "Search description",
-		"field.image": "Share image",
-		"field.noindex": "Hide from search engines",
-		"field.canonical": "Original URL",
-		"option.index": "Show",
-		"option.noindex": "Hide",
-		"preview.search": "Search result preview",
-		"preview.share": "Share preview",
-		"preview.noTitle": "Untitled",
-		"preview.noDescription": "No description",
-		"preview.hidden": "Hidden from search engines",
-		"ai.title.label": "Suggest search title",
-		"ai.description.label": "Suggest search description",
-		"ai.input.title": "Title",
-		"ai.input.summary": "Summary",
-		"ai.input.body": "Body",
-		"ai.input.current": "Current value",
-		"ai.title.prompt": ({ limit }) =>
-			[
-				"Write 3 title candidates to show in search results.",
-				`- At most ${limit} characters, in the same language as the body`,
-				"- Put the question the content answers or its key keywords near the front",
-				"- Do not use exaggerated or clickbait wording",
-			].join("\n"),
-		"ai.description.prompt": ({ limit }) =>
-			[
-				"Write the description to show under the title in search results.",
-				`- At most ${limit} characters, 1 to 2 sentences, in the same language as the body`,
-				"- Make clear what a searcher gets from this content",
-			].join("\n"),
+		tab: "SEO",
+		title: "SEO title",
+		description: "SEO description",
+		image: "Share image",
+		noindex: "Hide from search",
+		hidden: "Hidden",
+		canonical: "Canonical address",
+		entryTitle: "Title",
+		sameAs: (name: string) => `Same as ${name}`,
+		searchPreview: "Search result",
+		sharePreview: "Share card",
+		noTitle: "No title",
+		noDescription: "No description",
+		hiddenFromSearch: "Hidden from search",
 	},
 	ko: {
-		"field.title": "검색 제목",
-		"field.description": "검색 설명",
-		"field.image": "공유 이미지",
-		"field.noindex": "검색엔진에 숨기기",
-		"field.canonical": "원본 주소",
-		"option.index": "노출",
-		"option.noindex": "숨기기",
-		"preview.search": "검색 결과 미리보기",
-		"preview.share": "공유 미리보기",
-		"preview.noTitle": "제목 없음",
-		"preview.noDescription": "설명 없음",
-		"preview.hidden": "검색엔진에 숨김",
-		"ai.title.label": "검색 제목 추천",
-		"ai.description.label": "검색 설명 추천",
-		"ai.input.title": "제목",
-		"ai.input.summary": "요약",
-		"ai.input.body": "본문",
-		"ai.input.current": "현재 값",
+		tab: "SEO",
+		title: "SEO 제목",
+		description: "SEO 설명",
+		image: "공유 이미지",
+		noindex: "검색에서 숨기기",
+		hidden: "숨김",
+		canonical: "대표 주소",
+		entryTitle: "제목",
+		// "과" after a closed syllable, "와" after an open one.
+		sameAs: (name: string) => `${name}${endsClosed(name) ? "과" : "와"} 같음`,
+		searchPreview: "검색 결과",
+		sharePreview: "공유 카드",
+		noTitle: "제목 없음",
+		noDescription: "설명 없음",
+		hiddenFromSearch: "검색에서 숨김",
 	},
-});
+};
+
+export type SeoLanguage = keyof typeof seoWords;
+
+/** Whether a word's last Hangul syllable ends in a consonant. A word that ends in anything else reads as closed. */
+function endsClosed(word: string): boolean {
+	const last = word.trim().at(-1)?.charCodeAt(0);
+	if (last === undefined || last < 0xac00 || last > 0xd7a3) return true;
+	return (last - 0xac00) % 28 !== 0;
+}

@@ -1,0 +1,286 @@
+import type { EntryState, Facet, ListColumn, ListFilter } from "@monti-cms/core";
+import { sortFacets } from "@monti-cms/core";
+import {
+	DropdownMenuGroup,
+	DropdownMenuItem,
+	DropdownMenuLabel,
+	DropdownMenuScroll,
+	DropdownMenuSearch,
+	DropdownMenuSeparator,
+} from "@monti-cms/ui";
+import { type ReactNode, useState } from "react";
+import { useLanguageName } from "../../format/language";
+import { addressIfShared, titleOf } from "../../format/names";
+import { useAdmin } from "../../operations/admin-context";
+import { useRead } from "../../operations/use-operation";
+import { DateRows } from "./date-rows";
+import { toggled, ValueRow } from "./filter-rows";
+import { filterColumn, type ListState, TRANSLATION_STATES } from "./list-query";
+import { SortRows } from "./sort-rows";
+
+type Query = Record<string, unknown>;
+
+const STATES: readonly EntryState[] = ["published", "changed", "draft", "archived"];
+/** A relation's values past this many scroll inside the menu, under the search row. */
+const LONG = 8;
+
+/** The counts of one column's values, read when its menu opens, the other columns' filters applied (`entries.facets`). */
+function useFacets(query: Query, column: string) {
+	return useRead<{ values: Facet[] }>("entries.facets", { ...query, column }).data?.values ?? null;
+}
+
+const count = (facets: Facet[] | null, value: string | null) =>
+	facets === null ? null : (facets.find((facet) => facet.value === value)?.count ?? 0);
+
+type MenuProps = {
+	column: ListColumn;
+	label: string;
+	state: ListState;
+	query: Query;
+	setFilter: (column: string, filter: ListFilter | null) => void;
+	setSort: (sort: ListState["sort"]) => void;
+	onHide: () => void;
+	/** Where the counts are counted, while the list has folders (`Counted`). */
+	countedWhere?: string;
+};
+
+/**
+ * What a menu's counts count, said over them while the list has folders (LT-12): picking a value is a filter, and a filter looks through the
+ * folders below (doc 07, T54), so each count is the rows the list shows once it is picked, not the rows of the folder on the screen. `where`
+ * is left out when there are no folders: the counts are then the rows on the screen.
+ */
+function Counted({ where, children }: { where?: string; children: ReactNode }) {
+	if (!where) return children;
+	return (
+		<DropdownMenuGroup>
+			<DropdownMenuLabel>{where}</DropdownMenuLabel>
+			{children}
+		</DropdownMenuGroup>
+	);
+}
+
+const filterOf = (state: ListState, column: string) => state.filters.find((filter) => filterColumn(filter) === column);
+
+function HideRow({ onHide }: { onHide: () => void }) {
+	const { t } = useAdmin();
+	return (
+		<>
+			<DropdownMenuSeparator />
+			<DropdownMenuItem onClick={onHide}>{t("list.hide")}</DropdownMenuItem>
+		</>
+	);
+}
+
+function StatusMenu({ state, query, setFilter, onHide, countedWhere }: MenuProps) {
+	const { t } = useAdmin();
+	const facets = useFacets(query, "status");
+	const current = filterOf(state, "status");
+	const chosen = current?.on === "status" ? current.any : [];
+	const names: Record<EntryState, string> = {
+		published: t("list.state.published"),
+		changed: t("list.state.changed"),
+		draft: t("list.state.draft"),
+		archived: t("list.state.archived"),
+	};
+	return (
+		<>
+			<Counted where={countedWhere}>
+				{STATES.map((value) => (
+					<ValueRow
+						key={value}
+						label={names[value]}
+						counted={count(facets, value)}
+						checked={chosen.includes(value)}
+						onToggle={() => {
+							const any = toggled(chosen, value);
+							setFilter("status", any.length ? { on: "status", any } : null);
+						}}
+					/>
+				))}
+			</Counted>
+			<HideRow onHide={onHide} />
+		</>
+	);
+}
+
+/**
+ * The language column: the languages the groups have, each with its count | "Translation": missing, source changed, up to date (components/list.md, column
+ * menu). The translation rows are checked like any column's values: several leave the groups of any of them.
+ */
+function LocaleMenu({ state, query, setFilter, onHide, countedWhere }: MenuProps) {
+	const { t } = useAdmin();
+	const languageName = useLanguageName();
+	const facets = useFacets(query, "locale");
+	const translationFacets = useFacets(query, "translation");
+	const current = filterOf(state, "locale");
+	const chosen = current?.on === "locale" ? current.any : [];
+	const translation = filterOf(state, "translation");
+	const picked = translation?.on === "translation" ? translation.any : [];
+	// By count, then by the name shown (the server sorts by the code, which is not what the menu says).
+	const locales = sortFacets(
+		[...new Set([...(facets ?? []).map((facet) => facet.value ?? ""), ...chosen])].filter(Boolean).map((value) => ({
+			value,
+			label: languageName(value),
+			count: count(facets, value) ?? 0,
+		})),
+	).map((each) => each.value);
+	return (
+		<>
+			<Counted where={countedWhere}>
+				{locales.map((value) => (
+					<ValueRow
+						key={value}
+						label={languageName(value)}
+						counted={count(facets, value)}
+						checked={chosen.includes(value)}
+						onToggle={() => {
+							const any = toggled(chosen, value);
+							setFilter("locale", any.length ? { on: "locale", any } : null);
+						}}
+					/>
+				))}
+			</Counted>
+			<DropdownMenuSeparator />
+			<DropdownMenuGroup>
+				<DropdownMenuLabel>{t("list.translation")}</DropdownMenuLabel>
+				{TRANSLATION_STATES.map((is) => (
+					<ValueRow
+						key={is}
+						label={t(`list.translation.${is}`)}
+						counted={count(translationFacets, is)}
+						checked={picked.includes(is)}
+						onToggle={() => {
+							// In the menu's order, so the same choice is always the same address.
+							const any = TRANSLATION_STATES.filter((each) => toggled(picked, is).includes(each));
+							setFilter("translation", any.length ? { on: "translation", any } : null);
+						}}
+					/>
+				))}
+			</DropdownMenuGroup>
+			<HideRow onHide={onHide} />
+		</>
+	);
+}
+
+/** A relation or select column: "None", then each value with its count; a relation searches its values on top (components/list.md, column menu). */
+function ValuesMenu({ column, state, query, setFilter, onHide, countedWhere }: MenuProps) {
+	const { t } = useAdmin();
+	const facets = useFacets(query, column.id);
+	const [find, setFind] = useState("");
+	const current = filterOf(state, column.id);
+	const chosen = current?.on === "relation" || current?.on === "select" ? current.any : [];
+	const kind = column.kind === "relation" ? "relation" : "select";
+	const toggle = (value: string | null) => {
+		const any = toggled(chosen, value);
+		setFilter(column.id, any.length ? { on: kind, field: column.id, any } : null);
+	};
+	// A relation's value is another entry: one with no title is called what the lists call it, never by its id. An option is its label.
+	const labelOf = (facet: Facet & { value: string }) =>
+		kind === "relation" ? titleOf(facet.label, t) : (facet.label ?? facet.value);
+	const values = (facets ?? []).filter(
+		(facet): facet is Facet & { value: string } =>
+			facet.value !== null &&
+			labelOf(facet as Facet & { value: string })
+				.toLowerCase()
+				.includes(find.trim().toLowerCase()),
+	);
+	// Two values of one name on screen are told apart by their address, as a list row's is.
+	const shown = values.map((facet) => ({ group: facet.value, title: facet.label ?? "", slug: facet.slug ?? "" }));
+	const rows = values.map((facet, index) => (
+		<ValueRow
+			key={facet.value}
+			address={kind === "relation" && shown[index] ? addressIfShared(shown[index], shown, t) : null}
+			label={labelOf(facet)}
+			counted={facet.count}
+			checked={chosen.includes(facet.value)}
+			onToggle={() => toggle(facet.value)}
+		/>
+	));
+	return (
+		<>
+			{kind === "relation" && <DropdownMenuSearch value={find} onValueChange={setFind} label={t("list.findValue")} />}
+			<Counted where={countedWhere}>
+				<ValueRow
+					label={t("list.none")}
+					counted={count(facets, null)}
+					checked={chosen.includes(null)}
+					onToggle={() => toggle(null)}
+				/>
+				<DropdownMenuSeparator />
+				{kind === "relation" && (facets?.length ?? 0) > LONG ? <DropdownMenuScroll>{rows}</DropdownMenuScroll> : rows}
+			</Counted>
+			<HideRow onHide={onHide} />
+		</>
+	);
+}
+
+function EmptyMenu({ column, state, query, setFilter, onHide, countedWhere }: MenuProps) {
+	const { t } = useAdmin();
+	const facets = useFacets(query, column.id);
+	const on = filterOf(state, column.id)?.on === "empty";
+	return (
+		<>
+			<Counted where={countedWhere}>
+				<ValueRow
+					label={t("list.isEmpty")}
+					counted={count(facets, "empty")}
+					checked={on}
+					onToggle={() => setFilter(column.id, on ? null : { on: "empty", field: column.id })}
+				/>
+			</Counted>
+			<HideRow onHide={onHide} />
+		</>
+	);
+}
+
+function TitleMenu({ state, setSort }: MenuProps) {
+	return (
+		<SortRows
+			dir={state.sort.by === "title" ? state.sort.dir : null}
+			onChange={(dir) => setSort({ by: "title", dir })}
+		/>
+	);
+}
+
+/**
+ * A date column: sort newest or oldest first | the days to filter by (`DateRows`) | hide (flow 7, steps 05–05c).
+ */
+function DateMenu({ column, state, setFilter, setSort, onHide }: MenuProps) {
+	const field = column.id as "updatedAt" | "publishedAt" | "createdAt";
+	const current = filterOf(state, column.id);
+	return (
+		<>
+			<SortRows
+				kind="date"
+				dir={state.sort.by === column.id ? state.sort.dir : null}
+				onChange={(dir) => setSort({ by: field, dir })}
+			/>
+			<DropdownMenuSeparator />
+			<DateRows
+				range={current?.on === "date" ? current.range : null}
+				onChange={(range) => setFilter(column.id, range === null ? null : { on: "date", field, range })}
+			/>
+			<HideRow onHide={onHide} />
+		</>
+	);
+}
+
+/** The rows of a column's menu, by what the column is: sort | values to filter by | hide (components/list.md, column menu). */
+export function ColumnMenu(props: MenuProps) {
+	switch (props.column.kind) {
+		case "status":
+			return <StatusMenu {...props} />;
+		case "title":
+			return <TitleMenu {...props} />;
+		case "locale":
+			return <LocaleMenu {...props} />;
+		case "date":
+			return <DateMenu {...props} />;
+		case "relation":
+		case "select":
+			return <ValuesMenu {...props} />;
+		case "text":
+		case "media":
+			return <EmptyMenu {...props} />;
+	}
+}

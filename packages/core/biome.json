@@ -1,0 +1,58 @@
+{
+	"$schema": "https://biomejs.dev/schemas/2.3.10/schema.json",
+	"root": false,
+	"extends": "//",
+	"linter": {
+		"rules": {
+			"style": {
+				"noRestrictedImports": {
+					"level": "error",
+					"options": {
+						"patterns": [
+							{
+								"group": [
+									"next",
+									"next/**",
+									"react",
+									"react/**",
+									"react-dom",
+									"react-dom/**",
+									"@monti-cms/ui",
+									"@monti-cms/ui/**"
+								],
+								"message": "The core runs on the server and in the CLI and knows no framework or screen: operations reach the screen through the admin API."
+							},
+							{
+								"group": ["ai", "@ai-sdk/**", "@anthropic-ai/**", "openai"],
+								"message": "The core knows no AI: the assistant lives in @monti-cms/ai and uses the core through agentTools and callAgentTool."
+							}
+						]
+					}
+				}
+			}
+		}
+	},
+	"overrides": [
+		{
+			"includes": ["src/**", "!**/*.test.{ts,mts,cts,tsx}", "!**/__test__/**"],
+			"plugins": ["./biome-plugins/no-inline-function-in-object.grit", "./biome-plugins/no-double-assertion.grit"],
+			"linter": {
+				"rules": {
+					"complexity": {
+						"noExcessiveLinesPerFunction": {
+							"level": "error",
+							"options": {
+								"maxLines": 30,
+								"skipBlankLines": true
+							}
+						}
+					}
+				}
+			}
+		},
+		{
+			"includes": ["src/**/types.{ts,mts,cts,tsx}"],
+			"plugins": ["./biome-plugins/types-only.grit"]
+		}
+	]
+}
