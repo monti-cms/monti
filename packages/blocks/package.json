@@ -13,15 +13,11 @@
 	},
 	"files": [
 		"blocks",
-		"!blocks/**/*.test.ts",
-		"!blocks/**/*.test.tsx",
 		"registry.json",
 		"README.md"
 	],
 	"scripts": {
-		"typecheck": "tsc --noEmit -p .",
-		"test": "vitest run --project blocks",
-		"test:browser": "vitest run --project 'blocks (browser)'"
+		"typecheck": "tsc --noEmit -p ."
 	},
 	"peerDependencies": {
 		"@monti-cms/core": "workspace:*",
@@ -51,7 +47,6 @@
 		"react": "^19.0.0",
 		"react-dom": "^19.0.0",
 		"typescript": "^7.0.2",
-		"vitest": "^4.0.0",
 		"@monti-cms/admin": "workspace:*",
 		"@monti-cms/ui": "workspace:*"
 	}

@@ -15,7 +15,6 @@
 	],
 	"scripts": {
 		"typecheck": "tsc --noEmit -p .",
-		"test": "vitest run",
 		"build": "node ../../scripts/build-package.mjs"
 	},
 	"dependencies": {
@@ -34,8 +33,7 @@
 		"next": "16.4.6",
 		"react": "19.2.3",
 		"react-dom": "19.2.3",
-		"typescript": "^7.0.2",
-		"vitest": "4.1.12"
+		"typescript": "^7.0.2"
 	},
 	"sideEffects": [
 		"./src/admin.tsx"

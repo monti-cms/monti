@@ -15,7 +15,6 @@
 	],
 	"scripts": {
 		"typecheck": "tsc --noEmit -p .",
-		"test": "vitest run",
 		"build": "node ../../scripts/build-package.mjs"
 	},
 	"peerDependencies": {
@@ -36,7 +35,6 @@
 		"pg": "^8.23.0",
 		"react": "^19.0.0",
 		"typescript": "^7.0.2",
-		"vitest": "^4.0.0",
 		"zod": "^4.2.1"
 	},
 	"sideEffects": false,

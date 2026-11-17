@@ -8,11 +8,11 @@
 
 ## 상태: 다시 만드는 중
 
-Monti는 설계부터 다시 만들고 있습니다. 이전 패키지는 지웠고, 그것이 있는 마지막 커밋은 `9c69629f`입니다. 다시 만든 패키지의 첫 릴리스를
-만들고 있습니다([20번 문서](docs/design/features/20-release.md)). 나오기 전까지 [릴리스 페이지](https://github.com/monti-cms/monti/releases)는 비어 있습니다.
+Monti는 다시 만들고 있습니다. 이전 패키지는 지웠고, 그것이 있는 마지막 커밋은 `9c69629f`입니다. core(`packages/core`)를 먼저
+[`docs/refactor/core.md`](docs/refactor/core.md)대로 새로 쓰고, 나머지 패키지는 [`docs/refactor`](docs/refactor)의 각자 문서로 이어서 만듭니다.
+첫 릴리스가 나오기 전까지 [릴리스 페이지](https://github.com/monti-cms/monti/releases)는 비어 있습니다.
 
-- 설계는 [`docs/design/features`](docs/design/features/README.md)에 있습니다. 기능마다 문서 하나이고, 만드는 순서는
-  [`build.md`](docs/design/features/build.md)에 있습니다. 어디까지 왔고 무엇이 남았는지는 [`docs/tracker.md`](docs/tracker.md)에 있습니다.
+- 설계는 [`docs/refactor`](docs/refactor)에 있습니다. `core.md`가 먼저이고, 이어지는 패키지마다 문서 하나입니다.
 - 기준이 되는 화면은 디자인 시스템 Storybook의 기준 화면(`Screens/Reference`)입니다.
 
 ## 패키지
@@ -62,7 +62,6 @@ pnpm install            # 설치
 pnpm lint               # 린트 (pnpm lint:fix로 고침)
 pnpm check:design       # 관리자 화면 규칙 (docs/design/admin)
 pnpm check:review       # 관리자 화면이 디자인 검토가 읽은 그대로인지
-pnpm check:operations   # 기능 문서와 코드가 같은 기능을 말하는지
 pnpm typecheck          # 모든 패키지 타입 검사
 pnpm build              # 모든 패키지 빌드
 CMS_TEST_DATABASE_URL=postgres://localhost/monti_test pnpm test   # core 테스트, Postgres 테스트 데이터베이스에서

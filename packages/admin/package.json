@@ -21,8 +21,6 @@
 		"build:styles": "node ../../scripts/build-styles.mjs",
 		"storybook": "storybook dev -p 6007 --no-open",
 		"build-storybook": "storybook build -o storybook-static",
-		"test": "vitest run --project admin",
-		"test:screen": "vitest run --project 'admin (screen)'",
 		"build": "node ../../scripts/build-package.mjs && node ../../scripts/build-styles.mjs"
 	},
 	"dependencies": {
@@ -68,8 +66,7 @@
 		"react-dom": "19.2.3",
 		"storybook": "10.6.1",
 		"typescript": "^7.0.2",
-		"vite": "^8.3.0",
-		"vitest": "4.1.12"
+		"vite": "^8.3.0"
 	},
 	"publishConfig": {
 		"exports": {

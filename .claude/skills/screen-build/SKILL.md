@@ -58,4 +58,3 @@ Fill each `it.todo` as its piece is built:
 | `check:scenes` (pre-push, CI, the hook before `git push` and `gh pr create`) | a scene for every kind of part a folder uses; no `.todo`, `.only`, or skip without its tracker item | that the test does what its scene says: the review reads it |
 | `check:design` | tokens, raw lengths, imports | heights made of padding, a ring cut by a scroll box: measure |
 | `check:review` and the merge hook | nothing merged unread | that the reading was right: the owner's look comes first |
-| `check:operations` | a doc is not done with open tracker rows | that a put-off row was written at all: write it when you put something off |

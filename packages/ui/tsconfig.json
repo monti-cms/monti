@@ -13,15 +13,5 @@
 		"jsx": "react-jsx",
 		"types": ["node"]
 	},
-	"include": [
-		"src",
-		"visual",
-		"vitest.config.ts",
-		"vitest.dom.config.ts",
-		"vitest.browser.config.ts",
-		".storybook",
-		"test",
-		"../../testing"
-	],
-	"exclude": ["../../testing/usability", "../../testing/release"]
+	"include": ["src", ".storybook"]
 }

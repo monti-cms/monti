@@ -1,9 +1,0 @@
-import { defineConfig } from "vitest/config";
-
-export default defineConfig({
-	test: {
-		include: ["src/**/*.test.ts"],
-		testTimeout: 20_000,
-		globalSetup: ["../core/src/__test__/global-setup.ts"],
-	},
-});

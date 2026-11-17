@@ -13,5 +13,5 @@
 		"jsx": "react-jsx",
 		"types": ["node"]
 	},
-	"include": ["src", "vitest.config.ts", "../core/src/__test__/global-setup.ts"]
+	"include": ["src"]
 }
