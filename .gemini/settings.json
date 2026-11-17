@@ -1,0 +1,17 @@
+{
+	"hooks": {
+		"BeforeTool": [
+			{
+				"matcher": "run_shell_command|write_file|replace",
+				"hooks": [
+					{
+						"type": "command",
+						"name": "agent-guard",
+						"command": "node \"${GEMINI_PROJECT_DIR:-$(git rev-parse --show-toplevel)}/agent-guard/guard.mjs\"",
+						"timeout": 10000
+					}
+				]
+			}
+		]
+	}
+}

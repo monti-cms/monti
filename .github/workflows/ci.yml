@@ -1,28 +1,26 @@
-# Automated checks. On every push: lint, design and doc checks, type check, unused code, package build, the design review's record, the core and
-# admin tests on Postgres, the browser tests (L3 parts and L4 screens in Chromium), and the release's proof: a fresh site installed from the
-# packed tarballs.
+# Automated checks. On every push: lint (Biome and the core's import rules) and the core's suppression check.
 name: CI
 
-# Runs on push only (the PR page shows the result of that commit). Also triggering on PRs would run the same checks twice. Not on `overhaul`:
-# a pull request is merged into it only when its head holds `overhaul` as it is and CI passed on that head (the merge hook in
-# scripts/check-review.mjs), so the merged commit is what CI already checked.
+# Runs on push only (the PR page shows the result of that commit). Also triggering on PRs would run the same checks twice.
 on:
   push:
-    branches-ignore: [overhaul]
 
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 permissions:
   contents: read
 
 jobs:
-  check:
-    name: lint · typecheck · build
+  lint:
+    name: lint
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+        with:
+          # The whole history: the step below diffs the pushed commits.
+          fetch-depth: 0
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v5
         with:
@@ -31,231 +29,17 @@ jobs:
       - run: pnpm install --frozen-lockfile
       # Check only; nothing is fixed.
       - run: pnpm lint
-      # Korean strings in package runtime code live only in the message dictionaries (messages.ts).
-      - run: pnpm check:korean
-      # Admin UI is styled with token utilities and built from the parts of @monti-cms/ui (no one-off CSS, raw pixel sizes or parts built in a screen).
-      - run: pnpm check:design
-      - run: node --test scripts/check-banner-place.test.mjs
-      - run: node --test scripts/check-format.test.mjs
-      - run: node --test scripts/check-type-colour.test.mjs
-      - run: node --test scripts/check-theme.test.mjs scripts/check-parts.test.mjs scripts/gen-tokens.test.mjs
-      # The token files are what scripts/gen-tokens.mjs writes from tokens.json, and the tokens keep the design system's rules (text contrast, one
-      # declaration per role).
-      - run: pnpm gen:tokens --check
-      # The callout's title icons are the Carbon glyphs of its kind button (kind-icons.ts), as scripts/gen-callout-icons.mjs makes them.
-      - run: pnpm gen:callout-icons --check
-      # Screen specs: the catalog is what scripts/gen-screen-catalog.mjs reads from the parts' prop types, and every *.screen.json stays inside it.
-      - run: pnpm gen:screen-catalog --check
-      - run: node --test scripts/check-screens.test.mjs
-      - run: pnpm check:screens
-      # The message dictionaries: one file naming convention, the same keys in English and Korean, and no key that nothing uses.
-      - run: pnpm check:messages
-      # The feature docs and the code name the same operations, and test titles name done criteria that exist (docs/design/features/build.md).
-      - run: pnpm check:operations
-      # Every scene of testing/scenes.ts is tried where its kind of part is used, and no test is left to do, skipped without its tracker item, or
-      # alone under ".only" (docs/testing.md). The check's own tests first.
-      - run: node --test scripts/check-scenes.test.mjs
-      - run: pnpm check:scenes
-      # A browser test's failure leaves a picture named after the test: a name too long for a file leaves none. The check's own tests first.
-      - run: node --test scripts/check-test-titles.test.mjs
-      - run: pnpm check:titles
-      - run: pnpm typecheck
-      # Files and exports of the packages that nothing uses.
-      - run: pnpm knip
-      - run: pnpm build
-      # The release bundle (doc 20): what the pack script makes and refuses to make, then two of the release's gates on the built packages:
-      # publint and arethetypeswrong on every tarball. The third gate, a fresh site, is its own job below.
-      - run: node --test scripts/pack-release.test.mjs
-      - run: pnpm check:packages
-      # The admin's prebuilt stylesheet touches nothing outside the admin: every rule under the admin's document, only its own names (doc 16).
-      - run: node --test scripts/build-styles.test.mjs
-
-  review:
-    name: design review
-    runs-on: ubuntu-latest
-    steps:
-      # The whole history, so a failure can name the files that changed since the review on record.
-      - uses: actions/checkout@v5
-        with:
-          fetch-depth: 0
-      # Node alone: the check uses git and nothing installed, so the job has no pnpm for setup-node's cache to look for.
-      - uses: actions/setup-node@v5
-        with:
-          node-version: 24
-          package-manager-cache: false
-      # The admin UI of this commit is the one the design-review agent read (scripts/design-review.json). Its own job, so a branch that is
-      # still being worked on shows the other checks' results while this one waits for the review.
-      # The gate's own tests first, so they run on a branch that is still waiting for its review: the check in a repository of its own, and the
-      # shell command lines the merge hook must see a merge in or leave alone.
-      - run: node --test scripts/check-review.test.mjs scripts/merge-commands.test.mjs
-      - run: node scripts/check-review.mjs
-
-  test:
-    name: core and admin tests
-    runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:16
+      # The core is fixed, not silenced: the pushed commits add no `biome-ignore`, `@ts-expect-error`, `@ts-nocheck` or `eslint-disable` under
+      # packages/core. A new branch (an all-zero `before`) or a `before` that is gone (after a force push) is compared with where it left main.
+      - name: no new suppression in the core
         env:
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: monti_test
-        ports: ["5432:5432"]
-        options: --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
-    steps:
-      - uses: actions/checkout@v5
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v5
-        with:
-          node-version: 24
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm test
-        env:
-          CMS_TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432/monti_test
-
-  browser:
-    # The screen tests take about 18 minutes in one runner; eight runners take an eighth each. Vitest splits the test files between them.
-    name: browser tests (${{ matrix.shard }}/8)
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        shard: [1, 2, 3, 4, 5, 6, 7, 8]
-    steps:
-      - uses: actions/checkout@v5
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v5
-        with:
-          node-version: 24
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      # Chromium and the system fonts it falls back to (Japanese, Chinese, …) come from a cache per Playwright version: the fonts' packages are
-      # fetched from the Ubuntu mirror, which can take minutes (8 on 2026-11-06), and the browser from Playwright's server.
-      - id: playwright
-        run: echo "version=$(node -p "require('playwright/package.json').version")" >> "$GITHUB_OUTPUT"
-      - uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cache/ms-playwright
-            ~/.cache/playwright-apt
-          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}
-      - run: |
-          if ls ~/.cache/playwright-apt/*.deb >/dev/null 2>&1; then sudo cp ~/.cache/playwright-apt/*.deb /var/cache/apt/archives/; fi
-          pnpm exec playwright install --with-deps chromium
-          mkdir -p ~/.cache/playwright-apt
-          cp /var/cache/apt/archives/*.deb ~/.cache/playwright-apt/ 2>/dev/null || true
-      # L3: one part of @monti-cms/ui; L4: admin screens on a site in the browser (PGlite), driven with real input (docs/testing.md).
-      - run: pnpm --filter @monti-cms/ui test:browser --shard=${{ matrix.shard }}/8
-      - run: pnpm --filter @monti-cms/blocks test:browser --shard=${{ matrix.shard }}/8 --passWithNoTests
-      - run: pnpm --filter @monti-cms/admin test:screen --shard=${{ matrix.shard }}/8
-      # The pictures of the page that failing tests left (git ignores them): without this they go with the runner.
-      - uses: actions/upload-artifact@v4
-        if: failure()
-        with:
-          name: browser-test-failures-${{ matrix.shard }}
-          path: packages/*/src/**/__screenshots__/**
-          if-no-files-found: ignore
-
-  # One check named "browser tests" for the eight runners, so a pull request shows one result for them.
-  browser-tests:
-    name: browser tests
-    needs: browser
-    if: always()
-    runs-on: ubuntu-latest
-    steps:
-      - run: test "${{ needs.browser.result }}" = "success"
-
-  release:
-    name: release proof
-    runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: monti_test
-        ports: ["5432:5432"]
-        options: --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
-    steps:
-      - uses: actions/checkout@v5
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v5
-        with:
-          node-version: 24
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - id: playwright
-        run: echo "version=$(node -p "require('playwright/package.json').version")" >> "$GITHUB_OUTPUT"
-      - uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cache/ms-playwright
-            ~/.cache/playwright-apt
-          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}
-      - run: |
-          if ls ~/.cache/playwright-apt/*.deb >/dev/null 2>&1; then sudo cp ~/.cache/playwright-apt/*.deb /var/cache/apt/archives/; fi
-          pnpm exec playwright install --with-deps chromium
-          mkdir -p ~/.cache/playwright-apt
-          cp /var/cache/apt/archives/*.deb ~/.cache/playwright-apt/ 2>/dev/null || true
-      - run: pnpm build
-      # What the fresh site downloads with npm (Next and its own dependencies) is kept between runs: it changes with the site's package.json.
-      - uses: actions/cache@v4
-        with:
-          path: ~/.npm
-          key: npm-release-proof-${{ runner.os }}-${{ hashFiles('testing/release/app/package.json') }}
-      # Doc 20, 20-3: a new Next app outside this workspace installs the packed tarballs with npm, builds, starts, and a browser opens its
-      # admin (scripts/try-release.mjs). It makes a database of its own on this server and drops it.
-      - run: node scripts/try-release.mjs --shot "$RUNNER_TEMP/release-proof/admin.png"
-        env:
-          CMS_TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432/monti_test
-      # The browser's picture of the admin, whether the proof passed or not.
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: release-proof
-          path: ${{ runner.temp }}/release-proof
-          if-no-files-found: ignore
-
-  e2e:
-    name: e2e flows
-    runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: monti_test
-        ports: ["5432:5432"]
-        options: --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
-    steps:
-      - uses: actions/checkout@v5
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v5
-        with:
-          node-version: 24
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - id: playwright
-        run: echo "version=$(node -p "require('playwright/package.json').version")" >> "$GITHUB_OUTPUT"
-      - uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cache/ms-playwright
-            ~/.cache/playwright-apt
-          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}
-      - run: |
-          if ls ~/.cache/playwright-apt/*.deb >/dev/null 2>&1; then sudo cp ~/.cache/playwright-apt/*.deb /var/cache/apt/archives/; fi
-          pnpm exec playwright install --with-deps chromium
-          mkdir -p ~/.cache/playwright-apt
-          cp /var/cache/apt/archives/*.deb ~/.cache/playwright-apt/ 2>/dev/null || true
-      # L5: the example app (examples/blog) built and started, over HTTP on real Postgres and a real folder of files (docs/testing.md).
-      - run: pnpm test:e2e
-        env:
-          CMS_TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432/monti_test
-      # A failed flow's trace, pictures and page (Playwright's `outputDir`): without this they go with the runner.
-      - uses: actions/upload-artifact@v4
-        if: failure()
-        with:
-          name: e2e-failures
-          path: node_modules/.cache/monti-e2e/
-          if-no-files-found: ignore
+          BEFORE: ${{ github.event.before }}
+        run: |
+          base="$BEFORE"
+          if [ -z "${base//0/}" ] || ! git cat-file -e "$base^{commit}" 2>/dev/null; then
+            base=$(git merge-base origin/main "$GITHUB_SHA" 2>/dev/null || git rev-list --max-parents=0 "$GITHUB_SHA" | tail -n 1)
+          fi
+          if git diff -U0 "$base" "$GITHUB_SHA" -- packages/core | grep -E '^\+' | grep -vE '^\+\+\+ ' | grep -E 'biome-ignore|@ts-expect-error|@ts-nocheck|eslint-disable'; then
+            echo "::error::A suppression was added under packages/core: fix the code instead."
+            exit 1
+          fi

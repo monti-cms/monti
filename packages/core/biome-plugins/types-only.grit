@@ -1,0 +1,52 @@
+// `types.ts` holds types only (core.md, section 8, rule 3). Allowed: type aliases, interfaces, `import type`, `export type` (also `export type {} from`
+// and `export type *`). Flagged: a statement of any other kind (function, class, enum, variable, `declare`, `namespace`, `if`, ...), an import that
+// is not `import type` (`import "x"` too, and `import { type A }`: write `import type { A }`), and an export that is not `export type` or an exported
+// alias or interface (`export { v } from "x"`, `export * from "x"`, `export declare function`, `export default`). `packages/core/biome.json`
+// applies this to `src/**/types.{ts,mts,cts,tsx}`.
+pattern value_statement() {
+	or {
+		JsClassDeclaration(),
+		JsDebuggerStatement(),
+		JsDoWhileStatement(),
+		JsExpressionStatement(),
+		JsForInStatement(),
+		JsForOfStatement(),
+		JsForStatement(),
+		JsFunctionDeclaration(),
+		JsIfStatement(),
+		JsLabeledStatement(),
+		JsSwitchStatement(),
+		JsThrowStatement(),
+		JsTryFinallyStatement(),
+		JsTryStatement(),
+		JsVariableStatement(),
+		JsWhileStatement(),
+		JsWithStatement(),
+		TsDeclareFunctionDeclaration(),
+		TsDeclareStatement(),
+		TsEnumDeclaration(),
+		TsExternalModuleDeclaration(),
+		TsGlobalDeclaration(),
+		TsImportEqualsDeclaration(),
+		TsModuleDeclaration()
+	}
+}
+
+or {
+	value_statement() as $statement where {
+		register_diagnostic(span=$statement, message="A types.ts file holds types only: move this function, class, enum, value or statement to a file of running code.", severity="error")
+	},
+	JsImport() as $import where {
+		$import <: not r"(?s)import\s+type\b.*",
+		register_diagnostic(span=$import, message="A types.ts file holds types only: use `import type`.", severity="error")
+	},
+	JsExport() as $export where {
+		$export <: not r"(?s)export\s+type\b.*",
+		$export <: not contains or {
+			TsTypeAliasDeclaration(),
+			TsInterfaceDeclaration(),
+			value_statement()
+		},
+		register_diagnostic(span=$export, message="A types.ts file holds types only: export only types (`export type`, an exported type alias or interface).", severity="error")
+	}
+}

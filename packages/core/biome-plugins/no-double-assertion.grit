@@ -1,0 +1,23 @@
+// A type is not forced through `unknown` or `any`: `value as unknown as T` and `value as any as T` (also written `(value as unknown) as T`, with one or
+// two pairs of parentheses) and the angle forms `<T><unknown>value`, `<T>(<unknown>value)`, `(<unknown>value) as T` and `<unknown>value as T` (`any` the
+// same way) tell the compiler to stop checking, so fix the types instead. A single `as T`, `<T>value`, `as const` and a `: unknown` annotation are fine.
+// `packages/core/biome.json` applies this to the non-test files of `src`.
+pattern forced_angle() {
+	or {
+		TsTypeAssertionExpression() as $assertion where { $assertion <: r"(?s)<\s*(?:unknown|any)\s*>.*" },
+		`($inner)` where { $inner <: forced_angle() }
+	}
+}
+
+or {
+	`$value as unknown as $type`,
+	`$value as any as $type`,
+	`($value as unknown) as $type`,
+	`($value as any) as $type`,
+	`(($value as unknown)) as $type`,
+	`(($value as any)) as $type`,
+	TsTypeAssertionExpression() as $outer where { $outer <: r"(?s)<.*?>\s*\(*\s*<\s*(?:unknown|any)\s*>.*" },
+	`$value as $_` as $outer where { $value <: forced_angle() }
+} as $assertion where {
+	register_diagnostic(span=$assertion, message="Do not force a type with a double assertion (as unknown as T): fix the types.", severity="error")
+}

@@ -1,0 +1,22 @@
+// A function is not written inside an object literal: name it, then put the name in the object (`{ onEvent }`, `{ "0001": initial }`), so every
+// operation, hook and migration is a named, testable function. Callbacks given as call arguments (`.map((x) => ...)`) and class members are fine.
+// Flagged: an arrow or function as a property value (also wrapped in parentheses, `as` or `satisfies`: `{ a: (() => 1) satisfies F }`), a method,
+// a getter and a setter. `packages/core/biome.json` applies this to the non-test files of `src`.
+pattern wrapped_function() {
+	or {
+		JsArrowFunctionExpression(),
+		JsFunctionExpression(),
+		`($inner)` where { $inner <: wrapped_function() },
+		`$inner as $_` where { $inner <: wrapped_function() },
+		`$inner satisfies $_` where { $inner <: wrapped_function() }
+	}
+}
+
+or {
+	JsPropertyObjectMember(value=wrapped_function()),
+	JsMethodObjectMember(),
+	JsGetterObjectMember(),
+	JsSetterObjectMember()
+} as $member where {
+	register_diagnostic(span=$member, message="Do not write a function inside an object literal: give it a name and put the name in the object.", severity="error")
+}

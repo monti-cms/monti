@@ -29,6 +29,8 @@ export const chart = defineBlock({
 		const first = normalizeChartDsl(parseChartDsl(source)).errors[0];
 		return first ? [{ level: "warn", message: { ko: errorLine(first, "ko"), en: errorLine(first, "en") } }] : [];
 	},
+	// TODO(refactor): drawing a block (Site, Editor and the other screen slots) is the site's job, not the CMS's.
+	// Remove them from this definition when the blocks package is migrated (docs/refactor/blocks.md).
 	Site: Chart,
 	// The editor's view (its own tool row and settings), loaded in the admin the first time it is drawn.
 	Editor: lazy(() => import("./editor")),

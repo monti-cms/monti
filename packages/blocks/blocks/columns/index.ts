@@ -15,6 +15,8 @@ export const columns = defineBlock({
 	fields: { widths: { label: words.widths } },
 	holds: "blocks",
 	children: ["column"],
+	// TODO(refactor): drawing a block (Site, Editor and the other screen slots) is the site's job, not the CMS's.
+	// Remove them from this definition when the blocks package is migrated (docs/refactor/blocks.md).
 	Site: Columns,
 	// The editor's view (its own tool row and settings), loaded in the admin the first time it is drawn.
 	Editor: lazy(() => import("./editor")),
@@ -33,5 +35,7 @@ export const column = defineBlock({
 	label: words.column,
 	description: "One column of a columns block: the blocks in it.",
 	holds: "blocks",
+	// TODO(refactor): drawing a block (Site, Editor and the other screen slots) is the site's job, not the CMS's.
+	// Remove them from this definition when the blocks package is migrated (docs/refactor/blocks.md).
 	Site: Column,
 });

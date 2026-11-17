@@ -15,6 +15,8 @@ export const mermaid = defineBlock({
 	fields: { source: { label: words.mermaid } },
 	fence: { language: "mermaid", attr: "source" },
 	holds: "nothing",
+	// TODO(refactor): drawing a block (Site, Editor and the other screen slots) is the site's job, not the CMS's.
+	// Remove them from this definition when the blocks package is migrated (docs/refactor/blocks.md).
 	Site: Mermaid,
 	// The editor's view (its own tool row and settings), loaded in the admin the first time it is drawn.
 	Editor: lazy(() => import("./editor")),

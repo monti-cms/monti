@@ -19,6 +19,8 @@ export const tabs = defineBlock({
 		(block.children ?? []).some((tab) => typeof tab.attrs?.label !== "string" || tab.attrs.label.trim() === "")
 			? [{ level: "warn", message: words.aTabWithNo }]
 			: [],
+	// TODO(refactor): drawing a block (Site, Editor and the other screen slots) is the site's job, not the CMS's.
+	// Remove them from this definition when the blocks package is migrated (docs/refactor/blocks.md).
 	Site: Tabs,
 	// The editor's view (its own tool row and settings), loaded in the admin the first time it is drawn.
 	Editor: lazy(() => import("./editor")),
@@ -40,6 +42,8 @@ export const tab = defineBlock({
 	fields: { label: { label: words.name } },
 	holds: "blocks",
 	translate: { attrs: ["label"] },
+	// TODO(refactor): drawing a block (Site, Editor and the other screen slots) is the site's job, not the CMS's.
+	// Remove them from this definition when the blocks package is migrated (docs/refactor/blocks.md).
 	Site: Tab,
 	// The editor's view (its own tool row and settings), loaded in the admin the first time it is drawn.
 	Editor: lazy(() => import("./editor").then((module) => ({ default: module.TabEditor }))),

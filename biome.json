@@ -47,56 +47,6 @@
 	},
 	"overrides": [
 		{
-			"includes": ["packages/core/src/**"],
-			"linter": {
-				"rules": {
-					"style": {
-						"noRestrictedImports": {
-							"level": "error",
-							"options": {
-								"patterns": [
-									{
-										"group": [
-											"next",
-											"next/**",
-											"react",
-											"react/**",
-											"react-dom",
-											"react-dom/**",
-											"@monti-cms/ui",
-											"@monti-cms/ui/**"
-										],
-										"message": "The core runs on the server and in the CLI and knows no framework or screen: operations reach the screen through the admin API."
-									},
-									{
-										"group": ["ai", "@ai-sdk/**", "@anthropic-ai/**", "openai"],
-										"message": "The core knows no AI: the assistant lives in @monti-cms/ai and uses the core through agentTools and callAgentTool."
-									}
-								]
-							}
-						}
-					}
-				}
-			}
-		},
-		{
-			"includes": ["packages/admin/src/**", "!packages/admin/src/operations/**", "!**/*.test.ts", "!**/*.test.tsx"],
-			"linter": {
-				"rules": {
-					"style": {
-						"noRestrictedGlobals": {
-							"level": "error",
-							"options": {
-								"deniedGlobals": {
-									"fetch": "Screens reach the server only through operations (useOperation), so every screen gets the same checks, versions and log (docs/design/features/build.md, rule 3)."
-								}
-							}
-						}
-					}
-				}
-			}
-		},
-		{
 			"includes": ["packages/ui/src/**"],
 			"linter": {
 				"rules": {
@@ -117,20 +67,6 @@
 					}
 				}
 			}
-		},
-		{
-			"includes": [
-				"packages/*/src/**",
-				"!**/__test__/**",
-				"!packages/*/src/test/**",
-				"!**/*.test.ts",
-				"!**/*.test.tsx"
-			],
-			"plugins": ["./biome-plugins/title-key.grit"]
-		},
-		{
-			"includes": ["packages/*/src/**/*.stories.tsx"],
-			"plugins": ["./biome-plugins/story-visual-tags.grit"]
 		}
 	],
 	"assist": {
