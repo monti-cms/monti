@@ -27,3 +27,7 @@ storybook-static
 
 # Personal Claude Code settings (the shared skills and agents in .claude are committed)
 .claude/settings.local.json
+
+# Stryker mutation test artifacts and incremental cache
+.stryker-tmp
+.stryker-incremental.json

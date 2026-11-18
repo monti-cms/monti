@@ -152,13 +152,16 @@ export type Monti<R extends ResourceTree = ResourceTree> = MontiClient<R> & {
 };
 
 // 6. 서버 플러그인과 사이트 설정(monti.config.ts)
-export type Migration = (db: Kysely<any>) => Promise<void>;  // 엔진이 Kysely의 Migrator에 맞게 감싼다
+export interface Migration {
+  name: string;
+  up: (db: Kysely<any>) => Promise<void>;
+}
 
 export interface Plugin<R extends ResourceTree = ResourceTree> {
   name: string;
   operations?: Record<string, Record<string, ReadOperation<any, any> | WriteOperation<any, any>>>;
   keyServices?: KeyServiceDefinition[];
-  migrations?: Record<string, Migration>;   // 키는 단계 이름, 이름순으로 한 번씩 실행
+  migrations?: Migration[];                 // 배열 순서대로 한 번씩 실행
   onEvent?: (event: MontiEvent, ctx: { monti: Monti<R> }) => void | Promise<void>;
 }
 
@@ -191,34 +194,34 @@ export interface MontiConfig {
 
 | 속성 | 뜻 |
 |---|---|
-| `name` | 식별자 |
+| `name` | 식별자(npm 패키지 이름 등 고유 문자열) |
 | `operations` | 플러그인이 더하는 Operation 트리 |
 | `keyServices` | 키 보관함에 등록할 외부 서비스 규격 |
-| `migrations` | 플러그인 테이블을 만들고 바꾸는 단계 |
+| `migrations` | 플러그인 테이블을 만들고 바꾸는 단계 배열 |
 | `onEvent` | 3.3의 구독자 |
 
 화면 쪽 확장은 `admin`의 `AdminPlugin`이 맡는다.
 
 ### 5.1 `migrations`
 
-플러그인은 DB 변경 단계를 이름과 함께 적는다. core 자신도 같은 방식이다.
+플러그인은 DB 변경 단계를 `{ name, up }` 배열로 적는다. core 자신도 같은 방식이다.
 
 ```ts
 // 설명용 의사 코드
 const createConversations = async (db) => { /* 테이블 만들기 */ };
 const addConversationModel = async (db) => { /* 컬럼 더하기 */ };
 
-migrations: {
-  "0001_conversations": createConversations,
-  "0002_conversation_model": addConversationModel,
-}
+migrations: [
+  { name: "conversations", up: createConversations },
+  { name: "conversation_model", up: addConversationModel },
+]
 ```
 
 - 객체 안에는 함수를 직접 적지 않고 이름 붙은 함수를 넣는다(린트가 막는다).
 
-- 단계는 이름순으로 **한 번씩만** 실행되고, 나간 단계는 고치지 않는다. 바꿀 일은 새 단계로 쓴다.
+- 단계는 배열에 정의된 순서대로 **한 번씩만** 실행되고, 나간 단계는 고치지 않는다. 바꿀 일은 새 단계로 쓴다.
 - 앱이 시작될 때 core 먼저, 그다음 플러그인을 자동으로 실행한다.
-- 실행한 단계는 주인별 장부(이력 테이블)에 적는다: `monti_migration_core`, `monti_migration_<플러그인 이름>`. 이름이 같은 단계가 core와 플러그인에 있어도 섞이지 않는다. 장부는 10개 도메인 테이블에 세지 않는다.
+- 실행한 단계는 `monti_migrations` 테이블(`scope`, `name`, 복합 기본키 `(scope, name)`)에 기록한다. `scope`에는 `"core"` 또는 플러그인 이름(`"@monti-cms/ai"` 등)이 들어가며, 단계 이름(`name`)이 같아도 `scope`가 다르면 섞이지 않는다. `monti_migrations`는 10개 도메인 테이블에 세지 않는다.
 - 플러그인 테이블 이름에는 플러그인 이름을 접두어로 붙인다(문서 규칙이다).
 - 마이그레이션은 시작할 때만 실행되고 `dryRun` 안에서는 돌지 않는다.
 - 단계의 `db`는 타입을 비워 둔다(옛 시점의 테이블을 다루기 때문이다).
@@ -388,7 +391,7 @@ packages/core/src/
 │
 ├── db/                         층 0: 아무것도 import하지 않는다
 │   ├── types.ts                [타입] Database, 테이블 10개의 행 타입, Migration
-│   ├── migrate.ts              [함수] 주인(core·플러그인)별 장부로 단계를 한 번씩 실행
+│   ├── migrate.ts              [함수] monti_migrations 테이블(scope, name)로 단계를 순서대로 한 번씩 실행
 │   └── migrations/
 │       └── 0001-initial.ts     [함수] 첫 마이그레이션
 │
@@ -449,7 +452,7 @@ flowchart TD
 - `engine/`의 `*-file.ts`와 `state.ts`가 스키마·설정의 상태를 들고 커밋 뒤 파일에 쓴다. `schema.update`·`config.update` 같은 기능은 `resources/schema/`와 `resources/config/`에 두고 `setSchema`·`setConfig`로 요청만 한다.
 - `BlockDefinition`의 데이터 계약은 `rich-text/types.ts`에 둔다. `engine/types.ts`의 `MontiConfig`가 이 타입을 쓰는 것은 아래 층을 쓰는 정상 방향이다. 화면 컴포넌트(`Site`, `Editor` 등)는 CMS의 블록 정의에 담지 않는다. 블록을 그리는 일은 사이트가 한다.
 - `rich-text/validate-doc.ts`는 오류를 던지지 않는다. 문제 목록을 `BAD_REQUEST`로 바꾸는 일은 부르는 리소스(`entries`, `templates`, `data`)가 한다. 특정 블록의 전용 규칙은 그 블록의 패키지에 둔다.
-- `Migration` 타입은 `db/types.ts`에 두고 `Plugin`이 이를 참조한다. `db/migrate.ts`는 `{주인, 단계}`만 받아서 `Plugin`을 모른다.
+- `Migration` 타입은 `db/types.ts`에 두고 `Plugin`이 이를 참조한다. `db/migrate.ts`는 `scope`(`"core"` 또는 플러그인 이름)와 `Migration[]` 배열만 받아서 `Plugin`을 모른다.
 - 외부 패키지와 사이트는 공개 Operation을 직접 호출한다.
 - CLI는 `packages/cli/`, HTTP 입구는 `packages/next/`에 둔다. 두 패키지가 core를 사용한다.
 - 파일 하나에 역할 하나를 둔다. 함수 본문은 30줄까지이고(빈 줄 제외) 린트가 검사한다.
@@ -476,9 +479,9 @@ flowchart TD
 |---|---|---|
 | 2026-11-17 | `@monti-cms/mdx`, `@monti-cms/cli`는 core 밖에 둔다. | 소유자와 정함 |
 | 2026-11-18 | core를 얇게 유지한다. HTTP·`Reader`·렌더링·코드 블록 전용 기능은 밖으로 뺀다. | 소유자와 정함 |
-| 2026-11-18 | 플러그인 DB 계약은 이름 붙은 단계 `migrations`다. | 소유자와 정함 |
+| 2026-11-18 | 플러그인 DB 계약은 `{ name, up }` 배열인 `migrations: Migration[]`이고 배열 순서대로 실행한다. | 소유자와 정함 |
 | 2026-11-18 | 마이그레이션은 앱 시작 때 자동 실행한다. | 소유자와 정함 |
-| 2026-11-18 | 마이그레이션 장부는 주인(core, 각 플러그인)마다 따로 둔다. | 만들며 정함 |
+| 2026-11-18 | 마이그레이션 이력은 단일 테이블 `monti_migrations`(`scope`, `name`)에 기록하고 `scope`에 `"core"` 또는 패키지 이름 형태의 플러그인 이름을 둔다. | 소유자와 정함 |
 | 2026-11-18 | 묶음(`transaction`)의 이벤트는 커밋된 뒤 호출 순서대로 통지한다. | 소유자와 정함 |
 | 2026-11-18 | 플러그인 안의 `ctx.db`는 타입 매개변수로 core와 플러그인 테이블을 함께 보인다. 플러그인 밖 호출 타입은 쓰는 곳이 생길 때 정한다. | 소유자와 정함 |
 | 2026-11-18 | 이벤트 구독자의 오류 처리는 구독자의 몫이다. core는 발행하고 끝낸다. | 소유자와 정함 |
