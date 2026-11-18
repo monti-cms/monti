@@ -11,7 +11,7 @@
 // Sources are read with the TypeScript parser, so a string that looks like a comment or a call is not mistaken for one.
 // What it cannot see: a test API renamed on import (`import { it as spec }`), a mock target that is not a string literal,
 // environment variables read another way than through `process` or `globalThis.process` (`import { env } from
-// "node:process"`, `process[key]` with a computed key, `process` passed on under another name).
+// "node:process"`, `process[key]` with a key that is not a written string, `process` passed on under another name).
 
 import { spawnSync } from "node:child_process";
 import { readdirSync, readFileSync } from "node:fs";
@@ -276,16 +276,30 @@ function envAccess(ts, node) {
 	return false;
 }
 
-/** `const { env } = process` and `const { env: e } = globalThis.process`: the `env` taken out of `process` by name. */
+/** True for a destructuring key that names `env`: `env`, `"env"` or `["env"]`. */
+function isEnvKey(ts, key) {
+	if (key === undefined) return false;
+	if (ts.isComputedPropertyName(key)) return stringValue(ts, key.expression) === "env";
+	return (ts.isIdentifier(key) || ts.isStringLiteralLike(key)) && key.text === "env";
+}
+
+/**
+ * `const { env } = process`, `function f({ env } = process)` and `({ env } = process)`, also with `env: e`, `["env"]: e`
+ * or `globalThis.process`: the `env` taken out of `process` by name.
+ */
 function envDestructured(ts, node) {
-	if (!ts.isObjectBindingPattern(node)) return false;
-	const { parent } = node;
-	if (!ts.isVariableDeclaration(parent) || parent.name !== node || !parent.initializer) return false;
-	if (!isProcess(ts, parent.initializer)) return false;
-	return node.elements.some((element) => {
-		const key = element.propertyName ?? element.name;
-		return (ts.isIdentifier(key) || ts.isStringLiteralLike(key)) && key.text === "env";
-	});
+	if (ts.isObjectBindingPattern(node)) {
+		const { parent } = node;
+		const declares = ts.isVariableDeclaration(parent) || ts.isParameter(parent) || ts.isBindingElement(parent);
+		if (!declares || parent.name !== node || !parent.initializer || !isProcess(ts, parent.initializer)) return false;
+		return node.elements.some((element) => isEnvKey(ts, element.propertyName ?? element.name));
+	}
+	if (ts.isBinaryExpression(node) && node.operatorToken.kind === ts.SyntaxKind.EqualsToken) {
+		const target = skipParentheses(ts, node.left);
+		if (!ts.isObjectLiteralExpression(target) || !isProcess(ts, node.right)) return false;
+		return target.properties.some((property) => isEnvKey(ts, property.name));
+	}
+	return false;
 }
 
 /** The expression `node` stands in once parentheses around it are taken away. */

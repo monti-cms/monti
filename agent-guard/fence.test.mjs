@@ -634,6 +634,10 @@ describe("environment variables", () => {
 		"const { env, argv } = globalThis.process;",
 		'export const dev = globalThis.process["env"].NODE_ENV;',
 		"export const { NODE_ENV } = globalThis.process.env;",
+		'const { ["env"]: vars } = process;',
+		"export function read({ env } = process) {\n\treturn env;\n}",
+		"let env;\n({ env } = process);",
+		'let vars;\n({ "env": vars } = globalThis.process);',
 	];
 	for (const code of NOT_BY_NAME) {
 		test(`${code.replaceAll("\n", " ")} fails: process.env is read only as process.env.NAME`, () => {
