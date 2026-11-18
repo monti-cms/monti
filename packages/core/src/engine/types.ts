@@ -44,15 +44,40 @@ export interface MontiEvent<TInput = unknown, TOutput = unknown> {
 export type EventListener = (event: MontiEvent) => void | Promise<void>;
 
 /** The calls of a resource tree: each operation becomes `(input) => Promise<output>` at the same key path. */
-export type MontiClient<R extends ResourceTree> = {
-	[K in keyof R]: R[K] extends ReadOperation<infer I, infer O> | WriteOperation<infer I, infer O>
-		? (input: I) => Promise<O>
-		: R[K] extends ResourceTree
-			? MontiClient<R[K]>
-			: never;
+export type MontiClient<R extends ResourceTree> = { [K in keyof R]: ClientNode<R[K]> };
+
+/** One node of `MontiClient`, mapped member by member so a node typed `Operation | ResourceTree` maps too. */
+type ClientNode<N> = N extends ReadOperation<infer I, infer O> | WriteOperation<infer I, infer O>
+	? (input: I) => Promise<O>
+	: N extends ResourceTree
+		? MontiClient<N>
+		: never;
+
+/** The writes of a resource tree only, at the same key paths: what a `dryRun` block gets. */
+export type MontiWriteClient<R extends ResourceTree> = {
+	[K in keyof R as R[K] extends { kind: "read" } ? never : K]: WriteClientNode<R[K]>;
 };
 
+/** One node of `MontiWriteClient`, mapped member by member like `ClientNode`. */
+type WriteClientNode<N> =
+	N extends WriteOperation<infer I, infer O>
+		? (input: I) => Promise<O>
+		: N extends ResourceTree
+			? MontiWriteClient<N>
+			: never;
+
 export type Monti<R extends ResourceTree = ResourceTree> = MontiClient<R> & {
+	/** Runs the block's calls in one transaction; their events are sent in call order once it commits. */
+	transaction<T>(fn: (tx: MontiClient<R>) => Promise<T>): Promise<T>;
+	/** Runs the block's writes as they would run, then rolls them back: no event is sent. */
+	dryRun<T>(fn: (tx: MontiWriteClient<R>) => Promise<T>): Promise<T>;
 	/** Adds a subscriber to committed writes; the returned function removes it. */
 	onEvent(listener: EventListener): () => void;
 };
+
+/** A server plugin: the operations it adds to the resource tree and its subscriber to committed writes. */
+export interface Plugin {
+	name: string;
+	operations?: Record<string, Record<string, Operation>>;
+	onEvent?: (event: MontiEvent, ctx: { monti: Monti }) => void | Promise<void>;
+}

@@ -1,32 +1,98 @@
-import type { Kysely } from "kysely";
+import type { Kysely, Transaction } from "kysely";
 import type { Database } from "../db/types";
 import { MontiError } from "./errors";
 import { createEvents } from "./events";
-import type { Monti, MontiClient, MontiEvent, Operation, ResourceTree } from "./types";
+import { isOperation } from "./operation";
+import { withPlugins } from "./plugins";
+import type { Monti, MontiClient, MontiEvent, MontiWriteClient, Operation, Plugin, ResourceTree } from "./types";
 
+/** How the calls of one client run: a direct call, a `transaction` block or a `dryRun` block. */
 interface Runner {
-	db: Kysely<Database>;
-	emit: (event: MontiEvent) => void;
+	db: Kysely<Database> | Transaction<Database>;
+	/** Runs a write's `run` in a transaction: a new one for a direct call, the block's own one inside a block. */
+	write(run: (trx: Transaction<Database>) => Promise<unknown>): Promise<unknown>;
+	/** Takes a write's event: sent at once after a direct call's commit, queued inside a block. */
+	emit(event: MontiEvent): void;
 }
 
-/** The engine over a resource tree: `monti.<resource>.<action>(input)` runs the operation at that key path. */
-export function createMonti<R extends ResourceTree>(db: Kysely<Database>, resources: R): Monti<R> {
+/**
+ * The engine over a resource tree and its plugins: `monti.<resource>.<action>(input)` runs the operation at that key
+ * path. A plugin's operations join the tree and its `onEvent` subscribes to committed writes.
+ */
+export function createMonti<R extends ResourceTree>(
+	db: Kysely<Database>,
+	resources: R,
+	plugins: Plugin[] = [],
+): Monti<R> {
 	const events = createEvents();
-	const client = buildClient(resources, "", { db, emit: events.emit }) as MontiClient<R>;
-	return Object.assign(client, { onEvent: events.onEvent });
+	const tree = withPlugins(resources, plugins);
+	const client = buildClient(tree, "", directRunner(db, events.emit), true) as MontiClient<R>;
+	const monti = Object.assign(client, {
+		onEvent: events.onEvent,
+		transaction: transactionOf<R>(db, tree, events.emit),
+		dryRun: dryRunOf<R>(db, tree),
+	});
+	for (const plugin of plugins) {
+		const { onEvent } = plugin;
+		if (onEvent !== undefined) events.onEvent((event) => onEvent(event, { monti }));
+	}
+	return monti;
 }
 
-function buildClient(tree: ResourceTree, prefix: string, runner: Runner): Record<string, unknown> {
+function directRunner(db: Kysely<Database>, emit: (event: MontiEvent) => void): Runner {
+	function write(run: (trx: Transaction<Database>) => Promise<unknown>): Promise<unknown> {
+		return db.transaction().execute(run);
+	}
+	return { db, write, emit };
+}
+
+function blockRunner(trx: Transaction<Database>, queue: MontiEvent[]): Runner {
+	function write(run: (trx: Transaction<Database>) => Promise<unknown>): Promise<unknown> {
+		return run(trx);
+	}
+	function emit(event: MontiEvent): void {
+		queue.push(event);
+	}
+	return { db: trx, write, emit };
+}
+
+/** A block's calls share one transaction; once it commits, the queued events are sent in call order. */
+function transactionOf<R extends ResourceTree>(
+	db: Kysely<Database>,
+	tree: ResourceTree,
+	emit: (event: MontiEvent) => void,
+) {
+	return async function transaction<T>(fn: (tx: MontiClient<R>) => Promise<T>): Promise<T> {
+		const queue: MontiEvent[] = [];
+		const result = await db
+			.transaction()
+			.execute((trx) => fn(buildClient(tree, "", blockRunner(trx, queue), true) as MontiClient<R>));
+		for (const event of queue) emit(event);
+		return result;
+	};
+}
+
+/** A block of writes only, run as they would run and then rolled back; its queued events are dropped. */
+function dryRunOf<R extends ResourceTree>(db: Kysely<Database>, tree: ResourceTree) {
+	return async function dryRun<T>(fn: (tx: MontiWriteClient<R>) => Promise<T>): Promise<T> {
+		const trx = await db.startTransaction().execute();
+		try {
+			return await fn(buildClient(tree, "", blockRunner(trx, []), false) as MontiWriteClient<R>);
+		} finally {
+			await trx.rollback().execute();
+		}
+	};
+}
+
+function buildClient(tree: ResourceTree, prefix: string, runner: Runner, reads: boolean): Record<string, unknown> {
 	return Object.fromEntries(
-		Object.entries(tree).map(([key, node]) => {
-			const path = prefix === "" ? key : `${prefix}.${key}`;
-			return [key, isOperation(node) ? bind(node, path, runner) : buildClient(node, path, runner)];
-		}),
+		Object.entries(tree)
+			.filter(([, node]) => reads || !isOperation(node) || node.kind === "write")
+			.map(([key, node]) => {
+				const path = prefix === "" ? key : `${prefix}.${key}`;
+				return [key, isOperation(node) ? bind(node, path, runner) : buildClient(node, path, runner, reads)];
+			}),
 	);
-}
-
-function isOperation(node: Operation | ResourceTree): node is Operation {
-	return typeof node.run === "function";
 }
 
 function bind(operation: Operation, path: string, runner: Runner): (input: unknown) => Promise<unknown> {
@@ -35,11 +101,11 @@ function bind(operation: Operation, path: string, runner: Runner): (input: unkno
 	};
 }
 
-/** A read runs as it is; a write runs in a transaction and, once committed, its event is sent. */
+/** A read runs on the runner's database; a write runs in the runner's transaction and hands its event to the runner. */
 async function execute(operation: Operation, path: string, raw: unknown, runner: Runner): Promise<unknown> {
 	const input = parseInput(operation, raw);
 	if (operation.kind === "read") return operation.run(input, { db: runner.db });
-	const output = await runner.db.transaction().execute((trx) => operation.run(input, { db: trx }));
+	const output = await runner.write((trx) => operation.run(input, { db: trx }));
 	runner.emit({ operation: path, input, output });
 	return output;
 }

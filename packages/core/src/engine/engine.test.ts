@@ -9,7 +9,7 @@ import type { Database } from "../db/types";
 import { createMonti } from "./engine";
 import { MontiError } from "./errors";
 import { defineRead, defineWrite } from "./operation";
-import type { WriteContext } from "./types";
+import type { Monti, MontiEvent, Plugin, ReadContext, WriteContext } from "./types";
 
 let testDb: TestDatabase;
 let db: Kysely<Database>;
@@ -165,4 +165,155 @@ it("ENG-6 does not notify a subscriber that was removed", async () => {
 
 	// ENG-6.1
 	expect(listener).not.toHaveBeenCalled();
+});
+
+it("ENG-7 shares one transaction across a transaction block's calls and sends their events in call order after the commit", async () => {
+	const contexts: ReadContext["db"][] = [];
+	const create = defineWrite({
+		input: folderInput,
+		run: async (input, ctx) => {
+			contexts.push(ctx.db);
+			return insertFolder(input, ctx);
+		},
+	});
+	const add = defineWrite({
+		input: folderInput,
+		run: async (input, ctx) => {
+			contexts.push(ctx.db);
+			return insertFolder(input, ctx);
+		},
+	});
+	const list = defineRead({
+		input: z.object({}),
+		run: async (_input, ctx) => {
+			contexts.push(ctx.db);
+			const rows = await ctx.db.selectFrom("folders").select("name").orderBy("name").execute();
+			return rows.map((row) => row.name);
+		},
+	});
+	const monti = createMonti(db, { folders: { create, add, list } });
+	const events: MontiEvent[] = [];
+	const namesAtEvents: Promise<string[]>[] = [];
+	monti.onEvent((event) => {
+		events.push(event);
+		namesAtEvents.push(folderNames());
+	});
+	const first = { id: randomUUID(), name: "Photos" };
+	const second = { id: randomUUID(), name: "Videos" };
+	let namesInBlock: string[] | undefined;
+	let eventsInBlock: number | undefined;
+
+	const result = await monti.transaction(async (tx) => {
+		await tx.folders.create(first);
+		namesInBlock = await tx.folders.list({});
+		await tx.folders.add(second);
+		eventsInBlock = events.length;
+		return "done";
+	});
+
+	// ENG-7.1
+	expect(contexts[1]).toBe(contexts[0]);
+	// ENG-7.1
+	expect(contexts[2]).toBe(contexts[0]);
+	// ENG-7.1
+	expect(contexts[0]?.isTransaction).toBe(true);
+	// ENG-7.2
+	expect(namesInBlock).toEqual(["Photos"]);
+	// ENG-7.3
+	expect(eventsInBlock).toBe(0);
+	// ENG-7.4
+	expect(events).toEqual([
+		{ operation: "folders.create", input: first, output: { id: first.id } },
+		{ operation: "folders.add", input: second, output: { id: second.id } },
+	]);
+	// ENG-7.4
+	expect(await Promise.all(namesAtEvents)).toEqual([
+		["Photos", "Videos"],
+		["Photos", "Videos"],
+	]);
+	// ENG-7.5
+	expect(result).toBe("done");
+});
+
+it("ENG-8 rolls back a transaction block that fails midway and sends no event", async () => {
+	const monti = createMonti(db, { folders: { create: defineWrite({ input: folderInput, run: insertFolder }) } });
+	const listener = vi.fn();
+	monti.onEvent(listener);
+
+	const call = monti.transaction(async (tx) => {
+		await tx.folders.create({ id: randomUUID(), name: "Photos" });
+		throw new Error("the block fails");
+	});
+
+	// ENG-8.1
+	await expect(call).rejects.toThrow("the block fails");
+	// ENG-8.2
+	expect(await folderNames()).toEqual([]);
+	// ENG-8.3
+	expect(listener).not.toHaveBeenCalled();
+});
+
+it("ENG-9 shows only the writes in a dryRun block, rolls them back and sends no event", async () => {
+	const list = defineRead({
+		input: z.object({}),
+		run: async (_input, ctx) => ctx.db.selectFrom("folders").select("name").execute(),
+	});
+	const create = defineWrite({ input: folderInput, run: insertFolder });
+	const monti = createMonti(db, { folders: { create, list } });
+	const listener = vi.fn();
+	monti.onEvent(listener);
+	const input = { id: randomUUID(), name: "Photos" };
+	let actions: string[] | undefined;
+
+	const output = await monti.dryRun(async (tx) => {
+		actions = Object.keys(tx.folders);
+		return tx.folders.create(input);
+	});
+
+	// ENG-9.1
+	expect(actions).toEqual(["create"]);
+	// ENG-9.2
+	expect(output).toEqual({ id: input.id });
+	// ENG-9.3
+	expect(await folderNames()).toEqual([]);
+	// ENG-9.4
+	expect(listener).not.toHaveBeenCalled();
+});
+
+it("ENG-10 connects a plugin's operations and onEvent to the engine", async () => {
+	const create = defineWrite({ input: folderInput, run: insertFolder });
+	const pluginListener = vi.fn();
+	let namesAtEvent: Promise<string[]> | undefined;
+	const plugin: Plugin = {
+		name: "albums-plugin",
+		operations: { albums: { create } },
+		onEvent: (event, ctx) => {
+			pluginListener(event, ctx);
+			namesAtEvent = folderNames();
+		},
+	};
+	const monti = createMonti(db, { folders: { list: defineRead({ input: z.object({}), run: async () => [] }) } }, [
+		plugin,
+	]);
+	const withPlugin = monti as unknown as Monti<{ albums: { create: typeof create } }>;
+	const input = { id: randomUUID(), name: "Photos" };
+
+	const output = await withPlugin.albums.create(input);
+
+	// ENG-10.1
+	expect(output).toEqual({ id: input.id });
+	// ENG-10.2
+	expect(pluginListener).toHaveBeenCalledExactlyOnceWith({ operation: "albums.create", input, output }, { monti });
+	// ENG-10.2
+	expect(pluginListener.mock.calls[0]?.[1].monti).toBe(monti);
+	// ENG-10.2
+	expect(await namesAtEvent).toEqual(["Photos"]);
+});
+
+it("ENG-11 rejects a plugin whose operation path is already taken", () => {
+	const create = defineWrite({ input: folderInput, run: insertFolder });
+	const plugin: Plugin = { name: "folders-plugin", operations: { folders: { create } } };
+
+	// ENG-11.1
+	expect(() => createMonti(db, { folders: { create } }, [plugin])).toThrow();
 });
