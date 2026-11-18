@@ -1,0 +1,277 @@
+import { randomUUID } from "node:crypto";
+import type { Kysely } from "kysely";
+import { afterEach, beforeEach, expect, it } from "vitest";
+import { createTestDatabase, type TestDatabase } from "../../__test__/database";
+import { migrate } from "../../db/migrate";
+import { initial } from "../../db/migrations/0001-initial";
+import type { Database } from "../../db/types";
+import { createMonti } from "../../engine/engine";
+import { folders } from "./folders";
+
+let testDb: TestDatabase;
+let db: Kysely<Database>;
+
+const POSTS = "posts";
+const MEDIA = "media";
+
+function montiOf() {
+	return createMonti(db, { folders }, [], {
+		schema: { locales: ["ko"], collections: { [POSTS]: { fields: { title: { type: "text" } } } } },
+		config: { name: "Monti Blog", dev: false },
+		schemaFile: "unused-schema-file",
+		configFile: "unused-config-file",
+	});
+}
+
+beforeEach(async () => {
+	testDb = await createTestDatabase();
+	await migrate(testDb.db, "core", [initial]);
+	db = testDb.db as Kysely<Database>;
+});
+
+afterEach(async () => {
+	await testDb.drop();
+});
+
+interface Seed {
+	scope?: string;
+	name?: string;
+	parent_id?: string | null;
+	trashed?: boolean;
+}
+
+/** Inserts a folder straight into the table and returns its id. */
+async function seedFolder(seed: Seed = {}): Promise<string> {
+	const id = randomUUID();
+	await db
+		.insertInto("folders")
+		.values({
+			id,
+			scope: seed.scope ?? POSTS,
+			name: seed.name ?? "Folder",
+			parent_id: seed.parent_id ?? null,
+			trashed_at: seed.trashed === true ? new Date() : null,
+		})
+		.execute();
+	return id;
+}
+
+async function folderRows() {
+	return db.selectFrom("folders").selectAll().execute();
+}
+
+async function folderRow(id: string) {
+	return db.selectFrom("folders").selectAll().where("id", "=", id).executeTakeFirstOrThrow();
+}
+
+it("FLD-1 creates a root folder", async () => {
+	const output = await montiOf().folders.create({ scope: POSTS, name: "Drafts" });
+	const rows = await folderRows();
+
+	// FLD-1.1
+	expect(output.scope).toBe(POSTS);
+	// FLD-1.2
+	expect(output.name).toBe("Drafts");
+	// FLD-1.3
+	expect(output.parent_id).toBeNull();
+	// FLD-1.4
+	expect(rows.map((row) => row.id)).toEqual([output.id]);
+});
+
+it("FLD-2 creates a child folder under a parent folder", async () => {
+	const root = await seedFolder();
+
+	const output = await montiOf().folders.create({ scope: POSTS, name: "Child", parent_id: root });
+
+	// FLD-2.1
+	expect(output.parent_id).toBe(root);
+	// FLD-2.2
+	expect((await folderRow(output.id)).parent_id).toBe(root);
+});
+
+it("FLD-3 creates a folder with the given id", async () => {
+	const id = randomUUID();
+
+	const output = await montiOf().folders.create({ id, scope: MEDIA, name: "Photos" });
+
+	// FLD-3.1
+	expect(output.id).toBe(id);
+	// FLD-3.2
+	expect((await folderRows()).map((row) => row.id)).toEqual([id]);
+});
+
+it("FLD-4 rejects folders.create with BAD_REQUEST for a scope not in the schema", async () => {
+	// FLD-4.1
+	await expect(montiOf().folders.create({ scope: "constructor", name: "Drafts" })).rejects.toMatchObject({
+		code: "BAD_REQUEST",
+	});
+	// FLD-4.2
+	expect(await folderRows()).toEqual([]);
+});
+
+it("FLD-5 rejects folders.create with BAD_REQUEST for a parent of another scope", async () => {
+	const mediaFolder = await seedFolder({ scope: MEDIA });
+
+	// FLD-5.1
+	await expect(montiOf().folders.create({ scope: POSTS, name: "Child", parent_id: mediaFolder })).rejects.toMatchObject(
+		{ code: "BAD_REQUEST" },
+	);
+	// FLD-5.2
+	expect((await folderRows()).map((row) => row.id)).toEqual([mediaFolder]);
+});
+
+it("FLD-6 rejects folders.create with BAD_REQUEST for a trashed parent", async () => {
+	const trashed = await seedFolder({ trashed: true });
+
+	// FLD-6.1
+	await expect(montiOf().folders.create({ scope: POSTS, name: "Child", parent_id: trashed })).rejects.toMatchObject({
+		code: "BAD_REQUEST",
+	});
+	// FLD-6.2
+	expect((await folderRows()).map((row) => row.id)).toEqual([trashed]);
+});
+
+it("FLD-7 rejects folders.create with BAD_REQUEST for a parent that does not exist", async () => {
+	// FLD-7.1
+	await expect(
+		montiOf().folders.create({ scope: POSTS, name: "Child", parent_id: randomUUID() }),
+	).rejects.toMatchObject({ code: "BAD_REQUEST" });
+	// FLD-7.2
+	expect(await folderRows()).toEqual([]);
+});
+
+it("FLD-8 lists only the scope's folders whose trashed_at is null", async () => {
+	const active = await seedFolder({ name: "Active" });
+	await seedFolder({ name: "Trashed", trashed: true });
+	await seedFolder({ scope: MEDIA, name: "Photos" });
+
+	const output = await montiOf().folders.list({ scope: POSTS });
+
+	// FLD-8.1
+	expect(output.map((folder) => folder.id)).toEqual([active]);
+});
+
+it("FLD-9 renames a folder and moves it under another folder", async () => {
+	const first = await seedFolder({ name: "First" });
+	const second = await seedFolder({ name: "Second" });
+
+	const output = await montiOf().folders.update({ id: second, name: "Renamed", parent_id: first });
+	const row = await folderRow(second);
+
+	// FLD-9.1
+	expect(output.name).toBe("Renamed");
+	// FLD-9.2
+	expect(output.parent_id).toBe(first);
+	// FLD-9.3
+	expect(row.name).toBe("Renamed");
+	// FLD-9.4
+	expect(row.parent_id).toBe(first);
+});
+
+it("FLD-10 renames a folder without parent_id and keeps its parent", async () => {
+	const root = await seedFolder({ name: "Root" });
+	const child = await seedFolder({ name: "Child", parent_id: root });
+
+	const output = await montiOf().folders.update({ id: child, name: "Renamed" });
+	const row = await folderRow(child);
+
+	// FLD-10.1
+	expect(output.name).toBe("Renamed");
+	// FLD-10.2
+	expect(output.parent_id).toBe(root);
+	// FLD-10.3
+	expect(row.name).toBe("Renamed");
+	// FLD-10.4
+	expect(row.parent_id).toBe(root);
+});
+
+it("FLD-11 moves a folder to the root with a null parent_id", async () => {
+	const root = await seedFolder({ name: "Root" });
+	const child = await seedFolder({ name: "Child", parent_id: root });
+
+	const output = await montiOf().folders.update({ id: child, parent_id: null });
+
+	// FLD-11.1
+	expect(output.parent_id).toBeNull();
+	// FLD-11.2
+	expect((await folderRow(child)).parent_id).toBeNull();
+});
+
+it("FLD-12 rejects folders.update with BAD_REQUEST for a move under itself", async () => {
+	const root = await seedFolder();
+
+	// FLD-12.1
+	await expect(montiOf().folders.update({ id: root, parent_id: root })).rejects.toMatchObject({
+		code: "BAD_REQUEST",
+	});
+	// FLD-12.2
+	expect((await folderRow(root)).parent_id).toBeNull();
+});
+
+it("FLD-13 rejects folders.update with BAD_REQUEST for a move under a descendant", async () => {
+	const root = await seedFolder({ name: "Root" });
+	const child = await seedFolder({ name: "Child", parent_id: root });
+	const grandchild = await seedFolder({ name: "Grandchild", parent_id: child });
+
+	// FLD-13.1
+	await expect(montiOf().folders.update({ id: root, parent_id: grandchild })).rejects.toMatchObject({
+		code: "BAD_REQUEST",
+	});
+	// FLD-13.2
+	expect((await folderRow(root)).parent_id).toBeNull();
+});
+
+it("FLD-14 rejects folders.update with BAD_REQUEST for a parent of another scope", async () => {
+	const collectionFolder = await seedFolder();
+	const mediaFolder = await seedFolder({ scope: MEDIA });
+
+	// FLD-14.1
+	await expect(montiOf().folders.update({ id: collectionFolder, parent_id: mediaFolder })).rejects.toMatchObject({
+		code: "BAD_REQUEST",
+	});
+	// FLD-14.2
+	expect((await folderRow(collectionFolder)).parent_id).toBeNull();
+});
+
+it("FLD-15 rejects folders.update with BAD_REQUEST for a trashed parent", async () => {
+	const active = await seedFolder({ name: "Active" });
+	const trashed = await seedFolder({ name: "Trashed", trashed: true });
+
+	// FLD-15.1
+	await expect(montiOf().folders.update({ id: active, parent_id: trashed })).rejects.toMatchObject({
+		code: "BAD_REQUEST",
+	});
+	// FLD-15.2
+	expect((await folderRow(active)).parent_id).toBeNull();
+});
+
+it("FLD-16 rejects folders.update with BAD_REQUEST for a parent that does not exist", async () => {
+	const root = await seedFolder();
+
+	// FLD-16.1
+	await expect(montiOf().folders.update({ id: root, parent_id: randomUUID() })).rejects.toMatchObject({
+		code: "BAD_REQUEST",
+	});
+	// FLD-16.2
+	expect((await folderRow(root)).parent_id).toBeNull();
+});
+
+it("FLD-17 rejects folders.update with NOT_FOUND for a trashed folder", async () => {
+	const trashed = await seedFolder({ name: "Trashed", trashed: true });
+
+	// FLD-17.1
+	await expect(montiOf().folders.update({ id: trashed, name: "Renamed" })).rejects.toMatchObject({
+		code: "NOT_FOUND",
+	});
+	// FLD-17.2
+	expect((await folderRow(trashed)).name).toBe("Trashed");
+});
+
+it("FLD-18 rejects folders.update with NOT_FOUND for an id that does not exist", async () => {
+	// FLD-18.1
+	await expect(montiOf().folders.update({ id: randomUUID(), name: "Renamed" })).rejects.toMatchObject({
+		code: "NOT_FOUND",
+	});
+	// FLD-18.2
+	expect(await folderRows()).toEqual([]);
+});
