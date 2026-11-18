@@ -1,5 +1,4 @@
 import { randomUUID } from "node:crypto";
-import { sql } from "kysely";
 import { z } from "zod";
 import { MontiError } from "../../engine/errors";
 import { defineRead, defineWrite } from "../../engine/operation";
@@ -73,8 +72,6 @@ async function updateFolder(input: z.infer<typeof updateInput>, ctx: WriteContex
 		.executeTakeFirst();
 	if (target === undefined) throw new MontiError("NOT_FOUND", "No active folder has this id");
 	if (typeof input.parent_id === "string") {
-		// Serializes moves within a scope so two concurrent moves cannot each pass the cycle check and form a loop.
-		await sql`select pg_advisory_xact_lock(hashtext(${`folders:${target.scope}`}))`.execute(ctx.db);
 		await rejectParent(ctx, input.parent_id, target.scope);
 		await rejectCycle(ctx, input.id, input.parent_id);
 	}
