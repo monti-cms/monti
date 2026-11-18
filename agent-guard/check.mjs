@@ -9,8 +9,7 @@
 //                                            and jscpd; and the acceptance fence) and exit 0 or 1
 //
 // Workers are a delegated task (`T3CODE_THREAD_ID`) or a sub-agent (`agent_id` in the payload); every other session is the PM.
-// `--stop` and `--pre-commit` check workers only. `--pre-tool` stops a worker editing a protected file, and the PM editing
-// code (`packages/`, `scripts/`): the PM hands code to a worker, and may still commit what a worker left in its worktree.
+// `--stop`, `--pre-tool` and `--pre-commit` check workers only. `--pre-tool` stops a worker editing a protected file.
 // Anything unexpected inside the check fails open with a warning.
 
 import { spawn, spawnSync } from "node:child_process";
@@ -292,9 +291,6 @@ async function stop() {
 
 // ---- before a tool runs ----
 
-// The PM's own edits stop at these; it delegates code to a worker.
-const PM_CODE_PREFIXES = ["packages/", "scripts/"];
-
 // The tools that write files (Claude Code, Codex, Antigravity) and where each names its target.
 const EDIT_TOOLS = new Set([
 	"Edit",
@@ -358,26 +354,16 @@ function toolPayload(payload) {
 /** Returns why the tool call may not run, or null. */
 function preToolReason(raw) {
 	const payload = toolPayload(raw);
-	if (!EDIT_TOOLS.has(payload.tool_name)) return null;
+	if (!isWorker(payload) || !EDIT_TOOLS.has(payload.tool_name)) return null;
 	const cwd = typeof payload.cwd === "string" && payload.cwd !== "" ? payload.cwd : process.cwd();
-	const files = editTargets(payload)
+	const touched = editTargets(payload)
 		.map((target) => repoPath(path.resolve(cwd, target)))
-		.filter((file) => file !== undefined);
-	if (isWorker(payload)) {
-		const touched = files.filter(isProtected);
-		if (touched.length === 0) return null;
-		return [
-			"These files are protected and a worker may not change them:",
-			...touched.map((name) => `- ${name}`),
-			"Solve the task in files you may change. If one of these looks wrong, report it to the PM.",
-		].join("\n");
-	}
-	const code = files.filter((file) => PM_CODE_PREFIXES.some((prefix) => file.startsWith(prefix)));
-	if (code.length === 0) return null;
+		.filter((file) => file !== undefined && isProtected(file));
+	if (touched.length === 0) return null;
 	return [
-		"The PM does not edit code:",
-		...code.map((name) => `- ${name}`),
-		"Delegate this change to a worker agent with a brief that says what to change and why.",
+		"These files are protected and a worker may not change them:",
+		...touched.map((name) => `- ${name}`),
+		"Solve the task in files you may change. If one of these looks wrong, report it to the PM.",
 	].join("\n");
 }
 

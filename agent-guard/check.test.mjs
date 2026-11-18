@@ -643,31 +643,23 @@ describe("--pre-tool", () => {
 		assert.match(result.stderr, pattern);
 	};
 
-	test("blocks the PM editing packages/ and scripts/, and tells it to delegate", () => {
+	test("allows the PM editing any file, packages/, scripts/ and the protected files among them", () => {
 		const f = fixture();
-		for (const thread of [PM, ""]) {
-			const result = edit(
-				f,
-				{ tool_name: "Edit", tool_input: { file_path: path.join(f.repo, "packages/core/src/a.ts") } },
-				{ thread },
-			);
-			blocked(result, /The PM does not edit code:\n- packages\/core\/src\/a\.ts\n/);
-			assert.match(result.stderr, /Delegate this change to a worker agent/);
-		}
-		blocked(
-			edit(f, { tool_name: "Write", tool_input: { file_path: path.join(f.repo, "scripts/new.mjs") } }, { thread: PM }),
-			/- scripts\/new\.mjs/,
-		);
-		blocked(
+		const files = [
+			"packages/core/src/a.ts",
+			"scripts/new.mjs",
+			"packages/core/env.d.ts",
+			"docs/notes.md",
+			"docs/acceptance/core/a.md",
+			"agent-guard/check.mjs",
+			"package.json",
+		];
+		for (const thread of [PM, ""])
+			for (const file of files)
+				allowed(edit(f, { tool_name: "Edit", tool_input: { file_path: path.join(f.repo, file) } }, { thread }));
+		allowed(
 			edit(f, { tool_name: "Write", cwd: f.repo, tool_input: { file_path: "packages/core/env.d.ts" } }, { thread: PM }),
-			/- packages\/core\/env\.d\.ts/,
 		);
-	});
-
-	test("allows the PM editing docs and the other files outside the code", () => {
-		const f = fixture();
-		for (const file of ["docs/notes.md", "docs/acceptance/core/a.md", "agent-guard/check.mjs", "package.json"])
-			allowed(edit(f, { tool_name: "Edit", tool_input: { file_path: path.join(f.repo, file) } }, { thread: PM }));
 	});
 
 	test("blocks a worker editing a protected file, packages/core/env.d.ts among them", () => {
@@ -709,15 +701,15 @@ describe("--pre-tool", () => {
 
 	test("reads the targets of the other editors' tools", () => {
 		const f = fixture();
-		const file = path.join(f.repo, "packages/core/src/a.ts");
+		const file = path.join(f.repo, "agent-guard/check.mjs");
 		for (const tool_input of [{ notebook_path: file }, { TargetFile: file }, { path: file }])
-			blocked(edit(f, { tool_name: "NotebookEdit", tool_input }, { thread: PM }), /- packages\/core\/src\/a\.ts/);
-		blocked(edit(f, { tool_name: "write_to_file", tool_input: { TargetFile: file } }, { thread: PM }), /a\.ts/);
+			blocked(edit(f, { tool_name: "NotebookEdit", tool_input }), /- agent-guard\/check\.mjs/);
+		blocked(edit(f, { tool_name: "write_to_file", tool_input: { TargetFile: file } }), /check\.mjs/);
 		const patch =
-			"*** Begin Patch\n*** Update File: packages/core/src/a.ts\n@@\n-a\n+b\n*** Add File: docs/x.md\n+x\n*** End Patch\n";
+			"*** Begin Patch\n*** Update File: agent-guard/check.mjs\n@@\n-a\n+b\n*** Add File: docs/x.md\n+x\n*** End Patch\n";
 		for (const tool_input of [{ command: ["apply_patch", patch] }, { patch }, patch]) {
-			const result = edit(f, { tool_name: "apply_patch", cwd: f.repo, tool_input }, { thread: PM });
-			blocked(result, /- packages\/core\/src\/a\.ts\n/);
+			const result = edit(f, { tool_name: "apply_patch", cwd: f.repo, tool_input });
+			blocked(result, /- agent-guard\/check\.mjs\n/);
 			assert.doesNotMatch(result.stderr, /docs\/x\.md/);
 		}
 	});
@@ -728,21 +720,19 @@ describe("--pre-tool", () => {
 		roots.push(elsewhere);
 		const result = edit(
 			f,
-			{ tool_name: "Edit", tool_input: { file_path: path.join(f.repo, "packages/core/src/a.ts") } },
-			{ thread: PM, cwd: elsewhere },
+			{ tool_name: "Edit", tool_input: { file_path: path.join(f.repo, "agent-guard/check.mjs") } },
+			{ cwd: elsewhere },
 		);
-		blocked(result, /- packages\/core\/src\/a\.ts/);
-		allowed(
-			edit(f, { tool_name: "Write", tool_input: { file_path: path.join(elsewhere, "packages/x.ts") } }, { thread: PM }),
-		);
+		blocked(result, /- agent-guard\/check\.mjs/);
+		allowed(edit(f, { tool_name: "Write", tool_input: { file_path: path.join(elsewhere, "agent-guard/x.mjs") } }));
 	});
 
 	test("lets reads and other tools through, and fails open on a bad payload", () => {
 		const f = fixture();
-		const file = path.join(f.repo, "packages/core/src/a.ts");
-		allowed(edit(f, { tool_name: "Read", tool_input: { file_path: file } }, { thread: PM }));
-		allowed(edit(f, { tool_name: "Bash", tool_input: { command: "ls" } }, { thread: PM }));
-		const bad = f.run(["--pre-tool"], { input: "not json", thread: PM });
+		const file = path.join(f.repo, "agent-guard/check.mjs");
+		allowed(edit(f, { tool_name: "Read", tool_input: { file_path: file } }));
+		allowed(edit(f, { tool_name: "Bash", tool_input: { command: "ls" } }));
+		const bad = f.run(["--pre-tool"], { input: "not json" });
 		assert.equal(bad.status, 0);
 		assert.match(bad.stderr, /the check could not run and was skipped/);
 	});
@@ -759,13 +749,10 @@ describe("--pre-tool", () => {
 		assert.equal(answer.decision, "deny");
 		assert.match(answer.reason, /a worker may not change them:\n- agent-guard\/check\.mjs\n/);
 
-		const pm = call("replace_file_content", path.join(f.repo, "packages/core/src/a.ts"), {}, { thread: PM });
-		assert.equal(pm.status, 0);
-		assert.equal(JSON.parse(pm.stdout).decision, "deny");
-		assert.match(JSON.parse(pm.stdout).reason, /The PM does not edit code:\n- packages\/core\/src\/a\.ts/);
-
 		for (const result of [
 			call("multi_replace_file_content", path.join(f.repo, "packages/core/src/a.ts")),
+			call("replace_file_content", path.join(f.repo, "packages/core/src/a.ts"), {}, { thread: PM }),
+			call("write_to_file", path.join(f.repo, "agent-guard/check.mjs"), {}, { thread: PM }),
 			call("view_file", path.join(f.repo, "agent-guard/check.mjs")),
 		]) {
 			assert.equal(result.status, 0);
