@@ -378,7 +378,7 @@ erDiagram
 | `config` | `get`, `update`(개발 서버만) | |
 | `keys` | `list`, `create`, `update`, `delete` | `check` |
 | `data` | | `export`, `import` |
-| `session` | `get`, `create`(로그인·개발 우회), `delete` | |
+| `session` | `get`, `create`(로그인), `delete` | |
 | `admin` | `create`(최초 계정), `update` | |
 
 ## 8. 폴더 구조
