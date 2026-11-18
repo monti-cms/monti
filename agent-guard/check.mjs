@@ -10,7 +10,7 @@
 
 import { spawn, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { readFileSync, renameSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
@@ -89,12 +89,36 @@ function fingerprint(root, untracked) {
 	return hash.digest("hex");
 }
 
+/**
+ * The environment for `pnpm lint`. A fresh git worktree has no `node_modules` until it is installed, and without it pnpm
+ * falls back to whatever biome is installed globally. The main checkout's `.bin` folders come first on PATH instead, so
+ * the lint runs the pinned versions. Nothing changes when the worktree has its own `node_modules`.
+ */
+function lintEnv(root) {
+	if (existsSync(path.join(root, "node_modules"))) return process.env;
+	let common;
+	try {
+		common = path.resolve(root, git(root, ["rev-parse", "--git-common-dir"]).trim());
+	} catch {
+		return process.env;
+	}
+	const mainRoot = path.basename(common) === ".git" ? path.dirname(common) : common;
+	const bins = [
+		path.join(mainRoot, "node_modules", ".bin"),
+		path.join(mainRoot, "packages", "core", "node_modules", ".bin"),
+	].filter((dir) => existsSync(dir));
+	if (bins.length === 0) return process.env;
+	const key = Object.keys(process.env).find((name) => name.toUpperCase() === "PATH") ?? "PATH";
+	return { ...process.env, [key]: [...bins, process.env[key]].filter(Boolean).join(path.delimiter) };
+}
+
 /** Runs `pnpm lint` in its own process group so the timeout can kill biome and the rest with it. */
 function runLint(root) {
 	return new Promise((resolve, reject) => {
 		const windows = process.platform === "win32";
 		const child = spawn("pnpm", ["lint"], {
 			cwd: root,
+			env: lintEnv(root),
 			detached: !windows,
 			shell: windows,
 			stdio: ["ignore", "pipe", "pipe"],
@@ -284,7 +308,12 @@ async function preCommit() {
 /** `pnpm lint` and the fence, both run so one report shows everything that is wrong. */
 async function checkAll() {
 	const root = topLevel();
-	const lint = spawnSync("pnpm", ["lint"], { stdio: "inherit", shell: process.platform === "win32" });
+	const lint = spawnSync("pnpm", ["lint"], {
+		cwd: root,
+		env: lintEnv(root),
+		stdio: "inherit",
+		shell: process.platform === "win32",
+	});
 	const problems = await runFence(root);
 	if (problems.length > 0) process.stderr.write(`${fenceDetail(problems)}\n`);
 	return lint.status === 0 && problems.length === 0 ? 0 : 1;

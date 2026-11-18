@@ -9,9 +9,10 @@
 // Sources are read with the TypeScript parser, so a string that looks like a comment or a call is not mistaken for one.
 // What it cannot see: a test API renamed on import (`import { it as spec }`), a mock target that is not a string literal.
 
+import { spawnSync } from "node:child_process";
 import { readdirSync, readFileSync } from "node:fs";
+import { createRequire } from "node:module";
 import path from "node:path";
-import ts from "typescript";
 
 const AC_DIR = "docs/acceptance/core";
 const CORE_SRC = "packages/core/src";
@@ -41,7 +42,42 @@ const DATABASE_MODULE =
 const MOCK_METHODS = new Set(["mock", "doMock", "unstable_mockModule"]);
 const DATABASE_WORDS = new Set(["db", "pool", "pg", "database"]);
 
-const kind = ts.SyntaxKind;
+// ---- TypeScript ----
+
+/** The root of the main checkout when `root` is a linked worktree, or undefined. */
+function mainCheckout(root) {
+	const result = spawnSync("git", ["rev-parse", "--git-common-dir"], { cwd: root, encoding: "utf8" });
+	if (result.status !== 0) return undefined;
+	const common = path.resolve(root, result.stdout.trim());
+	return path.basename(common) === ".git" ? path.dirname(common) : common;
+}
+
+/**
+ * Loads TypeScript from this file, from `root`, or from the main checkout. A fresh git worktree has no `node_modules`
+ * until it is installed, but the main checkout it was made from has one.
+ */
+function loadTypeScript(root) {
+	const tried = [];
+	const candidates = [() => createRequire(import.meta.url), () => createRequire(path.join(root, "package.json"))];
+	const main = () => {
+		const mainRoot = mainCheckout(root);
+		return mainRoot === undefined ? undefined : createRequire(path.join(mainRoot, "package.json"));
+	};
+	for (const candidate of [...candidates, main]) {
+		try {
+			const require = candidate();
+			if (require === undefined) continue;
+			const mod = require("typescript");
+			const ts = mod?.default ?? mod;
+			if (ts?.ScriptTarget) return ts;
+		} catch (error) {
+			tried.push(error.message.split("\n")[0]);
+		}
+	}
+	throw new Error(
+		`TypeScript was not found from the agent-guard folder, ${root} or the main checkout: run pnpm install (${tried.join("; ")})`,
+	);
+}
 
 // ---- acceptance conditions ----
 
@@ -106,7 +142,7 @@ function sourceFiles(root) {
 		.sort();
 }
 
-function descendants(node) {
+function descendants(ts, node) {
 	const nodes = [];
 	const visit = (child) => {
 		nodes.push(child);
@@ -116,15 +152,15 @@ function descendants(node) {
 	return nodes;
 }
 
-const stringValue = (node) => (node && ts.isStringLiteralLike(node) ? node.text : undefined);
+const stringValue = (ts, node) => (node && ts.isStringLiteralLike(node) ? node.text : undefined);
 
 /** The root name of `it`, `it.concurrent` or `it["skip"]`; calls in the chain end it, so `expect(x).toBe` has none. */
-function chainRoot(node) {
+function chainRoot(ts, node) {
 	let current = node;
 	const names = [];
 	for (;;) {
 		if (ts.isPropertyAccessExpression(current)) names.unshift(current.name.text);
-		else if (ts.isElementAccessExpression(current) && stringValue(current.argumentExpression) !== undefined)
+		else if (ts.isElementAccessExpression(current) && stringValue(ts, current.argumentExpression) !== undefined)
 			names.unshift(current.argumentExpression.text);
 		else break;
 		current = current.expression;
@@ -133,18 +169,18 @@ function chainRoot(node) {
 }
 
 /** Where a comment may not be: a suppression that hides a problem instead of fixing it. */
-function suppressions(sf, at) {
+function suppressions(ts, sf, at) {
 	const text = sf.text;
 	const found = new Map();
 	const jsxTexts = [];
 	const visit = (node) => {
-		if (node.kind >= kind.FirstJSDocNode && node.kind <= kind.LastJSDocNode) return;
+		if (node.kind >= ts.SyntaxKind.FirstJSDocNode && node.kind <= ts.SyntaxKind.LastJSDocNode) return;
 		const children = node.getChildren(sf);
 		if (children.length > 0) {
 			for (const child of children) visit(child);
 			return;
 		}
-		if (node.kind === kind.JsxText) jsxTexts.push(node);
+		if (node.kind === ts.SyntaxKind.JsxText) jsxTexts.push(node);
 		const ranges = [
 			...(ts.getLeadingCommentRanges(text, node.pos) ?? []),
 			...(ts.getTrailingCommentRanges(text, node.end) ?? []),
@@ -161,48 +197,51 @@ function suppressions(sf, at) {
 
 // ---- the database is never faked ----
 
-function moduleName(node) {
-	if (ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) return stringValue(node.moduleSpecifier);
+function moduleName(ts, node) {
+	if (ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) return stringValue(ts, node.moduleSpecifier);
 	if (ts.isImportEqualsDeclaration(node) && ts.isExternalModuleReference(node.moduleReference))
-		return stringValue(node.moduleReference.expression);
-	if (ts.isCallExpression(node) && (node.expression.kind === kind.ImportKeyword || isName(node.expression, "require")))
-		return stringValue(node.arguments[0]);
+		return stringValue(ts, node.moduleReference.expression);
+	if (
+		ts.isCallExpression(node) &&
+		(node.expression.kind === ts.SyntaxKind.ImportKeyword || isName(ts, node.expression, "require"))
+	)
+		return stringValue(ts, node.arguments[0]);
 	return undefined;
 }
 
-const isName = (node, name) => ts.isIdentifier(node) && node.text === name;
+const isName = (ts, node, name) => ts.isIdentifier(node) && node.text === name;
 
 /** `vi.mock("x")` and `vi.mock(import("x"))`: the name of the module being replaced. */
-function mockedModule(call) {
+function mockedModule(ts, call) {
 	const [target] = call.arguments;
-	if (target && ts.isCallExpression(target) && target.expression.kind === kind.ImportKeyword)
-		return stringValue(target.arguments[0]);
-	return stringValue(target);
+	if (target && ts.isCallExpression(target) && target.expression.kind === ts.SyntaxKind.ImportKeyword)
+		return stringValue(ts, target.arguments[0]);
+	return stringValue(ts, target);
 }
 
 const words = (name) => name.match(/[A-Z]+(?![a-z])|[A-Z]?[a-z]+|\d+/g) ?? [];
 
 /** True for a spied-on target like `db`, `pool`, `testDb` or `ctx.pgPool`. */
-const namesDatabase = (node) =>
-	descendants(node).some(
+const namesDatabase = (ts, node) =>
+	descendants(ts, node).some(
 		(part) => ts.isIdentifier(part) && words(part.text).some((word) => DATABASE_WORDS.has(word.toLowerCase())),
 	);
 
-function fakeDatabase(nodes, at) {
+function fakeDatabase(ts, nodes, at) {
 	const problems = [];
 	for (const node of nodes) {
-		const imported = moduleName(node);
+		const imported = moduleName(ts, node);
 		if (imported !== undefined && FAKE_DATABASE.test(imported)) {
 			problems.push(at(node.getStart(), `${imported} is a fake database: tests run on the real Postgres`));
 		}
 		if (!ts.isCallExpression(node) || !ts.isPropertyAccessExpression(node.expression)) continue;
-		const { root, names } = chainRoot(node.expression);
+		const { root, names } = chainRoot(ts, node.expression);
 		if (root !== "vi" && root !== "jest") continue;
-		const mocked = MOCK_METHODS.has(names[0]) ? mockedModule(node) : undefined;
+		const mocked = MOCK_METHODS.has(names[0]) ? mockedModule(ts, node) : undefined;
 		if (mocked !== undefined && (DATABASE_MODULE.test(mocked) || FAKE_DATABASE.test(mocked))) {
 			problems.push(at(node.getStart(), `${mocked} is mocked: tests run on the real Postgres`));
 		}
-		if (names[0] === "spyOn" && node.arguments[0] && namesDatabase(node.arguments[0])) {
+		if (names[0] === "spyOn" && node.arguments[0] && namesDatabase(ts, node.arguments[0])) {
 			problems.push(at(node.getStart(), "the database is spied on: tests run on the real Postgres"));
 		}
 	}
@@ -212,11 +251,11 @@ function fakeDatabase(nodes, at) {
 // ---- tests ----
 
 /** Skipped, focused and parameterized tests: one test per AC, and every test runs. */
-function skippedTests(nodes, at) {
+function skippedTests(ts, nodes, at) {
 	const problems = [];
 	for (const node of nodes) {
 		if (ts.isPropertyAccessExpression(node) || ts.isElementAccessExpression(node)) {
-			const { root, names } = chainRoot(node);
+			const { root, names } = chainRoot(ts, node);
 			const name = names.at(-1);
 			if (TEST_ROOTS.has(root) && BANNED_MODIFIERS.has(name))
 				problems.push(at(node.getStart(), `${root}.${name} is not allowed`));
@@ -227,36 +266,36 @@ function skippedTests(nodes, at) {
 		if (ts.isIdentifier(node.expression) && BANNED_NAMES.has(node.expression.text)) {
 			problems.push(at(node.getStart(), `${node.expression.text} is not allowed`));
 		}
-		if (!TEST_ROOTS.has(chainRoot(node.expression).root)) continue;
+		if (!TEST_ROOTS.has(chainRoot(ts, node.expression).root)) continue;
 		for (const option of node.arguments.filter(ts.isObjectLiteralExpression).flatMap((object) => object.properties)) {
 			const name =
 				option.name && (ts.isIdentifier(option.name) || ts.isStringLiteral(option.name)) ? option.name.text : undefined;
-			const off = ts.isPropertyAssignment(option) && option.initializer.kind === kind.FalseKeyword;
+			const off = ts.isPropertyAssignment(option) && option.initializer.kind === ts.SyntaxKind.FalseKeyword;
 			if (BANNED_OPTIONS.has(name) && !off) problems.push(at(option.getStart(), `the ${name} option is not allowed`));
 		}
 	}
 	return problems;
 }
 
-const isTestCall = (node) => {
+const isTestCall = (ts, node) => {
 	if (!ts.isCallExpression(node)) return false;
-	const { root, names } = chainRoot(node.expression);
+	const { root, names } = chainRoot(ts, node.expression);
 	return (root === "it" || root === "test") && names.every((name) => TEST_MODIFIERS.has(name));
 };
 
-const isExpectCall = (node) => {
+const isExpectCall = (ts, node) => {
 	if (!ts.isCallExpression(node)) return false;
 	const callee = node.expression;
-	if (isName(callee, "expect")) return true;
+	if (isName(ts, callee, "expect")) return true;
 	return (
 		ts.isPropertyAccessExpression(callee) &&
-		isName(callee.expression, "expect") &&
+		isName(ts, callee.expression, "expect") &&
 		["soft", "poll"].includes(callee.name.text)
 	);
 };
 
 /** The statement an `expect` belongs to, or the body of an arrow function when it has no block. */
-function statementOf(node) {
+function statementOf(ts, node) {
 	let current = node;
 	while (current.parent) {
 		const { parent } = current;
@@ -269,21 +308,21 @@ function statementOf(node) {
 }
 
 /** The result number in the `// DB-3.1` comment on the line right above `node`'s statement, or undefined. */
-function resultAbove(sf, node) {
-	const statement = statementOf(node);
+function resultAbove(ts, sf, node) {
+	const statement = statementOf(ts, node);
 	const comment = ts.getLeadingCommentRanges(sf.text, statement.getFullStart())?.at(-1);
-	if (!comment || comment.kind !== kind.SingleLineCommentTrivia) return undefined;
+	if (!comment || comment.kind !== ts.SyntaxKind.SingleLineCommentTrivia) return undefined;
 	const line = (position) => sf.getLineAndCharacterOfPosition(position).line;
 	if (line(comment.end) + 1 !== line(statement.getStart(sf))) return undefined;
 	return RESULT_COMMENT.exec(sf.text.slice(comment.pos, comment.end))?.[1];
 }
 
 /** Reads the tests in one file into `tests` and returns the problems inside the file itself. */
-function readTests(sf, nodes, at, tests) {
-	const problems = skippedTests(nodes, at);
+function readTests(ts, sf, nodes, at, tests) {
+	const problems = skippedTests(ts, nodes, at);
 	const found = [];
-	for (const node of nodes.filter(isTestCall)) {
-		const title = stringValue(node.arguments[0]);
+	for (const node of nodes.filter((node) => isTestCall(ts, node))) {
+		const title = stringValue(ts, node.arguments[0]);
 		const match = title === undefined ? null : TEST_TITLE.exec(title);
 		const where = (message) => at(node.getStart(), message);
 		if (title === undefined) problems.push(where("the test title must be a string"));
@@ -293,8 +332,9 @@ function readTests(sf, nodes, at, tests) {
 		else found.push({ node, id: match[1], at: at(node.getStart()), expects: [] });
 	}
 
-	const ownerOf = (node) => nodes.findLast((test) => isTestCall(test) && test.pos <= node.pos && node.end <= test.end);
-	for (const expectation of nodes.filter(isExpectCall)) {
+	const ownerOf = (node) =>
+		nodes.findLast((test) => isTestCall(ts, test) && test.pos <= node.pos && node.end <= test.end);
+	for (const expectation of nodes.filter((node) => isExpectCall(ts, node))) {
 		const owner = ownerOf(expectation);
 		if (!owner) {
 			problems.push(
@@ -302,7 +342,7 @@ function readTests(sf, nodes, at, tests) {
 			);
 			continue;
 		}
-		const result = resultAbove(sf, expectation);
+		const result = resultAbove(ts, sf, expectation);
 		if (result === undefined)
 			problems.push(
 				at(
@@ -352,6 +392,7 @@ function matchTests(acs, tests) {
 
 /** Checks `packages/core/src` against `docs/acceptance/core` and returns the problems, empty when it passes. */
 export function checkFence(root) {
+	const ts = loadTypeScript(root);
 	const { acs, problems } = readAcceptance(root);
 	const tests = [];
 	for (const file of sourceFiles(root)) {
@@ -360,9 +401,9 @@ export function checkFence(root) {
 			const place = `${file}:${sf.getLineAndCharacterOfPosition(position).line + 1}`;
 			return message === undefined ? place : `${place}: ${message}`;
 		};
-		const nodes = descendants(sf);
-		problems.push(...suppressions(sf, at), ...fakeDatabase(nodes, at));
-		if (TEST_FILE.test(file)) problems.push(...readTests(sf, nodes, at, tests));
+		const nodes = descendants(ts, sf);
+		problems.push(...suppressions(ts, sf, at), ...fakeDatabase(ts, nodes, at));
+		if (TEST_FILE.test(file)) problems.push(...readTests(ts, sf, nodes, at, tests));
 	}
 	problems.push(...matchTests(acs, tests));
 	return problems;
