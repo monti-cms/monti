@@ -75,9 +75,16 @@ export type Monti<R extends ResourceTree = ResourceTree> = MontiClient<R> & {
 	onEvent(listener: EventListener): () => void;
 };
 
-/** A server plugin: the operations it adds to the resource tree and its subscriber to committed writes. */
+/** An external service whose keys the key store keeps: `check` resolves when `secret` connects and rejects when not. */
+export interface KeyServiceDefinition {
+	service: string;
+	check(secret: string): Promise<void>;
+}
+
+/** A server plugin: the operations it adds to the resource tree, its key services and its subscriber to committed writes. */
 export interface Plugin {
 	name: string;
 	operations?: Record<string, Record<string, Operation>>;
+	keyServices?: KeyServiceDefinition[];
 	onEvent?: (event: MontiEvent, ctx: { monti: Monti }) => void | Promise<void>;
 }

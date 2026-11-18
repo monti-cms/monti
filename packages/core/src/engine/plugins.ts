@@ -1,5 +1,5 @@
 import { MontiError } from "./errors";
-import type { Operation, Plugin, ResourceTree } from "./types";
+import type { KeyServiceDefinition, Operation, Plugin, ResourceTree } from "./types";
 
 /**
  * The resource tree with each plugin's operations added at `<resource>.<action>`. A plugin may add actions to an
@@ -33,4 +33,17 @@ function addActions(
 		merged[action] = operation;
 	}
 	return merged;
+}
+
+/** The key services every plugin registers, in plugin order. */
+export function keyServicesOf(plugins: Plugin[]): KeyServiceDefinition[] {
+	return plugins.filter(hasKeyServices).flatMap(keyServicesOfPlugin);
+}
+
+function hasKeyServices(plugin: Plugin): plugin is Plugin & { keyServices: KeyServiceDefinition[] } {
+	return plugin.keyServices !== undefined;
+}
+
+function keyServicesOfPlugin(plugin: Plugin & { keyServices: KeyServiceDefinition[] }): KeyServiceDefinition[] {
+	return plugin.keyServices;
 }
