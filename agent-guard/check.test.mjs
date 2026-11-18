@@ -47,8 +47,20 @@ const INITIAL_FILES = {
 	"package.json": "{}\n",
 };
 
+// A condition that has no test, and the test that answers it; `fixture({ ...CONDITION })` starts with the condition committed.
+const CONDITION = { "docs/acceptance/core/db.md": "DB-1  A thing\n  결과  DB-1.1  it happens\n" };
+const FENCE_TEST = `import { expect, it } from "vitest";
+
+it("DB-1 does the thing", () => {
+	// DB-1.1
+	expect(1).toBe(1);
+});
+`;
+const UNMARKED_TEST = FENCE_TEST.replace("\t// DB-1.1\n", "");
+const FENCE_FAILED = /The acceptance fence failed:\n- docs\/acceptance\/core\/db\.md:1: DB-1 has no test/;
+
 /** A git repository with one commit, a fake pnpm on PATH and a private tmpdir for the hook's state files. */
-function fixture() {
+function fixture(extraFiles = {}) {
 	const base = realpathSync(mkdtempSync(path.join(tmpdir(), "monti-check-test-")));
 	roots.push(base);
 	const repo = path.join(base, "repo");
@@ -99,7 +111,7 @@ function fixture() {
 	f.git("config", "user.email", "test@example.com");
 	f.git("config", "user.name", "Test");
 	f.git("config", "commit.gpgsign", "false");
-	for (const [file, content] of Object.entries(INITIAL_FILES)) f.write(file, content);
+	for (const [file, content] of Object.entries({ ...INITIAL_FILES, ...extraFiles })) f.write(file, content);
 	f.git("add", "-A");
 	f.git("commit", "-q", "-m", "initial");
 	return f;
@@ -271,6 +283,71 @@ describe("code checks", () => {
 		assert.equal(f.stop().status, 2);
 		assert.equal(f.stop().status, 2);
 		assert.equal(f.lintRuns(), 2);
+	});
+});
+
+describe("the acceptance fence on a stop", () => {
+	test("runs together with lint, and a core change that matches the conditions passes", () => {
+		const f = fixture(CONDITION);
+		f.write("packages/core/src/db.test.ts", FENCE_TEST);
+		allowed(f.stop());
+		assert.equal(f.lintRuns(), 1);
+	});
+
+	test("blocks a core change that breaks it, names the problem and still ran lint", () => {
+		const f = fixture(CONDITION);
+		f.write("packages/core/src/db.test.ts", UNMARKED_TEST);
+		const result = f.stop();
+		assert.equal(result.status, 2);
+		assert.match(
+			result.stderr,
+			/The acceptance fence failed:\n- packages\/core\/src\/db\.test\.ts:4: the line above this expect/,
+		);
+		assert.doesNotMatch(result.stderr, /pnpm lint/);
+		assert.ok(result.stderr.trimEnd().endsWith(FIX_AND_RETRY));
+		assert.equal(f.lintRuns(), 1);
+	});
+
+	test("blocks a change with no test for a condition, and reports lint and the fence together", () => {
+		const f = fixture(CONDITION);
+		f.write("packages/core/src/a.ts", "export const a = 2;\n");
+		f.lintFails("lint error");
+		const result = f.stop();
+		assert.equal(result.status, 2);
+		assert.match(result.stderr, /`pnpm lint` failed:\nlint error\n\nThe acceptance fence failed:/);
+		assert.match(result.stderr, FENCE_FAILED);
+	});
+
+	test("lists 40 problems and counts the rest", () => {
+		const conditions = Array.from(
+			{ length: 45 },
+			(_, i) => `DB-${i + 1}  A thing\n  결과  DB-${i + 1}.1  it happens\n`,
+		);
+		const f = fixture({ "docs/acceptance/core/db.md": conditions.join("\n") });
+		f.write("packages/core/src/a.ts", "export const a = 2;\n");
+		const { stderr } = f.stop();
+		assert.equal(stderr.match(/^- docs\/acceptance/gm).length, 40);
+		assert.match(stderr, /\.\.\.and 5 more\n/);
+	});
+
+	test("a failing fence counts toward the three strikes, and a fixed one resets them", () => {
+		const f = fixture(CONDITION);
+		f.write("packages/core/src/db.test.ts", UNMARKED_TEST);
+		assert.ok(f.stop().stderr.includes(FIX_AND_RETRY));
+		assert.ok(f.stop().stderr.includes(FIX_AND_RETRY));
+		assert.ok(f.stop().stderr.includes(ESCALATION_START));
+		allowed(f.stop());
+
+		f.write("packages/core/src/db.test.ts", FENCE_TEST);
+		allowed(f.stop());
+		assert.equal(f.lintRuns(), 4);
+	});
+
+	test("does not read the fence for a change that needs no lint", () => {
+		const f = fixture(CONDITION);
+		f.write("docs/notes.md", "changed\n");
+		allowed(f.stop());
+		assert.equal(f.lintRuns(), 0);
 	});
 });
 
@@ -527,6 +604,64 @@ describe("--pre-commit", () => {
 	});
 });
 
+describe("--pre-commit and the acceptance fence", () => {
+	test("lets the owner commit the conditions alone before any test exists", () => {
+		const f = fixture();
+		f.write("docs/acceptance/core/db.md", CONDITION["docs/acceptance/core/db.md"]);
+		f.git("add", "-A");
+		allowed(f.run(["--pre-commit"], { thread: "" }));
+	});
+
+	test("blocks a commit that touches the core while a condition has no test, and names the condition", () => {
+		const f = fixture(CONDITION);
+		f.write("packages/core/package.json", "{}\n");
+		f.git("add", "-A");
+		for (const thread of ["", "thread:pm", WORKER]) {
+			const result = f.run(["--pre-commit"], { thread });
+			assert.equal(result.status, 1);
+			assert.match(result.stderr, FENCE_FAILED);
+		}
+	});
+
+	test("lets a commit of the core through when the tests match", () => {
+		const f = fixture(CONDITION);
+		f.write("packages/core/src/db.test.ts", FENCE_TEST);
+		f.git("add", "-A");
+		allowed(f.run(["--pre-commit"]));
+		allowed(f.run(["--pre-commit"], { thread: "" }));
+
+		f.write("packages/core/src/db.test.ts", UNMARKED_TEST);
+		f.git("add", "-A");
+		assert.match(f.run(["--pre-commit"], { thread: "" }).stderr, /the line above this expect/);
+	});
+
+	test("checks a worker's commit of other code, but not the owner's", () => {
+		const f = fixture(CONDITION);
+		f.write("scripts/tool.mjs", "export {};\n");
+		f.git("add", "-A");
+		assert.equal(f.run(["--pre-commit"]).status, 1);
+		allowed(f.run(["--pre-commit"], { thread: "" }));
+	});
+
+	test("does not run it for a commit that has no code", () => {
+		const f = fixture(CONDITION);
+		f.write("docs/notes.md", "changed\n");
+		f.git("add", "-A");
+		allowed(f.run(["--pre-commit"]));
+	});
+
+	test("takes a protected file before the fence", () => {
+		const f = fixture(CONDITION);
+		f.write("docs/acceptance/core/db.md", "changed\n");
+		f.write("packages/core/src/a.ts", "export {};\n");
+		f.git("add", "-A");
+		const result = f.run(["--pre-commit"]);
+		assert.equal(result.status, 1);
+		assert.match(result.stderr, /Protected files are staged/);
+		assert.doesNotMatch(result.stderr, /fence/);
+	});
+});
+
 describe("without options", () => {
 	test("runs the code checks and exits with their result", () => {
 		const f = fixture();
@@ -539,5 +674,25 @@ describe("without options", () => {
 		assert.equal(failed.status, 1);
 		assert.match(failed.stdout, /lint error/);
 		assert.equal(f.lintRuns(), 2);
+	});
+
+	test("fails on the fence alone, and reports the fence next to a failing lint", () => {
+		const f = fixture(CONDITION);
+		const fenceOnly = f.run([], { thread: "" });
+		assert.equal(fenceOnly.status, 1);
+		assert.match(fenceOnly.stdout, /lint passed/);
+		assert.match(fenceOnly.stderr, FENCE_FAILED);
+
+		f.lintFails("lint error");
+		const both = f.run([], { thread: "" });
+		assert.equal(both.status, 1);
+		assert.match(both.stdout, /lint error/);
+		assert.match(both.stderr, FENCE_FAILED);
+		assert.equal(f.lintRuns(), 2);
+
+		f.write("packages/core/src/db.test.ts", FENCE_TEST);
+		f.lintPasses();
+		assert.equal(f.run([], { thread: "" }).status, 0);
+		assert.equal(f.lintRuns(), 3);
 	});
 });

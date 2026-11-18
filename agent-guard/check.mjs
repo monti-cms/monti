@@ -3,7 +3,7 @@
 //
 //   node agent-guard/check.mjs --stop        Stop hook (Claude Code, Codex, Antigravity): reads the hook payload on stdin
 //   node agent-guard/check.mjs --pre-commit  Git pre-commit hook
-//   node agent-guard/check.mjs               run the code checks and exit 0 or 1
+//   node agent-guard/check.mjs               run the code checks (`pnpm lint` and the acceptance fence) and exit 0 or 1
 //
 // Only worker sessions are checked: a delegated task (`T3CODE_THREAD_ID`) or a sub-agent (`agent_id` in the payload).
 // The PM and the owner are never stopped by it. Anything unexpected inside the check fails open with a warning.
@@ -18,6 +18,7 @@ const WORKER_THREAD_PREFIX = "thread:delegated-task:";
 const MAX_FAILURES = 3;
 const LINT_TIMEOUT_MS = Number(process.env.MONTI_CHECK_TIMEOUT_MS) || 120_000;
 const OUTPUT_TAIL_LINES = 40;
+const MAX_PROBLEMS = 40;
 const MAX_BUFFER = 256 * 1024 * 1024;
 
 // A worker may not change these; they define the task and the rules it is checked against.
@@ -126,6 +127,18 @@ function runLint(root) {
 
 const tail = (text) => text.trimEnd().split("\n").slice(-OUTPUT_TAIL_LINES).join("\n");
 
+/** The core's tests against the acceptance conditions (fence.mjs). Loaded when needed, so a missing TypeScript only skips the hooks. */
+async function runFence(root) {
+	const { checkFence } = await import("./fence.mjs");
+	return checkFence(root);
+}
+
+function fenceDetail(problems) {
+	const shown = problems.slice(0, MAX_PROBLEMS).map((problem) => `- ${problem}`);
+	if (problems.length > MAX_PROBLEMS) shown.push(`...and ${problems.length - MAX_PROBLEMS} more`);
+	return `The acceptance fence failed:\n${shown.join("\n")}`;
+}
+
 // The per-session state: how many checks in a row failed, and the working tree that last passed.
 const EMPTY_STATE = { failureCount: 0, escalated: false, lastPassingFingerprint: null };
 
@@ -188,12 +201,16 @@ async function evaluate(root, key) {
 		return null;
 	}
 
+	const problems = await runFence(root);
 	const lint = await runLint(root);
-	if (lint.ok) {
+	if (lint.ok && problems.length === 0) {
 		saveState(file, { failureCount: 0, escalated: false, lastPassingFingerprint: current });
 		return null;
 	}
-	return fail(file, state, `\`pnpm lint\` failed:\n${tail(lint.output)}`);
+	const details = [];
+	if (!lint.ok) details.push(`\`pnpm lint\` failed:\n${tail(lint.output)}`);
+	if (problems.length > 0) details.push(fenceDetail(problems));
+	return fail(file, state, details.join("\n\n"));
 }
 
 function fail(file, state, detail) {
@@ -225,7 +242,7 @@ async function stop() {
 	const antigravity = Object.hasOwn(payload, "executionNum");
 	if (antigravity && payload.fullyIdle !== true) return 0;
 
-	const root = git(process.cwd(), ["rev-parse", "--show-toplevel"]).trim();
+	const root = topLevel();
 	const session = payload.session_id ?? payload.sessionId ?? payload.conversationId ?? process.env.T3CODE_THREAD_ID;
 	const reason = await evaluate(root, [session ?? root, payload.agent_id ?? ""].join("|"));
 
@@ -240,32 +257,55 @@ async function stop() {
 	return 0;
 }
 
-function preCommit() {
+const topLevel = () => git(process.cwd(), ["rev-parse", "--show-toplevel"]).trim();
+
+async function preCommit() {
+	const root = topLevel();
+	const worker = isWorkerThread();
+	const staged = splitNul(git(root, ["diff", "--cached", "--name-only", "-z", "--no-renames"]));
+
 	// The owner and the PM commit the protected files; a worker's commit may not contain them.
-	if (!isWorkerThread()) return 0;
-	const root = git(process.cwd(), ["rev-parse", "--show-toplevel"]).trim();
-	const staged = splitNul(git(root, ["diff", "--cached", "--name-only", "-z", "--no-renames"])).filter(isProtected);
-	if (staged.length === 0) return 0;
-	process.stderr.write(
-		`Protected files are staged:\n${staged.map((name) => `- ${name}`).join("\n")}\nUnstage and restore them (git restore --staged --worktree --source=HEAD -- <file>) and commit the rest.\n`,
-	);
-	return 1;
+	const protectedFiles = worker ? staged.filter(isProtected) : [];
+	if (protectedFiles.length > 0) {
+		process.stderr.write(
+			`Protected files are staged:\n${protectedFiles.map((name) => `- ${name}`).join("\n")}\nUnstage and restore them (git restore --staged --worktree --source=HEAD -- <file>) and commit the rest.\n`,
+		);
+		return 1;
+	}
+
+	// A commit that touches the core must keep its tests matching the acceptance conditions; the owner's commit of the conditions alone is not held to it.
+	const touchesCore = staged.some((file) => file.startsWith("packages/core/")) || (worker && staged.some(isCode));
+	if (!touchesCore) return 0;
+	const problems = await runFence(root);
+	if (problems.length > 0) process.stderr.write(`${fenceDetail(problems)}\n`);
+	return problems.length > 0 ? 1 : 0;
 }
 
-function lint() {
-	const result = spawnSync("pnpm", ["lint"], { stdio: "inherit", shell: process.platform === "win32" });
-	return result.status === 0 ? 0 : 1;
+/** `pnpm lint` and the fence, both run so one report shows everything that is wrong. */
+async function checkAll() {
+	const root = topLevel();
+	const lint = spawnSync("pnpm", ["lint"], { stdio: "inherit", shell: process.platform === "win32" });
+	const problems = await runFence(root);
+	if (problems.length > 0) process.stderr.write(`${fenceDetail(problems)}\n`);
+	return lint.status === 0 && problems.length === 0 ? 0 : 1;
 }
 
 async function main() {
 	const mode = process.argv[2];
-	if (mode === undefined) return lint();
+	if (mode === undefined) {
+		try {
+			return await checkAll();
+		} catch (error) {
+			process.stderr.write(`agent-guard: the check could not run (${error.message})\n`);
+			return 1;
+		}
+	}
 	if (mode !== "--stop" && mode !== "--pre-commit") {
 		process.stderr.write(`Unknown option ${mode}. Use --stop, --pre-commit or no option.\n`);
 		return 1;
 	}
 	try {
-		return mode === "--stop" ? await stop() : preCommit();
+		return mode === "--stop" ? await stop() : await preCommit();
 	} catch (error) {
 		process.stderr.write(`agent-guard: the check could not run and was skipped (${error.message})\n`);
 		return 0;

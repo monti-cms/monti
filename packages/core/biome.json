@@ -51,6 +51,17 @@
 			}
 		},
 		{
+			"includes": ["src/**/*.test.{ts,mts,cts,tsx}", "src/**/__test__/**"],
+			"linter": {
+				"rules": {
+					"suspicious": {
+						"noFocusedTests": "error",
+						"noSkippedTests": "error"
+					}
+				}
+			}
+		},
+		{
 			"includes": ["src/**/types.{ts,mts,cts,tsx}"],
 			"plugins": ["./biome-plugins/types-only.grit"]
 		}

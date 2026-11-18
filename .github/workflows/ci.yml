@@ -1,4 +1,4 @@
-# Automated checks. On every push: lint (Biome and the core's import rules) and the core's suppression check.
+# Automated checks. On every push: lint (Biome and the core's import rules), the core's tests against the acceptance conditions, and the core's suppression check.
 name: CI
 
 # Runs on push only (the PR page shows the result of that commit). Also triggering on PRs would run the same checks twice.
@@ -27,8 +27,9 @@ jobs:
           node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      # Check only; nothing is fixed.
-      - run: pnpm lint
+      # Check only; nothing is fixed. `pnpm lint`, then the core's tests against docs/acceptance/core (one test per condition, result numbers, no skips,
+      # no fake database, no suppression comment).
+      - run: node agent-guard/check.mjs
       # The core is fixed, not silenced: the pushed commits add no `biome-ignore`, `@ts-expect-error`, `@ts-nocheck` or `eslint-disable` under
       # packages/core. A new branch (an all-zero `before`) or a `before` that is gone (after a force push) is compared with where it left main.
       - name: no new suppression in the core
