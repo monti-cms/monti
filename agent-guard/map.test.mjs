@@ -141,10 +141,32 @@ test("treats a declaration named in a local export list as exported", () => {
 	);
 	assert.deepEqual(lines(map).slice(-4), [
 		"  export function one(): void",
-		"  export function two(): void",
 		"  export { one, two as second }",
+		"  [internal] function two(): void",
 		"  [internal] function three(): void",
 	]);
+});
+
+test("shows a declaration exported only under an alias by the alias, not as an export under its own name", () => {
+	const map = buildMap(
+		fixture({
+			"engine/a.ts": [
+				"function foo(): void {}",
+				"const value = 1;",
+				"function same(): void {}",
+				"function both(): void {}",
+				"export { foo as bar, value as total, same as same, both, both as alias };",
+				"",
+			].join("\n"),
+		}),
+	);
+	assert.deepEqual(lines(map).slice(-4), [
+		"  export function same(): void",
+		"  export function both(): void",
+		"  export { foo as bar, value as total, same as same, both, both as alias }",
+		"  [internal] function foo(): void",
+	]);
+	assert.doesNotMatch(map, /export (?:function foo|const value)/);
 });
 
 test("says so when the core has no source files", () => {

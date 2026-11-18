@@ -595,6 +595,14 @@ describe("environment variables", () => {
 		['process.env.TEST_DATABASE_URL ?? "postgres://localhost:5432/postgres"', "TEST_DATABASE_URL"],
 		['process.env.TEST_DATABASE_URL || "postgres://localhost/postgres"', "TEST_DATABASE_URL"],
 		["(process.env.NODE_ENV) ?? (`production`)", "NODE_ENV"],
+		["process.env.NODE_ENV ?? false", "NODE_ENV"],
+		["process.env.NODE_ENV || true", "NODE_ENV"],
+		["process.env.NODE_ENV ?? null", "NODE_ENV"],
+		["process.env.TEST_DATABASE_URL ?? -1", "TEST_DATABASE_URL"],
+		["process.env.TEST_DATABASE_URL ?? (-1n)", "TEST_DATABASE_URL"],
+		['process.env.TEST_DATABASE_URL ?? { host: "localhost" }', "TEST_DATABASE_URL"],
+		['process.env.TEST_DATABASE_URL ?? ["postgres://localhost"]', "TEST_DATABASE_URL"],
+		["globalThis.process.env.NODE_ENV ?? 'test'", "NODE_ENV"],
 	];
 	for (const [code, name] of FALLBACKS) {
 		test(`${code} fails: a fallback value is written in`, () => {
@@ -607,6 +615,7 @@ describe("environment variables", () => {
 
 	test("a fallback that is not a written-in value passes", () => {
 		passes(helper("const a = process.env.NODE_ENV ?? undefined;\nconst b = process.env.TEST_DATABASE_URL ?? a;"));
+		passes(helper("const a = 1;\nexport const b = process.env.NODE_ENV ?? -a;"));
 	});
 
 	const NOT_BY_NAME = [
@@ -616,6 +625,15 @@ describe("environment variables", () => {
 		"const env = process.env;",
 		"const all = { ...process.env };",
 		"const name = 'NODE_ENV';\nconst value = process.env[name];",
+		'export const dev = process["env"].NODE_ENV;',
+		"export const dev = process[`env`].NODE_ENV;",
+		'export const dev = (process)["env"];',
+		"const { env } = process;",
+		"const { env: vars } = process;",
+		'const { "env": vars } = process;',
+		"const { env, argv } = globalThis.process;",
+		'export const dev = globalThis.process["env"].NODE_ENV;',
+		"export const { NODE_ENV } = globalThis.process.env;",
 	];
 	for (const code of NOT_BY_NAME) {
 		test(`${code.replaceAll("\n", " ")} fails: process.env is read only as process.env.NAME`, () => {
@@ -628,6 +646,48 @@ describe("environment variables", () => {
 
 	test("process.env in a string or another object's env is not read", () => {
 		passes(source('export const a = "process.env.FOO";\nconst config = { env: {} };\nexport const b = config.env;'));
+		passes(source('const { argv } = process;\nconst { env } = config;\nexport const a = process["argv"];'));
+	});
+
+	test("globalThis.process.env is read like process.env", () => {
+		passes(source("export const dev = globalThis.process.env.NODE_ENV;"));
+		fails(
+			source("export const foo = globalThis.process.env.FOO;"),
+			/a\.ts:1: process\.env\.FOO is not declared in packages\/core\/env\.d\.ts/,
+		);
+	});
+
+	test("only ProcessEnv inside namespace NodeJS approves a variable", () => {
+		const declared = (text) => ({ ...WITH_ENV, [ENV_TYPES]: text });
+		const notDeclared = /a\.ts:1: process\.env\.FOO is not declared in packages\/core\/env\.d\.ts/;
+		const read = "export const foo = process.env.FOO;";
+		fails(source(read, declared(`${DECLARED}interface ProcessEnv {\n\treadonly FOO?: string;\n}\n`)), notDeclared);
+		fails(
+			source(
+				read,
+				declared(
+					`${DECLARED}declare namespace Other {\n\tinterface ProcessEnv {\n\t\treadonly FOO?: string;\n\t}\n}\n`,
+				),
+			),
+			notDeclared,
+		);
+		fails(
+			source(
+				read,
+				declared(
+					`${DECLARED}declare namespace Outer {\n\tnamespace NodeJS {\n\t\tinterface ProcessEnv {\n\t\t\treadonly FOO?: string;\n\t\t}\n\t}\n}\n`,
+				),
+			),
+			notDeclared,
+		);
+		passes(
+			source(
+				read,
+				declared(
+					`${DECLARED}declare global {\n\tnamespace NodeJS {\n\t\tinterface ProcessEnv {\n\t\t\treadonly FOO?: string;\n\t\t}\n\t}\n}\nexport {};\n`,
+				),
+			),
+		);
 	});
 });
 

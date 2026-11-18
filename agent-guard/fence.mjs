@@ -10,7 +10,8 @@
 //
 // Sources are read with the TypeScript parser, so a string that looks like a comment or a call is not mistaken for one.
 // What it cannot see: a test API renamed on import (`import { it as spec }`), a mock target that is not a string literal,
-// environment variables read another way than `process.env` (`import { env } from "node:process"`, `globalThis.process`).
+// environment variables read another way than through `process` or `globalThis.process` (`import { env } from
+// "node:process"`, `process[key]` with a computed key, `process` passed on under another name).
 
 import { spawnSync } from "node:child_process";
 import { readdirSync, readFileSync } from "node:fs";
@@ -256,8 +257,36 @@ function fakeDatabase(ts, nodes, at) {
 
 // ---- environment variables ----
 
-const isProcessEnv = (ts, node) =>
-	ts.isPropertyAccessExpression(node) && node.name.text === "env" && isName(ts, node.expression, "process");
+/** `process` or `globalThis.process`, with any parentheses around it. */
+function isProcess(ts, node) {
+	const bare = skipParentheses(ts, node);
+	if (isName(ts, bare, "process")) return true;
+	return (
+		ts.isPropertyAccessExpression(bare) &&
+		bare.name.text === "process" &&
+		isName(ts, skipParentheses(ts, bare.expression), "globalThis")
+	);
+}
+
+/** `process.env`, `process["env"]` and `process[\`env\`]`, on `process` or `globalThis.process`. */
+function envAccess(ts, node) {
+	if (ts.isPropertyAccessExpression(node)) return node.name.text === "env" && isProcess(ts, node.expression);
+	if (ts.isElementAccessExpression(node))
+		return stringValue(ts, node.argumentExpression) === "env" && isProcess(ts, node.expression);
+	return false;
+}
+
+/** `const { env } = process` and `const { env: e } = globalThis.process`: the `env` taken out of `process` by name. */
+function envDestructured(ts, node) {
+	if (!ts.isObjectBindingPattern(node)) return false;
+	const { parent } = node;
+	if (!ts.isVariableDeclaration(parent) || parent.name !== node || !parent.initializer) return false;
+	if (!isProcess(ts, parent.initializer)) return false;
+	return node.elements.some((element) => {
+		const key = element.propertyName ?? element.name;
+		return (ts.isIdentifier(key) || ts.isStringLiteralLike(key)) && key.text === "env";
+	});
+}
 
 /** The expression `node` stands in once parentheses around it are taken away. */
 function outermost(ts, node) {
@@ -269,8 +298,22 @@ function outermost(ts, node) {
 const skipParentheses = (ts, node) =>
 	ts.isParenthesizedExpression(node) ? skipParentheses(ts, node.expression) : node;
 
-const isLiteral = (ts, node) =>
-	node !== undefined && (ts.isStringLiteralLike(node) || ts.isNumericLiteral(node) || ts.isTemplateExpression(node));
+/** A value written into the code: a string, number, `true`, `false`, `null`, `-1`, or an object or array literal. */
+function isLiteral(ts, node) {
+	if (node === undefined) return false;
+	const bare = skipParentheses(ts, node);
+	if (ts.isPrefixUnaryExpression(bare)) return isLiteral(ts, bare.operand);
+	return (
+		ts.isStringLiteralLike(bare) ||
+		ts.isNumericLiteral(bare) ||
+		ts.isBigIntLiteral(bare) ||
+		ts.isTemplateExpression(bare) ||
+		ts.isRegularExpressionLiteral(bare) ||
+		ts.isObjectLiteralExpression(bare) ||
+		ts.isArrayLiteralExpression(bare) ||
+		[ts.SyntaxKind.TrueKeyword, ts.SyntaxKind.FalseKeyword, ts.SyntaxKind.NullKeyword].includes(bare.kind)
+	);
+}
 
 /** `process.env.X ?? "value"` and `process.env.X || "value"`: a default written into the code. */
 function hasFallback(ts, node) {
@@ -279,10 +322,28 @@ function hasFallback(ts, node) {
 	if (!ts.isBinaryExpression(parent) || parent.left !== read) return false;
 	const operator = parent.operatorToken.kind;
 	if (operator !== ts.SyntaxKind.QuestionQuestionToken && operator !== ts.SyntaxKind.BarBarToken) return false;
-	return isLiteral(ts, skipParentheses(ts, parent.right));
+	return isLiteral(ts, parent.right);
 }
 
-/** The names declared on `interface ProcessEnv` in `packages/core/env.d.ts`; none when the file is missing. */
+/** True for `namespace NodeJS` at the top of the file or inside `declare global`, where Node's own types are merged. */
+function isNodeNamespace(ts, node) {
+	if (!ts.isModuleDeclaration(node) || !ts.isIdentifier(node.name) || node.name.text !== "NodeJS") return false;
+	const { parent } = node;
+	if (ts.isSourceFile(parent)) return true;
+	const outer = parent.parent;
+	return (
+		ts.isModuleBlock(parent) &&
+		ts.isModuleDeclaration(outer) &&
+		ts.isIdentifier(outer.name) &&
+		outer.name.text === "global" &&
+		ts.isSourceFile(outer.parent)
+	);
+}
+
+/**
+ * The names declared on `interface ProcessEnv` inside `namespace NodeJS` in `packages/core/env.d.ts`; none when the file is
+ * missing. Another `interface ProcessEnv` in the file does not reach `process.env` and approves nothing.
+ */
 function approvedEnvironment(ts, root) {
 	let text;
 	try {
@@ -294,6 +355,7 @@ function approvedEnvironment(ts, root) {
 	const names = new Set();
 	for (const node of descendants(ts, sf)) {
 		if (!ts.isInterfaceDeclaration(node) || node.name.text !== "ProcessEnv") continue;
+		if (!ts.isModuleBlock(node.parent) || !isNodeNamespace(ts, node.parent.parent)) continue;
 		for (const member of node.members) {
 			if (ts.isPropertySignature(member) && (ts.isIdentifier(member.name) || ts.isStringLiteralLike(member.name)))
 				names.add(member.name.text);
@@ -307,9 +369,11 @@ const BY_NAME = `process.env must be read as process.env.NAME, with NAME declare
 /** Every read of `process.env`: `process.env.NAME` for a declared NAME, and without a fallback written in. */
 function environmentReads(ts, nodes, at, approved) {
 	const problems = [];
-	for (const env of nodes.filter((node) => isProcessEnv(ts, node))) {
+	for (const pattern of nodes.filter((node) => envDestructured(ts, node)))
+		problems.push(at(pattern.getStart(), BY_NAME));
+	for (const env of nodes.filter((node) => envAccess(ts, node))) {
 		const { parent } = env;
-		if (!ts.isPropertyAccessExpression(parent) || parent.expression !== env) {
+		if (!ts.isPropertyAccessExpression(env) || !ts.isPropertyAccessExpression(parent) || parent.expression !== env) {
 			problems.push(at(env.getStart(), BY_NAME));
 			continue;
 		}

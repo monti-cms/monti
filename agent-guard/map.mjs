@@ -89,13 +89,19 @@ function declarationLine(ts, sf, node) {
 	return undefined;
 }
 
-/** The names a file exports with a local `export { name }`; those declarations are shown as exported. */
+/**
+ * The names a file exports under their own name with a local `export { name }`; those declarations are shown as exported.
+ * A name exported only under an alias (`export { name as other }`) is not: the export line itself shows the alias.
+ */
 function locallyExported(ts, sf) {
 	const names = new Set();
 	for (const statement of sf.statements) {
 		if (!ts.isExportDeclaration(statement) || statement.moduleSpecifier || !statement.exportClause) continue;
 		if (!ts.isNamedExports(statement.exportClause)) continue;
-		for (const element of statement.exportClause.elements) names.add((element.propertyName ?? element.name).text);
+		for (const element of statement.exportClause.elements) {
+			if (element.propertyName === undefined || element.propertyName.text === element.name.text)
+				names.add(element.name.text);
+		}
 	}
 	return names;
 }
