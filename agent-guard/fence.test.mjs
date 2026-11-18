@@ -551,6 +551,150 @@ describe("suppression comments", () => {
 	});
 });
 
+describe("environment variables", () => {
+	const SOURCE = "packages/core/src/a.ts";
+	const HELPER = "packages/core/src/__test__/database.ts";
+	const ENV_TYPES = "packages/core/env.d.ts";
+	const DECLARED = `declare namespace NodeJS {
+	interface ProcessEnv {
+		readonly NODE_ENV?: "development" | "production" | "test";
+		readonly TEST_DATABASE_URL?: string;
+	}
+}
+`;
+	const WITH_ENV = { ...PASSING, [ENV_TYPES]: DECLARED };
+	const source = (code, extra = WITH_ENV) => ({ ...extra, [SOURCE]: `${code}\n` });
+	const helper = (code) => ({ ...WITH_ENV, [HELPER]: `${code}\n` });
+
+	test("the variables declared on ProcessEnv in packages/core/env.d.ts are read anywhere", () => {
+		passes(source('export const dev = process.env.NODE_ENV === "development";'));
+		passes(source("export const url = process.env.TEST_DATABASE_URL;"));
+		passes(helper("export const dev = process.env.NODE_ENV;\nexport const url = process.env.TEST_DATABASE_URL;"));
+	});
+
+	test("a variable added to env.d.ts is approved, and none is without the file", () => {
+		const more = {
+			...WITH_ENV,
+			[ENV_TYPES]: DECLARED.replace("readonly NODE_ENV", "readonly FOO?: string;\n\t\treadonly NODE_ENV"),
+		};
+		passes(source("export const foo = process.env.FOO;", more));
+		fails(
+			source("export const dev = process.env.NODE_ENV;", PASSING),
+			/a\.ts:1: process\.env\.NODE_ENV is not declared in packages\/core\/env\.d\.ts/,
+		);
+	});
+
+	test("process.env.FOO fails, in source and in tests, until it is declared", () => {
+		const message =
+			/:1: process\.env\.FOO is not declared in packages\/core\/env\.d\.ts: ask the PM and owner to approve it/;
+		fails(source("export const foo = process.env.FOO;"), message);
+		fails(helper("export const foo = process.env.FOO;"), message);
+	});
+
+	const FALLBACKS = [
+		['process.env.TEST_DATABASE_URL ?? "postgres://localhost:5432/postgres"', "TEST_DATABASE_URL"],
+		['process.env.TEST_DATABASE_URL || "postgres://localhost/postgres"', "TEST_DATABASE_URL"],
+		["(process.env.NODE_ENV) ?? (`production`)", "NODE_ENV"],
+		["process.env.NODE_ENV ?? false", "NODE_ENV"],
+		["process.env.NODE_ENV || true", "NODE_ENV"],
+		["process.env.NODE_ENV ?? null", "NODE_ENV"],
+		["process.env.TEST_DATABASE_URL ?? -1", "TEST_DATABASE_URL"],
+		["process.env.TEST_DATABASE_URL ?? (-1n)", "TEST_DATABASE_URL"],
+		['process.env.TEST_DATABASE_URL ?? { host: "localhost" }', "TEST_DATABASE_URL"],
+		['process.env.TEST_DATABASE_URL ?? ["postgres://localhost"]', "TEST_DATABASE_URL"],
+		["globalThis.process.env.NODE_ENV ?? 'test'", "NODE_ENV"],
+	];
+	for (const [code, name] of FALLBACKS) {
+		test(`${code} fails: a fallback value is written in`, () => {
+			fails(
+				helper(`export const x = ${code};`),
+				new RegExp(`database\\.ts:1: process\\.env\\.${name} has a fallback value written in`),
+			);
+		});
+	}
+
+	test("a fallback that is not a written-in value passes", () => {
+		passes(helper("const a = process.env.NODE_ENV ?? undefined;\nconst b = process.env.TEST_DATABASE_URL ?? a;"));
+		passes(helper("const a = 1;\nexport const b = process.env.NODE_ENV ?? -a;"));
+	});
+
+	const NOT_BY_NAME = [
+		'export const url = process.env["TEST_DATABASE_URL"];',
+		"export const { NODE_ENV } = process.env;",
+		'const { NODE_ENV = "test" } = process.env;',
+		"const env = process.env;",
+		"const all = { ...process.env };",
+		"const name = 'NODE_ENV';\nconst value = process.env[name];",
+		'export const dev = process["env"].NODE_ENV;',
+		"export const dev = process[`env`].NODE_ENV;",
+		'export const dev = (process)["env"];',
+		"const { env } = process;",
+		"const { env: vars } = process;",
+		'const { "env": vars } = process;',
+		"const { env, argv } = globalThis.process;",
+		'export const dev = globalThis.process["env"].NODE_ENV;',
+		"export const { NODE_ENV } = globalThis.process.env;",
+		'const { ["env"]: vars } = process;',
+		"export function read({ env } = process) {\n\treturn env;\n}",
+		"let env;\n({ env } = process);",
+		'let vars;\n({ "env": vars } = globalThis.process);',
+	];
+	for (const code of NOT_BY_NAME) {
+		test(`${code.replaceAll("\n", " ")} fails: process.env is read only as process.env.NAME`, () => {
+			fails(
+				source(code),
+				/a\.ts:\d+: process\.env must be read as process\.env\.NAME, with NAME declared in packages\/core\/env\.d\.ts/,
+			);
+		});
+	}
+
+	test("process.env in a string or another object's env is not read", () => {
+		passes(source('export const a = "process.env.FOO";\nconst config = { env: {} };\nexport const b = config.env;'));
+		passes(source('const { argv } = process;\nconst { env } = config;\nexport const a = process["argv"];'));
+	});
+
+	test("globalThis.process.env is read like process.env", () => {
+		passes(source("export const dev = globalThis.process.env.NODE_ENV;"));
+		fails(
+			source("export const foo = globalThis.process.env.FOO;"),
+			/a\.ts:1: process\.env\.FOO is not declared in packages\/core\/env\.d\.ts/,
+		);
+	});
+
+	test("only ProcessEnv inside namespace NodeJS approves a variable", () => {
+		const declared = (text) => ({ ...WITH_ENV, [ENV_TYPES]: text });
+		const notDeclared = /a\.ts:1: process\.env\.FOO is not declared in packages\/core\/env\.d\.ts/;
+		const read = "export const foo = process.env.FOO;";
+		fails(source(read, declared(`${DECLARED}interface ProcessEnv {\n\treadonly FOO?: string;\n}\n`)), notDeclared);
+		fails(
+			source(
+				read,
+				declared(
+					`${DECLARED}declare namespace Other {\n\tinterface ProcessEnv {\n\t\treadonly FOO?: string;\n\t}\n}\n`,
+				),
+			),
+			notDeclared,
+		);
+		fails(
+			source(
+				read,
+				declared(
+					`${DECLARED}declare namespace Outer {\n\tnamespace NodeJS {\n\t\tinterface ProcessEnv {\n\t\t\treadonly FOO?: string;\n\t\t}\n\t}\n}\n`,
+				),
+			),
+			notDeclared,
+		);
+		passes(
+			source(
+				read,
+				declared(
+					`${DECLARED}declare global {\n\tnamespace NodeJS {\n\t\tinterface ProcessEnv {\n\t\t\treadonly FOO?: string;\n\t\t}\n\t}\n}\nexport {};\n`,
+				),
+			),
+		);
+	});
+});
+
 describe("finding TypeScript", () => {
 	const gitIn = (cwd, ...args) => {
 		const result = spawnSync("git", args, { cwd, encoding: "utf8" });

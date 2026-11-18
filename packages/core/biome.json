@@ -4,6 +4,10 @@
 	"extends": "//",
 	"linter": {
 		"rules": {
+			"correctness": {
+				"noUnusedVariables": "error",
+				"noUnusedImports": "error"
+			},
 			"style": {
 				"noRestrictedImports": {
 					"level": "error",

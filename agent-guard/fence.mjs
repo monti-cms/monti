@@ -5,9 +5,13 @@
 // 1. Acceptance conditions (AC) and tests match one to one, and every `expect` has the result number of its AC above it.
 // 2. Tests are not skipped, focused or empty, and the database is never faked.
 // 3. No suppression comment hides a problem in the code.
+// 4. `process.env` is read only as `process.env.NAME` for a variable declared in `packages/core/env.d.ts`, and never with a
+//    written-in fallback value.
 //
 // Sources are read with the TypeScript parser, so a string that looks like a comment or a call is not mistaken for one.
-// What it cannot see: a test API renamed on import (`import { it as spec }`), a mock target that is not a string literal.
+// What it cannot see: a test API renamed on import (`import { it as spec }`), a mock target that is not a string literal,
+// environment variables read another way than through `process` or `globalThis.process` (`import { env } from
+// "node:process"`, `process[key]` with a key that is not a written string, `process` passed on under another name).
 
 import { spawnSync } from "node:child_process";
 import { readdirSync, readFileSync } from "node:fs";
@@ -15,10 +19,10 @@ import { createRequire } from "node:module";
 import path from "node:path";
 
 const AC_DIR = "docs/acceptance/core";
-const CORE_SRC = "packages/core/src";
+export const CORE_SRC = "packages/core/src";
 
 const SOURCE_FILE = /\.(?:[cm]?[jt]s|[jt]sx)$/;
-const TEST_FILE = /\.(?:test|spec)\.(?:[cm]?[jt]s|[jt]sx)$|(?:^|\/)__test__\//;
+export const TEST_FILE = /\.(?:test|spec)\.(?:[cm]?[jt]s|[jt]sx)$|(?:^|\/)__test__\//;
 
 const ID = "[A-Z][A-Z0-9]*-\\d+";
 const AC_HEADER = new RegExp(`^(${ID})\\s{2,}\\S`);
@@ -42,6 +46,9 @@ const DATABASE_MODULE =
 const MOCK_METHODS = new Set(["mock", "doMock", "unstable_mockModule"]);
 const DATABASE_WORDS = new Set(["db", "pool", "pg", "database"]);
 
+// The one list of environment variables the core may read: the properties of `ProcessEnv` in this file.
+const ENV_TYPES = "packages/core/env.d.ts";
+
 // ---- TypeScript ----
 
 /** The root of the main checkout when `root` is a linked worktree, or undefined. */
@@ -56,7 +63,7 @@ function mainCheckout(root) {
  * Loads TypeScript from this file, from `root`, or from the main checkout. A fresh git worktree has no `node_modules`
  * until it is installed, but the main checkout it was made from has one.
  */
-function loadTypeScript(root) {
+export function loadTypeScript(root) {
 	const tried = [];
 	const candidates = [() => createRequire(import.meta.url), () => createRequire(path.join(root, "package.json"))];
 	const main = () => {
@@ -132,7 +139,7 @@ function readdirOrEmpty(dir, options = {}) {
 
 // ---- reading one source file ----
 
-function sourceFiles(root) {
+export function sourceFiles(root) {
 	return readdirOrEmpty(path.join(root, CORE_SRC), { recursive: true })
 		.filter((entry) => entry.isFile())
 		.map((entry) => path.relative(root, path.join(entry.parentPath, entry.name)).split(path.sep).join("/"))
@@ -244,6 +251,161 @@ function fakeDatabase(ts, nodes, at) {
 		if (names[0] === "spyOn" && node.arguments[0] && namesDatabase(ts, node.arguments[0])) {
 			problems.push(at(node.getStart(), "the database is spied on: tests run on the real Postgres"));
 		}
+	}
+	return problems;
+}
+
+// ---- environment variables ----
+
+/** `process` or `globalThis.process`, with any parentheses around it. */
+function isProcess(ts, node) {
+	const bare = skipParentheses(ts, node);
+	if (isName(ts, bare, "process")) return true;
+	return (
+		ts.isPropertyAccessExpression(bare) &&
+		bare.name.text === "process" &&
+		isName(ts, skipParentheses(ts, bare.expression), "globalThis")
+	);
+}
+
+/** `process.env`, `process["env"]` and `process[\`env\`]`, on `process` or `globalThis.process`. */
+function envAccess(ts, node) {
+	if (ts.isPropertyAccessExpression(node)) return node.name.text === "env" && isProcess(ts, node.expression);
+	if (ts.isElementAccessExpression(node))
+		return stringValue(ts, node.argumentExpression) === "env" && isProcess(ts, node.expression);
+	return false;
+}
+
+/** True for a destructuring key that names `env`: `env`, `"env"` or `["env"]`. */
+function isEnvKey(ts, key) {
+	if (key === undefined) return false;
+	if (ts.isComputedPropertyName(key)) return stringValue(ts, key.expression) === "env";
+	return (ts.isIdentifier(key) || ts.isStringLiteralLike(key)) && key.text === "env";
+}
+
+/**
+ * `const { env } = process`, `function f({ env } = process)` and `({ env } = process)`, also with `env: e`, `["env"]: e`
+ * or `globalThis.process`: the `env` taken out of `process` by name.
+ */
+function envDestructured(ts, node) {
+	if (ts.isObjectBindingPattern(node)) {
+		const { parent } = node;
+		const declares = ts.isVariableDeclaration(parent) || ts.isParameter(parent) || ts.isBindingElement(parent);
+		if (!declares || parent.name !== node || !parent.initializer || !isProcess(ts, parent.initializer)) return false;
+		return node.elements.some((element) => isEnvKey(ts, element.propertyName ?? element.name));
+	}
+	if (ts.isBinaryExpression(node) && node.operatorToken.kind === ts.SyntaxKind.EqualsToken) {
+		const target = skipParentheses(ts, node.left);
+		if (!ts.isObjectLiteralExpression(target) || !isProcess(ts, node.right)) return false;
+		return target.properties.some((property) => isEnvKey(ts, property.name));
+	}
+	return false;
+}
+
+/** The expression `node` stands in once parentheses around it are taken away. */
+function outermost(ts, node) {
+	let current = node;
+	while (ts.isParenthesizedExpression(current.parent)) current = current.parent;
+	return current;
+}
+
+const skipParentheses = (ts, node) =>
+	ts.isParenthesizedExpression(node) ? skipParentheses(ts, node.expression) : node;
+
+/** A value written into the code: a string, number, `true`, `false`, `null`, `-1`, or an object or array literal. */
+function isLiteral(ts, node) {
+	if (node === undefined) return false;
+	const bare = skipParentheses(ts, node);
+	if (ts.isPrefixUnaryExpression(bare)) return isLiteral(ts, bare.operand);
+	return (
+		ts.isStringLiteralLike(bare) ||
+		ts.isNumericLiteral(bare) ||
+		ts.isBigIntLiteral(bare) ||
+		ts.isTemplateExpression(bare) ||
+		ts.isRegularExpressionLiteral(bare) ||
+		ts.isObjectLiteralExpression(bare) ||
+		ts.isArrayLiteralExpression(bare) ||
+		[ts.SyntaxKind.TrueKeyword, ts.SyntaxKind.FalseKeyword, ts.SyntaxKind.NullKeyword].includes(bare.kind)
+	);
+}
+
+/** `process.env.X ?? "value"` and `process.env.X || "value"`: a default written into the code. */
+function hasFallback(ts, node) {
+	const read = outermost(ts, node);
+	const { parent } = read;
+	if (!ts.isBinaryExpression(parent) || parent.left !== read) return false;
+	const operator = parent.operatorToken.kind;
+	if (operator !== ts.SyntaxKind.QuestionQuestionToken && operator !== ts.SyntaxKind.BarBarToken) return false;
+	return isLiteral(ts, parent.right);
+}
+
+/** True for `namespace NodeJS` at the top of the file or inside `declare global`, where Node's own types are merged. */
+function isNodeNamespace(ts, node) {
+	if (!ts.isModuleDeclaration(node) || !ts.isIdentifier(node.name) || node.name.text !== "NodeJS") return false;
+	const { parent } = node;
+	if (ts.isSourceFile(parent)) return true;
+	const outer = parent.parent;
+	return (
+		ts.isModuleBlock(parent) &&
+		ts.isModuleDeclaration(outer) &&
+		ts.isIdentifier(outer.name) &&
+		outer.name.text === "global" &&
+		ts.isSourceFile(outer.parent)
+	);
+}
+
+/**
+ * The names declared on `interface ProcessEnv` inside `namespace NodeJS` in `packages/core/env.d.ts`; none when the file is
+ * missing. Another `interface ProcessEnv` in the file does not reach `process.env` and approves nothing.
+ */
+function approvedEnvironment(ts, root) {
+	let text;
+	try {
+		text = readFileSync(path.join(root, ENV_TYPES), "utf8");
+	} catch {
+		return new Set();
+	}
+	const sf = ts.createSourceFile(ENV_TYPES, text, ts.ScriptTarget.Latest, true);
+	const names = new Set();
+	for (const node of descendants(ts, sf)) {
+		if (!ts.isInterfaceDeclaration(node) || node.name.text !== "ProcessEnv") continue;
+		if (!ts.isModuleBlock(node.parent) || !isNodeNamespace(ts, node.parent.parent)) continue;
+		for (const member of node.members) {
+			if (ts.isPropertySignature(member) && (ts.isIdentifier(member.name) || ts.isStringLiteralLike(member.name)))
+				names.add(member.name.text);
+		}
+	}
+	return names;
+}
+
+const BY_NAME = `process.env must be read as process.env.NAME, with NAME declared in ${ENV_TYPES}`;
+
+/** Every read of `process.env`: `process.env.NAME` for a declared NAME, and without a fallback written in. */
+function environmentReads(ts, nodes, at, approved) {
+	const problems = [];
+	for (const pattern of nodes.filter((node) => envDestructured(ts, node)))
+		problems.push(at(pattern.getStart(), BY_NAME));
+	for (const env of nodes.filter((node) => envAccess(ts, node))) {
+		const { parent } = env;
+		if (!ts.isPropertyAccessExpression(env) || !ts.isPropertyAccessExpression(parent) || parent.expression !== env) {
+			problems.push(at(env.getStart(), BY_NAME));
+			continue;
+		}
+		const name = parent.name.text;
+		if (!approved.has(name))
+			problems.push(
+				at(
+					parent.getStart(),
+					`process.env.${name} is not declared in ${ENV_TYPES}: ask the PM and owner to approve it and add it there instead of inventing one`,
+				),
+			);
+		if (hasFallback(ts, parent))
+			problems.push(
+				at(
+					parent.getStart(),
+					`process.env.${name} has a fallback value written in: do not hardcode a value for an environment variable`,
+				),
+			);
 	}
 	return problems;
 }
@@ -395,6 +557,7 @@ export function checkFence(root) {
 	const ts = loadTypeScript(root);
 	const { acs, problems } = readAcceptance(root);
 	const tests = [];
+	const approved = approvedEnvironment(ts, root);
 	for (const file of sourceFiles(root)) {
 		const sf = ts.createSourceFile(file, readFileSync(path.join(root, file), "utf8"), ts.ScriptTarget.Latest, true);
 		const at = (position, message) => {
@@ -402,7 +565,11 @@ export function checkFence(root) {
 			return message === undefined ? place : `${place}: ${message}`;
 		};
 		const nodes = descendants(ts, sf);
-		problems.push(...suppressions(ts, sf, at), ...fakeDatabase(ts, nodes, at));
+		problems.push(
+			...suppressions(ts, sf, at),
+			...fakeDatabase(ts, nodes, at),
+			...environmentReads(ts, nodes, at, approved),
+		);
 		if (TEST_FILE.test(file)) problems.push(...readTests(ts, sf, nodes, at, tests));
 	}
 	problems.push(...matchTests(acs, tests));

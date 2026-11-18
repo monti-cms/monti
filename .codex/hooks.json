@@ -1,5 +1,27 @@
 {
 	"hooks": {
+		"SessionStart": [
+			{
+				"hooks": [
+					{
+						"type": "command",
+						"command": "node \"$(git rev-parse --show-toplevel)/agent-guard/map.mjs\"",
+						"timeout": 30
+					}
+				]
+			}
+		],
+		"PreToolUse": [
+			{
+				"hooks": [
+					{
+						"type": "command",
+						"command": "node \"$(git rev-parse --show-toplevel)/agent-guard/check.mjs\" --pre-tool",
+						"timeout": 30
+					}
+				]
+			}
+		],
 		"Stop": [
 			{
 				"hooks": [

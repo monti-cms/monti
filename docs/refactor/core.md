@@ -456,7 +456,7 @@ flowchart TD
 - 외부 패키지와 사이트는 공개 Operation을 직접 호출한다.
 - CLI는 `packages/cli/`, HTTP 입구는 `packages/next/`에 둔다. 두 패키지가 core를 사용한다.
 - 파일 하나에 역할 하나를 둔다. 함수 본문은 30줄까지이고(빈 줄 제외) 린트가 검사한다.
-- 이 절의 폴더 규칙과 코드 규칙은 린트가 검사한다. 규칙은 `packages/core/biome.json`, `packages/core/biome-plugins/`, `packages/core/.dependency-cruiser.cjs`에 있다. 에이전트는 이 파일들과 `agent-guard/`를 고치지 못하고, 소유자가 고친다.
+- 이 절의 폴더 규칙과 코드 규칙은 린트가 검사한다. 규칙은 `packages/core/biome.json`, `packages/core/biome-plugins/`, `packages/core/.dependency-cruiser.cjs`, `packages/core/knip.jsonc`, `packages/core/.jscpd.json`, `packages/core/env.d.ts`, `.secretlintrc.json`에 있다. 에이전트는 이 파일들과 `agent-guard/`를 고치지 못하고, 소유자가 고친다.
 - 엔진 안의 파일 구성은 2단계, 리소스 폴더 안의 파일 구성은 3단계 테스트 계획에서 확정한다(11절).
 
 ## 9. 작업 방식
