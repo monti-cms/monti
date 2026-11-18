@@ -22,7 +22,7 @@ function addActions(
 	plugin: string,
 	resource: string,
 ): ResourceTree {
-	const merged: ResourceTree = { ...existing };
+	const merged: ResourceTree = { ...(existing as ResourceTree | undefined) };
 	for (const [action, operation] of Object.entries(actions)) {
 		if (Object.hasOwn(merged, action)) {
 			throw new MontiError(
