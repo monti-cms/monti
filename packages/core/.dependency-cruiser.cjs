@@ -34,9 +34,6 @@ module.exports = {
 		},
 	],
 	options: {
-		// dependency-cruiser does not support TypeScript 7.0: with its own TypeScript reader it cruises no .ts file. The swc parser reads them. Remove
-		// this line when TypeScript 7.1 or later is stable and supported by dependency-cruiser.
-		parser: "swc",
 		// Count `import type` as an import: a layer breach or a cycle made of types is still a breach.
 		tsPreCompilationDeps: true,
 		doNotFollow: { path: "node_modules" },
