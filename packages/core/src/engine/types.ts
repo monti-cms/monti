@@ -2,14 +2,56 @@ import type { Kysely, Transaction } from "kysely";
 import type { z } from "zod";
 import type { Database } from "../db/types";
 
+/** The shape of the user schema (`monti.schema.ts`): the content languages and the collections with their fields. */
+export interface Schema {
+	locales: string[];
+	collections: Record<string, CollectionSchema>;
+}
+
+interface CollectionSchema {
+	fields: Record<string, FieldSchema>;
+}
+
+interface FieldSchema {
+	type: string;
+}
+
+/** The site settings (`monti.config.ts`). */
+export interface MontiConfig {
+	name: string;
+	/** Whether this is a dev server: only a dev server changes the schema and the config. */
+	dev?: boolean;
+}
+
+/** The schema and config the engine starts with, and the files it writes their changes to. */
+export interface MontiState {
+	schema: Schema;
+	config: MontiConfig;
+	schemaFile: string;
+	configFile: string;
+}
+
 /** What a read's `run` gets: the database, outside any transaction when the read is called directly. */
 export interface ReadContext {
 	db: Kysely<Database> | Transaction<Database>;
+	schema: Schema;
+	config: MontiConfig;
 }
 
 /** What a write's `run` gets: a write always runs inside a transaction. */
 export interface WriteContext extends ReadContext {
 	db: Transaction<Database>;
+	/** Changes the transaction's copy of the schema; written to the shared state and the file after the commit. */
+	setSchema: (schema: Schema) => void;
+	/** Changes the transaction's copy of the site name; written to the shared state and the file after the commit. */
+	setConfig: (config: Pick<MontiConfig, "name">) => void;
+}
+
+/** One transaction's copy of the schema and config: its changes reach the shared state and the files only on `commit`. */
+export interface Stage {
+	context(db: Transaction<Database>): WriteContext;
+	/** Writes the copy's changes to the shared state and the files, in the order they were made. */
+	commit(): Promise<void>;
 }
 
 export interface ReadOperation<TInput, TOutput> {
