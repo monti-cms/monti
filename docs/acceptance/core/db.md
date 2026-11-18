@@ -2,10 +2,10 @@
 
 ```
 DB-1  마이그레이션 배열을 순서대로 실행한다
-  전제  마이그레이션 `first`, `second`가 배열에 순서대로 주어진다
+  전제  마이그레이션 `second`, `first`가 배열에 순서대로 주어진다
   행동  `core` 마이그레이션을 실행한다
-  결과  DB-1.1  `first`, `second` 순서로 실행된다
-        DB-1.2  `monti_migrations`에 `("core", "first")`, `("core", "second")`가 기록된다
+  결과  DB-1.1  `second`, `first` 순서로 실행된다
+        DB-1.2  `monti_migrations`에 `("core", "second")`, `("core", "first")`가 기록된다
 
 DB-2  이미 실행된 마이그레이션은 건너뛰고 새 마이그레이션만 실행한다
   전제  `core`의 `first` 마이그레이션이 이미 실행되어 있다

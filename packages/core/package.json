@@ -6,10 +6,19 @@
 	"license": "MIT",
 	"type": "module",
 	"scripts": {
-		"lint:deps": "depcruise --config .dependency-cruiser.cjs src"
+		"lint:deps": "depcruise --config .dependency-cruiser.cjs src",
+		"test": "vitest run",
+		"test:mutation": "stryker run"
 	},
 	"devDependencies": {
+		"@stryker-mutator/core": "^10.1.1",
+		"@stryker-mutator/vitest-runner": "^10.1.1",
 		"@types/node": "^24.19.2",
+		"@types/pg": "^8.23.1",
+		"pg": "^8.23.1",
 		"vitest": "^5.1.0"
+	},
+	"dependencies": {
+		"kysely": "^0.29.8"
 	}
 }
