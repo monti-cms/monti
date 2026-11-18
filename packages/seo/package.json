@@ -34,7 +34,7 @@
 		"kysely": "^0.29.6",
 		"pg": "^8.23.0",
 		"react": "^19.0.0",
-		"typescript": "^7.0.2"
+		"typescript": "^6.0.3"
 	},
 	"sideEffects": false,
 	"publishConfig": {

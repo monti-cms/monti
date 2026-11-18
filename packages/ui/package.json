@@ -49,7 +49,7 @@
 		"react-dom": "19.2.3",
 		"storybook": "10.6.1",
 		"storybook-addon-pseudo-states": "10.6.1",
-		"typescript": "^7.0.2",
+		"typescript": "^6.0.3",
 		"typescript-api": "npm:typescript@5.9.3",
 		"vite": "^8.3.0"
 	},

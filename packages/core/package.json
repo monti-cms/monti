@@ -7,5 +7,9 @@
 	"type": "module",
 	"scripts": {
 		"lint:deps": "depcruise --config .dependency-cruiser.cjs src"
+	},
+	"devDependencies": {
+		"@types/node": "^24.19.2",
+		"vitest": "^5.1.0"
 	}
 }
