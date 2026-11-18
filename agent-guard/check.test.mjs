@@ -747,6 +747,50 @@ describe("--pre-tool", () => {
 		assert.match(bad.stderr, /the check could not run and was skipped/);
 	});
 
+	test("Antigravity's toolCall gets a deny or allow decision as JSON on stdout with exit code 0", () => {
+		const f = fixture();
+		const call = (name, file, extra = {}, options = {}) =>
+			edit(f, { toolCall: { name, args: { TargetFile: file } }, stepIdx: 19, conversationId: "c1", ...extra }, options);
+
+		const denied = call("write_to_file", path.join(f.repo, "agent-guard/check.mjs"));
+		assert.equal(denied.status, 0);
+		assert.equal(denied.stderr, "");
+		const answer = JSON.parse(denied.stdout);
+		assert.equal(answer.decision, "deny");
+		assert.match(answer.reason, /a worker may not change them:\n- agent-guard\/check\.mjs\n/);
+
+		const pm = call("replace_file_content", path.join(f.repo, "packages/core/src/a.ts"), {}, { thread: PM });
+		assert.equal(pm.status, 0);
+		assert.equal(JSON.parse(pm.stdout).decision, "deny");
+		assert.match(JSON.parse(pm.stdout).reason, /The PM does not edit code:\n- packages\/core\/src\/a\.ts/);
+
+		for (const result of [
+			call("multi_replace_file_content", path.join(f.repo, "packages/core/src/a.ts")),
+			call("view_file", path.join(f.repo, "agent-guard/check.mjs")),
+		]) {
+			assert.equal(result.status, 0);
+			assert.equal(result.stderr, "");
+			assert.deepEqual(JSON.parse(result.stdout), { decision: "allow" });
+		}
+	});
+
+	test("Antigravity's relative target is placed in its first workspace path", () => {
+		const f = fixture();
+		const elsewhere = realpathSync(mkdtempSync(path.join(tmpdir(), "monti-check-elsewhere-")));
+		roots.push(elsewhere);
+		const result = edit(
+			f,
+			{
+				toolCall: { name: "write_to_file", args: { TargetFile: "docs/acceptance/core/a.md" } },
+				workspacePaths: [f.repo],
+			},
+			{ cwd: elsewhere },
+		);
+		assert.equal(result.status, 0);
+		assert.equal(JSON.parse(result.stdout).decision, "deny");
+		assert.match(JSON.parse(result.stdout).reason, /- docs\/acceptance\/core\/a\.md/);
+	});
+
 	test("the PM's stop and commit of a worker's code in the shared worktree are not blocked", () => {
 		const f = fixture();
 		f.write("packages/core/src/ok.ts", "export const ok = 1;\n");

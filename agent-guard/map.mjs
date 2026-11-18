@@ -1,8 +1,11 @@
 #!/usr/bin/env node
 // The map of the core's symbols, so an agent sees what already exists before it writes a new one.
 //
-//   node agent-guard/map.mjs    prints the map of `packages/core/src` (the SessionStart hook runs this)
+//   node agent-guard/map.mjs    prints the map of `packages/core/src` (the SessionStart hook runs this); for Antigravity,
+//                               whose payload on stdin has `workspacePaths` or `artifactDirectoryPath` and no
+//                               `session_id`, the map goes out as a system message in its JSON
 //   buildMap(root)              returns the same text
+//   sessionStartOutput(map, payload)  what the hook prints for that payload
 //
 // For every source file (tests and `__test__/` left out), grouped by layer: its exports as one-line signatures, and in
 // files other than `types.ts` its top-level functions that are not exported, marked `[internal]`.
@@ -167,11 +170,35 @@ export function buildMap(root) {
 	return lines.join("\n");
 }
 
+const isAntigravity = (payload) =>
+	payload !== null &&
+	typeof payload === "object" &&
+	!Object.hasOwn(payload, "session_id") &&
+	(Object.hasOwn(payload, "workspacePaths") || Object.hasOwn(payload, "artifactDirectoryPath"));
+
+/** The hook's stdout: the map as plain text, or for Antigravity the map injected as a system message. */
+export function sessionStartOutput(map, payload) {
+	if (!isAntigravity(payload)) return `${map}\n`;
+	return `${JSON.stringify({ injectSteps: [{ systemMessage: { systemMessage: map } }] })}\n`;
+}
+
+/** The hook payload on stdin, or undefined in a terminal or when it is not JSON. */
+function readPayload() {
+	if (process.stdin.isTTY) return undefined;
+	try {
+		const text = readFileSync(0, "utf8");
+		return text.trim() === "" ? undefined : JSON.parse(text);
+	} catch {
+		return undefined;
+	}
+}
+
 const self = fileURLToPath(import.meta.url);
 const invoked = process.argv[1] && realpathSync(process.argv[1]) === realpathSync(self);
 if (invoked) {
+	const payload = readPayload();
 	try {
-		process.stdout.write(`${buildMap(path.resolve(path.dirname(self), ".."))}\n`);
+		process.stdout.write(sessionStartOutput(buildMap(path.resolve(path.dirname(self), "..")), payload));
 	} catch (error) {
 		process.stderr.write(`agent-guard: the core symbol map could not be built (${error.message})\n`);
 	}

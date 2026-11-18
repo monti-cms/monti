@@ -2,7 +2,8 @@
 // The fence around worker agents.
 //
 //   node agent-guard/check.mjs --stop        Stop hook (Claude Code, Codex, Antigravity): reads the hook payload on stdin
-//   node agent-guard/check.mjs --pre-tool    PreToolUse hook: stops a file edit before it happens (payload on stdin)
+//   node agent-guard/check.mjs --pre-tool    PreToolUse hook (Claude Code, Codex, Antigravity): stops a file edit before it
+//                                            happens (payload on stdin)
 //   node agent-guard/check.mjs --pre-commit  Git pre-commit hook
 //   node agent-guard/check.mjs               run the code checks (`pnpm lint`: Biome, secretlint, dependency-cruiser, knip
 //                                            and jscpd; and the acceptance fence) and exit 0 or 1
@@ -343,8 +344,20 @@ function repoPath(file) {
 	return relative.split(path.sep).join("/");
 }
 
+/**
+ * The payload in Claude Code's and Codex's shape. Antigravity names the tool call `toolCall: { name, args }` and gives the
+ * workspace as `workspacePaths` instead of `cwd`.
+ */
+function toolPayload(payload) {
+	if (!Object.hasOwn(payload, "toolCall")) return payload;
+	const call = payload.toolCall !== null && typeof payload.toolCall === "object" ? payload.toolCall : {};
+	const workspace = Array.isArray(payload.workspacePaths) ? payload.workspacePaths[0] : undefined;
+	return { ...payload, tool_name: call.name, tool_input: call.args, cwd: payload.cwd ?? workspace };
+}
+
 /** Returns why the tool call may not run, or null. */
-function preToolReason(payload) {
+function preToolReason(raw) {
+	const payload = toolPayload(raw);
 	if (!EDIT_TOOLS.has(payload.tool_name)) return null;
 	const cwd = typeof payload.cwd === "string" && payload.cwd !== "" ? payload.cwd : process.cwd();
 	const files = editTargets(payload)
@@ -369,7 +382,13 @@ function preToolReason(payload) {
 }
 
 async function preTool() {
-	const reason = preToolReason(await readPayload());
+	const payload = await readPayload();
+	const reason = preToolReason(payload);
+	// Antigravity reads the decision as JSON on stdout, with exit code 0.
+	if (Object.hasOwn(payload, "toolCall")) {
+		process.stdout.write(`${JSON.stringify(reason === null ? { decision: "allow" } : { decision: "deny", reason })}\n`);
+		return 0;
+	}
 	if (reason === null) return 0;
 	process.stderr.write(`${reason}\n`);
 	return 2;

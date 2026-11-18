@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { after, test } from "node:test";
 import { fileURLToPath } from "node:url";
-import { buildMap } from "./map.mjs";
+import { buildMap, sessionStartOutput } from "./map.mjs";
 
 const GUARD = path.dirname(fileURLToPath(import.meta.url));
 const MAP = path.join(GUARD, "map.mjs");
@@ -182,4 +182,39 @@ test("prints the map when run, and nothing when imported", () => {
 	});
 	assert.equal(imported.status, 0);
 	assert.equal(imported.stdout, "");
+});
+
+test("gives Antigravity the map as an injected system message, and everyone else plain text", () => {
+	const antigravity = {
+		conversationId: "c1",
+		workspacePaths: ["/workspace/project"],
+		transcriptPath: "/t",
+		artifactDirectoryPath: "/a",
+		modelName: "m",
+	};
+	assert.deepEqual(JSON.parse(sessionStartOutput("MAP", antigravity)), {
+		injectSteps: [{ systemMessage: { systemMessage: "MAP" } }],
+	});
+	assert.deepEqual(JSON.parse(sessionStartOutput("MAP", { artifactDirectoryPath: "/a" })), {
+		injectSteps: [{ systemMessage: { systemMessage: "MAP" } }],
+	});
+	for (const payload of [undefined, { session_id: "s1", cwd: "/x" }, { session_id: "s1", workspacePaths: ["/x"] }])
+		assert.equal(sessionStartOutput("MAP", payload), "MAP\n");
+});
+
+test("prints the map as Antigravity's JSON when its payload is on stdin, and as text for Claude Code's", () => {
+	const antigravity = spawnSync(process.execPath, [MAP], {
+		input: JSON.stringify({ conversationId: "c1", workspacePaths: [path.dirname(GUARD)] }),
+		encoding: "utf8",
+	});
+	assert.equal(antigravity.status, 0);
+	const message = JSON.parse(antigravity.stdout).injectSteps[0].systemMessage.systemMessage;
+	assert.match(message, /^# Core symbol map \(packages\/core\/src\)\n/);
+
+	const claude = spawnSync(process.execPath, [MAP], {
+		input: JSON.stringify({ session_id: "s1", cwd: path.dirname(GUARD) }),
+		encoding: "utf8",
+	});
+	assert.equal(claude.status, 0);
+	assert.equal(claude.stdout, `${message}\n`);
 });
