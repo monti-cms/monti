@@ -1,13 +1,12 @@
 {
 	"hooks": {
-		"PreToolUse": [
+		"Stop": [
 			{
-				"matcher": "^(Bash|apply_patch|Edit|Write)$",
 				"hooks": [
 					{
 						"type": "command",
-						"command": "node \"$(git rev-parse --show-toplevel)/agent-guard/guard.mjs\"",
-						"statusMessage": "Checking the tool call"
+						"command": "node \"$(git rev-parse --show-toplevel)/agent-guard/check.mjs\" --stop",
+						"timeout": 180
 					}
 				]
 			}

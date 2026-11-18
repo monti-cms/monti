@@ -1,15 +1,10 @@
 {
 	"agent-guard": {
-		"PreToolUse": [
+		"Stop": [
 			{
-				"matcher": "run_command|write_to_file|replace_file_content|multi_replace_file_content",
-				"hooks": [
-					{
-						"type": "command",
-						"command": "node \"$(git rev-parse --show-toplevel)/agent-guard/guard.mjs\"",
-						"timeout": 10
-					}
-				]
+				"type": "command",
+				"command": "node \"$(git rev-parse --show-toplevel)/agent-guard/check.mjs\" --stop",
+				"timeout": 180
 			}
 		]
 	}
