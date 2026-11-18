@@ -1,9 +1,24 @@
 import assert from "node:assert/strict";
-import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import {
+	copyFileSync,
+	existsSync,
+	mkdirSync,
+	mkdtempSync,
+	realpathSync,
+	rmSync,
+	symlinkSync,
+	writeFileSync,
+} from "node:fs";
+import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { after, describe, test } from "node:test";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { checkFence } from "./fence.mjs";
+
+const FENCE = path.join(path.dirname(fileURLToPath(import.meta.url)), "fence.mjs");
+const TYPESCRIPT = path.dirname(createRequire(import.meta.url).resolve("typescript/package.json"));
 
 const roots = [];
 after(() => {
@@ -533,5 +548,58 @@ describe("suppression comments", () => {
 			"packages/core/src/dist/x.js": "// @ts-nocheck\n",
 			"packages/other/src/x.ts": "// @ts-nocheck\n",
 		});
+	});
+});
+
+describe("finding TypeScript", () => {
+	const gitIn = (cwd, ...args) => {
+		const result = spawnSync("git", args, { cwd, encoding: "utf8" });
+		assert.equal(result.status, 0, result.stderr);
+	};
+
+	const freshDirectory = () => {
+		const dir = realpathSync(mkdtempSync(path.join(tmpdir(), "monti-fence-test-")));
+		roots.push(dir);
+		return dir;
+	};
+
+	/** A copy of fence.mjs in `dir`, so it cannot find the TypeScript of this repository by its own location. */
+	function copyFence(dir) {
+		mkdirSync(path.join(dir, "agent-guard"), { recursive: true });
+		copyFileSync(FENCE, path.join(dir, "agent-guard", "fence.mjs"));
+	}
+
+	const loadCheckFence = async (dir) =>
+		(await import(pathToFileURL(path.join(dir, "agent-guard", "fence.mjs")).href)).checkFence;
+
+	test("a git worktree without node_modules uses the TypeScript of the main checkout", async () => {
+		const main = freshDirectory();
+		gitIn(main, "init", "-q", "-b", "main");
+		gitIn(main, "config", "user.email", "test@example.com");
+		gitIn(main, "config", "user.name", "Test");
+		gitIn(main, "config", "commit.gpgsign", "false");
+		mkdirSync(path.join(main, "docs", "acceptance", "core"), { recursive: true });
+		writeFileSync(path.join(main, "docs", "acceptance", "core", "db.md"), AC);
+		copyFence(main);
+		gitIn(main, "add", "docs", "agent-guard");
+		gitIn(main, "commit", "-q", "-m", "initial");
+		// Installed in the main checkout only, and not committed, as in the real repository.
+		mkdirSync(path.join(main, "node_modules"));
+		symlinkSync(TYPESCRIPT, path.join(main, "node_modules", "typescript"), "dir");
+
+		const worktree = path.join(freshDirectory(), "worktree");
+		gitIn(main, "worktree", "add", "-q", "-b", "fresh", worktree);
+		assert.equal(existsSync(path.join(worktree, "node_modules")), false);
+
+		const checkFenceInWorktree = await loadCheckFence(worktree);
+		const problems = checkFenceInWorktree(worktree);
+		assert.match(problems.join("\n"), /docs\/acceptance\/core\/db\.md:\d+: DB-3 has no test/);
+	});
+
+	test("a folder with no TypeScript anywhere is an error that says so", async () => {
+		const dir = freshDirectory();
+		copyFence(dir);
+		const checkFenceInDir = await loadCheckFence(dir);
+		assert.throws(() => checkFenceInDir(dir), /TypeScript was not found .*run pnpm install/);
 	});
 });

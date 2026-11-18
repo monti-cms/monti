@@ -8,14 +8,18 @@ import {
 	readFileSync,
 	realpathSync,
 	rmSync,
+	symlinkSync,
 	writeFileSync,
 } from "node:fs";
+import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { after, describe, test } from "node:test";
 import { fileURLToPath } from "node:url";
 
-const CHECK = path.join(path.dirname(fileURLToPath(import.meta.url)), "check.mjs");
+const GUARD = path.dirname(fileURLToPath(import.meta.url));
+const CHECK = path.join(GUARD, "check.mjs");
+const TYPESCRIPT = path.dirname(createRequire(import.meta.url).resolve("typescript/package.json"));
 const WORKER = "thread:delegated-task:test";
 const FIX_AND_RETRY = "Fix these and try to finish again.";
 const ESCALATION_START = "The check failed 3 times in a row. Stop fixing.";
@@ -28,6 +32,7 @@ after(() => {
 // A stand-in for pnpm that counts its runs and fails, hangs or passes as the test says.
 const FAKE_PNPM = `#!/bin/sh
 echo run >> "$GUARD_STATE/runs"
+echo "$PATH" > "$GUARD_STATE/path"
 if [ -f "$GUARD_STATE/hang" ]; then sleep 30; fi
 if [ -f "$GUARD_STATE/fail" ]; then cat "$GUARD_STATE/fail"; exit 1; fi
 echo lint passed
@@ -90,7 +95,7 @@ function fixture(extraFiles = {}) {
 	f.lintPasses = () => rmSync(path.join(state, "fail"), { force: true });
 	f.lintHangs = () => writeFileSync(path.join(state, "hang"), "");
 
-	f.run = (args, { input = "", env = {}, thread = WORKER } = {}) => {
+	f.run = (args, { input = "", env = {}, thread = WORKER, cwd = repo, check = CHECK } = {}) => {
 		const childEnv = {
 			...process.env,
 			PATH: `${bin}${path.delimiter}${process.env.PATH}`,
@@ -102,8 +107,35 @@ function fixture(extraFiles = {}) {
 		};
 		delete childEnv.T3CODE_THREAD_ID;
 		if (thread) childEnv.T3CODE_THREAD_ID = thread;
-		return spawnSync(process.execPath, [CHECK, ...args], { cwd: repo, input, env: childEnv, encoding: "utf8" });
+		return spawnSync(process.execPath, [check, ...args], { cwd, input, env: childEnv, encoding: "utf8" });
 	};
+	f.lintPath = () => readFileSync(path.join(state, "path"), "utf8").trim();
+
+	/**
+	 * What T3 Code creates for a worker: a linked worktree with the committed files but no `node_modules`. The main checkout
+	 * has TypeScript and a `.bin` folder; the guard's own files are committed in it, so the worktree runs its own copies.
+	 */
+	f.worktree = () => {
+		for (const file of ["check.mjs", "fence.mjs"]) f.write(`agent-guard/${file}`, readFileSync(path.join(GUARD, file)));
+		f.git("add", "-A");
+		f.git("commit", "-q", "-m", "guard");
+		mkdirSync(path.join(repo, "node_modules", ".bin"), { recursive: true });
+		symlinkSync(TYPESCRIPT, path.join(repo, "node_modules", "typescript"), "dir");
+		const dir = path.join(base, "worktree");
+		f.git("worktree", "add", "-q", "-b", "fresh", dir);
+		const run = (args, options = {}) =>
+			f.run(args, { ...options, cwd: dir, check: path.join(dir, "agent-guard", "check.mjs") });
+		return {
+			dir,
+			stop: (payload = { session_id: "s1" }, options) =>
+				run(["--stop"], { ...options, input: JSON.stringify(payload) }),
+			write: (file, content) => {
+				mkdirSync(path.dirname(path.join(dir, file)), { recursive: true });
+				writeFileSync(path.join(dir, file), content);
+			},
+		};
+	};
+
 	f.stop = (payload = { session_id: "s1" }, options = {}) =>
 		f.run(["--stop"], { ...options, input: typeof payload === "string" ? payload : JSON.stringify(payload) });
 
@@ -561,6 +593,45 @@ describe("failing open", () => {
 		const result = f.run(["--nope"]);
 		assert.equal(result.status, 1);
 		assert.match(result.stderr, /Unknown option --nope/);
+	});
+});
+
+describe("a fresh worktree without node_modules", () => {
+	test("a stop finds TypeScript in the main checkout and blocks a broken test instead of skipping the check", () => {
+		const worktree = fixture(CONDITION).worktree();
+		assert.ok(!existsSync(path.join(worktree.dir, "node_modules")));
+		worktree.write("packages/core/src/db.test.ts", UNMARKED_TEST);
+		const result = worktree.stop();
+		assert.equal(result.status, 2, result.stderr);
+		assert.match(
+			result.stderr,
+			/The acceptance fence failed:\n- packages\/core\/src\/db\.test\.ts:4: the line above this expect/,
+		);
+		assert.doesNotMatch(result.stderr, /could not run/);
+	});
+
+	test("a stop lets a worktree with a matching test finish", () => {
+		const worktree = fixture(CONDITION).worktree();
+		worktree.write("packages/core/src/db.test.ts", FENCE_TEST);
+		allowed(worktree.stop());
+	});
+
+	test("pnpm lint runs with the main checkout's .bin folders first on PATH", () => {
+		const f = fixture(CONDITION);
+		const worktree = f.worktree();
+		worktree.write("packages/core/src/db.test.ts", FENCE_TEST);
+		allowed(worktree.stop());
+		assert.equal(f.lintRuns(), 1);
+		assert.ok(f.lintPath().startsWith(`${path.join(f.repo, "node_modules", ".bin")}${path.delimiter}`), f.lintPath());
+	});
+
+	test("a worktree that has its own node_modules keeps its PATH", () => {
+		const f = fixture(CONDITION);
+		const worktree = f.worktree();
+		mkdirSync(path.join(worktree.dir, "node_modules"));
+		worktree.write("packages/core/src/db.test.ts", FENCE_TEST);
+		allowed(worktree.stop());
+		assert.ok(f.lintPath().startsWith(`${f.bin}${path.delimiter}`), f.lintPath());
 	});
 });
 
