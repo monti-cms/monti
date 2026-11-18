@@ -1,5 +1,16 @@
 {
 	"hooks": {
+		"SessionStart": [
+			{
+				"hooks": [
+					{
+						"type": "command",
+						"command": "node \"$CLAUDE_PROJECT_DIR/agent-guard/map.mjs\"",
+						"timeout": 30
+					}
+				]
+			}
+		],
 		"PreToolUse": [
 			{
 				"matcher": "Edit|Write|MultiEdit|NotebookEdit",

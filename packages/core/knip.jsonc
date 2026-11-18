@@ -1,0 +1,11 @@
+{
+	"$schema": "https://unpkg.com/knip@6/schema.json",
+	// The public entry is `src/index.ts`; the tests are entries through the Vitest plugin. Until `src/index.ts` is written,
+	// `src/db/types.ts` stands in for it: `Database` and the table types are the stage's public types and nothing in the
+	// core imports them yet. Every other file and export must be used by another file or a test.
+	"entry": ["src/index.ts", "src/db/types.ts"],
+	"project": ["src/**/*.ts"],
+	// Only the code: unused files, exports, types, enum members and exports listed twice. Dependencies are left out, since a
+	// fresh worktree lints without its own `node_modules` and every package would look missing.
+	"include": ["files", "exports", "nsExports", "types", "nsTypes", "enumMembers", "duplicates"]
+}

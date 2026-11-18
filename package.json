@@ -3,9 +3,11 @@
 	"private": true,
 	"license": "MIT",
 	"scripts": {
-		"lint": "pnpm exec biome check . && pnpm lint:secrets && pnpm lint:deps",
+		"lint": "pnpm exec biome check . && pnpm lint:secrets && pnpm lint:deps && pnpm lint:unused && pnpm lint:dup",
 		"lint:secrets": "secretlint \"packages/**\" \"scripts/**\"",
 		"lint:deps": "pnpm --filter @monti-cms/core --fail-if-no-match lint:deps",
+		"lint:unused": "pnpm --filter @monti-cms/core --fail-if-no-match lint:unused",
+		"lint:dup": "pnpm --filter @monti-cms/core --fail-if-no-match lint:dup",
 		"lint:fix": "pnpm exec biome check . --write",
 		"prepare": "husky"
 	},
@@ -31,6 +33,8 @@
 		"@types/react-dom": "^19",
 		"dependency-cruiser": "^18.8.0",
 		"husky": "^9.1.7",
+		"jscpd": "^5.4.3",
+		"knip": "^6.46.0",
 		"lightningcss": "^1.33.0",
 		"lint-staged": "^17.6.0",
 		"postcss": "^8.5.28",

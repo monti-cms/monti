@@ -18,10 +18,10 @@ import { createRequire } from "node:module";
 import path from "node:path";
 
 const AC_DIR = "docs/acceptance/core";
-const CORE_SRC = "packages/core/src";
+export const CORE_SRC = "packages/core/src";
 
 const SOURCE_FILE = /\.(?:[cm]?[jt]s|[jt]sx)$/;
-const TEST_FILE = /\.(?:test|spec)\.(?:[cm]?[jt]s|[jt]sx)$|(?:^|\/)__test__\//;
+export const TEST_FILE = /\.(?:test|spec)\.(?:[cm]?[jt]s|[jt]sx)$|(?:^|\/)__test__\//;
 
 const ID = "[A-Z][A-Z0-9]*-\\d+";
 const AC_HEADER = new RegExp(`^(${ID})\\s{2,}\\S`);
@@ -62,7 +62,7 @@ function mainCheckout(root) {
  * Loads TypeScript from this file, from `root`, or from the main checkout. A fresh git worktree has no `node_modules`
  * until it is installed, but the main checkout it was made from has one.
  */
-function loadTypeScript(root) {
+export function loadTypeScript(root) {
 	const tried = [];
 	const candidates = [() => createRequire(import.meta.url), () => createRequire(path.join(root, "package.json"))];
 	const main = () => {
@@ -138,7 +138,7 @@ function readdirOrEmpty(dir, options = {}) {
 
 // ---- reading one source file ----
 
-function sourceFiles(root) {
+export function sourceFiles(root) {
 	return readdirOrEmpty(path.join(root, CORE_SRC), { recursive: true })
 		.filter((entry) => entry.isFile())
 		.map((entry) => path.relative(root, path.join(entry.parentPath, entry.name)).split(path.sep).join("/"))

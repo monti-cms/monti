@@ -7,6 +7,8 @@
 	"type": "module",
 	"scripts": {
 		"lint:deps": "depcruise --config .dependency-cruiser.cjs src",
+		"lint:dup": "jscpd src",
+		"lint:unused": "knip --no-config-hints",
 		"test": "vitest run",
 		"test:mutation": "stryker run"
 	},

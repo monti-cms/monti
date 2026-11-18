@@ -4,7 +4,8 @@
 //   node agent-guard/check.mjs --stop        Stop hook (Claude Code, Codex, Antigravity): reads the hook payload on stdin
 //   node agent-guard/check.mjs --pre-tool    PreToolUse hook: stops a file edit before it happens (payload on stdin)
 //   node agent-guard/check.mjs --pre-commit  Git pre-commit hook
-//   node agent-guard/check.mjs               run the code checks (`pnpm lint` and the acceptance fence) and exit 0 or 1
+//   node agent-guard/check.mjs               run the code checks (`pnpm lint`: Biome, secretlint, dependency-cruiser, knip
+//                                            and jscpd; and the acceptance fence) and exit 0 or 1
 //
 // Workers are a delegated task (`T3CODE_THREAD_ID`) or a sub-agent (`agent_id` in the payload); every other session is the PM.
 // `--stop` and `--pre-commit` check workers only. `--pre-tool` stops a worker editing a protected file, and the PM editing
@@ -33,6 +34,8 @@ const PROTECTED_FILES = new Set([
 	".gemini/settings.json",
 	"packages/core/biome.json",
 	"packages/core/.dependency-cruiser.cjs",
+	"packages/core/knip.jsonc",
+	"packages/core/.jscpd.json",
 	"packages/core/env.d.ts",
 	".secretlintrc.json",
 ]);
