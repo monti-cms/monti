@@ -1,5 +1,4 @@
 import { MontiError } from "./errors";
-import { isOperation } from "./operation";
 import type { Operation, Plugin, ResourceTree } from "./types";
 
 /**
@@ -23,18 +22,15 @@ function addActions(
 	plugin: string,
 	resource: string,
 ): ResourceTree {
-	if (existing !== undefined && isOperation(existing)) throw taken(plugin, resource);
 	const merged: ResourceTree = { ...existing };
 	for (const [action, operation] of Object.entries(actions)) {
-		if (Object.hasOwn(merged, action)) throw taken(plugin, `${resource}.${action}`);
+		if (Object.hasOwn(merged, action)) {
+			throw new MontiError(
+				"CONFLICT",
+				`The plugin "${plugin}" adds the operation "${resource}.${action}", whose path is already taken.`,
+			);
+		}
 		merged[action] = operation;
 	}
 	return merged;
-}
-
-function taken(plugin: string, path: string): MontiError {
-	return new MontiError(
-		"CONFLICT",
-		`The plugin "${plugin}" adds the operation "${path}", whose path is already taken.`,
-	);
 }

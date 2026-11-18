@@ -2,7 +2,6 @@ import type { Kysely, Transaction } from "kysely";
 import type { Database } from "../db/types";
 import { MontiError } from "./errors";
 import { createEvents } from "./events";
-import { isOperation } from "./operation";
 import { withPlugins } from "./plugins";
 import type { Monti, MontiClient, MontiEvent, MontiWriteClient, Operation, Plugin, ResourceTree } from "./types";
 
@@ -114,4 +113,9 @@ function parseInput(operation: Operation, raw: unknown): unknown {
 	const result = operation.input.safeParse(raw);
 	if (!result.success) throw new MontiError("BAD_REQUEST", result.error.message, result.error.issues);
 	return result.data;
+}
+
+/** Whether a node of the resource tree is an operation rather than a resource holding more nodes. */
+function isOperation(node: Operation | ResourceTree): node is Operation {
+	return typeof node.run === "function";
 }

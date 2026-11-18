@@ -8,6 +8,5 @@ export class MontiError extends Error {
 		public readonly details?: unknown,
 	) {
 		super(message);
-		this.name = "MontiError";
 	}
 }

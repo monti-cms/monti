@@ -315,5 +315,10 @@ it("ENG-11 rejects a plugin whose operation path is already taken", () => {
 	const plugin: Plugin = { name: "folders-plugin", operations: { folders: { create } } };
 
 	// ENG-11.1
-	expect(() => createMonti(db, { folders: { create } }, [plugin])).toThrow();
+	expect(() => createMonti(db, { folders: { create } }, [plugin])).toThrow(
+		new MontiError(
+			"CONFLICT",
+			'The plugin "folders-plugin" adds the operation "folders.create", whose path is already taken.',
+		),
+	);
 });
