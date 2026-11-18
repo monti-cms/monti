@@ -2,15 +2,18 @@
 // The fence around worker agents.
 //
 //   node agent-guard/check.mjs --stop        Stop hook (Claude Code, Codex, Antigravity): reads the hook payload on stdin
+//   node agent-guard/check.mjs --pre-tool    PreToolUse hook: stops a file edit before it happens (payload on stdin)
 //   node agent-guard/check.mjs --pre-commit  Git pre-commit hook
 //   node agent-guard/check.mjs               run the code checks (`pnpm lint` and the acceptance fence) and exit 0 or 1
 //
-// Only worker sessions are checked: a delegated task (`T3CODE_THREAD_ID`) or a sub-agent (`agent_id` in the payload).
-// The PM and the owner are never stopped by it. Anything unexpected inside the check fails open with a warning.
+// Workers are a delegated task (`T3CODE_THREAD_ID`) or a sub-agent (`agent_id` in the payload); every other session is the PM.
+// `--stop` and `--pre-commit` check workers only. `--pre-tool` stops a worker editing a protected file, and the PM editing
+// code (`packages/`, `scripts/`): the PM hands code to a worker, and may still commit what a worker left in its worktree.
+// Anything unexpected inside the check fails open with a warning.
 
 import { spawn, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { existsSync, readFileSync, renameSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, realpathSync, renameSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
@@ -30,6 +33,8 @@ const PROTECTED_FILES = new Set([
 	".gemini/settings.json",
 	"packages/core/biome.json",
 	"packages/core/.dependency-cruiser.cjs",
+	"packages/core/env.d.ts",
+	".secretlintrc.json",
 ]);
 
 // A change to one of these is what `pnpm lint` has to look at.
@@ -52,6 +57,7 @@ const isCode = (file) => {
 };
 
 const isWorkerThread = () => process.env.T3CODE_THREAD_ID?.startsWith(WORKER_THREAD_PREFIX) === true;
+const isWorker = (payload) => isWorkerThread() || (typeof payload.agent_id === "string" && payload.agent_id !== "");
 
 const sha256 = (...parts) => {
 	const hash = createHash("sha256");
@@ -259,8 +265,7 @@ async function readPayload() {
 
 async function stop() {
 	const payload = await readPayload();
-	const worker = isWorkerThread() || (typeof payload.agent_id === "string" && payload.agent_id !== "");
-	if (!worker) return 0;
+	if (!isWorker(payload)) return 0;
 
 	// Antigravity runs the hook after every step; only the end of a whole run (`fullyIdle`) is a stop.
 	const antigravity = Object.hasOwn(payload, "executionNum");
@@ -279,6 +284,92 @@ async function stop() {
 		return 2;
 	}
 	return 0;
+}
+
+// ---- before a tool runs ----
+
+// The PM's own edits stop at these; it delegates code to a worker.
+const PM_CODE_PREFIXES = ["packages/", "scripts/"];
+
+// The tools that write files (Claude Code, Codex, Antigravity) and where each names its target.
+const EDIT_TOOLS = new Set([
+	"Edit",
+	"Write",
+	"MultiEdit",
+	"NotebookEdit",
+	"apply_patch",
+	"write_to_file",
+	"replace_file_content",
+	"multi_replace_file_content",
+]);
+const PATH_KEYS = ["file_path", "notebook_path", "TargetFile", "path"];
+const PATCH_FILE = /^\*\*\* (?:(?:Add|Update|Delete) File|Move to): (.+)$/gm;
+
+/** The files a tool call would write, as given (absolute, or relative to the session's directory). */
+function editTargets(payload) {
+	const input = payload.tool_input;
+	if (typeof input === "string") return [...input.matchAll(PATCH_FILE)].map((match) => match[1].trim());
+	if (input === null || typeof input !== "object") return [];
+	const targets = PATH_KEYS.map((key) => input[key]).filter((value) => typeof value === "string" && value !== "");
+	for (const key of ["command", "patch", "input"]) {
+		const text = Array.isArray(input[key]) ? input[key].join("\n") : input[key];
+		if (typeof text === "string") targets.push(...[...text.matchAll(PATCH_FILE)].map((match) => match[1].trim()));
+	}
+	return targets;
+}
+
+/**
+ * Where `file` is inside its git repository, or undefined outside one. The repository is found from the file itself, so a
+ * file in another worktree is placed in that worktree whatever the session's directory is.
+ */
+function repoPath(file) {
+	let dir = path.dirname(file);
+	while (!existsSync(dir)) {
+		const parent = path.dirname(dir);
+		if (parent === dir) return undefined;
+		dir = parent;
+	}
+	let root;
+	try {
+		root = realpathSync(git(dir, ["rev-parse", "--show-toplevel"]).trim());
+	} catch {
+		return undefined;
+	}
+	const relative = path.relative(root, path.join(realpathSync(dir), path.relative(dir, file)));
+	if (relative === "" || relative.startsWith("..") || path.isAbsolute(relative)) return undefined;
+	return relative.split(path.sep).join("/");
+}
+
+/** Returns why the tool call may not run, or null. */
+function preToolReason(payload) {
+	if (!EDIT_TOOLS.has(payload.tool_name)) return null;
+	const cwd = typeof payload.cwd === "string" && payload.cwd !== "" ? payload.cwd : process.cwd();
+	const files = editTargets(payload)
+		.map((target) => repoPath(path.resolve(cwd, target)))
+		.filter((file) => file !== undefined);
+	if (isWorker(payload)) {
+		const touched = files.filter(isProtected);
+		if (touched.length === 0) return null;
+		return [
+			"These files are protected and a worker may not change them:",
+			...touched.map((name) => `- ${name}`),
+			"Solve the task in files you may change. If one of these looks wrong, report it to the PM.",
+		].join("\n");
+	}
+	const code = files.filter((file) => PM_CODE_PREFIXES.some((prefix) => file.startsWith(prefix)));
+	if (code.length === 0) return null;
+	return [
+		"The PM does not edit code:",
+		...code.map((name) => `- ${name}`),
+		"Delegate this change to a worker agent with a brief that says what to change and why.",
+	].join("\n");
+}
+
+async function preTool() {
+	const reason = preToolReason(await readPayload());
+	if (reason === null) return 0;
+	process.stderr.write(`${reason}\n`);
+	return 2;
 }
 
 const topLevel = () => git(process.cwd(), ["rev-parse", "--show-toplevel"]).trim();
@@ -329,12 +420,13 @@ async function main() {
 			return 1;
 		}
 	}
-	if (mode !== "--stop" && mode !== "--pre-commit") {
-		process.stderr.write(`Unknown option ${mode}. Use --stop, --pre-commit or no option.\n`);
+	const modes = { "--stop": stop, "--pre-tool": preTool, "--pre-commit": preCommit };
+	if (!Object.hasOwn(modes, mode)) {
+		process.stderr.write(`Unknown option ${mode}. Use --stop, --pre-tool, --pre-commit or no option.\n`);
 		return 1;
 	}
 	try {
-		return mode === "--stop" ? await stop() : await preCommit();
+		return await modes[mode]();
 	} catch (error) {
 		process.stderr.write(`agent-guard: the check could not run and was skipped (${error.message})\n`);
 		return 0;

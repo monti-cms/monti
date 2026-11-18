@@ -1,5 +1,16 @@
 {
 	"hooks": {
+		"PreToolUse": [
+			{
+				"hooks": [
+					{
+						"type": "command",
+						"command": "node \"$(git rev-parse --show-toplevel)/agent-guard/check.mjs\" --pre-tool",
+						"timeout": 30
+					}
+				]
+			}
+		],
 		"Stop": [
 			{
 				"hooks": [

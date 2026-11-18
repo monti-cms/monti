@@ -635,6 +635,128 @@ describe("a fresh worktree without node_modules", () => {
 	});
 });
 
+describe("--pre-tool", () => {
+	const PM = "thread:pm";
+	const edit = (f, payload, options = {}) => f.run(["--pre-tool"], { ...options, input: JSON.stringify(payload) });
+	const blocked = (result, pattern) => {
+		assert.equal(result.status, 2, result.stderr);
+		assert.match(result.stderr, pattern);
+	};
+
+	test("blocks the PM editing packages/ and scripts/, and tells it to delegate", () => {
+		const f = fixture();
+		for (const thread of [PM, ""]) {
+			const result = edit(
+				f,
+				{ tool_name: "Edit", tool_input: { file_path: path.join(f.repo, "packages/core/src/a.ts") } },
+				{ thread },
+			);
+			blocked(result, /The PM does not edit code:\n- packages\/core\/src\/a\.ts\n/);
+			assert.match(result.stderr, /Delegate this change to a worker agent/);
+		}
+		blocked(
+			edit(f, { tool_name: "Write", tool_input: { file_path: path.join(f.repo, "scripts/new.mjs") } }, { thread: PM }),
+			/- scripts\/new\.mjs/,
+		);
+		blocked(
+			edit(f, { tool_name: "Write", cwd: f.repo, tool_input: { file_path: "packages/core/env.d.ts" } }, { thread: PM }),
+			/- packages\/core\/env\.d\.ts/,
+		);
+	});
+
+	test("allows the PM editing docs and the other files outside the code", () => {
+		const f = fixture();
+		for (const file of ["docs/notes.md", "docs/acceptance/core/a.md", "agent-guard/check.mjs", "package.json"])
+			allowed(edit(f, { tool_name: "Edit", tool_input: { file_path: path.join(f.repo, file) } }, { thread: PM }));
+	});
+
+	test("blocks a worker editing a protected file, packages/core/env.d.ts among them", () => {
+		const f = fixture();
+		for (const file of [
+			"packages/core/env.d.ts",
+			"docs/acceptance/core/a.md",
+			"agent-guard/check.mjs",
+			".secretlintrc.json",
+		]) {
+			const result = edit(f, { tool_name: "Write", tool_input: { file_path: path.join(f.repo, file) } });
+			blocked(result, new RegExp(`a worker may not change them:\\n- ${file.replaceAll(".", "\\.")}\\n`));
+		}
+		blocked(
+			edit(
+				f,
+				{ tool_name: "Edit", agent_id: "agent-7", tool_input: { file_path: path.join(f.repo, "agent-guard/x.mjs") } },
+				{ thread: "" },
+			),
+			/- agent-guard\/x\.mjs/,
+		);
+	});
+
+	test("allows a worker editing the core's code", () => {
+		const f = fixture();
+		allowed(edit(f, { tool_name: "Edit", tool_input: { file_path: path.join(f.repo, "packages/core/src/a.ts") } }));
+		allowed(
+			edit(
+				f,
+				{
+					tool_name: "Write",
+					agent_id: "agent-7",
+					tool_input: { file_path: path.join(f.repo, "packages/core/src/new/b.ts") },
+				},
+				{ thread: "" },
+			),
+		);
+	});
+
+	test("reads the targets of the other editors' tools", () => {
+		const f = fixture();
+		const file = path.join(f.repo, "packages/core/src/a.ts");
+		for (const tool_input of [{ notebook_path: file }, { TargetFile: file }, { path: file }])
+			blocked(edit(f, { tool_name: "NotebookEdit", tool_input }, { thread: PM }), /- packages\/core\/src\/a\.ts/);
+		blocked(edit(f, { tool_name: "write_to_file", tool_input: { TargetFile: file } }, { thread: PM }), /a\.ts/);
+		const patch =
+			"*** Begin Patch\n*** Update File: packages/core/src/a.ts\n@@\n-a\n+b\n*** Add File: docs/x.md\n+x\n*** End Patch\n";
+		for (const tool_input of [{ command: ["apply_patch", patch] }, { patch }, patch]) {
+			const result = edit(f, { tool_name: "apply_patch", cwd: f.repo, tool_input }, { thread: PM });
+			blocked(result, /- packages\/core\/src\/a\.ts\n/);
+			assert.doesNotMatch(result.stderr, /docs\/x\.md/);
+		}
+	});
+
+	test("places a file by its own repository, not the session's directory", () => {
+		const f = fixture();
+		const elsewhere = realpathSync(mkdtempSync(path.join(tmpdir(), "monti-check-elsewhere-")));
+		roots.push(elsewhere);
+		const result = edit(
+			f,
+			{ tool_name: "Edit", tool_input: { file_path: path.join(f.repo, "packages/core/src/a.ts") } },
+			{ thread: PM, cwd: elsewhere },
+		);
+		blocked(result, /- packages\/core\/src\/a\.ts/);
+		allowed(
+			edit(f, { tool_name: "Write", tool_input: { file_path: path.join(elsewhere, "packages/x.ts") } }, { thread: PM }),
+		);
+	});
+
+	test("lets reads and other tools through, and fails open on a bad payload", () => {
+		const f = fixture();
+		const file = path.join(f.repo, "packages/core/src/a.ts");
+		allowed(edit(f, { tool_name: "Read", tool_input: { file_path: file } }, { thread: PM }));
+		allowed(edit(f, { tool_name: "Bash", tool_input: { command: "ls" } }, { thread: PM }));
+		const bad = f.run(["--pre-tool"], { input: "not json", thread: PM });
+		assert.equal(bad.status, 0);
+		assert.match(bad.stderr, /the check could not run and was skipped/);
+	});
+
+	test("the PM's stop and commit of a worker's code in the shared worktree are not blocked", () => {
+		const f = fixture();
+		f.write("packages/core/src/ok.ts", "export const ok = 1;\n");
+		f.lintFails();
+		allowed(f.stop(undefined, { thread: PM }));
+		f.git("add", "-A");
+		allowed(f.run(["--pre-commit"], { thread: PM }));
+	});
+});
+
 describe("--pre-commit", () => {
 	test("blocks a worker's commit that has a protected file staged, and lists the files", () => {
 		const f = fixture();

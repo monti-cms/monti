@@ -2,21 +2,32 @@ import { randomUUID } from "node:crypto";
 import { Kysely, PostgresDialect, sql } from "kysely";
 import pg from "pg";
 
-/** The server the tests create their databases on. Set `TEST_DATABASE_URL` to use another one. */
-export const TEST_SERVER_URL = process.env.TEST_DATABASE_URL ?? "postgres://localhost:5432/postgres";
+/**
+ * How to reach `database` on the test server. Without `TEST_DATABASE_URL` the driver's defaults pick the server (the
+ * `PGHOST`, `PGPORT` and `PGUSER` variables, else the local server as the current user). With it, the URL names the
+ * server and its own database, and any other database on it is reached by changing the URL's path.
+ */
+export function testServer(database?: string): pg.PoolConfig {
+	const url = process.env.TEST_DATABASE_URL;
+	if (url === undefined) return { database: database ?? "postgres" };
+	if (database === undefined) return { connectionString: url };
+	const other = new URL(url);
+	other.pathname = `/${database}`;
+	return { connectionString: other.toString() };
+}
 
 export interface TestDatabase {
 	db: Kysely<unknown>;
 	drop: () => Promise<void>;
 }
 
-function connect<DB>(connectionString: string): Kysely<DB> {
-	return new Kysely<DB>({ dialect: new PostgresDialect({ pool: new pg.Pool({ connectionString, max: 4 }) }) });
+function connect<DB>(config: pg.PoolConfig): Kysely<DB> {
+	return new Kysely<DB>({ dialect: new PostgresDialect({ pool: new pg.Pool({ ...config, max: 4 }) }) });
 }
 
 /** Runs `run` with a connection to the server's own database, used to create and drop the test databases. */
 async function onServer(run: (server: Kysely<unknown>) => Promise<void>): Promise<void> {
-	const server = connect<unknown>(TEST_SERVER_URL);
+	const server = connect<unknown>(testServer());
 	try {
 		await run(server);
 	} finally {
@@ -30,9 +41,7 @@ export async function createTestDatabase(): Promise<TestDatabase> {
 	await onServer(async (server) => {
 		await sql`create database ${sql.id(name)} template template0`.execute(server);
 	});
-	const url = new URL(TEST_SERVER_URL);
-	url.pathname = `/${name}`;
-	const db = connect<unknown>(url.toString());
+	const db = connect<unknown>(testServer(name));
 	const drop = async () => {
 		await db.destroy();
 		await onServer(async (server) => {
