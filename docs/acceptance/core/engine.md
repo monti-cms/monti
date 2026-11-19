@@ -76,4 +76,11 @@ ENG-11  플러그인의 Operation 경로가 기존 경로와 겹치면 거절한
   전제  이미 존재하는 `<resource>.<action>`과 같은 경로의 Operation을 가진 플러그인이 주어진다
   행동  엔진을 생성한다
   결과  ENG-11.1 오류가 던져진다
+
+ENG-12  쓰기 Operation에서 PostgreSQL 고유 제약 위반(`23505`)이 나면 `CONFLICT`로 변환하고 롤백한다
+  전제  한 번의 실행 안에서 행 하나를 추가한 뒤 같은 기본 키로 다시 추가하는 쓰기 Operation과 `onEvent` 구독자가 등록되어 있다
+  행동  해당 쓰기 Operation을 직접 호출하고, 같은 Operation을 `dryRun` 블록 안에서도 호출한다
+  결과  ENG-12.1  두 호출 모두 `code`가 `"CONFLICT"`인 `MontiError`가 던져진다
+        ENG-12.2  먼저 추가했던 행이 롤백되어 DB에 남아 있지 않는다
+        ENG-12.3  `onEvent` 구독자가 호출되지 않는다
 ```

@@ -1,6 +1,6 @@
 # `rich-text/` 인수 조건
 
-각 결과 줄의 "보고된다"는 반환된 문제 목록에 해당 `path`의 항목이 포함됨을 뜻한다.
+각 결과 줄의 "보고된다"는 반환된 문제 목록에 해당 `path`의 항목이 포함됨을 뜻한다. 예약 속성 `attrs.mediaId`·`attrs.mediaIds` 검사는 블록 정의의 `attrs` 스키마 유무와 상관없이 `children`을 포함한 모든 블록에 적용되며(생략·`undefined`·빈 배열 `[]` 허용), 사용자 블록 스키마로 재정의할 수 없다.
 
 ```
 RT-1  유효한 본문 문서는 빈 문제 목록을 돌려준다
@@ -72,4 +72,13 @@ RT-10  `marks`로 등록한 마크 정의는 내장 마크를 유지·덮어쓰�
         RT-10.2  `blocks[0].content[3].marks[0]` 경로의 문제가 보고된다
         RT-10.3  `blocks[0].content[0]`과 그 하위 경로에는 문제가 보고되지 않는다
         RT-10.4  `blocks[0].content[1]`과 그 하위 경로에는 문제가 보고되지 않는다
+
+RT-11  블록의 예약 속성 `attrs.mediaId`와 `attrs.mediaIds`에 값이 주어지면 UUID 형식으로 검사한다
+  전제  `blocks[0]`에 유효한 UUID `attrs.mediaId`, `blocks[1]`에 유효한 UUID 배열 `attrs.mediaIds`, `blocks[2]`에 UUID가 아닌 문자열 `attrs.mediaId`, `blocks[3]`에 `null`인 `attrs.mediaId`, `blocks[4]`에 UUID가 아닌 원소가 섞인 `attrs.mediaIds`, `blocks[5]`에 배열이 아닌 `attrs.mediaIds`가 담긴 문서가 있다
+  행동  `validateDoc`으로 문서를 검사한다
+  결과  RT-11.1  `blocks[2].attrs.mediaId` 경로의 문제가 보고된다
+        RT-11.2  `blocks[3].attrs.mediaId` 경로의 문제가 보고된다
+        RT-11.3  `blocks[4].attrs.mediaIds` 경로의 문제가 보고된다
+        RT-11.4  `blocks[5].attrs.mediaIds` 경로의 문제가 보고된다
+        RT-11.5  `blocks[0]`과 `blocks[1]` 및 그 하위 경로에는 문제가 보고되지 않는다
 ```

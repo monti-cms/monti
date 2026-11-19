@@ -4,7 +4,7 @@
 
 - `storage`가 설정되지 않은 엔진에서는 `media` 리소스 전체를 `BAD_REQUEST`로 거절한다.
 - `media.startUpload`: 새 UUID `key`로 `storage.ticket`을 발급하고 `loose_files`에 24시간 뒤 만료로 기록한다.
-- `media.create`: `storage.stat`으로 파일 존재와 `mime_type`을 확인해 `media`에 등록하고 `loose_files`에서 해당 `key`를 지운다.
+- `media.create`: 선택 `__preset_id`(UUID)를 받고 `storage.stat`으로 파일 존재와 `mime_type`을 확인해 `media`에 등록한 뒤 `loose_files`에서 해당 `key`를 지운다.
 - `media.list`·`media.get`: `trashed_at`이 `null`인 미디어만 `url`과 함께 돌려준다. `list`의 `folder_id`는 생략=전체, `null`=루트, UUID=해당 폴더 직속이다.
 - `media.update`: 단건(`id`)은 `metadata` 전체 교체·폴더 이동·파일 교체(`key` 변경 시 이전 `key`를 `loose_files`에 24시간 대기로 추가)를, 다건(`ids`)은 폴더 일괄 이동(`folder_id`)만 처리한다.
 
@@ -109,4 +109,10 @@ MED-15  다건 `media.update`에서 대상 중 하나라도 `trashed_at`이 설�
   행동  두 미디어의 `ids`와 해당 `folder_id`로 `media.update`를 실행한다
   결과  MED-15.1  `NOT_FOUND` 오류를 던진다
         MED-15.2  `media` 테이블에서 `trashed_at`이 `null`인 미디어의 `folder_id`가 `null` 그대로이다
+
+MED-16  `media.create`에 `__preset_id`를 주면 지정한 `id`로 미디어를 등록한다
+  전제  `storage`에 파일이 올라가 있고 `media`가 비어 있다
+  행동  미리 정한 UUID `__preset_id`와 올라간 `key`로 `media.create`를 실행한다
+  결과  MED-16.1  반환값의 `id`가 전달한 `__preset_id`이다
+        MED-16.2  `media` 테이블에 해당 `id`의 행이 하나 생긴다
 ```

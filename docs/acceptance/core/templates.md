@@ -1,11 +1,11 @@
 # `resources/templates/` · `resources/media/uses.ts` 인수 조건
 
-[`docs/refactor/core.md`](../../refactor/core.md) 3.1절(선택 입력 `id`), 6절(`templates`, `media_uses`), 7절(`templates` 리소스)의 인수 조건이다.
+[`docs/refactor/core.md`](../../refactor/core.md) 3.1절(선택 입력 `__preset_id`), 6절(`templates`, `media_uses`), 7절(`templates` 리소스)의 인수 조건이다.
 
-- `templates` 리소스는 `storage` 없이 동작한다. `create`는 선택 `id`(UUID)를 받고 스키마에 존재하는 `collection`이 필수이며(스키마에 없으면 `BAD_REQUEST`), `update` 입력에는 `collection`이 없어 수정할 수 없다.
+- `templates` 리소스는 `storage` 없이 동작한다. `create`는 선택 `__preset_id`(UUID)를 받고 스키마에 존재하는 `collection`이 필수이며(스키마에 없으면 `BAD_REQUEST`), `update` 입력에는 `collection`이 없어 수정할 수 없다.
 - `create`와 `content`가 주어진 `update`는 본문을 `validateDoc(content, ctx.config)`로 검사하고 실패 시 문제 목록 전체를 `details`에 담아 `BAD_REQUEST`로 거절한다.
 - 같은 `collection` 안에서 `name` 중복은 `CONFLICT`, 본문이 DB에 없거나 `trashed_at`이 설정된 미디어를 참조하면 `BAD_REQUEST`, 없는 `id`에 대한 `get`·`update`·`delete`는 `NOT_FOUND`로 거절한다.
-- `resources/media/uses.ts`는 블록 트리 전체(`children` 재귀)에서 `attrs.mediaId`와 `attrs.mediaIds`를 중복 없이 모아 같은 트랜잭션 안에서 `media_uses`(`source_kind: "template"`, `field_path: "content"`)를 갱신·정리한다.
+- `resources/media/uses.ts`는 블록 트리 전체(`children` 재귀)에서 `attrs.mediaId`와 `attrs.mediaIds`를 대소문자를 무시하고 한 번씩 모아 같은 트랜잭션 안에서 `media_uses`(`source_kind: "template"`, `field_path: "content"`)를 갱신·정리한다.
 
 ---
 
@@ -18,10 +18,10 @@ TPL-1  `templates.create`는 `storage` 없이도 컬렉션의 템플릿을 저�
   결과  TPL-1.1  반환값의 `id`가 UUID 형식이고 `collection`, `name`, `content`가 입력과 같다
         TPL-1.2  `templates` 테이블에 반환값과 같은 행이 생긴다
 
-TPL-2  `templates.create`에 `id`를 주면 지정한 `id`로 템플릿을 만든다
+TPL-2  `templates.create`에 `__preset_id`를 주면 지정한 `id`로 템플릿을 만든다
   전제  스키마에 컬렉션이 하나 있고 `templates`가 비어 있다
-  행동  미리 정한 UUID `id`, 해당 `collection`, `name`, 유효한 `content`로 `templates.create`를 실행한다
-  결과  TPL-2.1  반환값의 `id`가 전달한 `id`이다
+  행동  미리 정한 UUID `__preset_id`, 해당 `collection`, `name`, 유효한 `content`로 `templates.create`를 실행한다
+  결과  TPL-2.1  반환값의 `id`가 전달한 `__preset_id`이다
         TPL-2.2  `templates` 테이블에 해당 `id`의 행이 하나 생긴다
 
 TPL-3  `templates.create`는 다른 `collection`에 같은 `name`이 있어도 템플릿을 만든다
@@ -30,9 +30,9 @@ TPL-3  `templates.create`는 다른 `collection`에 같은 `name`이 있어도 �
   결과  TPL-3.1  반환값의 `collection`이 첫 번째 컬렉션이고 `name`이 입력과 같다
         TPL-3.2  `templates` 테이블에 두 컬렉션의 템플릿 두 개가 모두 있다
 
-TPL-4  `templates.create`는 본문 블록 트리의 `attrs.mediaId`·`attrs.mediaIds`를 `media_uses`에 중복 없이 기록한다
+TPL-4  `templates.create`는 본문 블록 트리의 `attrs.mediaId`·`attrs.mediaIds`를 `media_uses`에 대소문자를 무시하고 한 번씩 기록한다
   전제  스키마에 컬렉션이 하나 있고 `trashed_at`이 `null`인 미디어 세 개가 있으며 `media_uses`가 비어 있다
-  행동  최상위 블록이 첫 번째 미디어를 `attrs.mediaId`로, `quote`의 `children` 안 블록 하나가 두 번째 미디어를 `attrs.mediaId`로, 다른 `children` 블록이 두 번째·세 번째 미디어를 `attrs.mediaIds`로 참조하는 `content`로 `templates.create`를 실행한다
+  행동  최상위 블록이 첫 번째 미디어를 `attrs.mediaId`로, `quote`의 `children` 안 블록 하나가 두 번째 미디어를 `attrs.mediaId`로, 다른 `children` 블록이 대문자 표기의 두 번째 미디어와 세 번째 미디어를 `attrs.mediaIds`로 참조하는 `content`로 `templates.create`를 실행한다
   결과  TPL-4.1  `media_uses`에 `source_kind`가 `"template"`, `source_id`가 반환된 `id`, `field_path`가 `"content"`인 행이 세 미디어당 하나씩 정확히 세 개 생긴다
 
 TPL-5  `templates.create`는 스키마에 없는 `collection`이면 `BAD_REQUEST`로 거절한다

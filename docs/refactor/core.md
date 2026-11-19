@@ -35,7 +35,7 @@
 - Operation은 `defineRead` 또는 `defineWrite`로 **한 번만** 정의하고, 리소스 객체 트리(`{ entries: { list, get, ... } }`)에 둔다. 키 경로(`entries.get`)가 곧 이름이다. 이름 문자열을 따로 적지 않는다.
 - 속성은 둘뿐이다. **`input`**(Zod 스키마, 선택 입력은 `optional()`)과 **`run`**(`(input, ctx) => Promise<output>`).
 - 읽기는 상태를 바꾸지 않는다. 쓰기는 트랜잭션 안에서 실행되며, 미디어 사용처 색인(`media_uses`) 갱신은 해당 리소스의 `run`이 같은 트랜잭션 안에서 한다.
-- 생성 계열 쓰기(`folders.create`, `entries.create` 등)는 선택 입력 `id`(UUID)를 받는다. 호출자가 미리 정한 id로 앞뒤 쓰기를 잇기 위해서다.
+- 다른 쓰기가 참조할 수 있는 콘텐츠 생성 계열(`folders.create`, `templates.create`, `media.create`, `entries.create`, `translations.create`, `entries.duplicate`의 새 행)은 내부 예약 선택 입력 `__preset_id`(UUID, 소문자로 저장)를 받는다. 호출자가 미리 정한 id로 앞뒤 쓰기를 잇기 위한 용도이며 일반 호출에서는 생략한다(`keys`·`admin`·`session`·`media.startUpload`는 제외). 외부 입구(`next`, `cli`)가 이 입력을 그대로 받을지는 각 패키지 문서에서 정한다.
 - 같은 Operation을 `next`(HTTP), `cli`, `ai`, 사이트와 백그라운드 작업이 `monti.<resource>.<action>(input)`으로 직접 호출한다. 사이트 조회(`entries.get`, `entries.list` 등)와 휴지통의 만료 정리(`trash.delete`의 조건 입력)도 같은 Operation이다.
 
 ### 3.2 호출
@@ -91,7 +91,7 @@ sequenceDiagram
 
 ### 3.4 오류
 
-`MontiError` 하나로 통일한다. 코드는 `BAD_REQUEST`, `UNAUTHORIZED`, `FORBIDDEN`, `NOT_FOUND`, `CONFLICT`. 입력 검사 실패는 `BAD_REQUEST`다. HTTP 상태로의 변환은 외부 입구가 한다.
+`MontiError` 하나로 통일한다. 코드는 `BAD_REQUEST`, `UNAUTHORIZED`, `FORBIDDEN`, `NOT_FOUND`, `CONFLICT`. 입력 검사 실패는 `BAD_REQUEST`이며, 쓰기 중 발생하는 PostgreSQL 고유 제약 위반(`23505`, 중복 `id` 포함)은 엔진이 `CONFLICT`로 변환한다. 이 변환은 직접 호출·`transaction`·`dryRun` 모두에 적용되며, 블록 안에서 발생하면 그 블록 전체가 실패한다(잡고 계속할 수 없다). HTTP 상태로의 변환은 외부 입구가 한다.
 
 ### 3.5 타입 명세
 
@@ -520,7 +520,10 @@ flowchart TD
 | 2026-11-19 | 사람이 식별하는 `name`(`keys`, `folders`, `templates`)은 같은 범위 안 활성 항목끼리 중복을 허용하지 않고 `CONFLICT`로 거절한다. | 소유자와 정함 |
 | 2026-11-19 | 단계 끝 Stryker 보고는 4분류(무의미 변이 무시 · 명세 밖 분기 삭제 · 기존 AC 보강 · 새 규칙만 소유자 보고)로 정리하고, 큰 리소스는 기능 묶음 단위로 분할 승인·개발한다. | 소유자와 정함 |
 | 2026-11-19 | `templates`는 core에 유지하고 `collection`은 생성 시 필수(수정 불가), `templates.list`에서는 선택(생략 시 전체)으로 한다. | 소유자와 정함 |
-| 2026-11-19 | `resources/media/uses.ts`는 블록 트리 전체에서 `attrs.mediaId`·`attrs.mediaIds`를 중복 없이 모아 `media_uses`(템플릿은 `field_path: "content"`)를 갱신하며, DB에 없거나 `trashed_at`이 설정된 미디어 참조는 `BAD_REQUEST`로 거절한다. | 소유자와 정함 |
+| 2026-11-19 | `resources/media/uses.ts`는 블록 트리 전체에서 `attrs.mediaId`·`attrs.mediaIds`를 대소문자를 무시하고 한 번씩 모아 `media_uses`(템플릿은 `field_path: "content"`)를 갱신하며, DB에 없거나 `trashed_at`이 설정된 미디어 참조는 `BAD_REQUEST`로 거절한다. | 소유자와 정함 |
+| 2026-11-19 | 콘텐츠 생성 계열(`folders`·`templates`·`media`·`entries`·`translations` `create`, `entries.duplicate`)은 내부 예약 선택 입력 `__preset_id`(UUID)를 받고, 쓰기 중 PostgreSQL 고유 제약 위반(`23505`)은 엔진에서 `CONFLICT`로 변환한다. `@monti-cms/ai`는 LLM 스키마에서 `__preset_id`를 숨기고 실행기가 `randomUUID()`를 주입한다. | 소유자와 정함 |
+| 2026-11-19 | `validateDoc`은 블록의 예약 속성 `attrs.mediaId`(`z.uuid()`)·`attrs.mediaIds`(`z.array(z.uuid())`)에 값이 주어지면 UUID 형식을 검사해 `DocIssue`로 보고하고, `resources/media/uses.ts`는 소문자 정규화로 대소문자 혼용 UUID 중복을 제거한다. | 소유자와 정함 |
+| 2026-11-19 | 동시 쓰기 경쟁 대비(`FOR UPDATE` 행 잠금, 추가 DB 유니크 인덱스)는 지금 도입하지 않고 필요할 때 다룬다. | 소유자와 정함 |
 
 ## 11. 정하지 않은 것
 
