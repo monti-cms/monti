@@ -24,7 +24,7 @@ export const CORE_SRC = "packages/core/src";
 const SOURCE_FILE = /\.(?:[cm]?[jt]s|[jt]sx)$/;
 export const TEST_FILE = /\.(?:test|spec)\.(?:[cm]?[jt]s|[jt]sx)$|(?:^|\/)__test__\//;
 
-const ID = "[A-Z][A-Z0-9]*-\\d+";
+const ID = "[A-Z][A-Z0-9]*(?:-[A-Z][A-Z0-9]*)*-\\d+";
 const AC_HEADER = new RegExp(`^(${ID})\\s{2,}\\S`);
 const RESULT_LINE = new RegExp(`^\\s*(?:결과\\s+)?(${ID}\\.\\d+)\\s+\\S`);
 const DEFERRED = /\[보류(?::[^\]]*)?\]\s*$/;

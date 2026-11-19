@@ -37,7 +37,7 @@ async function folderNames(): Promise<string[]> {
 	return rows.map((row) => row.name);
 }
 
-it("ENG-1 runs a read called directly without a transaction", async () => {
+it("ENG-OP-1 runs a read called directly without a transaction", async () => {
 	await db.insertInto("folders").values({ id: randomUUID(), scope: "media", name: "Photos" }).execute();
 	let inTransaction: boolean | undefined;
 	const list = defineRead({
@@ -53,15 +53,15 @@ it("ENG-1 runs a read called directly without a transaction", async () => {
 
 	const output = await monti.folders.list({ scope: "media" });
 
-	// ENG-1.1
+	// ENG-OP-1.1
 	expect(inTransaction).toBe(false);
-	// ENG-1.2
+	// ENG-OP-1.2
 	expect(output).toEqual([{ name: "Photos" }]);
-	// ENG-1.3
+	// ENG-OP-1.3
 	expect(listener).not.toHaveBeenCalled();
 });
 
-it("ENG-2 runs a write called directly in a transaction and sends its event after the commit", async () => {
+it("ENG-OP-2 runs a write called directly in a transaction and sends its event after the commit", async () => {
 	let inTransaction: boolean | undefined;
 	const create = defineWrite({
 		input: folderInput,
@@ -81,19 +81,19 @@ it("ENG-2 runs a write called directly in a transaction and sends its event afte
 
 	const output = await monti.folders.create(input);
 
-	// ENG-2.1
+	// ENG-OP-2.1
 	expect(inTransaction).toBe(true);
-	// ENG-2.2
+	// ENG-OP-2.2
 	expect(await folderNames()).toEqual(["Photos"]);
-	// ENG-2.3
+	// ENG-OP-2.3
 	expect(output).toEqual({ id: input.id });
-	// ENG-2.4
+	// ENG-OP-2.4
 	expect(listener).toHaveBeenCalledExactlyOnceWith({ operation: "folders.create", input, output });
-	// ENG-2.4
+	// ENG-OP-2.4
 	expect(await namesAtEvent).toEqual(["Photos"]);
 });
 
-it("ENG-3 throws BAD_REQUEST for an input that does not match the schema and does not run", async () => {
+it("ENG-OP-3 throws BAD_REQUEST for an input that does not match the schema and does not run", async () => {
 	const run = vi.fn(insertFolder);
 	const monti = createMonti(db, { folders: { create: defineWrite({ input: folderInput, run }) } });
 	const listener = vi.fn();
@@ -101,17 +101,17 @@ it("ENG-3 throws BAD_REQUEST for an input that does not match the schema and doe
 
 	const call = monti.folders.create({ id: "not-a-uuid", name: "Photos" });
 
-	// ENG-3.1
+	// ENG-OP-3.1
 	await expect(call).rejects.toBeInstanceOf(MontiError);
-	// ENG-3.1
+	// ENG-OP-3.1
 	await expect(call).rejects.toMatchObject({ code: "BAD_REQUEST" });
-	// ENG-3.2
+	// ENG-OP-3.2
 	expect(run).not.toHaveBeenCalled();
-	// ENG-3.3
+	// ENG-OP-3.3
 	expect(listener).not.toHaveBeenCalled();
 });
 
-it("ENG-4 rolls back a write that fails while running and sends no event", async () => {
+it("ENG-OP-4 rolls back a write that fails while running and sends no event", async () => {
 	const create = defineWrite({
 		input: folderInput,
 		run: async (input, ctx) => {
@@ -125,15 +125,15 @@ it("ENG-4 rolls back a write that fails while running and sends no event", async
 
 	const call = monti.folders.create({ id: randomUUID(), name: "Photos" });
 
-	// ENG-4.1
+	// ENG-OP-4.1
 	await expect(call).rejects.toThrow("the write fails");
-	// ENG-4.2
+	// ENG-OP-4.2
 	expect(await folderNames()).toEqual([]);
-	// ENG-4.3
+	// ENG-OP-4.3
 	expect(listener).not.toHaveBeenCalled();
 });
 
-it("ENG-5 keeps the write's result and the other subscribers when a subscriber fails", async () => {
+it("ENG-EVT-1 keeps the write's result and the other subscribers when a subscriber fails", async () => {
 	const monti = createMonti(db, { folders: { create: defineWrite({ input: folderInput, run: insertFolder }) } });
 	monti.onEvent(() => {
 		throw new Error("the subscriber throws");
@@ -147,15 +147,15 @@ it("ENG-5 keeps the write's result and the other subscribers when a subscriber f
 
 	const output = await monti.folders.create(input);
 
-	// ENG-5.1
+	// ENG-EVT-1.1
 	expect(output).toEqual({ id: input.id });
-	// ENG-5.2
+	// ENG-EVT-1.2
 	expect(await folderNames()).toEqual(["Photos"]);
-	// ENG-5.3
+	// ENG-EVT-1.3
 	expect(listener).toHaveBeenCalledExactlyOnceWith({ operation: "folders.create", input, output });
 });
 
-it("ENG-6 does not notify a subscriber that was removed", async () => {
+it("ENG-EVT-2 does not notify a subscriber that was removed", async () => {
 	const monti = createMonti(db, { folders: { create: defineWrite({ input: folderInput, run: insertFolder }) } });
 	const listener = vi.fn();
 	const off = monti.onEvent(listener);
@@ -163,11 +163,11 @@ it("ENG-6 does not notify a subscriber that was removed", async () => {
 
 	await monti.folders.create({ id: randomUUID(), name: "Photos" });
 
-	// ENG-6.1
+	// ENG-EVT-2.1
 	expect(listener).not.toHaveBeenCalled();
 });
 
-it("ENG-7 shares one transaction across a transaction block's calls and sends their events in call order after the commit", async () => {
+it("ENG-TX-1 shares one transaction across a transaction block's calls and sends their events in call order after the commit", async () => {
 	const contexts: ReadContext["db"][] = [];
 	const create = defineWrite({
 		input: folderInput,
@@ -211,31 +211,31 @@ it("ENG-7 shares one transaction across a transaction block's calls and sends th
 		return "done";
 	});
 
-	// ENG-7.1
+	// ENG-TX-1.1
 	expect(contexts[1]).toBe(contexts[0]);
-	// ENG-7.1
+	// ENG-TX-1.1
 	expect(contexts[2]).toBe(contexts[0]);
-	// ENG-7.1
+	// ENG-TX-1.1
 	expect(contexts[0]?.isTransaction).toBe(true);
-	// ENG-7.2
+	// ENG-TX-1.2
 	expect(namesInBlock).toEqual(["Photos"]);
-	// ENG-7.3
+	// ENG-TX-1.3
 	expect(eventsInBlock).toBe(0);
-	// ENG-7.4
+	// ENG-TX-1.4
 	expect(events).toEqual([
 		{ operation: "folders.create", input: first, output: { id: first.id } },
 		{ operation: "folders.add", input: second, output: { id: second.id } },
 	]);
-	// ENG-7.4
+	// ENG-TX-1.4
 	expect(await Promise.all(namesAtEvents)).toEqual([
 		["Photos", "Videos"],
 		["Photos", "Videos"],
 	]);
-	// ENG-7.5
+	// ENG-TX-1.5
 	expect(result).toBe("done");
 });
 
-it("ENG-8 rolls back a transaction block that fails midway and sends no event", async () => {
+it("ENG-TX-2 rolls back a transaction block that fails midway and sends no event", async () => {
 	const monti = createMonti(db, { folders: { create: defineWrite({ input: folderInput, run: insertFolder }) } });
 	const listener = vi.fn();
 	monti.onEvent(listener);
@@ -245,15 +245,15 @@ it("ENG-8 rolls back a transaction block that fails midway and sends no event", 
 		throw new Error("the block fails");
 	});
 
-	// ENG-8.1
+	// ENG-TX-2.1
 	await expect(call).rejects.toThrow("the block fails");
-	// ENG-8.2
+	// ENG-TX-2.2
 	expect(await folderNames()).toEqual([]);
-	// ENG-8.3
+	// ENG-TX-2.3
 	expect(listener).not.toHaveBeenCalled();
 });
 
-it("ENG-9 shows only the writes in a dryRun block, rolls them back and sends no event", async () => {
+it("ENG-TX-3 shows only the writes in a dryRun block, rolls them back and sends no event", async () => {
 	const list = defineRead({
 		input: z.object({}),
 		run: async (_input, ctx) => ctx.db.selectFrom("folders").select("name").execute(),
@@ -270,17 +270,17 @@ it("ENG-9 shows only the writes in a dryRun block, rolls them back and sends no 
 		return tx.folders.create(input);
 	});
 
-	// ENG-9.1
+	// ENG-TX-3.1
 	expect(actions).toEqual(["create"]);
-	// ENG-9.2
+	// ENG-TX-3.2
 	expect(output).toEqual({ id: input.id });
-	// ENG-9.3
+	// ENG-TX-3.3
 	expect(await folderNames()).toEqual([]);
-	// ENG-9.4
+	// ENG-TX-3.4
 	expect(listener).not.toHaveBeenCalled();
 });
 
-it("ENG-10 connects a plugin's operations and onEvent to the engine", async () => {
+it("ENG-PLG-1 connects a plugin's operations and onEvent to the engine", async () => {
 	const create = defineWrite({ input: folderInput, run: insertFolder });
 	const pluginListener = vi.fn();
 	let namesAtEvent: Promise<string[]> | undefined;
@@ -300,21 +300,21 @@ it("ENG-10 connects a plugin's operations and onEvent to the engine", async () =
 
 	const output = await withPlugin.albums.create(input);
 
-	// ENG-10.1
+	// ENG-PLG-1.1
 	expect(output).toEqual({ id: input.id });
-	// ENG-10.2
+	// ENG-PLG-1.2
 	expect(pluginListener).toHaveBeenCalledExactlyOnceWith({ operation: "albums.create", input, output }, { monti });
-	// ENG-10.2
+	// ENG-PLG-1.2
 	expect(pluginListener.mock.calls[0]?.[1].monti).toBe(monti);
-	// ENG-10.2
+	// ENG-PLG-1.2
 	expect(await namesAtEvent).toEqual(["Photos"]);
 });
 
-it("ENG-11 rejects a plugin whose operation path is already taken", () => {
+it("ENG-PLG-2 rejects a plugin whose operation path is already taken", () => {
 	const create = defineWrite({ input: folderInput, run: insertFolder });
 	const plugin: Plugin = { name: "folders-plugin", operations: { folders: { create } } };
 
-	// ENG-11.1
+	// ENG-PLG-2.1
 	expect(() => createMonti(db, { folders: { create } }, [plugin])).toThrow(
 		new MontiError(
 			"CONFLICT",
@@ -323,7 +323,7 @@ it("ENG-11 rejects a plugin whose operation path is already taken", () => {
 	);
 });
 
-it("ENG-12 turns a PostgreSQL unique violation in a write into CONFLICT and rolls it back", async () => {
+it("ENG-TX-4 turns a PostgreSQL unique violation in a write into CONFLICT and rolls it back", async () => {
 	const create = defineWrite({
 		input: folderInput,
 		run: async (input, ctx) => {
@@ -338,16 +338,16 @@ it("ENG-12 turns a PostgreSQL unique violation in a write into CONFLICT and roll
 	const direct = monti.folders.create({ id: randomUUID(), name: "Photos" });
 	const dryRun = monti.dryRun((tx) => tx.folders.create({ id: randomUUID(), name: "Videos" }));
 
-	// ENG-12.1
+	// ENG-TX-4.1
 	await expect(direct).rejects.toBeInstanceOf(MontiError);
-	// ENG-12.1
+	// ENG-TX-4.1
 	await expect(direct).rejects.toMatchObject({ code: "CONFLICT" });
-	// ENG-12.1
+	// ENG-TX-4.1
 	await expect(dryRun).rejects.toBeInstanceOf(MontiError);
-	// ENG-12.1
+	// ENG-TX-4.1
 	await expect(dryRun).rejects.toMatchObject({ code: "CONFLICT" });
-	// ENG-12.2
+	// ENG-TX-4.2
 	expect(await folderNames()).toEqual([]);
-	// ENG-12.3
+	// ENG-TX-4.3
 	expect(listener).not.toHaveBeenCalled();
 });

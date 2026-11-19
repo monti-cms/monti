@@ -15,7 +15,7 @@ function text(value: string, marks?: unknown[]): Record<string, unknown> {
 	return marks ? { type: "text", text: value, marks } : { type: "text", text: value };
 }
 
-it("RT-1 returns no issues for a valid document", () => {
+it("RT-DOC-1 returns no issues for a valid document", () => {
 	const marks: Mark[] = [
 		{ type: "bold" },
 		{ type: "italic" },
@@ -56,17 +56,17 @@ it("RT-1 returns no issues for a valid document", () => {
 		{ id: "b13", type: "listItem", children: [] },
 	];
 	const doc: Doc = { blocks };
-	// RT-1.1
+	// RT-DOC-1.1
 	expect(validateDoc(doc)).toEqual([]);
 });
 
-it("RT-2 returns an issue instead of throwing when the top-level structure is wrong", () => {
+it("RT-DOC-2 returns an issue instead of throwing when the top-level structure is wrong", () => {
 	const paths = pathsOf({ blocks: {} });
-	// RT-2.1
+	// RT-DOC-2.1
 	expect(paths).toContain("blocks");
 });
 
-it("RT-3 returns an issue at every broken required property or shape of a block", () => {
+it("RT-DOC-3 returns an issue at every broken required property or shape of a block", () => {
 	const paths = pathsOf({
 		blocks: [
 			null,
@@ -77,40 +77,40 @@ it("RT-3 returns an issue at every broken required property or shape of a block"
 			{ id: "b5", type: "quote", children: {} },
 		],
 	});
-	// RT-3.1
+	// RT-DOC-3.1
 	expect(paths).toContain("blocks[0]");
-	// RT-3.2
+	// RT-DOC-3.2
 	expect(paths).toContain("blocks[1].id");
-	// RT-3.3
+	// RT-DOC-3.3
 	expect(paths).toContain("blocks[2].type");
-	// RT-3.4
+	// RT-DOC-3.4
 	expect(paths).toContain("blocks[3].attrs");
-	// RT-3.5
+	// RT-DOC-3.5
 	expect(paths).toContain("blocks[4].content");
-	// RT-3.6
+	// RT-DOC-3.6
 	expect(paths).toContain("blocks[5].children");
 });
 
-it("RT-4 reports the later block when two blocks share an id", () => {
+it("RT-DOC-4 reports the later block when two blocks share an id", () => {
 	const paths = pathsOf({
 		blocks: [
 			{ id: "same", type: "paragraph" },
 			{ id: "quote", type: "quote", children: [{ id: "same", type: "paragraph" }] },
 		],
 	});
-	// RT-4.1
+	// RT-DOC-4.1
 	expect(paths).toContain("blocks[1].children[0].id");
-	// RT-4.2
+	// RT-DOC-4.2
 	expect(paths).not.toContain("blocks[0].id");
 });
 
-it("RT-5 reports a block type that is not registered", () => {
+it("RT-DOC-5 reports a block type that is not registered", () => {
 	const paths = pathsOf({ blocks: [{ id: "b0", type: "carousel" }] });
-	// RT-5.1
+	// RT-DOC-5.1
 	expect(paths).toContain("blocks[0].type");
 });
 
-it("RT-6 keeps and overrides built-in blocks with registered definitions and checks attrs with their schema", () => {
+it("RT-BLK-1 keeps and overrides built-in blocks with registered definitions and checks attrs with their schema", () => {
 	const blocks: BlockDefinition[] = [
 		{ type: "callout", holds: "blocks", attrs: z.object({ tone: z.enum(["info", "warning"]) }) },
 		{ type: "codeBlock", holds: "text", attrs: z.object({ language: z.string() }) },
@@ -126,17 +126,17 @@ it("RT-6 keeps and overrides built-in blocks with registered definitions and che
 		},
 		{ blocks },
 	);
-	// RT-6.1
+	// RT-BLK-1.1
 	expect(paths).toContain("blocks[2].attrs");
-	// RT-6.2
+	// RT-BLK-1.2
 	expect(paths).toContain("blocks[3].attrs");
-	// RT-6.3
+	// RT-BLK-1.3
 	expect(under(paths, "blocks[0]")).toEqual([]);
-	// RT-6.4
+	// RT-BLK-1.4
 	expect(under(paths, "blocks[1]")).toEqual([]);
 });
 
-it("RT-7 reports content or children that the block's holds does not allow", () => {
+it("RT-BLK-2 reports content or children that the block's holds does not allow", () => {
 	const paragraph = { id: "p", type: "paragraph" };
 	const inline = { type: "text", text: "글" };
 	const paths = pathsOf({
@@ -146,17 +146,17 @@ it("RT-7 reports content or children that the block's holds does not allow", () 
 			{ id: "b2", type: "divider", content: [inline], children: [{ ...paragraph, id: "p2" }] },
 		],
 	});
-	// RT-7.1
+	// RT-BLK-2.1
 	expect(paths).toContain("blocks[0].children");
-	// RT-7.2
+	// RT-BLK-2.2
 	expect(paths).toContain("blocks[1].content");
-	// RT-7.3
+	// RT-BLK-2.3
 	expect(paths).toContain("blocks[2].content");
-	// RT-7.4
+	// RT-BLK-2.4
 	expect(paths).toContain("blocks[2].children");
 });
 
-it("RT-8 reports a child block that is not in the allowed children", () => {
+it("RT-BLK-3 reports a child block that is not in the allowed children", () => {
 	const blocks: BlockDefinition[] = [
 		{ type: "tabs", holds: "blocks", children: ["tab"] },
 		{ type: "tab", holds: "blocks" },
@@ -177,15 +177,15 @@ it("RT-8 reports a child block that is not in the allowed children", () => {
 		},
 		{ blocks },
 	);
-	// RT-8.1
+	// RT-BLK-3.1
 	expect(paths).toContain("blocks[0].children[0]");
-	// RT-8.2
+	// RT-BLK-3.2
 	expect(paths).toContain("blocks[1].children[1]");
-	// RT-8.3
+	// RT-BLK-3.3
 	expect(under(paths, "blocks[1].children[0]")).toEqual([]);
 });
 
-it("RT-9 reports a broken inline node or an unregistered mark", () => {
+it("RT-INL-1 reports a broken inline node or an unregistered mark", () => {
 	const paths = pathsOf({
 		blocks: [
 			{
@@ -200,17 +200,17 @@ it("RT-9 reports a broken inline node or an unregistered mark", () => {
 			},
 		],
 	});
-	// RT-9.1
+	// RT-INL-1.1
 	expect(paths).toContain("blocks[0].content[0].type");
-	// RT-9.2
+	// RT-INL-1.2
 	expect(paths).toContain("blocks[0].content[1].text");
-	// RT-9.3
+	// RT-INL-1.3
 	expect(paths).toContain("blocks[0].content[2].marks[0].type");
-	// RT-9.4
+	// RT-INL-1.4
 	expect(paths).toContain("blocks[0].content[3].marks[0].type");
 });
 
-it("RT-10 keeps and overrides built-in marks with registered definitions and checks the flat attributes without type", () => {
+it("RT-INL-2 keeps and overrides built-in marks with registered definitions and checks the flat attributes without type", () => {
 	const marks: MarkDefinition[] = [
 		{ type: "highlight", attrs: z.strictObject({ color: z.enum(["yellow", "green"]) }) },
 		{ type: "link", attrs: z.strictObject({ href: z.url() }) },
@@ -232,17 +232,17 @@ it("RT-10 keeps and overrides built-in marks with registered definitions and che
 		},
 		{ marks },
 	);
-	// RT-10.1
+	// RT-INL-2.1
 	expect(paths).toContain("blocks[0].content[2].marks[0]");
-	// RT-10.2
+	// RT-INL-2.2
 	expect(paths).toContain("blocks[0].content[3].marks[0]");
-	// RT-10.3
+	// RT-INL-2.3
 	expect(under(paths, "blocks[0].content[0]")).toEqual([]);
-	// RT-10.4
+	// RT-INL-2.4
 	expect(under(paths, "blocks[0].content[1]")).toEqual([]);
 });
 
-it("RT-11 checks the reserved attrs.mediaId and attrs.mediaIds as UUIDs when they are given", () => {
+it("RT-MED-1 checks the reserved attrs.mediaId and attrs.mediaIds as UUIDs when they are given", () => {
 	const paths = pathsOf({
 		blocks: [
 			{ id: "b0", type: "image", attrs: { mediaId: "0b9b5f0e-3c1a-4a52-9d8e-6f1f0d6c2a11" } },
@@ -257,16 +257,16 @@ it("RT-11 checks the reserved attrs.mediaId and attrs.mediaIds as UUIDs when the
 			{ id: "b5", type: "file", attrs: { mediaIds: "4f2c8e7a-1b3d-4c5e-8f9a-0b1c2d3e4f50" } },
 		],
 	});
-	// RT-11.1
+	// RT-MED-1.1
 	expect(paths).toContain("blocks[2].attrs.mediaId");
-	// RT-11.2
+	// RT-MED-1.2
 	expect(paths).toContain("blocks[3].attrs.mediaId");
-	// RT-11.3
+	// RT-MED-1.3
 	expect(paths).toContain("blocks[4].attrs.mediaIds");
-	// RT-11.4
+	// RT-MED-1.4
 	expect(paths).toContain("blocks[5].attrs.mediaIds");
-	// RT-11.5
+	// RT-MED-1.5
 	expect(under(paths, "blocks[0]")).toEqual([]);
-	// RT-11.5
+	// RT-MED-1.5
 	expect(under(paths, "blocks[1]")).toEqual([]);
 });

@@ -133,7 +133,7 @@ async function seedTemplateUsing(name: string, mediaId?: string) {
 	return { template, use };
 }
 
-/** TPL-14 and TPL-19: a target and another template using the first media, and an entry use sharing the target's id. */
+/** TPL-UPD-2 and TPL-DEL-1: a target and another template using the first media, and an entry use sharing the target's id. */
 async function seedSharedUses() {
 	const first = await seedMedia();
 	const target = await seedTemplateUsing("Target", first);
@@ -173,16 +173,16 @@ function byId<T extends { id: string }>(rows: T[]): T[] {
 	return [...rows].sort((a, b) => a.id.localeCompare(b.id));
 }
 
-it("TPL-1 creates and returns a template of a collection on an engine without storage", async () => {
+it("TPL-CRT-1 creates and returns a template of a collection on an engine without storage", async () => {
 	const output = await montiOf(false).templates.create({ collection: POSTS, name: "Review", content: PLAIN });
 
-	// TPL-1.1
+	// TPL-CRT-1.1
 	expect(output).toEqual({ id: expect.stringMatching(UUID), collection: POSTS, name: "Review", content: PLAIN });
-	// TPL-1.2
+	// TPL-CRT-1.2
 	expect(await templateRows()).toEqual([output]);
 });
 
-it("TPL-2 creates a template with the given __preset_id", async () => {
+it("TPL-CRT-2 creates a template with the given __preset_id", async () => {
 	const id = randomUUID();
 
 	const output = await montiOf().templates.create({
@@ -192,24 +192,24 @@ it("TPL-2 creates a template with the given __preset_id", async () => {
 		content: PLAIN,
 	});
 
-	// TPL-2.1
+	// TPL-CRT-2.1
 	expect(output.id).toBe(id);
-	// TPL-2.2
+	// TPL-CRT-2.2
 	expect((await templateRows()).map((row) => row.id)).toEqual([id]);
 });
 
-it("TPL-3 creates a template whose name another collection already has", async () => {
+it("TPL-CRT-3 creates a template whose name another collection already has", async () => {
 	const existing = await seedTemplate({ collection: PAGES, name: "Review" });
 
 	const output = await montiOf().templates.create({ collection: POSTS, name: "Review", content: PLAIN });
 
-	// TPL-3.1
+	// TPL-CRT-3.1
 	expect({ collection: output.collection, name: output.name }).toEqual({ collection: POSTS, name: "Review" });
-	// TPL-3.2
+	// TPL-CRT-3.2
 	expect(byId(await templateRows())).toEqual(byId([existing, output]));
 });
 
-it("TPL-4 records every media in the block tree's attrs.mediaId and attrs.mediaIds once in media_uses, ignoring case", async () => {
+it("TPL-CRT-4 records every media in the block tree's attrs.mediaId and attrs.mediaIds once in media_uses, ignoring case", async () => {
 	const first = await seedMedia();
 	const second = await seedMedia();
 	const third = await seedMedia();
@@ -229,7 +229,7 @@ it("TPL-4 records every media in the block tree's attrs.mediaId and attrs.mediaI
 
 	const output = await montiOf().templates.create({ collection: POSTS, name: "Review", content });
 
-	// TPL-4.1
+	// TPL-CRT-4.1
 	expect(await allUseRows()).toEqual(
 		[first, second, third].sort().map((media_id) => ({
 			media_id,
@@ -240,190 +240,190 @@ it("TPL-4 records every media in the block tree's attrs.mediaId and attrs.mediaI
 	);
 });
 
-it("TPL-5 rejects templates.create with BAD_REQUEST for a collection not in the schema", async () => {
-	// TPL-5.1
+it("TPL-CRT-5 rejects templates.create with BAD_REQUEST for a collection not in the schema", async () => {
+	// TPL-CRT-5.1
 	await expect(
 		montiOf().templates.create({ collection: "constructor", name: "Review", content: PLAIN }),
 	).rejects.toMatchObject({ code: "BAD_REQUEST" });
-	// TPL-5.2
+	// TPL-CRT-5.2
 	expect(await templateRows()).toEqual([]);
 });
 
-it("TPL-6 rejects templates.create with CONFLICT for a name the collection already has", async () => {
+it("TPL-CRT-6 rejects templates.create with CONFLICT for a name the collection already has", async () => {
 	const existing = await seedTemplate({ name: "Review" });
 
-	// TPL-6.1
+	// TPL-CRT-6.1
 	await expect(montiOf().templates.create({ collection: POSTS, name: "Review", content: PLAIN })).rejects.toMatchObject(
 		{ code: "CONFLICT" },
 	);
-	// TPL-6.2
+	// TPL-CRT-6.2
 	expect(await templateRows()).toEqual([existing]);
 });
 
-it("TPL-7 rejects templates.create with BAD_REQUEST carrying every problem of an invalid body", async () => {
+it("TPL-CRT-7 rejects templates.create with BAD_REQUEST carrying every problem of an invalid body", async () => {
 	const error = await montiOf()
 		.templates.create({ collection: POSTS, name: "Review", content: BROKEN })
 		.catch((caught: unknown) => caught);
 
-	// TPL-7.1
+	// TPL-CRT-7.1
 	expect(error).toMatchObject({ code: "BAD_REQUEST" });
-	// TPL-7.2
+	// TPL-CRT-7.2
 	expect(error).toHaveProperty("details", validateDoc(BROKEN, configOf(true)));
-	// TPL-7.3
+	// TPL-CRT-7.3
 	expect(await templateRows()).toEqual([]);
 });
 
-it("TPL-8 rejects templates.create with BAD_REQUEST for a body referencing a trashed media", async () => {
+it("TPL-CRT-8 rejects templates.create with BAD_REQUEST for a body referencing a trashed media", async () => {
 	const trashed = await seedMedia(true);
 
-	// TPL-8.1
+	// TPL-CRT-8.1
 	await expect(
 		montiOf().templates.create({ collection: POSTS, name: "Review", content: imageDoc(trashed) }),
 	).rejects.toMatchObject({ code: "BAD_REQUEST" });
-	// TPL-8.2
+	// TPL-CRT-8.2
 	expect(await templateRows()).toEqual([]);
-	// TPL-8.3
+	// TPL-CRT-8.3
 	expect(await allUseRows()).toEqual([]);
 });
 
-it("TPL-9 lists the templates of every collection when called without an input", async () => {
+it("TPL-READ-1 lists the templates of every collection when called without an input", async () => {
 	const post = await seedTemplate({ collection: POSTS });
 	const page = await seedTemplate({ collection: PAGES });
 
 	const output = await montiOf().templates.list();
 
-	// TPL-9.1
+	// TPL-READ-1.1
 	expect(byId(output)).toEqual(byId([post, page]));
 });
 
-it("TPL-10 lists only the templates of the given collection", async () => {
+it("TPL-READ-2 lists only the templates of the given collection", async () => {
 	const post = await seedTemplate({ collection: POSTS });
 	await seedTemplate({ collection: PAGES });
 
 	const output = await montiOf().templates.list({ collection: POSTS });
 
-	// TPL-10.1
+	// TPL-READ-2.1
 	expect(output).toEqual([post]);
 });
 
-it("TPL-11 gets the template with the given id", async () => {
+it("TPL-READ-3 gets the template with the given id", async () => {
 	await seedTemplate({ name: "First", content: { blocks: [{ id: "h1", type: "heading" }] } });
 	const second = await seedTemplate({ name: "Second" });
 
 	const output = await montiOf().templates.get({ id: second.id });
 
-	// TPL-11.1
+	// TPL-READ-3.1
 	expect(output).toEqual(second);
 });
 
-it("TPL-12 rejects templates.get with NOT_FOUND for an id no template has", async () => {
+it("TPL-READ-4 rejects templates.get with NOT_FOUND for an id no template has", async () => {
 	await seedTemplate();
 
-	// TPL-12.1
+	// TPL-READ-4.1
 	await expect(montiOf().templates.get({ id: randomUUID() })).rejects.toMatchObject({ code: "NOT_FOUND" });
 });
 
-it("TPL-13 renames a template given only a name and keeps its content and media_uses", async () => {
+it("TPL-UPD-1 renames a template given only a name and keeps its content and media_uses", async () => {
 	const { template, use } = await seedTemplateUsing("Review");
 
 	const output = await montiOf().templates.update({ id: template.id, name: "Renamed" });
 
-	// TPL-13.1
+	// TPL-UPD-1.1
 	expect(output).toEqual({ ...template, name: "Renamed" });
-	// TPL-13.2
+	// TPL-UPD-1.2
 	expect(await templateRow(template.id)).toEqual(output);
-	// TPL-13.3
+	// TPL-UPD-1.3
 	expect(await useRows("template", template.id)).toEqual([use]);
 });
 
-it("TPL-14 replaces the content and only the template's media_uses with the new references", async () => {
+it("TPL-UPD-2 replaces the content and only the template's media_uses with the new references", async () => {
 	const { target, other, entryUse } = await seedSharedUses();
 	const second = await seedMedia();
 	const content = imageDoc(second);
 
 	const output = await montiOf().templates.update({ id: target.template.id, content });
 
-	// TPL-14.1
+	// TPL-UPD-2.1
 	expect(output).toEqual({ ...target.template, content });
-	// TPL-14.2
+	// TPL-UPD-2.2
 	expect(await templateRow(target.template.id)).toEqual(output);
-	// TPL-14.3
+	// TPL-UPD-2.3
 	expect(await useRows("template", target.template.id)).toEqual([
 		{ media_id: second, source_kind: "template", source_id: target.template.id, field_path: "content" },
 	]);
-	// TPL-14.4
+	// TPL-UPD-2.4
 	expect(await useRows("template", other.template.id)).toEqual([other.use]);
-	// TPL-14.5
+	// TPL-UPD-2.5
 	expect(await useRows("entry", target.template.id)).toEqual([entryUse]);
 });
 
-it("TPL-15 rejects templates.update with CONFLICT for a name another template of the collection has", async () => {
+it("TPL-UPD-3 rejects templates.update with CONFLICT for a name another template of the collection has", async () => {
 	const first = await seedTemplate({ name: "First" });
 	const second = await seedTemplate({ name: "Second" });
 
-	// TPL-15.1
+	// TPL-UPD-3.1
 	await expect(montiOf().templates.update({ id: second.id, name: first.name })).rejects.toMatchObject({
 		code: "CONFLICT",
 	});
-	// TPL-15.2
+	// TPL-UPD-3.2
 	expect((await templateRow(second.id)).name).toBe("Second");
 });
 
-it("TPL-16 rejects templates.update with BAD_REQUEST carrying every problem of an invalid body", async () => {
+it("TPL-UPD-4 rejects templates.update with BAD_REQUEST carrying every problem of an invalid body", async () => {
 	const template = await seedTemplate();
 
 	const error = await montiOf()
 		.templates.update({ id: template.id, content: BROKEN })
 		.catch((caught: unknown) => caught);
 
-	// TPL-16.1
+	// TPL-UPD-4.1
 	expect(error).toMatchObject({ code: "BAD_REQUEST" });
-	// TPL-16.2
+	// TPL-UPD-4.2
 	expect(error).toHaveProperty("details", validateDoc(BROKEN, configOf(true)));
-	// TPL-16.3
+	// TPL-UPD-4.3
 	expect((await templateRow(template.id)).content).toEqual(template.content);
 });
 
-it("TPL-17 rejects templates.update with BAD_REQUEST for a body referencing a media id not in the database", async () => {
+it("TPL-UPD-5 rejects templates.update with BAD_REQUEST for a body referencing a media id not in the database", async () => {
 	const { template, use } = await seedTemplateUsing("Review");
 
-	// TPL-17.1
+	// TPL-UPD-5.1
 	await expect(montiOf().templates.update({ id: template.id, content: imageDoc(randomUUID()) })).rejects.toMatchObject({
 		code: "BAD_REQUEST",
 	});
-	// TPL-17.2
+	// TPL-UPD-5.2
 	expect((await templateRow(template.id)).content).toEqual(template.content);
-	// TPL-17.3
+	// TPL-UPD-5.3
 	expect(await useRows("template", template.id)).toEqual([use]);
 });
 
-it("TPL-18 rejects templates.update with NOT_FOUND for an id no template has", async () => {
+it("TPL-UPD-6 rejects templates.update with NOT_FOUND for an id no template has", async () => {
 	await seedTemplate();
 
-	// TPL-18.1
+	// TPL-UPD-6.1
 	await expect(montiOf().templates.update({ id: randomUUID(), name: "Renamed" })).rejects.toMatchObject({
 		code: "NOT_FOUND",
 	});
 });
 
-it("TPL-19 deletes the template and only its media_uses", async () => {
+it("TPL-DEL-1 deletes the template and only its media_uses", async () => {
 	const { target, other, entryUse } = await seedSharedUses();
 
 	await montiOf().templates.delete({ id: target.template.id });
 
-	// TPL-19.1
+	// TPL-DEL-1.1
 	expect(await templateRows()).toEqual([other.template]);
-	// TPL-19.2
+	// TPL-DEL-1.2
 	expect(await useRows("template", target.template.id)).toEqual([]);
-	// TPL-19.3
+	// TPL-DEL-1.3
 	expect(await useRows("template", other.template.id)).toEqual([other.use]);
-	// TPL-19.4
+	// TPL-DEL-1.4
 	expect(await useRows("entry", target.template.id)).toEqual([entryUse]);
 });
 
-it("TPL-20 rejects templates.delete with NOT_FOUND for an id no template has", async () => {
+it("TPL-DEL-2 rejects templates.delete with NOT_FOUND for an id no template has", async () => {
 	await seedTemplate();
 
-	// TPL-20.1
+	// TPL-DEL-2.1
 	await expect(montiOf().templates.delete({ id: randomUUID() })).rejects.toMatchObject({ code: "NOT_FOUND" });
 });

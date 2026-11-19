@@ -227,10 +227,10 @@ function sortedById(value: unknown): unknown {
 	return Array.isArray(value) ? [...value].sort((a, b) => a.id.localeCompare(b.id)) : value;
 }
 
-it("ENT-1 creates a working copy from collection, locale and slug alone and fills the defaults", async () => {
+it("ENT-CRT-1 creates a working copy from collection, locale and slug alone and fills the defaults", async () => {
 	const output = await montiOf().entries.create({ collection: POSTS, locale: "ko", slug: "hello-world" });
 
-	// ENT-1.1
+	// ENT-CRT-1.1
 	expect(output).toEqual({
 		id: expect.stringMatching(UUID),
 		collection: POSTS,
@@ -242,24 +242,24 @@ it("ENT-1 creates a working copy from collection, locale and slug alone and fill
 		published_at: null,
 	});
 	const { published_at: _, ...stored } = output;
-	// ENT-1.2
+	// ENT-CRT-1.2
 	expect(await entryRows()).toEqual([{ ...stored, translation_seen: {}, trashed_at: null }]);
-	// ENT-1.3
+	// ENT-CRT-1.3
 	expect(await db.selectFrom("entry_published").selectAll().execute()).toEqual([]);
 });
 
-it("ENT-2 creates a working copy with the given __preset_id", async () => {
+it("ENT-CRT-2 creates a working copy with the given __preset_id", async () => {
 	const id = randomUUID();
 
 	const output = await montiOf().entries.create({ __preset_id: id, collection: POSTS, locale: "ko", slug: "hello" });
 
-	// ENT-2.1
+	// ENT-CRT-2.1
 	expect(output.id).toBe(id);
-	// ENT-2.2
+	// ENT-CRT-2.2
 	expect(idsOf(await entryRows())).toEqual([id]);
 });
 
-it("ENT-3 stores a working copy with every field type, a body, a folder and a slug", async () => {
+it("ENT-CRT-3 stores a working copy with every field type, a body, a folder and a slug", async () => {
 	const folder = await seedFolder();
 	const media = await seedMedia();
 	const topic = await seedEntry({ collection: TOPICS });
@@ -286,18 +286,18 @@ it("ENT-3 stores a working copy with every field type, a body, a folder and a sl
 		data,
 	});
 
-	// ENT-3.1
+	// ENT-CRT-3.1
 	expect({ folder_id: output.folder_id, slug: output.slug, data: output.data }).toEqual({
 		folder_id: folder,
 		slug: "full",
 		data,
 	});
 	const { published_at: _, ...stored } = output;
-	// ENT-3.2
+	// ENT-CRT-3.2
 	expect(await entryRow(output.id)).toEqual({ ...stored, translation_seen: {}, trashed_at: null });
 });
 
-it("ENT-4 records the body, top-level media fields and conditional media sub-fields in media_uses once per path, ignoring case", async () => {
+it("ENT-CRT-4 records the body, top-level media fields and conditional media sub-fields in media_uses once per path, ignoring case", async () => {
 	const [first, second, third] = [await seedMedia(), await seedMedia(), await seedMedia()];
 	const data = {
 		fields: {
@@ -320,7 +320,7 @@ it("ENT-4 records the body, top-level media fields and conditional media sub-fie
 		source_id: output.id,
 		field_path,
 	});
-	// ENT-4.1
+	// ENT-CRT-4.1
 	expect(await useRows("entry", output.id)).toEqual([
 		...[first, third].sort().map((id) => use(id, "body")),
 		use(first, "fields.gallery"),
@@ -328,155 +328,155 @@ it("ENT-4 records the body, top-level media fields and conditional media sub-fie
 	]);
 });
 
-it("ENT-5 rejects entries.create with BAD_REQUEST for a collection not in the schema", async () => {
-	// ENT-5.1
+it("ENT-CRT-5 rejects entries.create with BAD_REQUEST for a collection not in the schema", async () => {
+	// ENT-CRT-5.1
 	await expect(
 		montiOf().entries.create({ collection: "constructor", locale: "ko", slug: "hello" }),
 	).rejects.toMatchObject({ code: "BAD_REQUEST" });
-	// ENT-5.2
+	// ENT-CRT-5.2
 	expect(await entryRows()).toEqual([]);
 });
 
-it("ENT-6 rejects entries.create with BAD_REQUEST for a locale not in the schema", async () => {
-	// ENT-6.1
+it("ENT-CRT-6 rejects entries.create with BAD_REQUEST for a locale not in the schema", async () => {
+	// ENT-CRT-6.1
 	await expect(montiOf().entries.create({ collection: POSTS, locale: "fr", slug: "hello" })).rejects.toMatchObject({
 		code: "BAD_REQUEST",
 	});
-	// ENT-6.2
+	// ENT-CRT-6.2
 	expect(await entryRows()).toEqual([]);
 });
 
-it("ENT-7 rejects entries.create with BAD_REQUEST for a folder of another scope", async () => {
+it("ENT-CRT-7 rejects entries.create with BAD_REQUEST for a folder of another scope", async () => {
 	const folder = await seedFolder({ scope: "media" });
 
-	// ENT-7.1
+	// ENT-CRT-7.1
 	await expect(
 		montiOf().entries.create({ collection: POSTS, locale: "ko", slug: "hello", folder_id: folder }),
 	).rejects.toMatchObject({ code: "BAD_REQUEST" });
-	// ENT-7.2
+	// ENT-CRT-7.2
 	expect(await entryRows()).toEqual([]);
 });
 
-it("ENT-8 rejects entries.create with BAD_REQUEST for a field key the schema does not define", async () => {
-	// ENT-8.1
+it("ENT-CRT-8 rejects entries.create with BAD_REQUEST for a field key the schema does not define", async () => {
+	// ENT-CRT-8.1
 	await expect(
 		montiOf().entries.create({ collection: POSTS, locale: "ko", slug: "hello", data: { fields: { unknown: "x" } } }),
 	).rejects.toMatchObject({ code: "BAD_REQUEST" });
-	// ENT-8.2
+	// ENT-CRT-8.2
 	expect(await entryRows()).toEqual([]);
 });
 
-it("ENT-9 rejects entries.create with BAD_REQUEST for values that break their field's type or constraint", async () => {
+it("ENT-CRT-9 rejects entries.create with BAD_REQUEST for values that break their field's type or constraint", async () => {
 	const data = { fields: { views: "three", title: "x".repeat(21) } };
 
-	// ENT-9.1
+	// ENT-CRT-9.1
 	await expect(
 		montiOf().entries.create({ collection: POSTS, locale: "ko", slug: "hello", data }),
 	).rejects.toMatchObject({ code: "BAD_REQUEST" });
-	// ENT-9.2
+	// ENT-CRT-9.2
 	expect(await entryRows()).toEqual([]);
 });
 
-it("ENT-10 rejects entries.create with BAD_REQUEST for a conditional sub-field not in the chosen option", async () => {
+it("ENT-CRT-10 rejects entries.create with BAD_REQUEST for a conditional sub-field not in the chosen option", async () => {
 	const data = { fields: { layout: { option: "hero", fields: { note: "Plain note" } } } };
 
-	// ENT-10.1
+	// ENT-CRT-10.1
 	await expect(
 		montiOf().entries.create({ collection: POSTS, locale: "ko", slug: "hello", data }),
 	).rejects.toMatchObject({ code: "BAD_REQUEST" });
-	// ENT-10.2
+	// ENT-CRT-10.2
 	expect(await entryRows()).toEqual([]);
 });
 
-it("ENT-11 rejects entries.create with BAD_REQUEST for a body in a collection without one", async () => {
+it("ENT-CRT-11 rejects entries.create with BAD_REQUEST for a body in a collection without one", async () => {
 	const data = { fields: {}, body: PLAIN };
 
-	// ENT-11.1
+	// ENT-CRT-11.1
 	await expect(
 		montiOf().entries.create({ collection: TOPICS, locale: "ko", slug: "hello", data }),
 	).rejects.toMatchObject({ code: "BAD_REQUEST" });
-	// ENT-11.2
+	// ENT-CRT-11.2
 	expect(await entryRows()).toEqual([]);
 });
 
-it("ENT-12 rejects entries.create with BAD_REQUEST carrying every problem of an invalid body", async () => {
+it("ENT-CRT-12 rejects entries.create with BAD_REQUEST carrying every problem of an invalid body", async () => {
 	const error = await montiOf()
 		.entries.create({ collection: POSTS, locale: "ko", slug: "hello", data: { fields: {}, body: BROKEN } })
 		.catch((caught: unknown) => caught);
 
-	// ENT-12.1
+	// ENT-CRT-12.1
 	expect(error).toMatchObject({ code: "BAD_REQUEST" });
-	// ENT-12.2
+	// ENT-CRT-12.2
 	expect(error).toHaveProperty("details", validateDoc(BROKEN, CONFIG));
-	// ENT-12.3
+	// ENT-CRT-12.3
 	expect(await entryRows()).toEqual([]);
 });
 
-it("ENT-13 rejects entries.create with BAD_REQUEST for a media field referencing a trashed media", async () => {
+it("ENT-CRT-13 rejects entries.create with BAD_REQUEST for a media field referencing a trashed media", async () => {
 	const trashed = await seedMedia(true);
 	const data = { fields: { cover: trashed } };
 
-	// ENT-13.1
+	// ENT-CRT-13.1
 	await expect(
 		montiOf().entries.create({ collection: POSTS, locale: "ko", slug: "hello", data }),
 	).rejects.toMatchObject({ code: "BAD_REQUEST" });
-	// ENT-13.2
+	// ENT-CRT-13.2
 	expect(await entryRows()).toEqual([]);
-	// ENT-13.3
+	// ENT-CRT-13.3
 	expect(await allUseRows()).toEqual([]);
 });
 
-it("ENT-14 rejects entries.create with BAD_REQUEST for a relation to an entry outside the to collection", async () => {
+it("ENT-CRT-14 rejects entries.create with BAD_REQUEST for a relation to an entry outside the to collection", async () => {
 	const page = await seedEntry({ collection: PAGES });
 	const data = { fields: { topic: page.id } };
 
-	// ENT-14.1
+	// ENT-CRT-14.1
 	await expect(
 		montiOf().entries.create({ collection: POSTS, locale: "ko", slug: "hello", data }),
 	).rejects.toMatchObject({ code: "BAD_REQUEST" });
-	// ENT-14.2
+	// ENT-CRT-14.2
 	expect(await entryRows()).toEqual([page]);
 });
 
-it("ENT-15 rejects entries.create with BAD_REQUEST for a relation to a translation", async () => {
+it("ENT-CRT-15 rejects entries.create with BAD_REQUEST for a relation to a translation", async () => {
 	const source = await seedEntry({ collection: TOPICS });
 	const translation = await seedEntry({ collection: TOPICS, locale: "en", source_entry_id: source.id });
 	const data = { fields: { topic: translation.id } };
 
-	// ENT-15.1
+	// ENT-CRT-15.1
 	await expect(
 		montiOf().entries.create({ collection: POSTS, locale: "ko", slug: "hello", data }),
 	).rejects.toMatchObject({ code: "BAD_REQUEST" });
-	// ENT-15.2
+	// ENT-CRT-15.2
 	expect(idsOf(await entryRows())).toEqual(idsOf([source, translation]));
 });
 
-it("ENT-16 rejects entries.create with BAD_REQUEST for a slug with a space", async () => {
-	// ENT-16.1
+it("ENT-CRT-16 rejects entries.create with BAD_REQUEST for a slug with a space", async () => {
+	// ENT-CRT-16.1
 	await expect(
 		montiOf().entries.create({ collection: POSTS, locale: "ko", slug: "hello world" }),
 	).rejects.toMatchObject({ code: "BAD_REQUEST" });
-	// ENT-16.2
+	// ENT-CRT-16.2
 	expect(await entryRows()).toEqual([]);
 });
 
-it("ENT-17 rejects entries.create with CONFLICT for a slug an active entry of the collection and locale has", async () => {
+it("ENT-CRT-17 rejects entries.create with CONFLICT for a slug an active entry of the collection and locale has", async () => {
 	const existing = await seedEntry({ slug: "hello" });
 
-	// ENT-17.1
+	// ENT-CRT-17.1
 	await expect(montiOf().entries.create({ collection: POSTS, locale: "ko", slug: "hello" })).rejects.toMatchObject({
 		code: "CONFLICT",
 	});
-	// ENT-17.2
+	// ENT-CRT-17.2
 	expect(await entryRows()).toEqual([existing]);
 });
 
-it("ENT-18 gets the published copy of a published entry when draft is left out", async () => {
+it("ENT-READ-1 gets the published copy of a published entry when draft is left out", async () => {
 	const { entry, published } = await seedPublishedEntry();
 
 	const output = await montiOf().entries.get({ id: entry.id });
 
-	// ENT-18.1
+	// ENT-READ-1.1
 	expect(output).toMatchObject({
 		id: entry.id,
 		collection: entry.collection,
@@ -484,11 +484,11 @@ it("ENT-18 gets the published copy of a published entry when draft is left out",
 		source_entry_id: entry.source_entry_id,
 		folder_id: entry.folder_id,
 	});
-	// ENT-18.2
+	// ENT-READ-1.2
 	expect(output).toMatchObject({ slug: published.slug, data: published.data, published_at: published.published_at });
 });
 
-it("ENT-19 gets the published copy by collection, locale and slug", async () => {
+it("ENT-READ-2 gets the published copy by collection, locale and slug", async () => {
 	const { entry, published } = await seedPublishedEntry();
 	await seedPublishedEntry();
 
@@ -498,7 +498,7 @@ it("ENT-19 gets the published copy by collection, locale and slug", async () => 
 		slug: published.slug,
 	});
 
-	// ENT-19.1
+	// ENT-READ-2.1
 	expect(output).toMatchObject({
 		id: entry.id,
 		slug: published.slug,
@@ -507,45 +507,45 @@ it("ENT-19 gets the published copy by collection, locale and slug", async () => 
 	});
 });
 
-it("ENT-20 gets the working copy with draft true even when the entry is published", async () => {
+it("ENT-READ-3 gets the working copy with draft true even when the entry is published", async () => {
 	const { entry, published } = await seedPublishedEntry();
 
 	const output = await montiOf().entries.get({ id: entry.id, draft: true });
 
-	// ENT-20.1
+	// ENT-READ-3.1
 	expect(output).toMatchObject({ slug: entry.slug, data: entry.data });
-	// ENT-20.2
+	// ENT-READ-3.2
 	expect(output.published_at).toEqual(published.published_at);
 });
 
-it("ENT-21 rejects entries.get with NOT_FOUND for an unpublished entry when draft is left out", async () => {
+it("ENT-READ-4 rejects entries.get with NOT_FOUND for an unpublished entry when draft is left out", async () => {
 	const entry = await seedEntry();
 
-	// ENT-21.1
+	// ENT-READ-4.1
 	await expect(montiOf().entries.get({ id: entry.id })).rejects.toMatchObject({ code: "NOT_FOUND" });
 });
 
-it("ENT-22 rejects entries.get with NOT_FOUND for a trashed entry even with draft true", async () => {
+it("ENT-READ-5 rejects entries.get with NOT_FOUND for a trashed entry even with draft true", async () => {
 	const { entry } = await seedPublishedEntry({ trashed: true });
 
-	// ENT-22.1
+	// ENT-READ-5.1
 	await expect(montiOf().entries.get({ id: entry.id, draft: true })).rejects.toMatchObject({ code: "NOT_FOUND" });
 });
 
-it("ENT-23 lists only the published copies of active published entries when called without an input", async () => {
+it("ENT-READ-6 lists only the published copies of active published entries when called without an input", async () => {
 	const { entry, published } = await seedPublishedEntry();
 	await seedEntry();
 	await seedPublishedEntry({ trashed: true });
 
 	const output = await montiOf().entries.list();
 
-	// ENT-23.1
+	// ENT-READ-6.1
 	expect(idsOf(output)).toEqual([entry.id]);
-	// ENT-23.2
+	// ENT-READ-6.2
 	expect(output[0]).toMatchObject({ slug: published.slug, data: published.data, published_at: published.published_at });
 });
 
-it("ENT-24 lists the working copies of every active entry with draft true", async () => {
+it("ENT-READ-7 lists the working copies of every active entry with draft true", async () => {
 	const { entry: publishedEntry, published } = await seedPublishedEntry();
 	const unpublished = await seedEntry({ data: { fields: { title: "Unpublished" } } });
 	await seedEntry({ trashed: true });
@@ -553,17 +553,17 @@ it("ENT-24 lists the working copies of every active entry with draft true", asyn
 	const output = await montiOf().entries.list({ draft: true });
 	const byId = new Map(output.map((entry) => [entry.id, entry]));
 
-	// ENT-24.1
+	// ENT-READ-7.1
 	expect(output.map(({ id, data }) => ({ id, data })).sort((a, b) => a.id.localeCompare(b.id))).toEqual(
 		[publishedEntry, unpublished].map(({ id, data }) => ({ id, data })).sort((a, b) => a.id.localeCompare(b.id)),
 	);
-	// ENT-24.2
+	// ENT-READ-7.2
 	expect(byId.get(publishedEntry.id)?.published_at).toEqual(published.published_at);
-	// ENT-24.3
+	// ENT-READ-7.3
 	expect(byId.get(unpublished.id)?.published_at).toBeNull();
 });
 
-it("ENT-25 lists only the entries directly in the folder with the given collection, locale and folder_id", async () => {
+it("ENT-READ-8 lists only the entries directly in the folder with the given collection, locale and folder_id", async () => {
 	const folder = await seedFolder();
 	const child = await seedFolder({ parent_id: folder });
 	const target = await seedEntry({ folder_id: folder });
@@ -574,22 +574,22 @@ it("ENT-25 lists only the entries directly in the folder with the given collecti
 
 	const output = await montiOf().entries.list({ collection: POSTS, locale: "ko", folder_id: folder, draft: true });
 
-	// ENT-25.1
+	// ENT-READ-8.1
 	expect(idsOf(output)).toEqual([target.id]);
 });
 
-it("ENT-26 lists only the entries at the root with folder_id null", async () => {
+it("ENT-READ-9 lists only the entries at the root with folder_id null", async () => {
 	const folder = await seedFolder();
 	const root = await seedEntry({ folder_id: null });
 	await seedEntry({ folder_id: folder });
 
 	const output = await montiOf().entries.list({ folder_id: null, draft: true });
 
-	// ENT-26.1
+	// ENT-READ-9.1
 	expect(idsOf(output)).toEqual([root.id]);
 });
 
-it("ENT-27 lists the entries whose relation field references the given entry in their published copy", async () => {
+it("ENT-READ-10 lists the entries whose relation field references the given entry in their published copy", async () => {
 	const topic = await seedEntry({ collection: TOPICS });
 	const other = await seedEntry({ collection: TOPICS });
 	const post = await seedEntry({ collection: POSTS });
@@ -601,11 +601,11 @@ it("ENT-27 lists the entries whose relation field references the given entry in 
 
 	const output = await montiOf().entries.list({ relation: { field: "topic", id: topic.id } });
 
-	// ENT-27.1
+	// ENT-READ-10.1
 	expect(idsOf(output)).toEqual(idsOf([post, page]));
 });
 
-it("ENT-28 changes only the slug and folder_id and keeps the data, media_uses and published copy", async () => {
+it("ENT-UPD-1 changes only the slug and folder_id and keeps the data, media_uses and published copy", async () => {
 	const media = await seedMedia();
 	const { entry, use } = await seedEntryUsing(media);
 	const published = await seedPublished(entry.id, "live", { fields: { title: "Live" } });
@@ -613,7 +613,7 @@ it("ENT-28 changes only the slug and folder_id and keeps the data, media_uses an
 
 	const output = await montiOf().entries.update({ id: entry.id, slug: "renamed", folder_id: folder });
 
-	// ENT-28.1
+	// ENT-UPD-1.1
 	expect(output).toEqual({
 		id: entry.id,
 		collection: entry.collection,
@@ -624,15 +624,15 @@ it("ENT-28 changes only the slug and folder_id and keeps the data, media_uses an
 		data: entry.data,
 		published_at: published.published_at,
 	});
-	// ENT-28.2
+	// ENT-UPD-1.2
 	expect(await entryRow(entry.id)).toMatchObject({ slug: "renamed", folder_id: folder, data: entry.data });
-	// ENT-28.3
+	// ENT-UPD-1.3
 	expect(await useRows("entry", entry.id)).toEqual([use]);
-	// ENT-28.4
+	// ENT-UPD-1.4
 	expect(await publishedRow(entry.id)).toMatchObject({ slug: published.slug, data: published.data });
 });
 
-it("ENT-29 replaces the working data and only the entry's media_uses", async () => {
+it("ENT-UPD-2 replaces the working data and only the entry's media_uses", async () => {
 	const first = await seedMedia();
 	const target = await seedEntryUsing(first);
 	const other = await seedEntryUsing(first);
@@ -647,116 +647,116 @@ it("ENT-29 replaces the working data and only the entry's media_uses", async () 
 
 	const output = await montiOf().entries.update({ id: target.entry.id, data });
 
-	// ENT-29.1
+	// ENT-UPD-2.1
 	expect(output).toMatchObject({ data, slug: target.entry.slug, folder_id: target.entry.folder_id });
-	// ENT-29.2
+	// ENT-UPD-2.2
 	expect((await entryRow(target.entry.id)).data).toEqual(data);
-	// ENT-29.3
+	// ENT-UPD-2.3
 	expect(await useRows("entry", target.entry.id)).toEqual([
 		{ media_id: second, source_kind: "entry", source_id: target.entry.id, field_path: "fields.cover" },
 	]);
-	// ENT-29.4
+	// ENT-UPD-2.4
 	expect(await useRows("entry", other.entry.id)).toEqual([other.use]);
-	// ENT-29.5
+	// ENT-UPD-2.5
 	expect(await useRows("template", target.entry.id)).toEqual([templateUse]);
 });
 
-it("ENT-30 moves an entry to the root with folder_id null", async () => {
+it("ENT-UPD-3 moves an entry to the root with folder_id null", async () => {
 	const folder = await seedFolder();
 	const entry = await seedEntry({ folder_id: folder });
 
 	const output = await montiOf().entries.update({ id: entry.id, folder_id: null });
 
-	// ENT-30.1
+	// ENT-UPD-3.1
 	expect(output).toMatchObject({ folder_id: null });
-	// ENT-30.2
+	// ENT-UPD-3.2
 	expect((await entryRow(entry.id)).folder_id).toBeNull();
 });
 
-it("ENT-31 rejects entries.update with BAD_REQUEST for a media id not in the database and keeps the entry", async () => {
+it("ENT-UPD-4 rejects entries.update with BAD_REQUEST for a media id not in the database and keeps the entry", async () => {
 	const media = await seedMedia();
 	const { entry, use } = await seedEntryUsing(media);
 
-	// ENT-31.1
+	// ENT-UPD-4.1
 	await expect(
 		montiOf().entries.update({ id: entry.id, data: { fields: { cover: randomUUID() } } }),
 	).rejects.toMatchObject({ code: "BAD_REQUEST" });
-	// ENT-31.2
+	// ENT-UPD-4.2
 	expect((await entryRow(entry.id)).data).toEqual(entry.data);
-	// ENT-31.3
+	// ENT-UPD-4.3
 	expect(await useRows("entry", entry.id)).toEqual([use]);
 });
 
-it("ENT-32 rejects entries.update with BAD_REQUEST for a relation to a trashed entry", async () => {
+it("ENT-UPD-5 rejects entries.update with BAD_REQUEST for a relation to a trashed entry", async () => {
 	const entry = await seedEntry({ data: { fields: { title: "Kept" } } });
 	const trashed = await seedEntry({ collection: TOPICS, trashed: true });
 
-	// ENT-32.1
+	// ENT-UPD-5.1
 	await expect(
 		montiOf().entries.update({ id: entry.id, data: { fields: { topic: trashed.id } } }),
 	).rejects.toMatchObject({ code: "BAD_REQUEST" });
-	// ENT-32.2
+	// ENT-UPD-5.2
 	expect((await entryRow(entry.id)).data).toEqual(entry.data);
 });
 
-it("ENT-33 rejects entries.update with NOT_FOUND for a trashed entry", async () => {
+it("ENT-UPD-6 rejects entries.update with NOT_FOUND for a trashed entry", async () => {
 	const entry = await seedEntry({ slug: "trashed", trashed: true });
 
-	// ENT-33.1
+	// ENT-UPD-6.1
 	await expect(montiOf().entries.update({ id: entry.id, slug: "renamed" })).rejects.toMatchObject({
 		code: "NOT_FOUND",
 	});
-	// ENT-33.2
+	// ENT-UPD-6.2
 	expect((await entryRow(entry.id)).slug).toBe("trashed");
 });
 
-it("ENT-34 rejects entries.update with CONFLICT for a slug another active entry of the collection and locale has", async () => {
+it("ENT-UPD-7 rejects entries.update with CONFLICT for a slug another active entry of the collection and locale has", async () => {
 	const first = await seedEntry({ slug: "first" });
 	const second = await seedEntry({ slug: "second" });
 
-	// ENT-34.1
+	// ENT-UPD-7.1
 	await expect(montiOf().entries.update({ id: second.id, slug: first.slug })).rejects.toMatchObject({
 		code: "CONFLICT",
 	});
-	// ENT-34.2
+	// ENT-UPD-7.2
 	expect((await entryRow(second.id)).slug).toBe("second");
 });
 
-it("ENT-35 moves the entries of ids into one folder", async () => {
+it("ENT-UPD-8 moves the entries of ids into one folder", async () => {
 	const folder = await seedFolder();
 	const first = await seedEntry();
 	const second = await seedEntry();
 
 	const output = await montiOf().entries.update({ ids: [first.id, second.id], folder_id: folder });
 
-	// ENT-35.1
+	// ENT-UPD-8.1
 	expect(sortedById(output)).toEqual(idsOf([first, second]).map((id) => ({ id, folder_id: folder })));
-	// ENT-35.2
+	// ENT-UPD-8.2
 	expect((await entryRows()).map((row) => row.folder_id)).toEqual([folder, folder]);
 });
 
-it("ENT-36 rejects a batch entries.update with NOT_FOUND when one entry is trashed and rolls back", async () => {
+it("ENT-UPD-9 rejects a batch entries.update with NOT_FOUND when one entry is trashed and rolls back", async () => {
 	const folder = await seedFolder();
 	const active = await seedEntry();
 	const trashed = await seedEntry({ trashed: true });
 
-	// ENT-36.1
+	// ENT-UPD-9.1
 	await expect(montiOf().entries.update({ ids: [active.id, trashed.id], folder_id: folder })).rejects.toMatchObject({
 		code: "NOT_FOUND",
 	});
-	// ENT-36.2
+	// ENT-UPD-9.2
 	expect((await entryRow(active.id)).folder_id).toBeNull();
 });
 
-it("ENT-37 rejects a batch entries.update with BAD_REQUEST for a trashed folder and rolls back", async () => {
+it("ENT-UPD-10 rejects a batch entries.update with BAD_REQUEST for a trashed folder and rolls back", async () => {
 	const folder = await seedFolder({ trashed: true });
 	const first = await seedEntry();
 	const second = await seedEntry();
 
-	// ENT-37.1
+	// ENT-UPD-10.1
 	await expect(montiOf().entries.update({ ids: [first.id, second.id], folder_id: folder })).rejects.toMatchObject({
 		code: "BAD_REQUEST",
 	});
-	// ENT-37.2
+	// ENT-UPD-10.2
 	expect((await entryRows()).map((row) => row.folder_id)).toEqual([null, null]);
 });

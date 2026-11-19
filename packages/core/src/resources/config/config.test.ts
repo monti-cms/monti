@@ -58,40 +58,40 @@ afterEach(async () => {
 	await rm(dir, { recursive: true });
 });
 
-it("SCH-6 returns the current site config from config.get", async () => {
+it("CFG-GET-1 returns the current site config from config.get", async () => {
 	const monti = montiOf(false);
 
-	// SCH-6.1
+	// CFG-GET-1.1
 	expect(await monti.config.get({})).toEqual({ name: "Monti Blog", dev: false });
 });
 
-it("SCH-7 renames the site and writes the name to the config file on a dev server", async () => {
+it("CFG-UPD-1 renames the site and writes the name to the config file on a dev server", async () => {
 	const monti = montiOf(true);
 
 	const output = await monti.config.update({ name: newName });
 
-	// SCH-7.1
+	// CFG-UPD-1.1
 	expect(output.name).toBe(newName);
-	// SCH-7.2
+	// CFG-UPD-1.2
 	expect(await monti.config.get({})).toEqual({ name: newName, dev: true });
-	// SCH-7.3
+	// CFG-UPD-1.3
 	expect(await nameInFile()).toBe(newName);
-	// SCH-7.4
+	// CFG-UPD-1.4
 	expect(await readFile(configFile, "utf8")).toBe(originalText.replace('"Monti Blog"', JSON.stringify(newName)));
 });
 
-it("SCH-8 rejects config.update with FORBIDDEN when not a dev server", async () => {
+it("CFG-UPD-2 rejects config.update with FORBIDDEN when not a dev server", async () => {
 	const monti = montiOf(false);
 
-	// SCH-8.1
+	// CFG-UPD-2.1
 	await expect(monti.config.update({ name: newName })).rejects.toMatchObject({ code: "FORBIDDEN" });
-	// SCH-8.2
+	// CFG-UPD-2.2
 	expect(await monti.config.get({})).toEqual({ name: "Monti Blog", dev: false });
-	// SCH-8.3
+	// CFG-UPD-2.3
 	expect(await readFile(configFile, "utf8")).toBe(originalText);
 });
 
-it("SCH-9 leaves the config and the config file unchanged when the transaction rolls back", async () => {
+it("CFG-UPD-3 leaves the config and the config file unchanged when the transaction rolls back", async () => {
 	const monti = montiOf(true);
 
 	const rollback = new Error("rollback");
@@ -104,21 +104,21 @@ it("SCH-9 leaves the config and the config file unchanged when the transaction r
 			if (error !== rollback) throw error;
 		});
 
-	// SCH-9.1
+	// CFG-UPD-3.1
 	expect(await monti.config.get({})).toEqual({ name: "Monti Blog", dev: true });
-	// SCH-9.2
+	// CFG-UPD-3.2
 	expect(await readFile(configFile, "utf8")).toBe(originalText);
 });
 
-it("SCH-10 leaves the config and the config file unchanged after a dryRun", async () => {
+it("CFG-UPD-4 leaves the config and the config file unchanged after a dryRun", async () => {
 	const monti = montiOf(true);
 
 	await monti.dryRun(async (tx) => {
 		await tx.config.update({ name: newName });
 	});
 
-	// SCH-10.1
+	// CFG-UPD-4.1
 	expect(await monti.config.get({})).toEqual({ name: "Monti Blog", dev: true });
-	// SCH-10.2
+	// CFG-UPD-4.2
 	expect(await readFile(configFile, "utf8")).toBe(originalText);
 });

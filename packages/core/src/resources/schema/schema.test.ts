@@ -86,38 +86,38 @@ afterEach(async () => {
 	await rm(dir, { recursive: true });
 });
 
-it("SCH-1 returns the current schema from schema.get", async () => {
+it("SCH-GET-1 returns the current schema from schema.get", async () => {
 	const monti = montiOf(false);
 
-	// SCH-1.1
+	// SCH-GET-1.1
 	expect(await monti.schema.get({})).toEqual(original);
 });
 
-it("SCH-2 changes the schema and writes it to the schema file on a dev server", async () => {
+it("SCH-UPD-1 changes the schema and writes it to the schema file on a dev server", async () => {
 	const monti = montiOf(true);
 
 	const output = await monti.schema.update(changed);
 
-	// SCH-2.1
+	// SCH-UPD-1.1
 	expect(output).toEqual(changed);
-	// SCH-2.2
+	// SCH-UPD-1.2
 	expect(await monti.schema.get({})).toEqual(changed);
-	// SCH-2.3
+	// SCH-UPD-1.3
 	expect(await schemaInFile()).toEqual(changed);
 });
 
-it("SCH-3 rejects schema.update with FORBIDDEN when not a dev server", async () => {
+it("SCH-UPD-2 rejects schema.update with FORBIDDEN when not a dev server", async () => {
 	const monti = montiOf(false);
 
-	// SCH-3.1
+	// SCH-UPD-2.1
 	await expect(monti.schema.update(changed)).rejects.toMatchObject({ code: "FORBIDDEN" });
-	// SCH-3.2
+	// SCH-UPD-2.2
 	expect(await monti.schema.get({})).toEqual(original);
-	// SCH-3.3
+	// SCH-UPD-2.3
 	expect(await schemaInFile()).toEqual(original);
 });
 
-it("SCH-4 leaves the schema and the schema file unchanged when the transaction rolls back", async () => {
+it("SCH-UPD-3 leaves the schema and the schema file unchanged when the transaction rolls back", async () => {
 	const monti = montiOf(true);
 
 	const rollback = new Error("rollback");
@@ -130,32 +130,32 @@ it("SCH-4 leaves the schema and the schema file unchanged when the transaction r
 			if (error !== rollback) throw error;
 		});
 
-	// SCH-4.1
+	// SCH-UPD-3.1
 	expect(await monti.schema.get({})).toEqual(original);
-	// SCH-4.2
+	// SCH-UPD-3.2
 	expect(await schemaInFile()).toEqual(original);
 });
 
-it("SCH-5 leaves the schema and the schema file unchanged after a dryRun", async () => {
+it("SCH-UPD-4 leaves the schema and the schema file unchanged after a dryRun", async () => {
 	const monti = montiOf(true);
 
 	await monti.dryRun(async (tx) => {
 		await tx.schema.update(changed);
 	});
 
-	// SCH-5.1
+	// SCH-UPD-4.1
 	expect(await monti.schema.get({})).toEqual(original);
-	// SCH-5.2
+	// SCH-UPD-4.2
 	expect(await schemaInFile()).toEqual(original);
 });
 
-it("SCH-11 rejects schema.update with BAD_REQUEST when a field has an undefined type", async () => {
+it("SCH-UPD-5 rejects schema.update with BAD_REQUEST when a field has an undefined type", async () => {
 	const monti = montiOf(true);
 
-	// SCH-11.1
+	// SCH-UPD-5.1
 	await expect(monti.schema.update(unknownType)).rejects.toMatchObject({ code: "BAD_REQUEST" });
-	// SCH-11.2
+	// SCH-UPD-5.2
 	expect(await monti.schema.get({})).toEqual(original);
-	// SCH-11.3
+	// SCH-UPD-5.3
 	expect(await schemaInFile()).toEqual(original);
 });
