@@ -165,6 +165,13 @@ export interface Plugin<R extends ResourceTree = ResourceTree> {
   onEvent?: (event: MontiEvent, ctx: { monti: Monti<R> }) => void | Promise<void>;
 }
 
+export interface StorageAdapter {
+  ticket(key: string, info: { mime: string; size: number }): Promise<{ url: string; headers: Record<string, string> }>;
+  stat(key: string): Promise<{ mime: string; size: number } | null>;
+  url(key: string): string;
+  remove(key: string): Promise<void>;
+}
+
 export interface MontiConfig {
   name: string;
   dev?: boolean;
@@ -504,6 +511,12 @@ flowchart TD
 | 2026-11-18 | TypeScript는 6을 쓰고, 돌연변이 테스트는 Stryker만 쓴다. | 소유자와 정함 |
 | 2026-11-18 | AC 폴더 이름은 `docs/acceptance/core/`다. | 만들며 정함 |
 | 2026-11-19 | 서식(mark)도 블록과 같이 `MontiConfig.marks?: MarkDefinition[]`로 등록해 내장 마크 8종과 합쳐 검사한다. | 소유자와 정함 |
+| 2026-11-19 | 모든 입력이 선택인 Operation은 빈 객체 `{}` 없이 인자를 생략해 호출할 수 있다. | 소유자와 정함 |
+| 2026-11-19 | `StorageAdapter`는 `ticket`, `stat`, `url`, `remove` 4개 메서드로 확정하고, 허용 MIME·최대 크기 정책은 어댑터에 위임한다. | 소유자와 정함 |
+| 2026-11-19 | `loose_files` 대기 시간은 미등록 업로드와 파일 교체 모두 24시간으로 두고, 단건 조회(`media.get` 등)에서 없거나 휴지통인 항목은 `NOT_FOUND`로 거절한다. | 소유자와 정함 |
+| 2026-11-19 | `media.list`의 `folder_id`는 쓰기(`null`=루트)와 일관되게 생략=전체, `null`=루트 직속, UUID=해당 폴더 직속으로 한다. | 소유자와 정함 |
+| 2026-11-19 | `media.key`는 `media` 테이블 전체(`trashed_at` 설정 행 포함)에서 중복을 허용하지 않고 `CONFLICT`로 거절한다. | 소유자와 정함 |
+| 2026-11-19 | `storage`가 설정되지 않은 엔진에서는 `media` 리소스 전체를 `BAD_REQUEST`로 거절하고, 미디어 반환값의 `url`은 항상 `string`으로 한다. | 소유자와 정함 |
 
 ## 11. 정하지 않은 것
 
@@ -514,7 +527,7 @@ flowchart TD
 - **죽은 코드 검사**(`knip`). 코어의 공개 출구(`index.ts`)가 생긴 뒤 코어에만 더한다. 그 전에는 아래층 코드가 아직 쓰이지 않아 오류만 난다.
 - **사이트 이름을 스키마로 옮길지**. 옮기면 `config.update`와 `setConfig`가 필요 없어진다. 2단계 전에 정한다.
 - **DB 커밋 뒤 스키마·설정 파일 쓰기가 실패하면** 어떤 상태를 돌려줄지, **플러그인 Operation의 경로가 겹치면** 조립 때 거절할지. 2단계 테스트 계획 전.
-- **`loose_files`의 실제 삭제** 시점·실행 주체·실패 처리. `dryRun`에서는 외부 삭제가 일어나지 않아야 한다. 3단계 미디어·휴지통 테스트 계획 전.
-- **단건 조회에서 없는 항목**을 `NOT_FOUND`로 던질지(해당 Operation의 테스트 계획에서 정한다).
+- **`loose_files`의 실제 삭제** 시점·실행 주체·실패 처리. `dryRun`에서는 외부 삭제가 일어나지 않아야 한다. 3단계 휴지통 테스트 계획 전.
+- **`resources/media/uses.ts` (`media_uses` 색인 갱신)**. `templates`·`entries` 단계에서 함께 구현한다.
 - **플러그인 테이블 타입을 넘기는 호출 형태**(2단계 테스트 계획 전). `defineRead<AiTables>(…)`처럼 타입 매개변수 하나만 직접 지정하면 TypeScript가 나머지(`TSchema`, `TOutput`)를 추론하지 못한다. 3.5의 `TTables`를 어떤 호출 형태로 받을지 정한다.
 - **플러그인 밖에서 플러그인 Operation을 호출할 때의 타입.** 쓰는 곳이 생기면 상의한다.
