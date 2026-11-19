@@ -34,18 +34,19 @@ DB-MIG-4  코어와 플러그인의 마이그레이션 이력을 범위별로 �
 ## 2. 초기 스키마 (`0001-initial`)
 
 ```
-DB-SCH-1  첫 마이그레이션이 10개 도메인 테이블을 만든다
+DB-SCH-1  첫 마이그레이션이 11개 도메인 테이블을 만든다
   전제  비어 있는 데이터베이스가 있다
   행동  `core`의 첫 마이그레이션(`0001-initial`)을 실행한다
-  결과  DB-SCH-1.1  `entries` 테이블에 `id`, `collection`, `locale`, `source_entry_id`, `folder_id`, `slug`, `data`, `translation_seen`, `trashed_at` 열이 있다
-        DB-SCH-1.2  `entry_published` 테이블에 `entry_id`, `slug`, `data`, `published_at` 열이 있다
-        DB-SCH-1.3  `templates` 테이블에 `id`, `collection`, `name`, `content` 열이 있다
-        DB-SCH-1.4  `folders` 테이블에 `id`, `scope`, `parent_id`, `name`, `trashed_at` 열이 있다
-        DB-SCH-1.5  `media` 테이블에 `id`, `folder_id`, `key`, `mime_type`, `metadata`, `trashed_at` 열이 있다
-        DB-SCH-1.6  `media_uses` 테이블에 `media_id`, `source_kind`, `source_id`, `field_path` 열이 있다
-        DB-SCH-1.7  `loose_files` 테이블에 `key`, `remove_after` 열이 있다
-        DB-SCH-1.8  `monti_admin` 테이블에 `id`, `email`, `password_hash` 열이 있다
-        DB-SCH-1.9  `monti_session` 테이블에 `token_hash`, `admin_id`, `expires_at` 열이 있다
-        DB-SCH-1.10 `api_keys` 테이블에 `id`, `service`, `name`, `secret`, `last4` 열이 있다
-        DB-SCH-1.11 `monti_migrations`에 `("core", "0001-initial")`이 기록된다
+  결과  DB-SCH-1.1  `entries` 테이블에 `id`, `collection`, `source_locale`, `folder_id`, `trashed_at` 열이 있다
+        DB-SCH-1.2  `entry_locales` 테이블에 `entry_id`, `locale`, `slug`, `data`, `translation_seen` 열이 있다
+        DB-SCH-1.3  `entry_published` 테이블에 `entry_id`, `locale`, `slug`, `data`, `published_at` 열이 있다
+        DB-SCH-1.4  `templates` 테이블에 `id`, `collection`, `name`, `content` 열이 있다
+        DB-SCH-1.5  `folders` 테이블에 `id`, `scope`, `parent_id`, `name`, `trashed_at` 열이 있다
+        DB-SCH-1.6  `media` 테이블에 `id`, `folder_id`, `key`, `mime_type`, `metadata`, `trashed_at` 열이 있다
+        DB-SCH-1.7  `media_uses` 테이블에 `media_id`, `source_kind`, `source_id`, `field_path` 열이 있다
+        DB-SCH-1.8  `loose_files` 테이블에 `key`, `remove_after` 열이 있다
+        DB-SCH-1.9  `monti_admin` 테이블에 `id`, `email`, `password_hash` 열이 있다
+        DB-SCH-1.10 `monti_session` 테이블에 `token_hash`, `admin_id`, `expires_at` 열이 있다
+        DB-SCH-1.11 `api_keys` 테이블에 `id`, `service`, `name`, `secret`, `last4` 열이 있다
+        DB-SCH-1.12 `monti_migrations`에 `("core", "0001-initial")`이 기록된다
 ```
