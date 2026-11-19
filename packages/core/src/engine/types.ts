@@ -10,7 +10,7 @@ export interface Schema {
 }
 
 /** A collection: `body` gives its entries a rich-text body; `label` and `description` are shown in the admin. */
-interface CollectionSchema {
+export interface CollectionSchema {
 	body?: boolean;
 	label?: string;
 	description?: string;
@@ -60,7 +60,14 @@ interface RelationField extends FieldMeta {
 }
 
 /** A field that holds one value: every type but `conditional`. */
-type ValueFieldSchema = TextField | NumberField | BooleanField | DateField | SelectField | MediaField | RelationField;
+export type ValueFieldSchema =
+	| TextField
+	| NumberField
+	| BooleanField
+	| DateField
+	| SelectField
+	| MediaField
+	| RelationField;
 
 /** A field whose sub-fields depend on the chosen option; the sub-fields hold values only, so it does not nest. */
 interface ConditionalFieldSchema extends FieldMeta {
@@ -68,7 +75,7 @@ interface ConditionalFieldSchema extends FieldMeta {
 	options: Record<string, { fields: Record<string, ValueFieldSchema> }>;
 }
 
-type FieldSchema = ValueFieldSchema | ConditionalFieldSchema;
+export type FieldSchema = ValueFieldSchema | ConditionalFieldSchema;
 
 /** The site settings (`monti.config.ts`). */
 export interface MontiConfig {

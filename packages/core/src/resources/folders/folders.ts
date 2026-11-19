@@ -48,16 +48,23 @@ async function createFolder(input: z.infer<typeof createInput>, ctx: WriteContex
 	return ctx.db.insertInto("folders").values(folder).returning(SHOWN).executeTakeFirstOrThrow();
 }
 
-/** Rejects a parent that is not an active folder of `scope`. */
-async function rejectParent(ctx: WriteContext, parentId: string, scope: string): Promise<void> {
-	const parent = await ctx.db
+/** Whether `id` is an active folder of `scope`. */
+export async function isActiveFolder(ctx: ReadContext, id: string, scope: string): Promise<boolean> {
+	const folder = await ctx.db
 		.selectFrom("folders")
 		.select("id")
-		.where("id", "=", parentId)
+		.where("id", "=", id)
 		.where("scope", "=", scope)
 		.where("trashed_at", "is", null)
 		.executeTakeFirst();
-	if (parent === undefined) throw new MontiError("BAD_REQUEST", "The parent is not an active folder of this scope");
+	return folder !== undefined;
+}
+
+/** Rejects a parent that is not an active folder of `scope`. */
+async function rejectParent(ctx: WriteContext, parentId: string, scope: string): Promise<void> {
+	if (!(await isActiveFolder(ctx, parentId, scope))) {
+		throw new MontiError("BAD_REQUEST", "The parent is not an active folder of this scope");
+	}
 }
 
 /** Rejects a name another active folder already has under the same parent of the same scope; `id` is the folder itself, left out. */
