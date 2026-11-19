@@ -256,3 +256,178 @@ ENT-UPD-10  다건 수정에서 대상 폴더가 휴지통에 있으면 `BAD_REQ
         ENT-UPD-10.2  `entries` 테이블에서 두 글의 `folder_id`가 모두 `null` 그대로이다
 ```
 
+
+## 4. 발행 (`publish`)
+
+```
+ENT-PUB-1  작업본으로 발행본을 만든다
+  전제  필수(`required: true`)인 `text`, `number`(값 `0`), `boolean`(값 `false`) 필드가 채워져 있고 미발행 상태인 활성 글이 하나 있다
+  행동  해당 글의 `id`만으로 `entries.publish`를 실행한다
+  결과  ENT-PUB-1.1  반환값의 `slug`와 `data`가 작업본과 같고 `published_at`이 실행 전후 시각 사이이다
+        ENT-PUB-1.2  `entry_published` 테이블에 `entry_id`, `slug`, `data`, `published_at`이 반환값과 같은 행이 생긴다
+
+ENT-PUB-2  이미 발행된 글을 다시 발행하면 기존 발행 시각을 유지한다
+  전제  발행된 글의 작업본 `slug`와 `data`를 다른 값으로 바꾼 상태이다
+  행동  해당 글의 `id`만으로 `entries.publish`를 실행한다
+  결과  ENT-PUB-2.1  반환값의 `slug`와 `data`가 새 작업본과 같고 `published_at`이 기존 발행 시각과 같다
+        ENT-PUB-2.2  `entry_published` 테이블에서 해당 행의 `slug`와 `data`가 갱신되고 `published_at`은 원래 그대로이다
+
+ENT-PUB-3  발행 시각을 지정해 발행하면 그 시각으로 저장한다
+  전제  이미 발행된 활성 글이 하나 있다
+  행동  해당 글의 `id`와 기존과 다른 타임존 포함 ISO 8601 `published_at`으로 `entries.publish`를 실행한다
+  결과  ENT-PUB-3.1  반환값의 `published_at`이 전달한 시각과 같다
+        ENT-PUB-3.2  `entry_published` 테이블에서 해당 행의 `published_at`이 전달한 시각과 같다
+
+ENT-PUB-4  필수 필드가 비어 있으면 `BAD_REQUEST`로 발행을 거절한다
+  전제  필수(`required: true`)인 `text` 필드가 있는 컬렉션에, 그 필드 값이 빈 문자열(`""`)인 미발행 글이 하나 있다
+  행동  해당 글의 `id`로 `entries.publish`를 실행한다
+  결과  ENT-PUB-4.1  `BAD_REQUEST` 오류를 던진다
+        ENT-PUB-4.2  `entry_published` 테이블이 비어 있다
+
+ENT-PUB-5  선택한 조건부 분기의 필수 하위 필드가 비어 있으면 `BAD_REQUEST`로 발행을 거절한다
+  전제  두 분기를 가진 `conditional` 필드의 첫 번째 분기에 필수(`required: true`) 하위 필드가 있고, 첫 번째 분기를 선택했지만 그 하위 필드를 생략한 미발행 글이 하나 있다
+  행동  해당 글의 `id`로 `entries.publish`를 실행한다
+  결과  ENT-PUB-5.1  `BAD_REQUEST` 오류를 던진다
+        ENT-PUB-5.2  `entry_published` 테이블이 비어 있다
+
+ENT-PUB-6  같은 슬러그로 이미 발행된 다른 글이 있으면 `CONFLICT`로 발행을 거절한다
+  전제  같은 `collection`과 `locale`에, 첫 번째 글은 옛 `slug`로 발행된 뒤 작업본 `slug`를 바꿨고 두 번째 미발행 글의 작업본 `slug`가 그 옛 `slug`와 같다
+  행동  두 번째 글의 `id`로 `entries.publish`를 실행한다
+  결과  ENT-PUB-6.1  `CONFLICT` 오류를 던진다
+        ENT-PUB-6.2  `entry_published` 테이블에 첫 번째 글의 행만 그대로 남아 있다
+
+ENT-PUB-7  휴지통에 있는 글은 `NOT_FOUND`로 발행을 거절한다
+  전제  휴지통에 들어가 있는(`trashed_at` 설정) 미발행 글이 하나 있다
+  행동  해당 글의 `id`로 `entries.publish`를 실행한다
+  결과  ENT-PUB-7.1  `NOT_FOUND` 오류를 던진다
+        ENT-PUB-7.2  `entry_published` 테이블이 비어 있다
+```
+
+## 5. 발행 취소 (`unpublish`)
+
+```
+ENT-UNPUB-1  발행을 취소하면 발행본만 지우고 작업본과 미디어 사용처는 남긴다
+  전제  미디어를 참조해 `media_uses` 행과 `entry_published` 행이 있는 활성 글이 하나 있다
+  행동  해당 글의 `id`로 `entries.unpublish`를 실행한다
+  결과  ENT-UNPUB-1.1  반환값의 `slug`와 `data`가 작업본과 같고 `published_at`이 `null`이다
+        ENT-UNPUB-1.2  `entry_published` 테이블이 비어 있다
+        ENT-UNPUB-1.3  `entries` 테이블의 해당 글 행이 원래 그대로이다
+        ENT-UNPUB-1.4  `media_uses`의 해당 글 참조가 원래 그대로이다
+
+ENT-UNPUB-2  이미 미발행 상태인 글도 오류 없이 발행 취소된다
+  전제  `entry_published` 행이 없는 활성 글이 하나 있다
+  행동  해당 글의 `id`로 `entries.unpublish`를 실행한다
+  결과  ENT-UNPUB-2.1  반환값의 `id`, `slug`, `data`가 작업본과 같고 `published_at`이 `null`이다
+
+ENT-UNPUB-3  휴지통에 있는 글은 `NOT_FOUND`로 발행 취소를 거절한다
+  전제  `entry_published` 행이 있고 휴지통에 들어가 있는(`trashed_at` 설정) 글이 하나 있다
+  행동  해당 글의 `id`로 `entries.unpublish`를 실행한다
+  결과  ENT-UNPUB-3.1  `NOT_FOUND` 오류를 던진다
+        ENT-UNPUB-3.2  `entry_published` 테이블의 해당 행이 원래 그대로이다
+```
+
+## 6. 복제 (`duplicate`)
+
+```
+ENT-DUP-1  원문 글의 작업본과 미디어 사용처를 새 슬러그의 미발행 글로 복제한다
+  전제  폴더에 속하고 미디어를 참조하며 발행본과 번역본이 있는 활성 원문 글이 하나 있다
+  행동  원문 글의 `id`와 새 `slug`로 `entries.duplicate`를 실행한다
+  결과  ENT-DUP-1.1  반환값의 `id`가 원본과 다른 UUID이고 `collection`, `locale`, `folder_id`, `data`는 원본 작업본과 같으며 `slug`는 새 `slug`, `source_entry_id`와 `published_at`은 `null`이다
+        ENT-DUP-1.2  `entries` 테이블에 새 행이 `translation_seen`이 `{}`인 상태로 하나만 추가된다
+        ENT-DUP-1.3  원본 글과 번역본 행은 원래 그대로이다
+        ENT-DUP-1.4  `entry_published` 테이블에 새 글의 행은 생기지 않는다
+        ENT-DUP-1.5  `media_uses`에 새 글의 참조가 원본과 같은 미디어·경로로 생긴다
+
+ENT-DUP-2  슬러그를 생략하고 복제하면 겹치지 않는 `-copy` 슬러그를 붙인다
+  전제  같은 `collection`과 `locale`에 `slug`가 `"hello"`인 활성 원문 글과 `"hello-copy"`인 활성 글이 하나씩 있다
+  행동  `"hello"` 글의 `id`만으로 `entries.duplicate`를 실행한다
+  결과  ENT-DUP-2.1  반환값의 `slug`가 `"hello-copy-2"`이다
+        ENT-DUP-2.2  `entries` 테이블에 `slug`가 `"hello-copy-2"`인 새 행이 생긴다
+
+ENT-DUP-3  지정한 ID로 복제한다
+  전제  활성 원문 글이 하나 있다
+  행동  해당 글의 `id`와 미리 정한 UUID `__preset_id`로 `entries.duplicate`를 실행한다
+  결과  ENT-DUP-3.1  반환값의 `id`가 전달한 `__preset_id`이다
+        ENT-DUP-3.2  `entries` 테이블에 해당 `id`의 행이 생긴다
+
+ENT-DUP-4  슬러그 형식이 맞지 않으면 `BAD_REQUEST`로 복제를 거절한다
+  전제  활성 원문 글이 하나 있다
+  행동  해당 글의 `id`와 공백이 포함된 `slug`로 `entries.duplicate`를 실행한다
+  결과  ENT-DUP-4.1  `BAD_REQUEST` 오류를 던진다
+        ENT-DUP-4.2  `entries` 테이블의 행은 원래 하나 그대로이다
+
+ENT-DUP-5  이미 쓰이고 있는 슬러그로는 `CONFLICT`로 복제를 거절한다
+  전제  활성 원문 글이 하나 있다
+  행동  해당 글의 `id`와 그 글과 같은 `slug`로 `entries.duplicate`를 실행한다
+  결과  ENT-DUP-5.1  `CONFLICT` 오류를 던진다
+        ENT-DUP-5.2  `entries` 테이블의 행은 원래 하나 그대로이다
+
+ENT-DUP-6  번역본은 `BAD_REQUEST`로 복제를 거절한다
+  전제  원문 글 하나와 그 원문 글을 가리키는 번역본 하나가 있다
+  행동  번역본의 `id`로 `entries.duplicate`를 실행한다
+  결과  ENT-DUP-6.1  `BAD_REQUEST` 오류를 던진다
+        ENT-DUP-6.2  `entries` 테이블의 행은 원래 두 개 그대로이다
+
+ENT-DUP-7  휴지통에 있는 글은 `NOT_FOUND`로 복제를 거절한다
+  전제  휴지통에 들어가 있는(`trashed_at` 설정) 원문 글이 하나 있다
+  행동  해당 글의 `id`로 `entries.duplicate`를 실행한다
+  결과  ENT-DUP-7.1  `NOT_FOUND` 오류를 던진다
+        ENT-DUP-7.2  `entries` 테이블의 행은 원래 하나 그대로이다
+```
+
+## 7. 참조 교체 (`replaceReferences`)
+
+```
+ENT-REF-1  다른 글들이 가리키던 대상을 작업본과 발행본 모두 새 대상으로 바꾸고, 옛 글은 그대로 둔다
+  전제  같은 컬렉션에 활성 원문 글 둘(옛 글, 새 글)이 있다. 다른 컬렉션의 발행된 글 하나가 작업본과 발행본 모두에서 옛 글을 가리키고 있고, 작업본과 발행본의 다른 필드는 서로 다르다
+  행동  옛 글을 `from_id`, 새 글을 `into_id`로 넣어 `entries.replaceReferences`를 실행한다
+  결과  ENT-REF-1.1  반환값의 `from_id`가 옛 글, `into_id`가 새 글이고 `updated_ids`가 그 글의 `id` 하나뿐이다
+        ENT-REF-1.2  그 글의 작업본(`entries.data`)과 발행본(`entry_published.data`) 모두 참조가 새 글로 바뀐다
+        ENT-REF-1.3  발행본의 나머지 필드, `slug`, `published_at`은 작업본으로 덮이지 않고 원래 그대로이다
+        ENT-REF-1.4  옛 글의 `trashed_at`은 `null` 그대로이다
+
+ENT-REF-2  여러 개를 고르는 관계 필드에 바꿀 대상이 이미 들어 있으면 먼저 등장한 위치 하나만 남긴다
+  전제  같은 컬렉션에 활성 원문 글 셋(옛 글, 다른 글, 새 글)이 있고, 다른 컬렉션의 글 하나가 `many: true` 관계 필드에 `[옛 글, 다른 글, 새 글]`을 가지고 있다
+  행동  옛 글을 `from_id`, 새 글을 `into_id`로 넣어 `entries.replaceReferences`를 실행한다
+  결과  ENT-REF-2.1  반환값의 `updated_ids`가 그 글의 `id` 하나뿐이다
+        ENT-REF-2.2  그 글의 관계 필드가 `[새 글, 다른 글]`로 바뀐다
+
+ENT-REF-3  조건부 필드 안에 들어 있는 관계 참조도 함께 바꾼다
+  전제  같은 컬렉션에 활성 원문 글 둘(옛 글, 새 글)이 있고, 다른 컬렉션의 글 하나가 `conditional` 필드 안 관계 필드로 옛 글을 가리킨다
+  행동  옛 글을 `from_id`, 새 글을 `into_id`로 넣어 `entries.replaceReferences`를 실행한다
+  결과  ENT-REF-3.1  반환값의 `updated_ids`가 그 글의 `id` 하나뿐이다
+        ENT-REF-3.2  그 글의 `conditional` 안 관계 필드가 새 글로 바뀐다
+
+ENT-REF-4  휴지통에 있는 다른 글이 가리키던 참조도 함께 바꾼다
+  전제  같은 컬렉션에 활성 원문 글 둘(옛 글, 새 글)이 있고, 휴지통에 들어가 있는(`trashed_at` 설정) 다른 컬렉션의 글 하나가 옛 글을 가리킨다
+  행동  옛 글을 `from_id`, 새 글을 `into_id`로 넣어 `entries.replaceReferences`를 실행한다
+  결과  ENT-REF-4.1  반환값의 `updated_ids`가 그 휴지통 글의 `id` 하나뿐이다
+        ENT-REF-4.2  그 휴지통 글의 참조가 새 글로 바뀐다
+
+ENT-REF-5  옛 글이 이미 휴지통에 있어도 다른 글의 참조를 새 글로 바꿀 수 있다
+  전제  같은 컬렉션에 휴지통에 들어가 있는 원문 글(옛 글)과 활성 원문 글(새 글)이 있고, 다른 컬렉션의 글 하나가 옛 글을 가리킨다
+  행동  옛 글을 `from_id`, 새 글을 `into_id`로 넣어 `entries.replaceReferences`를 실행한다
+  결과  ENT-REF-5.1  반환값의 `updated_ids`가 참조하던 글의 `id` 하나뿐이다
+        ENT-REF-5.2  참조하던 글의 참조가 새 글로 바뀐다
+
+ENT-REF-6  자기 자신으로 참조를 바꾸려 하면 `BAD_REQUEST`로 거절한다
+  전제  활성 원문 글이 하나 있다
+  행동  같은 `id`를 `from_id`와 `into_id` 모두에 넣어 `entries.replaceReferences`를 실행한다
+  결과  ENT-REF-6.1  `BAD_REQUEST` 오류를 던진다
+
+ENT-REF-7  서로 다른 컬렉션의 글끼리 참조를 바꾸려 하면 `BAD_REQUEST`로 거절한다
+  전제  서로 다른 두 컬렉션에 활성 원문 글 둘(옛 글, 새 글)이 하나씩 있다
+  행동  옛 글을 `from_id`, 새 글을 `into_id`로 넣어 `entries.replaceReferences`를 실행한다
+  결과  ENT-REF-7.1  `BAD_REQUEST` 오류를 던진다
+
+ENT-REF-8  번역본을 대상으로 참조를 바꾸려 하면 `BAD_REQUEST`로 거절한다
+  전제  같은 컬렉션에 원문 글 둘과 첫 번째 원문 글의 번역본 하나가 있다
+  행동  번역본을 `from_id`, 두 번째 원문 글을 `into_id`로 넣어 `entries.replaceReferences`를 실행한다
+  결과  ENT-REF-8.1  `BAD_REQUEST` 오류를 던진다
+
+ENT-REF-9  바꿀 새 글이 휴지통에 있으면 `NOT_FOUND`로 거절하고 아무 참조도 바꾸지 않는다
+  전제  같은 컬렉션에 활성 원문 글(옛 글)과 휴지통에 들어가 있는 원문 글(새 글)이 있고, 다른 컬렉션의 글 하나가 옛 글을 가리킨다
+  행동  옛 글을 `from_id`, 새 글을 `into_id`로 넣어 `entries.replaceReferences`를 실행한다
+  결과  ENT-REF-9.1  `NOT_FOUND` 오류를 던진다
+        ENT-REF-9.2  참조하던 글의 `data`가 원래 그대로이다
+```

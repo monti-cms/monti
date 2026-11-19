@@ -375,7 +375,7 @@ erDiagram
 
 | 리소스 | 동사 | 고유 액션 |
 |---|---|---|
-| `entries` | `list`, `get`, `create`, `update`(필드·본문·폴더·슬러그) | `publish`, `unpublish`, `duplicate`, `merge` |
+| `entries` | `list`, `get`, `create`, `update`(필드·본문·폴더·슬러그) | `publish`, `unpublish`, `duplicate`, `replaceReferences` |
 | `translations` | `list`, `get`, `create`, `update`(블록 연결·건너뛰기·원문 확인) | |
 | `templates` | `list`, `get`, `create`, `update`, `delete` | |
 | `folders` | `list`, `create`, `update`(이름·이동) | |
@@ -530,8 +530,9 @@ flowchart TD
 | 2026-11-20 | 번역본은 원문에 종속된 부가 엔티티로 두고, `relation` 필드는 `to` 컬렉션에서 `trashed_at`이 `null`이고 `source_entry_id`가 `null`인 원문 글만 가리키도록 한다. | 소유자와 정함 |
 | 2026-11-20 | `resources/media/uses.ts`의 엔트리 미디어 색인(`source_kind: "entry"`) 경로는 `data` 구조에 맞춰 본문 `"body"`, 최상위 필드 `"fields.<키>"`, `conditional` 하위 필드 `"fields.<조건키>.fields.<하위키>"`로 한다. | 소유자와 정함 |
 | 2026-11-20 | `entries.preview`는 core에서 빼고 `entries.get`·`entries.list`의 `draft?: boolean`(기본 `false`, 발행본 우선)으로 통일한다. `entries.list`는 다른 리소스 `list`와 마찬가지로 조건에 맞는 글이 없으면 빈 배열을 돌려준다. | 소유자와 정함 |
-| 2026-11-20 | 보관(archive) 상태와 `order` 열은 두지 않고, `entries.merge`는 core에 유지한다. | 소유자와 정함 |
+| 2026-11-20 | 보관(archive) 상태와 `order` 열은 두지 않는다. 기존 `entries.merge`는 `body` 유무에 따른 직관 충돌을 없애기 위해 휴지통 이동을 분리한 `entries.replaceReferences({ from_id, into_id })`로 정리하고, 병합 UI는 `monti.transaction`으로 `trash.move`와 조합한다. | 소유자와 정함 |
 | 2026-11-20 | 리소스 공용 도우미(`uuidInput`·`timestampInput`·`docOf`)는 `resources/_shared/`에 두고, `uuidInput`은 JSON Schema 변환이 깨지지 않도록 `z.uuid().overwrite((id) => id.toLowerCase())`로 소문자 정규화한다. | 소유자와 정함 |
+| 2026-11-20 | `entries.publish`는 선택 입력 `published_at`(타임존 포함 ISO 8601)을 받으며 생략 시 최초 발행은 현재 시각, 재발행은 기존 시각을 유지한다. `entries.unpublish`는 미발행 글에도 멱등 성공한다. `entries.duplicate`는 원문 작업본만 미발행 복제하며(쓰기 공통 검증 재적용), `slug` 생략 시 `-copy`, `-copy-2`…을 자동 부여한다. | 소유자와 정함 |
 
 ## 11. 정하지 않은 것
 
