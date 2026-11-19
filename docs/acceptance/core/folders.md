@@ -2,9 +2,9 @@
 
 [`docs/refactor/core.md`](../../refactor/core.md) 3.1절(선택 입력 `id`), 6절(`folders`), 7절(`folders` 리소스)의 인수조건이다.
 
-- `folders.create`: `scope`(컬렉션 키 또는 `"media"`), `name`, 선택적 `parent_id`와 선택적 `id`(UUID)를 받아 폴더를 만든다. 존재하지 않는 `scope`이거나, 부모 폴더가 같은 `scope`의 활성 폴더(`trashed_at`이 `null`)가 아니면 `BAD_REQUEST`로 거절한다.
+- `folders.create`: `scope`(컬렉션 키 또는 `"media"`), `name`, 선택적 `parent_id`와 선택적 `id`(UUID)를 받아 폴더를 만든다. 존재하지 않는 `scope`이거나, 부모 폴더가 같은 `scope`의 활성 폴더(`trashed_at`이 `null`)가 아니면 `BAD_REQUEST`, 같은 `scope`와 `parent_id`에 같은 `name`의 활성 폴더가 이미 있으면 `CONFLICT`로 거절한다.
 - `folders.list`: 지정한 `scope`의 폴더 중 `trashed_at`이 `null`인 폴더 목록을 돌려준다.
-- `folders.update`: `id`로 폴더의 `name`이나 `parent_id`(`null`이면 루트로 이동)를 바꾼다. 대상 폴더가 없거나 `trashed_at`이 설정되어 있으면 `NOT_FOUND`, 새 부모 폴더가 같은 `scope`의 활성 폴더가 아니거나 자기 자신·자손 폴더이면 `BAD_REQUEST`로 거절한다.
+- `folders.update`: `id`로 폴더의 `name`이나 `parent_id`(`null`이면 루트로 이동)를 바꾼다. 대상 폴더가 없거나 `trashed_at`이 설정되어 있으면 `NOT_FOUND`, 새 부모 폴더가 같은 `scope`의 활성 폴더가 아니거나 자기 자신·자손 폴더이면 `BAD_REQUEST`, 이동·이름 변경 결과 같은 `scope`와 `parent_id`에 같은 `name`의 활성 폴더가 이미 있으면 `CONFLICT`로 거절한다.
 
 ---
 
@@ -92,4 +92,16 @@ FLD-13  folders.update는 trashed_at이 설정된 폴더이면 NOT_FOUND로 거�
   행동  trashed_at이 설정된 폴더의 id와 새 name으로 folders.update를 실행한다
   결과  FLD-13.1  NOT_FOUND 오류를 던진다
         FLD-13.2  folders 테이블에서 해당 폴더의 name이 원래 name 그대로이다
+
+FLD-14  folders.create는 같은 scope와 parent_id에 같은 name의 활성 폴더가 이미 있으면 CONFLICT로 거절한다
+  전제  컬렉션 scope에 trashed_at이 null인 루트 폴더가 하나 있다
+  행동  같은 scope와 같은 name으로 루트 folders.create를 실행한다
+  결과  FLD-14.1  CONFLICT 오류를 던진다
+        FLD-14.2  folders 테이블의 행은 원래 하나 그대로이다
+
+FLD-15  folders.update는 이동·이름 변경 결과 같은 scope와 parent_id에 같은 name의 활성 폴더가 이미 있으면 CONFLICT로 거절한다
+  전제  같은 scope의 루트 폴더 아래에 하위 폴더가 하나 있고, 루트에 그 하위 폴더와 같은 name의 다른 루트 폴더가 있다
+  행동  하위 폴더의 parent_id를 null로 바꾸는 folders.update를 실행한다
+  결과  FLD-15.1  CONFLICT 오류를 던진다
+        FLD-15.2  folders 테이블에서 하위 폴더의 parent_id가 원래 부모 그대로이다
 ```
