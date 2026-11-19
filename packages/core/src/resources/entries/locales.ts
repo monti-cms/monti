@@ -14,7 +14,8 @@ export const addLocaleInput = z.object({
 	data: dataInput.optional(),
 });
 
-export const removeLocaleInput = z.object({ id: uuidInput, locale: z.string() });
+/** An entry and one of its locales: the input of `entries.removeLocale` and `entries.setSourceLocale`. */
+export const entryLocaleInput = z.object({ id: uuidInput, locale: z.string() });
 
 /**
  * Adds a working copy in a locale the entry does not have yet to an active entry, and counts the entry's `media_uses`
@@ -48,7 +49,7 @@ export async function addLocale(input: z.infer<typeof addLocaleInput>, ctx: Writ
  * Deletes an active entry's working copy in a locale other than its source locale, and with it the published copy in
  * that locale; the entry's `media_uses` are counted again over the locales left. The locale need not be in the schema.
  */
-export async function removeLocale(input: z.infer<typeof removeLocaleInput>, ctx: WriteContext) {
+export async function removeLocale(input: z.infer<typeof entryLocaleInput>, ctx: WriteContext) {
 	const entry = await findEntry(ctx, { id: input.id }, true);
 	if (input.locale === entry.source_locale) throw new MontiError("BAD_REQUEST", "The source locale cannot be removed");
 	const removed = await ctx.db
@@ -60,4 +61,20 @@ export async function removeLocale(input: z.infer<typeof removeLocaleInput>, ctx
 	if (removed === undefined) throw new MontiError("NOT_FOUND", "The entry does not have this locale");
 	await recountEntryMediaUses(ctx, entry.id, collectionOf(ctx, entry.collection));
 	return { id: entry.id, locale: input.locale };
+}
+
+/**
+ * Makes one of an active entry's existing locales its source locale and clears the `translation_seen` of all the
+ * entry's locales; the entry comes back as it is when that locale is its source locale already.
+ */
+export async function setSourceLocale(input: z.infer<typeof entryLocaleInput>, ctx: WriteContext): Promise<Entry> {
+	const entry = await findEntry(ctx, { id: input.id, locale: input.locale }, true);
+	if (entry.source_locale === input.locale) return entry;
+	await ctx.db.updateTable("entries").set({ source_locale: input.locale }).where("id", "=", entry.id).execute();
+	await ctx.db
+		.updateTable("entry_locales")
+		.set({ translation_seen: JSON.stringify({}) })
+		.where("entry_id", "=", entry.id)
+		.execute();
+	return { ...entry, source_locale: input.locale };
 }

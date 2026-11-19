@@ -141,6 +141,7 @@ async function seedFolder(seed: FolderSeed = {}): Promise<string> {
 interface LocaleSeed {
 	slug?: string;
 	data?: Record<string, unknown>;
+	translation_seen?: Record<string, unknown>;
 }
 
 /** Inserts the working copy of an entry in one locale and returns its row as the table holds it. */
@@ -150,7 +151,7 @@ async function seedLocale(entry_id: string, locale: string, seed: LocaleSeed = {
 		locale,
 		slug: seed.slug ?? `entry-${randomUUID()}`,
 		data: seed.data ?? { fields: {} },
-		translation_seen: {},
+		translation_seen: seed.translation_seen ?? {},
 	};
 	await db
 		.insertInto("entry_locales")
@@ -1547,4 +1548,94 @@ it("ENT-RLOC-5 rejects entries.removeLocale with NOT_FOUND for a trashed entry",
 	});
 	// ENT-RLOC-5.2
 	expect(await localeRow(entry.id, "en")).toEqual(en);
+});
+
+/** A `translation_seen` record of a working copy that has caught up with its source locale. */
+const SEEN = { title: "seen-hash" };
+
+/** Each working copy's `locale` and `translation_seen` of one entry, sorted by `locale`. */
+async function seenOf(entry_id: string) {
+	const rows = byLocale((await localeRows()).filter((row) => row.entry_id === entry_id));
+	return rows.map(({ locale, translation_seen }) => ({ locale, translation_seen }));
+}
+
+it("ENT-SRC-1 changes the source locale to another locale and clears the translation_seen of every locale of the entry", async () => {
+	const folder = await seedFolder();
+	const entry = await seedEntry({ folder_id: folder, data: { fields: { title: "KO" } } });
+	const en = await seedLocale(entry.id, "en", { data: { fields: { title: "EN" } }, translation_seen: SEEN });
+	await seedLocale(entry.id, "ja", { translation_seen: SEEN });
+	const enPublishedAt = new Date("2026-11-02T09:00:00.000Z");
+	const published = [
+		await seedPublished(entry.id, "en", en.slug, en.data, enPublishedAt),
+		await seedPublished(entry.id, "ko", entry.slug, entry.data),
+	];
+	const other = await seedEntry({ translation_seen: SEEN });
+
+	const output = await montiOf().entries.setSourceLocale({ id: entry.id, locale: "en" });
+
+	// ENT-SRC-1.1
+	expect(output).toEqual({
+		id: entry.id,
+		collection: POSTS,
+		locale: "en",
+		source_locale: "en",
+		folder_id: folder,
+		slug: en.slug,
+		data: en.data,
+		published_at: enPublishedAt,
+	});
+	// ENT-SRC-1.2
+	expect((await entryRow(entry.id)).source_locale).toBe("en");
+	// ENT-SRC-1.3
+	expect(await seenOf(entry.id)).toEqual([
+		{ locale: "en", translation_seen: {} },
+		{ locale: "ja", translation_seen: {} },
+		{ locale: "ko", translation_seen: {} },
+	]);
+	// ENT-SRC-1.4
+	expect([await publishedRows(), await localeRow(other.id, "ko")]).toEqual([published, other.working]);
+});
+
+it("ENT-SRC-2 returns the entry as it is and keeps translation_seen when the locale is already the source locale", async () => {
+	const entry = await seedEntry({ data: { fields: { title: "KO" } } });
+	const en = await seedLocale(entry.id, "en", { translation_seen: SEEN });
+
+	const output = await montiOf().entries.setSourceLocale({ id: entry.id, locale: "ko" });
+
+	// ENT-SRC-2.1
+	expect(output).toEqual({
+		id: entry.id,
+		collection: POSTS,
+		locale: "ko",
+		source_locale: "ko",
+		folder_id: null,
+		slug: entry.slug,
+		data: entry.data,
+		published_at: null,
+	});
+	// ENT-SRC-2.2
+	expect(await localeRow(entry.id, "en")).toEqual(en);
+});
+
+it("ENT-SRC-3 rejects entries.setSourceLocale with NOT_FOUND for a locale the entry does not have", async () => {
+	const entry = await seedEntry();
+
+	// ENT-SRC-3.1
+	await expect(montiOf().entries.setSourceLocale({ id: entry.id, locale: "en" })).rejects.toMatchObject({
+		code: "NOT_FOUND",
+	});
+	// ENT-SRC-3.2
+	expect((await entryRow(entry.id)).source_locale).toBe("ko");
+});
+
+it("ENT-SRC-4 rejects entries.setSourceLocale with NOT_FOUND for a trashed entry", async () => {
+	const entry = await seedEntry({ trashed: true });
+	const en = await seedLocale(entry.id, "en", { translation_seen: SEEN });
+
+	// ENT-SRC-4.1
+	await expect(montiOf().entries.setSourceLocale({ id: entry.id, locale: "en" })).rejects.toMatchObject({
+		code: "NOT_FOUND",
+	});
+	// ENT-SRC-4.2
+	expect([await entryRow(entry.id), await localeRow(entry.id, "en")]).toEqual([entry.row, en]);
 });
