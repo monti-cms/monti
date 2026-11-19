@@ -1,7 +1,6 @@
 import { MontiError } from "../../engine/errors";
 import type { CollectionSchema, ReadContext, WriteContext } from "../../engine/types";
-import type { Doc } from "../../rich-text/types";
-import { validateDoc } from "../../rich-text/validate-doc";
+import { docOf } from "../_shared/doc";
 import { isActiveFolder } from "../folders/folders";
 import { type EntryData, entryFieldValues } from "../media/uses";
 import { fieldsSchema } from "./fields";
@@ -54,20 +53,13 @@ export async function rejectTakenSlug(ctx: WriteContext, entry: SlugOwner): Prom
 		throw new MontiError("CONFLICT", "An active entry of this collection and locale has this slug");
 }
 
-/** The body checked against the config's blocks and marks; rejects it with every problem in `details`. */
-function docOf(body: unknown, ctx: ReadContext): Doc {
-	const issues = validateDoc(body, ctx.config);
-	if (issues.length > 0) throw new MontiError("BAD_REQUEST", "The body is not a valid document", issues);
-	return body as Doc;
-}
-
 /** Rejects relation ids that are not active source entries of the collection each field points to. */
 async function rejectRelations(ctx: WriteContext, collection: CollectionSchema, fields: Record<string, unknown>) {
 	const targets = new Map<string, Set<string>>();
 	for (const { field, value } of entryFieldValues(collection.fields, fields)) {
 		if (field.type !== "relation") continue;
 		const ids = targets.get(field.to) ?? new Set();
-		for (const id of [value].flat() as string[]) ids.add(id.toLowerCase());
+		for (const id of [value].flat() as string[]) ids.add(id);
 		targets.set(field.to, ids);
 	}
 	for (const [to, ids] of targets) await rejectInactiveSources(ctx, to, [...ids]);

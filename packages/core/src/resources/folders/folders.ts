@@ -3,6 +3,7 @@ import { z } from "zod";
 import { MontiError } from "../../engine/errors";
 import { defineRead, defineWrite } from "../../engine/operation";
 import type { ReadContext, WriteContext } from "../../engine/types";
+import { uuidInput } from "../_shared/input";
 
 /** What the folder actions return of a folder. */
 interface Folder {
@@ -26,10 +27,10 @@ async function listFolders(input: z.infer<typeof listInput>, ctx: ReadContext): 
 }
 
 const createInput = z.object({
-	__preset_id: z.uuid().optional(),
+	__preset_id: uuidInput.optional(),
 	scope: z.string(),
 	name: z.string(),
-	parent_id: z.uuid().nullable().optional(),
+	parent_id: uuidInput.nullable().optional(),
 });
 
 /** Makes a folder in `"media"` or a schema collection, under an active folder of the same scope when given one. */
@@ -82,7 +83,11 @@ async function rejectTaken(ctx: WriteContext, folder: Folder): Promise<void> {
 	if (taken !== undefined) throw new MontiError("CONFLICT", "An active folder here already has this name");
 }
 
-const updateInput = z.object({ id: z.uuid(), name: z.string().optional(), parent_id: z.uuid().nullable().optional() });
+const updateInput = z.object({
+	id: uuidInput,
+	name: z.string().optional(),
+	parent_id: uuidInput.nullable().optional(),
+});
 
 /** Renames an active folder or moves it; a null `parent_id` moves it to the root, an omitted one keeps its parent. */
 async function updateFolder(input: z.infer<typeof updateInput>, ctx: WriteContext): Promise<Folder> {

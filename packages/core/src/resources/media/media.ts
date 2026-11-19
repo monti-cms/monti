@@ -3,6 +3,7 @@ import { z } from "zod";
 import { MontiError } from "../../engine/errors";
 import { defineRead, defineWrite } from "../../engine/operation";
 import type { ReadContext, WriteContext } from "../../engine/types";
+import { uuidInput } from "../_shared/input";
 import {
 	addLooseFile,
 	itemOf,
@@ -29,8 +30,8 @@ async function startUpload(input: z.infer<typeof startUploadInput>, ctx: WriteCo
 }
 
 const createInput = z.object({
-	__preset_id: z.uuid().optional(),
-	folder_id: z.uuid().nullable().optional(),
+	__preset_id: uuidInput.optional(),
+	folder_id: uuidInput.nullable().optional(),
 	key: z.string(),
 	metadata: metadataInput.optional(),
 });
@@ -56,7 +57,7 @@ async function createMedia(input: z.infer<typeof createInput>, ctx: WriteContext
 	return itemOf(row, storage);
 }
 
-const listInput = z.object({ folder_id: z.uuid().nullable().optional() });
+const listInput = z.object({ folder_id: uuidInput.nullable().optional() });
 
 /** The active media: all of them, those at the root (`folder_id: null`), or those directly in one folder. */
 async function listMedia(input: z.infer<typeof listInput>, ctx: ReadContext): Promise<MediaItem[]> {
@@ -68,7 +69,7 @@ async function listMedia(input: z.infer<typeof listInput>, ctx: ReadContext): Pr
 	return rows.map((row) => itemOf(row, storage));
 }
 
-const getInput = z.object({ id: z.uuid() });
+const getInput = z.object({ id: uuidInput });
 
 async function getMedia(input: z.infer<typeof getInput>, ctx: ReadContext): Promise<MediaItem> {
 	const storage = storageOf(ctx);
@@ -83,12 +84,12 @@ async function getMedia(input: z.infer<typeof getInput>, ctx: ReadContext): Prom
 }
 
 const updateOneInput = z.strictObject({
-	id: z.uuid(),
-	folder_id: z.uuid().nullable().optional(),
+	id: uuidInput,
+	folder_id: uuidInput.nullable().optional(),
 	metadata: metadataInput.optional(),
 	key: z.string().optional(),
 });
-const updateManyInput = z.strictObject({ ids: z.array(z.uuid()).min(1), folder_id: z.uuid().nullable() });
+const updateManyInput = z.strictObject({ ids: z.array(uuidInput).min(1), folder_id: uuidInput.nullable() });
 const updateInput = z.union([updateOneInput, updateManyInput]);
 
 /** One item (`id`): replaces its metadata, moves it or replaces its file. Many (`ids`): moves them to one folder. */

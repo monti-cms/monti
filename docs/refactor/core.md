@@ -421,6 +421,7 @@ packages/core/src/
 │   └── spec.ts                 [함수] Operation 명세 (4단계)
 │
 ├── resources/                  층 2: db, rich-text, engine, 다른 리소스(순환 금지)
+│   ├── _shared/                input.ts(uuid·timestamp 입력), doc.ts(본문 검사 오류 변환)
 │   ├── entries/  translations/  templates/  folders/  trash/
 │   ├── media/                  uses.ts [함수] 본문·필드에서 사용처를 모아 media_uses 갱신
 │   ├── schema/  config/        schema.get·update, config.get·update
@@ -530,12 +531,12 @@ flowchart TD
 | 2026-11-20 | `resources/media/uses.ts`의 엔트리 미디어 색인(`source_kind: "entry"`) 경로는 `data` 구조에 맞춰 본문 `"body"`, 최상위 필드 `"fields.<키>"`, `conditional` 하위 필드 `"fields.<조건키>.fields.<하위키>"`로 한다. | 소유자와 정함 |
 | 2026-11-20 | `entries.preview`는 core에서 빼고 `entries.get`·`entries.list`의 `draft?: boolean`(기본 `false`, 발행본 우선)으로 통일한다. `entries.list`는 다른 리소스 `list`와 마찬가지로 조건에 맞는 글이 없으면 빈 배열을 돌려준다. | 소유자와 정함 |
 | 2026-11-20 | 보관(archive) 상태와 `order` 열은 두지 않고, `entries.merge`는 core에 유지한다. | 소유자와 정함 |
+| 2026-11-20 | 리소스 공용 도우미(`uuidInput`·`timestampInput`·`docOf`)는 `resources/_shared/`에 두고, `uuidInput`은 JSON Schema 변환이 깨지지 않도록 `z.uuid().overwrite((id) => id.toLowerCase())`로 소문자 정규화한다. | 소유자와 정함 |
 
 ## 11. 정하지 않은 것
 
 아래는 확정된 동작으로 다루지 않는다.
 
-- **본문 검사의 문제 목록을 `BAD_REQUEST`로 바꿔 던지는 도우미의 위치.** 문제 목록 전체를 오류의 `details`에 실어서 던진다(첫 문제만 던지지 않는다). `templates`에서는 `MontiError`를 직접 던지고, `entries`에서 중복이 생기면 공용 도우미 추출 여부를 정한다.
 - **엔진 안의 파일 구성**(스키마·설정 파일을 읽고 검증하고 쓰는 코드, 상태 관리, 플러그인 모으기, 명세)과 **리소스 폴더 안의 파일 구성**. 각각 2단계와 3단계 테스트 계획에서 확정한다.
 - **죽은 코드 검사**(`knip`). 코어의 공개 출구(`index.ts`)가 생긴 뒤 코어에만 더한다. 그 전에는 아래층 코드가 아직 쓰이지 않아 오류만 난다.
 - **사이트 이름을 스키마로 옮길지**. 옮기면 `config.update`와 `setConfig`가 필요 없어진다. 2단계 전에 정한다.

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { MontiError } from "../../engine/errors";
 import { defineRead, defineWrite } from "../../engine/operation";
 import type { ReadContext, WriteContext } from "../../engine/types";
+import { uuidInput } from "../_shared/input";
 import { replaceEntryMediaUses } from "../media/uses";
 import { type Entry, findEntry, listEntries } from "./query";
 import { checkData, collectionOf, rejectFolder, rejectLocale, rejectTakenSlug } from "./validate";
@@ -13,10 +14,10 @@ const slugInput = z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/);
 
 const dataInput = z.object({ fields: z.record(z.string(), z.unknown()).optional(), body: z.unknown().optional() });
 
-const folderInput = z.uuid().nullable();
+const folderInput = uuidInput.nullable();
 
 const createInput = z.object({
-	__preset_id: z.uuid().optional(),
+	__preset_id: uuidInput.optional(),
 	collection: z.string(),
 	locale: z.string(),
 	slug: slugInput,
@@ -50,7 +51,7 @@ async function createEntry(input: z.infer<typeof createInput>, ctx: WriteContext
 const draftInput = z.boolean().optional();
 
 const getInput = z.union([
-	z.object({ id: z.uuid(), draft: draftInput }),
+	z.object({ id: uuidInput, draft: draftInput }),
 	z.object({ collection: z.string(), locale: z.string(), slug: z.string(), draft: draftInput }),
 ]);
 
@@ -64,7 +65,7 @@ const listInput = z.object({
 	collection: z.string().optional(),
 	locale: z.string().optional(),
 	folder_id: folderInput.optional(),
-	relation: z.object({ field: z.string(), id: z.uuid() }).optional(),
+	relation: z.object({ field: z.string(), id: uuidInput }).optional(),
 	draft: draftInput,
 });
 
@@ -75,13 +76,13 @@ async function listAll(input: z.infer<typeof listInput>, ctx: ReadContext): Prom
 }
 
 const updateOneInput = z.object({
-	id: z.uuid(),
+	id: uuidInput,
 	slug: slugInput.optional(),
 	folder_id: folderInput.optional(),
 	data: dataInput.optional(),
 });
 
-const moveInput = z.object({ ids: z.array(z.uuid()).nonempty(), folder_id: folderInput });
+const moveInput = z.object({ ids: z.array(uuidInput).nonempty(), folder_id: folderInput });
 
 const updateInput = z.union([updateOneInput, moveInput]);
 
@@ -104,7 +105,7 @@ async function updateOne(input: z.infer<typeof updateOneInput>, ctx: WriteContex
 
 /** Moves active entries into one active folder of their collection, or to the root with `folder_id: null`. */
 async function moveEntries(input: z.infer<typeof moveInput>, ctx: WriteContext) {
-	const ids = [...new Set(input.ids.map((id) => id.toLowerCase()))];
+	const ids = [...new Set(input.ids)];
 	const found = await ctx.db
 		.selectFrom("entries")
 		.select("collection")

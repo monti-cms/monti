@@ -86,9 +86,7 @@ export async function listEntries(ctx: ReadContext, filter: ListFilter, draft: b
 	if (typeof filter.folder_id === "string") query = query.where("entry.folder_id", "=", filter.folder_id);
 	if (filter.relation !== undefined) {
 		const { field, id } = filter.relation;
-		query = query.where(
-			sql<boolean>`${sql.ref("entry.data")} -> 'fields' -> ${field}::text @> to_jsonb(${id.toLowerCase()}::text)`,
-		);
+		query = query.where(sql<boolean>`${sql.ref("entry.data")} -> 'fields' -> ${field}::text @> to_jsonb(${id}::text)`);
 	}
 	return query.execute();
 }

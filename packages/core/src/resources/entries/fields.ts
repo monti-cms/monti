@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { FieldSchema, ValueFieldSchema } from "../../engine/types";
+import { timestampInput, uuidInput } from "../_shared/input";
 
 /** One value, or a list of them when the field is `many`. */
 function oneOrMany(schema: z.ZodType, many: boolean | undefined): z.ZodType {
@@ -16,16 +17,12 @@ function valueSchema(field: ValueFieldSchema): z.ZodType {
 		case "boolean":
 			return z.boolean();
 		case "date":
-			return z.iso.datetime({ offset: true });
+			return timestampInput;
 		case "select":
 			return oneOrMany(z.enum(field.options), field.many);
 		case "media":
 		case "relation":
-			// Stored lowercased, so a relation filter's jsonb match does not depend on the input's case.
-			return oneOrMany(
-				z.uuid().transform((id) => id.toLowerCase()),
-				field.many,
-			);
+			return oneOrMany(uuidInput, field.many);
 	}
 }
 

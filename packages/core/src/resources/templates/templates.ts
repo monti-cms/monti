@@ -3,8 +3,8 @@ import { z } from "zod";
 import { MontiError } from "../../engine/errors";
 import { defineRead, defineWrite } from "../../engine/operation";
 import type { ReadContext, WriteContext } from "../../engine/types";
-import type { Doc } from "../../rich-text/types";
-import { validateDoc } from "../../rich-text/validate-doc";
+import { docOf } from "../_shared/doc";
+import { uuidInput } from "../_shared/input";
 import { removeMediaUses, replaceMediaUses } from "../media/uses";
 
 /** What the template actions return of a template: its row. */
@@ -16,13 +16,6 @@ interface Template {
 }
 
 const SHOWN = ["id", "collection", "name", "content"] as const;
-
-/** The body checked against the config's blocks and marks; rejects it with every problem in `details`. */
-function docOf(content: unknown, ctx: ReadContext): Doc {
-	const issues = validateDoc(content, ctx.config);
-	if (issues.length > 0) throw new MontiError("BAD_REQUEST", "The body is not a valid document", issues);
-	return content as Doc;
-}
 
 /** Rejects a name another template of the same collection already has; `id` is the template itself, left out. */
 async function rejectTaken(ctx: WriteContext, template: Omit<Template, "content">): Promise<void> {
@@ -37,7 +30,7 @@ async function rejectTaken(ctx: WriteContext, template: Omit<Template, "content"
 }
 
 const createInput = z.object({
-	__preset_id: z.uuid().optional(),
+	__preset_id: uuidInput.optional(),
 	collection: z.string(),
 	name: z.string(),
 	content: z.unknown(),
@@ -68,7 +61,7 @@ async function listTemplates(input: z.infer<typeof listInput>, ctx: ReadContext)
 	return query.execute();
 }
 
-const idInput = z.object({ id: z.uuid() });
+const idInput = z.object({ id: uuidInput });
 
 async function getTemplate(input: z.infer<typeof idInput>, ctx: ReadContext): Promise<Template> {
 	const row = await ctx.db.selectFrom("templates").select(SHOWN).where("id", "=", input.id).executeTakeFirst();
@@ -76,7 +69,7 @@ async function getTemplate(input: z.infer<typeof idInput>, ctx: ReadContext): Pr
 	return row;
 }
 
-const updateInput = z.object({ id: z.uuid(), name: z.string().optional(), content: z.unknown().optional() });
+const updateInput = z.object({ id: uuidInput, name: z.string().optional(), content: z.unknown().optional() });
 
 /** Renames a template or replaces its body; a new body replaces its `media_uses`, an omitted one keeps them. */
 async function updateTemplate(input: z.infer<typeof updateInput>, ctx: WriteContext): Promise<Template> {
