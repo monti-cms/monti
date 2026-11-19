@@ -9,13 +9,66 @@ export interface Schema {
 	collections: Record<string, CollectionSchema>;
 }
 
+/** A collection: `body` gives its entries a rich-text body; `label` and `description` are shown in the admin. */
 interface CollectionSchema {
+	body?: boolean;
+	label?: string;
+	description?: string;
 	fields: Record<string, FieldSchema>;
 }
 
-interface FieldSchema {
-	type: string;
+/** What every field may set, whatever its `type`. */
+interface FieldMeta {
+	required?: boolean;
+	label?: string;
+	description?: string;
 }
+
+interface TextField extends FieldMeta {
+	type: "text";
+	max?: number;
+}
+
+interface NumberField extends FieldMeta {
+	type: "number";
+}
+
+interface BooleanField extends FieldMeta {
+	type: "boolean";
+}
+
+interface DateField extends FieldMeta {
+	type: "date";
+}
+
+interface SelectField extends FieldMeta {
+	type: "select";
+	options: string[];
+	many?: boolean;
+}
+
+interface MediaField extends FieldMeta {
+	type: "media";
+	many?: boolean;
+}
+
+interface RelationField extends FieldMeta {
+	type: "relation";
+	/** The collection the field points to. */
+	to: string;
+	many?: boolean;
+}
+
+/** A field that holds one value: every type but `conditional`. */
+type ValueFieldSchema = TextField | NumberField | BooleanField | DateField | SelectField | MediaField | RelationField;
+
+/** A field whose sub-fields depend on the chosen option; the sub-fields hold values only, so it does not nest. */
+interface ConditionalFieldSchema extends FieldMeta {
+	type: "conditional";
+	options: Record<string, { fields: Record<string, ValueFieldSchema> }>;
+}
+
+type FieldSchema = ValueFieldSchema | ConditionalFieldSchema;
 
 /** The site settings (`monti.config.ts`). */
 export interface MontiConfig {

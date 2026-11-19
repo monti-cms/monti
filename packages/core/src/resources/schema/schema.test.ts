@@ -25,10 +25,35 @@ const original: Schema = {
 const changed: Schema = {
 	locales: ["ko", "en"],
 	collections: {
-		posts: { fields: { title: { type: "text" }, cover: { type: "media" } } },
+		posts: {
+			body: true,
+			label: "Posts",
+			description: "Blog posts",
+			fields: {
+				title: { type: "text", required: true, max: 80, label: "Title", description: "Shown in the list" },
+				views: { type: "number" },
+				pinned: { type: "boolean" },
+				publishedOn: { type: "date" },
+				category: { type: "select", options: ["news", "guide"], many: true },
+				cover: { type: "media", many: false },
+				tags: { type: "relation", to: "tags", many: true },
+				hero: {
+					type: "conditional",
+					options: {
+						image: { fields: { image: { type: "media" } } },
+						quote: { fields: { text: { type: "text", max: 200 }, author: { type: "text" } } },
+					},
+				},
+			},
+		},
 		tags: { fields: { label: { type: "text" } } },
 	},
 };
+
+/** A schema with a field whose `type` is none of the 8, as an untyped caller would send it. */
+const unknownType: Schema = JSON.parse(
+	JSON.stringify({ locales: ["ko"], collections: { posts: { fields: { title: { type: "richtext" } } } } }),
+);
 
 function montiOf(dev: boolean) {
 	return createMonti(db, { schema }, [], {
@@ -121,5 +146,16 @@ it("SCH-5 leaves the schema and the schema file unchanged after a dryRun", async
 	// SCH-5.1
 	expect(await monti.schema.get({})).toEqual(original);
 	// SCH-5.2
+	expect(await schemaInFile()).toEqual(original);
+});
+
+it("SCH-11 rejects schema.update with BAD_REQUEST when a field has an undefined type", async () => {
+	const monti = montiOf(true);
+
+	// SCH-11.1
+	await expect(monti.schema.update(unknownType)).rejects.toMatchObject({ code: "BAD_REQUEST" });
+	// SCH-11.2
+	expect(await monti.schema.get({})).toEqual(original);
+	// SCH-11.3
 	expect(await schemaInFile()).toEqual(original);
 });
