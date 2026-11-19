@@ -1,0 +1,110 @@
+import { randomUUID } from "node:crypto";
+import { z } from "zod";
+import { MontiError } from "../../engine/errors";
+import { defineRead, defineWrite } from "../../engine/operation";
+import type { ReadContext, WriteContext } from "../../engine/types";
+import type { Doc } from "../../rich-text/types";
+import { validateDoc } from "../../rich-text/validate-doc";
+import { removeMediaUses, replaceMediaUses } from "../media/uses";
+
+/** What the template actions return of a template: its row. */
+interface Template {
+	id: string;
+	collection: string;
+	name: string;
+	content: Record<string, unknown>;
+}
+
+const SHOWN = ["id", "collection", "name", "content"] as const;
+
+/** The body checked against the config's blocks and marks; rejects it with every problem in `details`. */
+function docOf(content: unknown, ctx: ReadContext): Doc {
+	const issues = validateDoc(content, ctx.config);
+	if (issues.length > 0) throw new MontiError("BAD_REQUEST", "The body is not a valid document", issues);
+	return content as Doc;
+}
+
+/** Rejects a name another template of the same collection already has; `id` is the template itself, left out. */
+async function rejectTaken(ctx: WriteContext, template: Omit<Template, "content">): Promise<void> {
+	const taken = await ctx.db
+		.selectFrom("templates")
+		.select("id")
+		.where("id", "<>", template.id)
+		.where("collection", "=", template.collection)
+		.where("name", "=", template.name)
+		.executeTakeFirst();
+	if (taken !== undefined) throw new MontiError("CONFLICT", "A template of this collection already has this name");
+}
+
+const createInput = z.object({
+	id: z.uuid().optional(),
+	collection: z.string(),
+	name: z.string(),
+	content: z.unknown(),
+});
+
+/** Makes a template of a schema collection and indexes the media its body references. */
+async function createTemplate(input: z.infer<typeof createInput>, ctx: WriteContext): Promise<Template> {
+	if (!Object.hasOwn(ctx.schema.collections, input.collection)) {
+		throw new MontiError("BAD_REQUEST", `No collection is named "${input.collection}"`);
+	}
+	const doc = docOf(input.content, ctx);
+	const template = { id: input.id ?? randomUUID(), collection: input.collection, name: input.name };
+	await rejectTaken(ctx, template);
+	await replaceMediaUses(ctx, { source_kind: "template", source_id: template.id }, "content", doc);
+	return ctx.db
+		.insertInto("templates")
+		.values({ ...template, content: JSON.stringify(doc) })
+		.returning(SHOWN)
+		.executeTakeFirstOrThrow();
+}
+
+const listInput = z.object({ collection: z.string().optional() });
+
+/** The templates of every collection, or of one when `collection` is given. */
+async function listTemplates(input: z.infer<typeof listInput>, ctx: ReadContext): Promise<Template[]> {
+	let query = ctx.db.selectFrom("templates").select(SHOWN);
+	if (input.collection !== undefined) query = query.where("collection", "=", input.collection);
+	return query.execute();
+}
+
+const idInput = z.object({ id: z.uuid() });
+
+async function getTemplate(input: z.infer<typeof idInput>, ctx: ReadContext): Promise<Template> {
+	const row = await ctx.db.selectFrom("templates").select(SHOWN).where("id", "=", input.id).executeTakeFirst();
+	if (row === undefined) throw new MontiError("NOT_FOUND", "No template has this id");
+	return row;
+}
+
+const updateInput = z.object({ id: z.uuid(), name: z.string().optional(), content: z.unknown().optional() });
+
+/** Renames a template or replaces its body; a new body replaces its `media_uses`, an omitted one keeps them. */
+async function updateTemplate(input: z.infer<typeof updateInput>, ctx: WriteContext): Promise<Template> {
+	const existing = await getTemplate(input, ctx);
+	const doc = input.content === undefined ? undefined : docOf(input.content, ctx);
+	const name = input.name ?? existing.name;
+	await rejectTaken(ctx, { ...existing, name });
+	if (doc !== undefined) await replaceMediaUses(ctx, { source_kind: "template", source_id: input.id }, "content", doc);
+	return ctx.db
+		.updateTable("templates")
+		.set({ name, content: doc === undefined ? undefined : JSON.stringify(doc) })
+		.where("id", "=", input.id)
+		.returning(SHOWN)
+		.executeTakeFirstOrThrow();
+}
+
+/** Deletes a template and its `media_uses`. */
+async function deleteTemplate(input: z.infer<typeof idInput>, ctx: WriteContext): Promise<void> {
+	const deleted = await ctx.db.deleteFrom("templates").where("id", "=", input.id).returning("id").executeTakeFirst();
+	if (deleted === undefined) throw new MontiError("NOT_FOUND", "No template has this id");
+	await removeMediaUses(ctx, { source_kind: "template", source_id: input.id });
+}
+
+/** The `templates` resource: reusable bodies of a collection's entries. */
+export const templates = {
+	list: defineRead({ input: listInput, run: listTemplates }),
+	get: defineRead({ input: idInput, run: getTemplate }),
+	create: defineWrite({ input: createInput, run: createTemplate }),
+	update: defineWrite({ input: updateInput, run: updateTemplate }),
+	delete: defineWrite({ input: idInput, run: deleteTemplate }),
+};
