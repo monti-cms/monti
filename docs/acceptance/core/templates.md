@@ -2,8 +2,8 @@
 
 [`docs/refactor/core.md`](../../refactor/core.md) 3.1절(선택 입력 `id`), 6절(`templates`, `media_uses`), 7절(`templates` 리소스)의 인수 조건이다.
 
-- `templates` 리소스는 `storage` 없이 동작한다. `create`는 선택 `id`(UUID)를 받고 `collection`은 필수이며 수정할 수 없다.
-- `create`·`update` 모두 본문을 `validateDoc(content, ctx.config)`로 검사하고 실패 시 문제 목록 전체를 `details`에 담아 `BAD_REQUEST`로 거절한다.
+- `templates` 리소스는 `storage` 없이 동작한다. `create`는 선택 `id`(UUID)를 받고 스키마에 존재하는 `collection`이 필수이며(없으면 `BAD_REQUEST`), `collection`은 수정할 수 없다.
+- `create`와 `content`가 주어진 `update`는 본문을 `validateDoc(content, ctx.config)`로 검사하고 실패 시 문제 목록 전체를 `details`에 담아 `BAD_REQUEST`로 거절한다.
 - 같은 `collection` 안에서 `name` 중복은 `CONFLICT`, 본문이 DB에 없거나 `trashed_at`이 설정된 미디어를 참조하면 `BAD_REQUEST`, 없는 `id`에 대한 `get`·`update`·`delete`는 `NOT_FOUND`로 거절한다.
 - `resources/media/uses.ts`는 블록 트리 전체(`children` 재귀)에서 `attrs.mediaId`와 `attrs.mediaIds`를 중복 없이 모아 같은 트랜잭션 안에서 `media_uses`(`source_kind: "template"`, `field_path: "content"`)를 갱신·정리한다.
 
@@ -18,7 +18,7 @@ TPL-1  `templates.create`는 `storage` 없이도 컬렉션의 템플릿을 저�
 
 TPL-2  `templates.create`는 지정한 `id`로 템플릿을 만들고 본문 블록 트리의 `attrs.mediaId`·`attrs.mediaIds`를 `media_uses`에 중복 없이 기록한다
   전제  스키마에 컬렉션이 하나 있고 `trashed_at`이 `null`인 미디어 세 개가 있으며 `media_uses`가 비어 있다
-  행동  미리 정한 UUID `id`와, 최상위 블록이 첫 번째·두 번째 미디어를 `attrs.mediaId`로, `quote` 블록의 `children` 안 블록이 두 번째 미디어를 `attrs.mediaId`로 중복 참조하고 두 번째·세 번째 미디어를 `attrs.mediaIds`로 참조하는 `content`로 `templates.create`를 실행한다
+  행동  미리 정한 UUID `id`와, 최상위 블록이 첫 번째 미디어를 `attrs.mediaId`로, `quote` 블록의 `children` 안 블록 하나가 두 번째 미디어를 `attrs.mediaId`로, 다른 `children` 블록이 첫 번째·세 번째 미디어를 `attrs.mediaIds`로 참조하는 `content`로 `templates.create`를 실행한다
   결과  TPL-2.1  반환값의 `id`가 전달한 `id`이다
         TPL-2.2  `templates` 테이블에 해당 `id`의 행이 하나 생긴다
         TPL-2.3  `media_uses`에 `source_kind`가 `"template"`, `source_id`가 전달한 `id`, `field_path`가 `"content"`인 행이 세 미디어당 하나씩 정확히 세 개 생긴다
@@ -102,4 +102,20 @@ TPL-15  `templates.update`는 본문이 DB에 존재하지 않는 미디어 `id`
   결과  TPL-15.1  `BAD_REQUEST` 오류를 던진다
         TPL-15.2  `templates` 테이블에서 해당 행의 `content`가 원래 그대로이다
         TPL-15.3  `media_uses`에 해당 템플릿의 기존 참조가 그대로 남아 있다
+
+TPL-16  `templates.update`는 본문 검증에 실패하면 `BAD_REQUEST`로 거절하고 기존 `content`를 유지한다
+  전제  템플릿이 하나 있다
+  행동  해당 `id`와 `blocks[0].type`이 미등록 블록인 `content`로 `templates.update`를 실행한다
+  결과  TPL-16.1  `BAD_REQUEST` 오류를 던진다
+        TPL-16.2  `templates` 테이블에서 해당 행의 `content`가 원래 그대로이다
+
+TPL-17  `templates.update`는 없는 `id`이면 `NOT_FOUND`로 거절한다
+  전제  `templates`가 비어 있다
+  행동  존재하지 않는 UUID `id`와 새 `name`으로 `templates.update`를 실행한다
+  결과  TPL-17.1  `NOT_FOUND` 오류를 던진다
+
+TPL-18  `templates.delete`는 없는 `id`이면 `NOT_FOUND`로 거절한다
+  전제  `templates`가 비어 있다
+  행동  존재하지 않는 UUID `id`로 `templates.delete`를 실행한다
+  결과  TPL-18.1  `NOT_FOUND` 오류를 던진다
 ```
