@@ -44,6 +44,7 @@ async function createFolder(input: z.infer<typeof createInput>, ctx: WriteContex
 		parent_id: input.parent_id ?? null,
 	};
 	if (folder.parent_id !== null) await rejectParent(ctx, folder.parent_id, folder.scope);
+	await rejectTaken(ctx, folder);
 	await ctx.db.insertInto("folders").values(folder).execute();
 	return folder;
 }
@@ -60,13 +61,28 @@ async function rejectParent(ctx: WriteContext, parentId: string, scope: string):
 	if (parent === undefined) throw new MontiError("BAD_REQUEST", "The parent is not an active folder of this scope");
 }
 
+/** Rejects a name another active folder already has under the same parent of the same scope; `id` is the folder itself, left out. */
+async function rejectTaken(ctx: WriteContext, folder: Folder): Promise<void> {
+	let query = ctx.db
+		.selectFrom("folders")
+		.select("id")
+		.where("id", "<>", folder.id)
+		.where("scope", "=", folder.scope)
+		.where("name", "=", folder.name)
+		.where("trashed_at", "is", null);
+	query =
+		folder.parent_id === null ? query.where("parent_id", "is", null) : query.where("parent_id", "=", folder.parent_id);
+	const taken = await query.executeTakeFirst();
+	if (taken !== undefined) throw new MontiError("CONFLICT", "An active folder here already has this name");
+}
+
 const updateInput = z.object({ id: z.uuid(), name: z.string().optional(), parent_id: z.uuid().nullable().optional() });
 
 /** Renames an active folder or moves it; a null `parent_id` moves it to the root, an omitted one keeps its parent. */
 async function updateFolder(input: z.infer<typeof updateInput>, ctx: WriteContext): Promise<Folder> {
 	const target = await ctx.db
 		.selectFrom("folders")
-		.select("scope")
+		.select(SHOWN)
 		.where("id", "=", input.id)
 		.where("trashed_at", "is", null)
 		.executeTakeFirst();
@@ -75,6 +91,8 @@ async function updateFolder(input: z.infer<typeof updateInput>, ctx: WriteContex
 		await rejectParent(ctx, input.parent_id, target.scope);
 		await rejectCycle(ctx, input.id, input.parent_id);
 	}
+	const parentId = input.parent_id === undefined ? target.parent_id : input.parent_id;
+	await rejectTaken(ctx, { ...target, name: input.name ?? target.name, parent_id: parentId });
 	return ctx.db
 		.updateTable("folders")
 		.set({ name: input.name, parent_id: input.parent_id })

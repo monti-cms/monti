@@ -227,3 +227,27 @@ it("FLD-13 rejects folders.update with NOT_FOUND for a trashed folder", async ()
 	// FLD-13.2
 	expect((await folderRow(trashed)).name).toBe("Trashed");
 });
+
+it("FLD-14 rejects folders.create with CONFLICT for an active folder of the same name at the same place", async () => {
+	const existing = await seedFolder({ name: "Drafts" });
+
+	// FLD-14.1
+	await expect(montiOf().folders.create({ scope: POSTS, name: "Drafts" })).rejects.toMatchObject({
+		code: "CONFLICT",
+	});
+	// FLD-14.2
+	expect((await folderRows()).map((row) => row.id)).toEqual([existing]);
+});
+
+it("FLD-15 rejects folders.update with CONFLICT when the move meets an active folder of the same name", async () => {
+	const root = await seedFolder({ name: "Root" });
+	const child = await seedFolder({ name: "Drafts", parent_id: root });
+	await seedFolder({ name: "Drafts" });
+
+	// FLD-15.1
+	await expect(montiOf().folders.update({ id: child, parent_id: null })).rejects.toMatchObject({
+		code: "CONFLICT",
+	});
+	// FLD-15.2
+	expect((await folderRow(child)).parent_id).toBe(root);
+});
