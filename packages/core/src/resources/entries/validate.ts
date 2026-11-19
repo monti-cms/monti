@@ -38,22 +38,23 @@ export async function rejectFolder(ctx: WriteContext, folderId: string, collecti
 	}
 }
 
-/** Rejects a slug another active entry of the same collection and locale has; `id` is the entry itself, left out. */
+/** Rejects a slug another active entry of the same collection has in the same locale; `id` is the entry itself, left out. */
 export async function rejectTakenSlug(ctx: WriteContext, entry: SlugOwner): Promise<void> {
 	const taken = await ctx.db
-		.selectFrom("entries")
-		.select("id")
-		.where("id", "<>", entry.id)
-		.where("collection", "=", entry.collection)
-		.where("locale", "=", entry.locale)
-		.where("slug", "=", entry.slug)
-		.where("trashed_at", "is", null)
+		.selectFrom("entry_locales")
+		.innerJoin("entries", "entries.id", "entry_locales.entry_id")
+		.select("entries.id")
+		.where("entries.id", "<>", entry.id)
+		.where("entries.collection", "=", entry.collection)
+		.where("entries.trashed_at", "is", null)
+		.where("entry_locales.locale", "=", entry.locale)
+		.where("entry_locales.slug", "=", entry.slug)
 		.executeTakeFirst();
 	if (taken !== undefined)
 		throw new MontiError("CONFLICT", "An active entry of this collection and locale has this slug");
 }
 
-/** Rejects relation ids that are not active source entries of the collection each field points to. */
+/** Rejects relation ids that are not active entries of the collection each field points to. */
 async function rejectRelations(ctx: WriteContext, collection: CollectionSchema, fields: Record<string, unknown>) {
 	const targets = new Map<string, Set<string>>();
 	for (const { field, value } of entryFieldValues(collection.fields, fields)) {
@@ -62,10 +63,10 @@ async function rejectRelations(ctx: WriteContext, collection: CollectionSchema, 
 		for (const id of [value].flat() as string[]) ids.add(id);
 		targets.set(field.to, ids);
 	}
-	for (const [to, ids] of targets) await rejectInactiveSources(ctx, to, [...ids]);
+	for (const [to, ids] of targets) await rejectInactiveTargets(ctx, to, [...ids]);
 }
 
-async function rejectInactiveSources(ctx: WriteContext, collection: string, ids: string[]): Promise<void> {
+async function rejectInactiveTargets(ctx: WriteContext, collection: string, ids: string[]): Promise<void> {
 	// `in ()` is not SQL: an empty `many` list points to nothing.
 	if (ids.length === 0) return;
 	const found = await ctx.db
@@ -73,14 +74,10 @@ async function rejectInactiveSources(ctx: WriteContext, collection: string, ids:
 		.select("id")
 		.where("id", "in", ids)
 		.where("collection", "=", collection)
-		.where("source_entry_id", "is", null)
 		.where("trashed_at", "is", null)
 		.execute();
 	if (found.length !== ids.length) {
-		throw new MontiError(
-			"BAD_REQUEST",
-			`A relation points to an entry that is not an active ${collection} source entry`,
-		);
+		throw new MontiError("BAD_REQUEST", `A relation points to an entry that is not an active ${collection} entry`);
 	}
 }
 

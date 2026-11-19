@@ -56,8 +56,15 @@ export function entryFieldValues(
 	});
 }
 
+/** Every media id the uses reference, each once. */
+function idsOf(uses: UsesByPath): string[] {
+	return [...new Set([...uses.values()].flatMap((pathIds) => [...pathIds]))];
+}
+
 /** Rejects ids that are not active media items: missing from `media` or trashed. */
 async function rejectInactive(ctx: WriteContext, ids: readonly string[]): Promise<void> {
+	// `in ()` is not SQL: data with no media checks nothing.
+	if (ids.length === 0) return;
 	const active = await ctx.db
 		.selectFrom("media")
 		.select("id")
@@ -76,39 +83,62 @@ export async function removeMediaUses(ctx: WriteContext, source: UseSource): Pro
 		.execute();
 }
 
-/** Replaces the source's `media_uses` rows with `uses`, after checking every media they reference is active. */
+/** Replaces the source's `media_uses` rows with `uses`. */
 async function writeUses(ctx: WriteContext, source: UseSource, uses: UsesByPath): Promise<void> {
-	const ids = new Set([...uses.values()].flatMap((pathIds) => [...pathIds]));
-	// `in ()` and an empty `values` are not SQL: data with no media checks nothing and leaves no rows.
-	if (ids.size > 0) await rejectInactive(ctx, [...ids]);
 	await removeMediaUses(ctx, source);
 	const rows = [...uses].flatMap(([field_path, pathIds]) =>
 		[...pathIds].map((media_id) => ({ media_id, ...source, field_path })),
 	);
+	// An empty `values` is not SQL: no media leaves no rows.
 	if (rows.length > 0) await ctx.db.insertInto("media_uses").values(rows).execute();
 }
 
-/** Replaces the source's `media_uses` rows with the active media `doc` references at `field_path`. */
+/** Replaces the source's `media_uses` rows with the media `doc` references at `field_path`; rejects inactive media. */
 export async function replaceMediaUses(
 	ctx: WriteContext,
 	source: UseSource,
 	field_path: string,
 	doc: Doc,
 ): Promise<void> {
-	await writeUses(ctx, source, new Map([[field_path, mediaIdsOf(doc.blocks)]]));
+	const uses: UsesByPath = new Map([[field_path, mediaIdsOf(doc.blocks)]]);
+	await rejectInactive(ctx, idsOf(uses));
+	await writeUses(ctx, source, uses);
 }
 
-/** Replaces an entry's `media_uses` rows with the media its checked `data` references in media fields and the body. */
+/** Adds `ids` to the ones `uses` has at `field_path`, lowercased. */
+function addUses(uses: UsesByPath, field_path: string, ids: Iterable<string>): void {
+	const pathIds = uses.get(field_path) ?? new Set<string>();
+	for (const id of ids) pathIds.add(id.toLowerCase());
+	uses.set(field_path, pathIds);
+}
+
+/** Adds the media checked entry `data` references in its media fields and its body to `uses`, by `field_path`. */
+function addEntryUses(uses: UsesByPath, collection: CollectionSchema, data: EntryData): UsesByPath {
+	for (const { path, field, value } of entryFieldValues(collection.fields, data.fields)) {
+		if (field.type === "media") addUses(uses, path, [value].flat() as string[]);
+	}
+	if (data.body !== undefined) addUses(uses, "body", mediaIdsOf(data.body.blocks));
+	return uses;
+}
+
+/**
+ * Replaces an entry's `media_uses` rows with the union of what every one of its locales' working copies references,
+ * after rejecting inactive media in `data`, the working copy being written. Call it once that copy is stored.
+ */
 export async function replaceEntryMediaUses(
 	ctx: WriteContext,
 	entryId: string,
 	collection: CollectionSchema,
 	data: EntryData,
 ): Promise<void> {
+	await rejectInactive(ctx, idsOf(addEntryUses(new Map(), collection, data)));
+	const locales = await ctx.db
+		.selectFrom("entry_locales")
+		.select("data")
+		.where("entry_id", "=", entryId)
+		.$castTo<{ data: EntryData }>()
+		.execute();
 	const uses: UsesByPath = new Map();
-	for (const { path, field, value } of entryFieldValues(collection.fields, data.fields)) {
-		if (field.type === "media") uses.set(path, new Set(([value].flat() as string[]).map((id) => id.toLowerCase())));
-	}
-	if (data.body !== undefined) uses.set("body", mediaIdsOf(data.body.blocks));
+	for (const row of locales) addEntryUses(uses, collection, row.data);
 	await writeUses(ctx, { source_kind: "entry", source_id: entryId }, uses);
 }

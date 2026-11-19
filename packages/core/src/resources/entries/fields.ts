@@ -44,3 +44,9 @@ export function fieldsSchema(fields: Record<string, FieldSchema>): z.ZodType {
 	);
 	return z.strictObject(shape);
 }
+
+/** A conditional field's stored value: the chosen option and that option's sub-field values. */
+export interface ConditionalValue {
+	option: string;
+	fields: Record<string, unknown>;
+}

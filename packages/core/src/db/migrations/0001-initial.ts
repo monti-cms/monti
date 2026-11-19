@@ -19,23 +19,42 @@ async function createEntries(db: Kysely<unknown>): Promise<void> {
 		.createTable("entries")
 		.addColumn("id", "uuid", (column) => column.primaryKey())
 		.addColumn("collection", "text", (column) => column.notNull())
-		.addColumn("locale", "text", (column) => column.notNull())
-		.addColumn("source_entry_id", "uuid", (column) => column.references("entries.id"))
+		.addColumn("source_locale", "text", (column) => column.notNull())
 		.addColumn("folder_id", "uuid", (column) => column.references("folders.id"))
-		.addColumn("slug", "text", (column) => column.notNull())
-		.addColumn("data", "jsonb", (column) => column.notNull())
-		.addColumn("translation_seen", "jsonb", (column) => column.notNull())
 		.addColumn("trashed_at", "timestamptz")
 		.execute();
 }
 
+/** One working copy per entry and locale; deleting the entry deletes them. */
+async function createEntryLocales(db: Kysely<unknown>): Promise<void> {
+	await db.schema
+		.createTable("entry_locales")
+		.addColumn("entry_id", "uuid", (column) => column.notNull().references("entries.id").onDelete("cascade"))
+		.addColumn("locale", "text", (column) => column.notNull())
+		.addColumn("slug", "text", (column) => column.notNull())
+		.addColumn("data", "jsonb", (column) => column.notNull())
+		.addColumn("translation_seen", "jsonb", (column) => column.notNull())
+		.addPrimaryKeyConstraint("entry_locales_pkey", ["entry_id", "locale"])
+		.execute();
+}
+
+/** One published copy per working copy; deleting the working copy deletes it. */
 async function createEntryPublished(db: Kysely<unknown>): Promise<void> {
 	await db.schema
 		.createTable("entry_published")
-		.addColumn("entry_id", "uuid", (column) => column.primaryKey().references("entries.id"))
+		.addColumn("entry_id", "uuid", (column) => column.notNull())
+		.addColumn("locale", "text", (column) => column.notNull())
 		.addColumn("slug", "text", (column) => column.notNull())
 		.addColumn("data", "jsonb", (column) => column.notNull())
 		.addColumn("published_at", "timestamptz", (column) => column.notNull())
+		.addPrimaryKeyConstraint("entry_published_pkey", ["entry_id", "locale"])
+		.addForeignKeyConstraint(
+			"entry_published_locale_fkey",
+			["entry_id", "locale"],
+			"entry_locales",
+			["entry_id", "locale"],
+			(constraint) => constraint.onDelete("cascade"),
+		)
 		.execute();
 }
 
@@ -105,10 +124,11 @@ async function createApiKeys(db: Kysely<unknown>): Promise<void> {
 		.execute();
 }
 
-/** Creates the ten domain tables, referenced tables first. */
+/** Creates the eleven domain tables, referenced tables first. */
 async function createDomainTables(db: Kysely<unknown>): Promise<void> {
 	await createFolders(db);
 	await createEntries(db);
+	await createEntryLocales(db);
 	await createEntryPublished(db);
 	await createTemplates(db);
 	await createMedia(db);

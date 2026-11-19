@@ -112,45 +112,41 @@ it("DB-MIG-4 records the history of the core and of a plugin apart by scope", as
 	]);
 });
 
-it("DB-SCH-1 creates the ten domain tables in the first migration", async () => {
+it("DB-SCH-1 creates the eleven domain tables in the first migration", async () => {
 	await migrate(testDb.db, "core", [initial]);
 
 	// DB-SCH-1.1
 	expect(await columnsOf(testDb.db, "entries")).toEqual(
-		[
-			"id",
-			"collection",
-			"locale",
-			"source_entry_id",
-			"folder_id",
-			"slug",
-			"data",
-			"translation_seen",
-			"trashed_at",
-		].sort(),
+		["id", "collection", "source_locale", "folder_id", "trashed_at"].sort(),
 	);
 	// DB-SCH-1.2
-	expect(await columnsOf(testDb.db, "entry_published")).toEqual(["entry_id", "slug", "data", "published_at"].sort());
+	expect(await columnsOf(testDb.db, "entry_locales")).toEqual(
+		["entry_id", "locale", "slug", "data", "translation_seen"].sort(),
+	);
 	// DB-SCH-1.3
-	expect(await columnsOf(testDb.db, "templates")).toEqual(["id", "collection", "name", "content"].sort());
+	expect(await columnsOf(testDb.db, "entry_published")).toEqual(
+		["entry_id", "locale", "slug", "data", "published_at"].sort(),
+	);
 	// DB-SCH-1.4
-	expect(await columnsOf(testDb.db, "folders")).toEqual(["id", "scope", "parent_id", "name", "trashed_at"].sort());
+	expect(await columnsOf(testDb.db, "templates")).toEqual(["id", "collection", "name", "content"].sort());
 	// DB-SCH-1.5
+	expect(await columnsOf(testDb.db, "folders")).toEqual(["id", "scope", "parent_id", "name", "trashed_at"].sort());
+	// DB-SCH-1.6
 	expect(await columnsOf(testDb.db, "media")).toEqual(
 		["id", "folder_id", "key", "mime_type", "metadata", "trashed_at"].sort(),
 	);
-	// DB-SCH-1.6
+	// DB-SCH-1.7
 	expect(await columnsOf(testDb.db, "media_uses")).toEqual(
 		["media_id", "source_kind", "source_id", "field_path"].sort(),
 	);
-	// DB-SCH-1.7
-	expect(await columnsOf(testDb.db, "loose_files")).toEqual(["key", "remove_after"].sort());
 	// DB-SCH-1.8
-	expect(await columnsOf(testDb.db, "monti_admin")).toEqual(["id", "email", "password_hash"].sort());
+	expect(await columnsOf(testDb.db, "loose_files")).toEqual(["key", "remove_after"].sort());
 	// DB-SCH-1.9
-	expect(await columnsOf(testDb.db, "monti_session")).toEqual(["token_hash", "admin_id", "expires_at"].sort());
+	expect(await columnsOf(testDb.db, "monti_admin")).toEqual(["id", "email", "password_hash"].sort());
 	// DB-SCH-1.10
-	expect(await columnsOf(testDb.db, "api_keys")).toEqual(["id", "service", "name", "secret", "last4"].sort());
+	expect(await columnsOf(testDb.db, "monti_session")).toEqual(["token_hash", "admin_id", "expires_at"].sort());
 	// DB-SCH-1.11
+	expect(await columnsOf(testDb.db, "api_keys")).toEqual(["id", "service", "name", "secret", "last4"].sort());
+	// DB-SCH-1.12
 	expect(await recordedMigrations(testDb.db)).toEqual([["core", "0001-initial"]]);
 });

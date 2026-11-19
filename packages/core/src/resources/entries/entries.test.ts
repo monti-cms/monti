@@ -16,10 +16,14 @@ let db: Kysely<Database>;
 const POSTS = "posts";
 const PAGES = "pages";
 const TOPICS = "topics";
+const NOTES = "notes";
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const PUBLISHED_AT = new Date("2026-11-01T09:00:00.000Z");
 
-/** `posts` has a body and every field type; `pages` relates to topics with `many`; `topics` has no body. */
+/**
+ * `posts` has a body and every field type; `pages` relates to topics with `many`; `topics` has no body; `notes` has
+ * required fields and a conditional whose first option has a required sub-field and a relation.
+ */
 const SCHEMA: Schema = {
 	locales: ["ko", "en"],
 	collections: {
@@ -45,6 +49,20 @@ const SCHEMA: Schema = {
 		},
 		[PAGES]: { fields: { topic: { type: "relation", to: TOPICS, many: true } } },
 		[TOPICS]: { fields: { name: { type: "text" } } },
+		[NOTES]: {
+			fields: {
+				title: { type: "text", required: true },
+				rank: { type: "number", required: true },
+				pinned: { type: "boolean", required: true },
+				kind: {
+					type: "conditional",
+					options: {
+						link: { fields: { url: { type: "text", required: true }, topic: { type: "relation", to: TOPICS } } },
+						plain: { fields: { note: { type: "text" } } },
+					},
+				},
+			},
+		},
 	},
 };
 
@@ -120,39 +138,60 @@ async function seedFolder(seed: FolderSeed = {}): Promise<string> {
 	return id;
 }
 
-interface EntrySeed {
-	collection?: string;
-	locale?: string;
+interface LocaleSeed {
 	slug?: string;
-	folder_id?: string | null;
-	source_entry_id?: string | null;
 	data?: Record<string, unknown>;
-	trashed?: boolean;
 }
 
-/** Inserts an entry straight into the table and returns its row as the table holds it. */
-async function seedEntry(seed: EntrySeed = {}) {
+/** Inserts the working copy of an entry in one locale and returns its row as the table holds it. */
+async function seedLocale(entry_id: string, locale: string, seed: LocaleSeed = {}) {
 	const row = {
-		id: randomUUID(),
-		collection: seed.collection ?? POSTS,
-		locale: seed.locale ?? "ko",
-		source_entry_id: seed.source_entry_id ?? null,
-		folder_id: seed.folder_id ?? null,
+		entry_id,
+		locale,
 		slug: seed.slug ?? `entry-${randomUUID()}`,
 		data: seed.data ?? { fields: {} },
 		translation_seen: {},
-		trashed_at: seed.trashed ? new Date() : null,
 	};
 	await db
-		.insertInto("entries")
+		.insertInto("entry_locales")
 		.values({ ...row, data: JSON.stringify(row.data), translation_seen: JSON.stringify(row.translation_seen) })
 		.execute();
 	return row;
 }
 
-/** Inserts the published copy of an entry, as `entries.publish` would, and returns its row. */
-async function seedPublished(entry_id: string, slug: string, data: Record<string, unknown>) {
-	const row = { entry_id, slug, data, published_at: PUBLISHED_AT };
+interface EntrySeed extends LocaleSeed {
+	collection?: string;
+	locale?: string;
+	folder_id?: string | null;
+	trashed?: boolean;
+}
+
+/**
+ * Inserts an entry and its working copy in its source locale (`ko` unless given). Returns the `entries` row as `row` and
+ * the working copy's `slug` and `data` beside its `id`.
+ */
+async function seedEntry(seed: EntrySeed = {}) {
+	const row = {
+		id: randomUUID(),
+		collection: seed.collection ?? POSTS,
+		source_locale: seed.locale ?? "ko",
+		folder_id: seed.folder_id ?? null,
+		trashed_at: seed.trashed ? new Date() : null,
+	};
+	await db.insertInto("entries").values(row).execute();
+	const working = await seedLocale(row.id, row.source_locale, seed);
+	return { ...row, row, working, slug: working.slug, data: working.data };
+}
+
+/** Inserts the published copy of an entry in one locale, as `entries.publish` would, and returns its row. */
+async function seedPublished(
+	entry_id: string,
+	locale: string,
+	slug: string,
+	data: Record<string, unknown>,
+	published_at = PUBLISHED_AT,
+) {
+	const row = { entry_id, locale, slug, data, published_at };
 	await db
 		.insertInto("entry_published")
 		.values({ ...row, data: JSON.stringify(data) })
@@ -160,10 +199,12 @@ async function seedPublished(entry_id: string, slug: string, data: Record<string
 	return row;
 }
 
-/** An active entry whose published copy has another slug and data than its working copy. */
+/** An active entry whose published copy in its source locale has another slug and data than its working copy. */
 async function seedPublishedEntry(seed: EntrySeed = {}) {
 	const entry = await seedEntry({ data: { fields: { title: "Draft" } }, ...seed });
-	const published = await seedPublished(entry.id, `live-${randomUUID()}`, { fields: { title: "Live" } });
+	const published = await seedPublished(entry.id, entry.source_locale, `live-${randomUUID()}`, {
+		fields: { title: "Live" },
+	});
 	return { entry, published };
 }
 
@@ -179,15 +220,15 @@ async function seedUse(use: UseSeed): Promise<UseSeed> {
 	return use;
 }
 
+/** The `media_uses` row of an entry's `cover` field referencing `media_id`. */
+function coverUse(source_id: string, media_id: string): UseSeed {
+	return { media_id, source_kind: "entry", source_id, field_path: "fields.cover" };
+}
+
 /** An entry whose `cover` field references `mediaId`, with its `media_uses` row. */
 async function seedEntryUsing(mediaId: string, seed: EntrySeed = {}) {
 	const entry = await seedEntry({ data: { fields: { cover: mediaId } }, ...seed });
-	const use = await seedUse({
-		media_id: mediaId,
-		source_kind: "entry",
-		source_id: entry.id,
-		field_path: "fields.cover",
-	});
+	const use = await seedUse(coverUse(entry.id, mediaId));
 	return { entry, use };
 }
 
@@ -199,8 +240,30 @@ async function entryRow(id: string) {
 	return db.selectFrom("entries").selectAll().where("id", "=", id).executeTakeFirstOrThrow();
 }
 
-async function publishedRow(entry_id: string) {
-	return db.selectFrom("entry_published").selectAll().where("entry_id", "=", entry_id).executeTakeFirstOrThrow();
+async function localeRows() {
+	return db.selectFrom("entry_locales").selectAll().execute();
+}
+
+async function localeRow(entry_id: string, locale: string) {
+	return db
+		.selectFrom("entry_locales")
+		.selectAll()
+		.where("entry_id", "=", entry_id)
+		.where("locale", "=", locale)
+		.executeTakeFirstOrThrow();
+}
+
+async function publishedRow(entry_id: string, locale: string) {
+	return db
+		.selectFrom("entry_published")
+		.selectAll()
+		.where("entry_id", "=", entry_id)
+		.where("locale", "=", locale)
+		.executeTakeFirstOrThrow();
+}
+
+async function publishedRows() {
+	return db.selectFrom("entry_published").selectAll().orderBy("locale").execute();
 }
 
 async function useRows(source_kind: "entry" | "template", source_id: string) {
@@ -222,6 +285,11 @@ function idsOf(rows: { id: string }[]): string[] {
 	return rows.map((row) => row.id).sort();
 }
 
+/** Each entry's `id` and `locale`, sorted by `id`, so a check does not hang on the order rows come back in. */
+function idsAndLocales(rows: { id: string; locale: string }[]) {
+	return rows.map(({ id, locale }) => ({ id, locale })).sort((a, b) => a.id.localeCompare(b.id));
+}
+
 /** A list sorted by `id`, so a check does not hang on the order rows come back in; anything else as it is. */
 function sortedById(value: unknown): unknown {
 	return Array.isArray(value) ? [...value].sort((a, b) => a.id.localeCompare(b.id)) : value;
@@ -235,17 +303,22 @@ it("ENT-CRT-1 creates a working copy from collection, locale and slug alone and 
 		id: expect.stringMatching(UUID),
 		collection: POSTS,
 		locale: "ko",
-		source_entry_id: null,
+		source_locale: "ko",
 		folder_id: null,
 		slug: "hello-world",
 		data: { fields: {} },
 		published_at: null,
 	});
-	const { published_at: _, ...stored } = output;
 	// ENT-CRT-1.2
-	expect(await entryRows()).toEqual([{ ...stored, translation_seen: {}, trashed_at: null }]);
+	expect(await entryRows()).toEqual([
+		{ id: output.id, collection: POSTS, source_locale: "ko", folder_id: null, trashed_at: null },
+	]);
 	// ENT-CRT-1.3
-	expect(await db.selectFrom("entry_published").selectAll().execute()).toEqual([]);
+	expect(await localeRows()).toEqual([
+		{ entry_id: output.id, locale: "ko", slug: "hello-world", data: { fields: {} }, translation_seen: {} },
+	]);
+	// ENT-CRT-1.4
+	expect(await publishedRows()).toEqual([]);
 });
 
 it("ENT-CRT-2 creates a working copy with the given __preset_id", async () => {
@@ -257,6 +330,8 @@ it("ENT-CRT-2 creates a working copy with the given __preset_id", async () => {
 	expect(output.id).toBe(id);
 	// ENT-CRT-2.2
 	expect(idsOf(await entryRows())).toEqual([id]);
+	// ENT-CRT-2.3
+	expect((await localeRows()).map((row) => row.entry_id)).toEqual([id]);
 });
 
 it("ENT-CRT-3 stores a working copy with every field type, a body, a folder and a slug", async () => {
@@ -292,9 +367,10 @@ it("ENT-CRT-3 stores a working copy with every field type, a body, a folder and 
 		slug: "full",
 		data,
 	});
-	const { published_at: _, ...stored } = output;
 	// ENT-CRT-3.2
-	expect(await entryRow(output.id)).toEqual({ ...stored, translation_seen: {}, trashed_at: null });
+	expect(await entryRow(output.id)).toMatchObject({ id: output.id, folder_id: folder });
+	// ENT-CRT-3.3
+	expect(await localeRow(output.id, "ko")).toMatchObject({ entry_id: output.id, locale: "ko", slug: "full", data });
 });
 
 it("ENT-CRT-4 records the body, top-level media fields and conditional media sub-fields in media_uses once per path, ignoring case", async () => {
@@ -335,6 +411,8 @@ it("ENT-CRT-5 rejects entries.create with BAD_REQUEST for a collection not in th
 	).rejects.toMatchObject({ code: "BAD_REQUEST" });
 	// ENT-CRT-5.2
 	expect(await entryRows()).toEqual([]);
+	// ENT-CRT-5.3
+	expect(await localeRows()).toEqual([]);
 });
 
 it("ENT-CRT-6 rejects entries.create with BAD_REQUEST for a locale not in the schema", async () => {
@@ -344,6 +422,8 @@ it("ENT-CRT-6 rejects entries.create with BAD_REQUEST for a locale not in the sc
 	});
 	// ENT-CRT-6.2
 	expect(await entryRows()).toEqual([]);
+	// ENT-CRT-6.3
+	expect(await localeRows()).toEqual([]);
 });
 
 it("ENT-CRT-7 rejects entries.create with BAD_REQUEST for a folder of another scope", async () => {
@@ -435,43 +515,30 @@ it("ENT-CRT-14 rejects entries.create with BAD_REQUEST for a relation to an entr
 		montiOf().entries.create({ collection: POSTS, locale: "ko", slug: "hello", data }),
 	).rejects.toMatchObject({ code: "BAD_REQUEST" });
 	// ENT-CRT-14.2
-	expect(await entryRows()).toEqual([page]);
+	expect(await entryRows()).toEqual([page.row]);
 });
 
-it("ENT-CRT-15 rejects entries.create with BAD_REQUEST for a relation to a translation", async () => {
-	const source = await seedEntry({ collection: TOPICS });
-	const translation = await seedEntry({ collection: TOPICS, locale: "en", source_entry_id: source.id });
-	const data = { fields: { topic: translation.id } };
-
+it("ENT-CRT-15 rejects entries.create with BAD_REQUEST for a slug with a space", async () => {
 	// ENT-CRT-15.1
-	await expect(
-		montiOf().entries.create({ collection: POSTS, locale: "ko", slug: "hello", data }),
-	).rejects.toMatchObject({ code: "BAD_REQUEST" });
-	// ENT-CRT-15.2
-	expect(idsOf(await entryRows())).toEqual(idsOf([source, translation]));
-});
-
-it("ENT-CRT-16 rejects entries.create with BAD_REQUEST for a slug with a space", async () => {
-	// ENT-CRT-16.1
 	await expect(
 		montiOf().entries.create({ collection: POSTS, locale: "ko", slug: "hello world" }),
 	).rejects.toMatchObject({ code: "BAD_REQUEST" });
-	// ENT-CRT-16.2
+	// ENT-CRT-15.2
 	expect(await entryRows()).toEqual([]);
 });
 
-it("ENT-CRT-17 rejects entries.create with CONFLICT for a slug an active entry of the collection and locale has", async () => {
+it("ENT-CRT-16 rejects entries.create with CONFLICT for a slug an active entry of the collection and locale has", async () => {
 	const existing = await seedEntry({ slug: "hello" });
 
-	// ENT-CRT-17.1
+	// ENT-CRT-16.1
 	await expect(montiOf().entries.create({ collection: POSTS, locale: "ko", slug: "hello" })).rejects.toMatchObject({
 		code: "CONFLICT",
 	});
-	// ENT-CRT-17.2
-	expect(await entryRows()).toEqual([existing]);
+	// ENT-CRT-16.2
+	expect(await entryRows()).toEqual([existing.row]);
 });
 
-it("ENT-READ-1 gets the published copy of a published entry when draft is left out", async () => {
+it("ENT-READ-1 gets the published copy of the source locale when draft is left out", async () => {
 	const { entry, published } = await seedPublishedEntry();
 
 	const output = await montiOf().entries.get({ id: entry.id });
@@ -480,21 +547,21 @@ it("ENT-READ-1 gets the published copy of a published entry when draft is left o
 	expect(output).toMatchObject({
 		id: entry.id,
 		collection: entry.collection,
-		locale: entry.locale,
-		source_entry_id: entry.source_entry_id,
+		source_locale: entry.source_locale,
 		folder_id: entry.folder_id,
+		locale: entry.source_locale,
 	});
 	// ENT-READ-1.2
 	expect(output).toMatchObject({ slug: published.slug, data: published.data, published_at: published.published_at });
 });
 
-it("ENT-READ-2 gets the published copy by collection, locale and slug", async () => {
+it("ENT-READ-2 gets the published copy by collection, locale and published slug", async () => {
 	const { entry, published } = await seedPublishedEntry();
 	await seedPublishedEntry();
 
 	const output = await montiOf().entries.get({
 		collection: entry.collection,
-		locale: entry.locale,
+		locale: entry.source_locale,
 		slug: published.slug,
 	});
 
@@ -532,15 +599,19 @@ it("ENT-READ-5 rejects entries.get with NOT_FOUND for a trashed entry even with 
 	await expect(montiOf().entries.get({ id: entry.id, draft: true })).rejects.toMatchObject({ code: "NOT_FOUND" });
 });
 
-it("ENT-READ-6 lists only the published copies of active published entries when called without an input", async () => {
+it("ENT-READ-6 lists only the published source locale of active entries when called without an input", async () => {
 	const { entry, published } = await seedPublishedEntry();
-	await seedEntry();
+	await seedLocale(entry.id, "en");
+	await seedPublished(entry.id, "en", `live-en-${randomUUID()}`, { fields: { title: "Live EN" } });
+	const enOnly = await seedEntry();
+	await seedLocale(enOnly.id, "en");
+	await seedPublished(enOnly.id, "en", `live-en-${randomUUID()}`, { fields: { title: "Live EN" } });
 	await seedPublishedEntry({ trashed: true });
 
 	const output = await montiOf().entries.list();
 
 	// ENT-READ-6.1
-	expect(idsOf(output)).toEqual([entry.id]);
+	expect(idsAndLocales(output)).toEqual([{ id: entry.id, locale: "ko" }]);
 	// ENT-READ-6.2
 	expect(output[0]).toMatchObject({ slug: published.slug, data: published.data, published_at: published.published_at });
 });
@@ -593,11 +664,11 @@ it("ENT-READ-10 lists the entries whose relation field references the given entr
 	const topic = await seedEntry({ collection: TOPICS });
 	const other = await seedEntry({ collection: TOPICS });
 	const post = await seedEntry({ collection: POSTS });
-	await seedPublished(post.id, post.slug, { fields: { topic: topic.id } });
+	await seedPublished(post.id, "ko", post.slug, { fields: { topic: topic.id } });
 	const page = await seedEntry({ collection: PAGES });
-	await seedPublished(page.id, page.slug, { fields: { topic: [other.id, topic.id] } });
+	await seedPublished(page.id, "ko", page.slug, { fields: { topic: [other.id, topic.id] } });
 	const draftOnly = await seedEntry({ collection: POSTS, data: { fields: { topic: topic.id } } });
-	await seedPublished(draftOnly.id, draftOnly.slug, { fields: { topic: other.id } });
+	await seedPublished(draftOnly.id, "ko", draftOnly.slug, { fields: { topic: other.id } });
 
 	const output = await montiOf().entries.list({ relation: { field: "topic", id: topic.id } });
 
@@ -605,10 +676,54 @@ it("ENT-READ-10 lists the entries whose relation field references the given entr
 	expect(idsOf(output)).toEqual(idsOf([post, page]));
 });
 
+it("ENT-READ-11 gets the published copy of the given non-source locale", async () => {
+	const { entry } = await seedPublishedEntry();
+	await seedLocale(entry.id, "en", { data: { fields: { title: "Draft EN" } } });
+	const en = await seedPublished(
+		entry.id,
+		"en",
+		`live-en-${randomUUID()}`,
+		{ fields: { title: "Live EN" } },
+		new Date("2026-11-02T09:00:00.000Z"),
+	);
+
+	const output = await montiOf().entries.get({ id: entry.id, locale: "en" });
+
+	// ENT-READ-11.1
+	expect(output).toMatchObject({ id: entry.id, locale: "en", source_locale: "ko" });
+	// ENT-READ-11.2
+	expect(output).toMatchObject({ slug: en.slug, data: en.data, published_at: en.published_at });
+});
+
+it("ENT-READ-12 rejects entries.get with NOT_FOUND for a locale the entry does not have", async () => {
+	const entry = await seedEntry();
+
+	// ENT-READ-12.1
+	await expect(montiOf().entries.get({ id: entry.id, locale: "en", draft: true })).rejects.toMatchObject({
+		code: "NOT_FOUND",
+	});
+});
+
+it("ENT-READ-13 lists one source locale row per entry when the locale is left out, even with translations", async () => {
+	const translated = await seedEntry({ locale: "ko" });
+	await seedLocale(translated.id, "en");
+	const english = await seedEntry({ locale: "en" });
+
+	const output = await montiOf().entries.list({ draft: true });
+
+	// ENT-READ-13.1
+	expect(idsAndLocales(output)).toEqual(
+		idsAndLocales([
+			{ id: translated.id, locale: "ko" },
+			{ id: english.id, locale: "en" },
+		]),
+	);
+});
+
 it("ENT-UPD-1 changes only the slug and folder_id and keeps the data, media_uses and published copy", async () => {
 	const media = await seedMedia();
 	const { entry, use } = await seedEntryUsing(media);
-	const published = await seedPublished(entry.id, "live", { fields: { title: "Live" } });
+	const published = await seedPublished(entry.id, "ko", "live", { fields: { title: "Live" } });
 	const folder = await seedFolder();
 
 	const output = await montiOf().entries.update({ id: entry.id, slug: "renamed", folder_id: folder });
@@ -617,19 +732,24 @@ it("ENT-UPD-1 changes only the slug and folder_id and keeps the data, media_uses
 	expect(output).toEqual({
 		id: entry.id,
 		collection: entry.collection,
-		locale: entry.locale,
-		source_entry_id: null,
+		locale: "ko",
+		source_locale: "ko",
 		folder_id: folder,
 		slug: "renamed",
 		data: entry.data,
 		published_at: published.published_at,
 	});
+	const working = await localeRow(entry.id, "ko");
 	// ENT-UPD-1.2
-	expect(await entryRow(entry.id)).toMatchObject({ slug: "renamed", folder_id: folder, data: entry.data });
+	expect({ folder_id: (await entryRow(entry.id)).folder_id, slug: working.slug, data: working.data }).toEqual({
+		folder_id: folder,
+		slug: "renamed",
+		data: entry.data,
+	});
 	// ENT-UPD-1.3
 	expect(await useRows("entry", entry.id)).toEqual([use]);
 	// ENT-UPD-1.4
-	expect(await publishedRow(entry.id)).toMatchObject({ slug: published.slug, data: published.data });
+	expect(await publishedRow(entry.id, "ko")).toMatchObject({ slug: published.slug, data: published.data });
 });
 
 it("ENT-UPD-2 replaces the working data and only the entry's media_uses", async () => {
@@ -650,11 +770,9 @@ it("ENT-UPD-2 replaces the working data and only the entry's media_uses", async 
 	// ENT-UPD-2.1
 	expect(output).toMatchObject({ data, slug: target.entry.slug, folder_id: target.entry.folder_id });
 	// ENT-UPD-2.2
-	expect((await entryRow(target.entry.id)).data).toEqual(data);
+	expect((await localeRow(target.entry.id, "ko")).data).toEqual(data);
 	// ENT-UPD-2.3
-	expect(await useRows("entry", target.entry.id)).toEqual([
-		{ media_id: second, source_kind: "entry", source_id: target.entry.id, field_path: "fields.cover" },
-	]);
+	expect(await useRows("entry", target.entry.id)).toEqual([coverUse(target.entry.id, second)]);
 	// ENT-UPD-2.4
 	expect(await useRows("entry", other.entry.id)).toEqual([other.use]);
 	// ENT-UPD-2.5
@@ -682,7 +800,7 @@ it("ENT-UPD-4 rejects entries.update with BAD_REQUEST for a media id not in the 
 		montiOf().entries.update({ id: entry.id, data: { fields: { cover: randomUUID() } } }),
 	).rejects.toMatchObject({ code: "BAD_REQUEST" });
 	// ENT-UPD-4.2
-	expect((await entryRow(entry.id)).data).toEqual(entry.data);
+	expect((await localeRow(entry.id, "ko")).data).toEqual(entry.data);
 	// ENT-UPD-4.3
 	expect(await useRows("entry", entry.id)).toEqual([use]);
 });
@@ -696,7 +814,7 @@ it("ENT-UPD-5 rejects entries.update with BAD_REQUEST for a relation to a trashe
 		montiOf().entries.update({ id: entry.id, data: { fields: { topic: trashed.id } } }),
 	).rejects.toMatchObject({ code: "BAD_REQUEST" });
 	// ENT-UPD-5.2
-	expect((await entryRow(entry.id)).data).toEqual(entry.data);
+	expect((await localeRow(entry.id, "ko")).data).toEqual(entry.data);
 });
 
 it("ENT-UPD-6 rejects entries.update with NOT_FOUND for a trashed entry", async () => {
@@ -707,7 +825,7 @@ it("ENT-UPD-6 rejects entries.update with NOT_FOUND for a trashed entry", async 
 		code: "NOT_FOUND",
 	});
 	// ENT-UPD-6.2
-	expect((await entryRow(entry.id)).slug).toBe("trashed");
+	expect((await localeRow(entry.id, "ko")).slug).toBe("trashed");
 });
 
 it("ENT-UPD-7 rejects entries.update with CONFLICT for a slug another active entry of the collection and locale has", async () => {
@@ -719,7 +837,7 @@ it("ENT-UPD-7 rejects entries.update with CONFLICT for a slug another active ent
 		code: "CONFLICT",
 	});
 	// ENT-UPD-7.2
-	expect((await entryRow(second.id)).slug).toBe("second");
+	expect((await localeRow(second.id, "ko")).slug).toBe("second");
 });
 
 it("ENT-UPD-8 moves the entries of ids into one folder", async () => {
@@ -759,4 +877,478 @@ it("ENT-UPD-10 rejects a batch entries.update with BAD_REQUEST for a trashed fol
 	});
 	// ENT-UPD-10.2
 	expect((await entryRows()).map((row) => row.folder_id)).toEqual([null, null]);
+});
+
+it("ENT-UPD-11 changes only the given non-source locale's working copy and moves the whole entry", async () => {
+	const entry = await seedEntry({ data: { fields: { title: "Korean" } } });
+	await seedLocale(entry.id, "en", { slug: "english", data: { fields: { title: "English" } } });
+	const folder = await seedFolder();
+	const data = { fields: { title: "New English" } };
+
+	const output = await montiOf().entries.update({
+		id: entry.id,
+		locale: "en",
+		slug: "new-english",
+		folder_id: folder,
+		data,
+	});
+
+	// ENT-UPD-11.1
+	expect(output).toMatchObject({ locale: "en", source_locale: "ko", slug: "new-english", folder_id: folder, data });
+	// ENT-UPD-11.2
+	expect([await localeRow(entry.id, "en"), await localeRow(entry.id, "ko")]).toEqual([
+		{ entry_id: entry.id, locale: "en", slug: "new-english", data, translation_seen: {} },
+		entry.working,
+	]);
+	// ENT-UPD-11.3
+	expect((await entryRow(entry.id)).folder_id).toBe(folder);
+});
+
+it("ENT-UPD-12 keeps the media_uses another locale of the entry references when one locale's data changes", async () => {
+	const [first, second, third] = [await seedMedia(), await seedMedia(), await seedMedia()];
+	const { entry } = await seedEntryUsing(first);
+	await seedLocale(entry.id, "en", { data: { fields: { cover: second } } });
+	await seedUse(coverUse(entry.id, second));
+
+	await montiOf().entries.update({ id: entry.id, locale: "en", data: { fields: { cover: third } } });
+
+	// ENT-UPD-12.1
+	expect(await useRows("entry", entry.id)).toEqual([first, third].sort().map((id) => coverUse(entry.id, id)));
+});
+
+it("ENT-UPD-13 rejects entries.update with NOT_FOUND for a locale the entry does not have", async () => {
+	const entry = await seedEntry();
+
+	// ENT-UPD-13.1
+	await expect(montiOf().entries.update({ id: entry.id, locale: "en", slug: "english" })).rejects.toMatchObject({
+		code: "NOT_FOUND",
+	});
+	// ENT-UPD-13.2
+	expect(await localeRows()).toEqual([entry.working]);
+});
+
+/** Note data that fills every required field, with `0` and `false` as the values. */
+const FILLED = { fields: { title: "Hello", rank: 0, pinned: false } };
+
+it("ENT-PUB-1 publishes the working copy into a published copy", async () => {
+	const entry = await seedEntry({ collection: NOTES, data: FILLED });
+	const before = new Date();
+
+	const output = await montiOf().entries.publish({ id: entry.id });
+
+	const after = new Date();
+	const published_at = output.published_at ?? new Date(0);
+	// ENT-PUB-1.1
+	expect({ slug: output.slug, data: output.data, inRange: before <= published_at && published_at <= after }).toEqual({
+		slug: entry.slug,
+		data: entry.data,
+		inRange: true,
+	});
+	// ENT-PUB-1.2
+	expect(await publishedRows()).toEqual([
+		{ entry_id: entry.id, locale: "ko", slug: output.slug, data: output.data, published_at: output.published_at },
+	]);
+});
+
+it("ENT-PUB-2 keeps the first published time when a published entry is published again", async () => {
+	const entry = await seedEntry({ collection: NOTES, slug: "new-slug", data: FILLED });
+	await seedPublished(entry.id, "ko", "old-slug", { fields: { title: "Old", rank: 1, pinned: true } });
+
+	const output = await montiOf().entries.publish({ id: entry.id });
+
+	// ENT-PUB-2.1
+	expect({ slug: output.slug, data: output.data, published_at: output.published_at }).toEqual({
+		slug: entry.slug,
+		data: entry.data,
+		published_at: PUBLISHED_AT,
+	});
+	// ENT-PUB-2.2
+	expect(await publishedRow(entry.id, "ko")).toEqual({
+		entry_id: entry.id,
+		locale: "ko",
+		slug: entry.slug,
+		data: entry.data,
+		published_at: PUBLISHED_AT,
+	});
+});
+
+it("ENT-PUB-3 stores the given published_at", async () => {
+	const entry = await seedEntry({ collection: NOTES, data: FILLED });
+	await seedPublished(entry.id, "ko", entry.slug, FILLED);
+	const given = "2026-12-25T18:30:00+09:00";
+
+	const output = await montiOf().entries.publish({ id: entry.id, published_at: given });
+
+	// ENT-PUB-3.1
+	expect(output.published_at).toEqual(new Date(given));
+	// ENT-PUB-3.2
+	expect((await publishedRow(entry.id, "ko")).published_at).toEqual(new Date(given));
+});
+
+it("ENT-PUB-4 rejects entries.publish with BAD_REQUEST for an empty required field", async () => {
+	const entry = await seedEntry({ collection: NOTES, data: { fields: { ...FILLED.fields, title: "" } } });
+
+	// ENT-PUB-4.1
+	await expect(montiOf().entries.publish({ id: entry.id })).rejects.toMatchObject({ code: "BAD_REQUEST" });
+	// ENT-PUB-4.2
+	expect(await publishedRows()).toEqual([]);
+});
+
+it("ENT-PUB-5 rejects entries.publish with BAD_REQUEST for an empty required sub-field of the chosen option", async () => {
+	const data = { fields: { ...FILLED.fields, kind: { option: "link", fields: {} } } };
+	const entry = await seedEntry({ collection: NOTES, data });
+
+	// ENT-PUB-5.1
+	await expect(montiOf().entries.publish({ id: entry.id })).rejects.toMatchObject({ code: "BAD_REQUEST" });
+	// ENT-PUB-5.2
+	expect(await publishedRows()).toEqual([]);
+});
+
+it("ENT-PUB-6 rejects entries.publish with CONFLICT for a slug another entry is published with", async () => {
+	const first = await seedEntry({ collection: NOTES, slug: "renamed", data: FILLED });
+	const published = await seedPublished(first.id, "ko", "hello", FILLED);
+	const second = await seedEntry({ collection: NOTES, slug: "hello", data: FILLED });
+
+	// ENT-PUB-6.1
+	await expect(montiOf().entries.publish({ id: second.id })).rejects.toMatchObject({ code: "CONFLICT" });
+	// ENT-PUB-6.2
+	expect(await publishedRows()).toEqual([published]);
+});
+
+it("ENT-PUB-7 rejects entries.publish with NOT_FOUND for a trashed entry", async () => {
+	const entry = await seedEntry({ collection: NOTES, data: FILLED, trashed: true });
+
+	// ENT-PUB-7.1
+	await expect(montiOf().entries.publish({ id: entry.id })).rejects.toMatchObject({ code: "NOT_FOUND" });
+	// ENT-PUB-7.2
+	expect(await publishedRows()).toEqual([]);
+});
+
+it("ENT-PUB-8 publishes only the given non-source locale and leaves the source locale unpublished", async () => {
+	const entry = await seedEntry({ collection: NOTES, data: FILLED });
+	const en = await seedLocale(entry.id, "en", { data: { fields: { ...FILLED.fields, title: "Hello EN" } } });
+
+	const output = await montiOf().entries.publish({ id: entry.id, locale: "en" });
+
+	// ENT-PUB-8.1
+	expect(output).toMatchObject({ locale: "en", source_locale: "ko", slug: en.slug, data: en.data });
+	// ENT-PUB-8.2
+	expect((await publishedRows()).map(({ entry_id, locale }) => ({ entry_id, locale }))).toEqual([
+		{ entry_id: entry.id, locale: "en" },
+	]);
+});
+
+it("ENT-PUB-9 rejects entries.publish with NOT_FOUND for a locale the entry does not have", async () => {
+	const entry = await seedEntry({ collection: NOTES, data: FILLED });
+
+	// ENT-PUB-9.1
+	await expect(montiOf().entries.publish({ id: entry.id, locale: "en" })).rejects.toMatchObject({
+		code: "NOT_FOUND",
+	});
+	// ENT-PUB-9.2
+	expect(await publishedRows()).toEqual([]);
+});
+
+it("ENT-UNPUB-1 deletes only the published copy and keeps the working copy and media_uses", async () => {
+	const media = await seedMedia();
+	const { entry, use } = await seedEntryUsing(media);
+	await seedPublished(entry.id, "ko", `live-${entry.slug}`, { fields: { title: "Live" } });
+
+	const output = await montiOf().entries.unpublish({ id: entry.id });
+
+	// ENT-UNPUB-1.1
+	expect({ slug: output.slug, data: output.data, published_at: output.published_at }).toEqual({
+		slug: entry.slug,
+		data: entry.data,
+		published_at: null,
+	});
+	// ENT-UNPUB-1.2
+	expect(await publishedRows()).toEqual([]);
+	// ENT-UNPUB-1.3
+	expect(await localeRow(entry.id, "ko")).toEqual(entry.working);
+	// ENT-UNPUB-1.4
+	expect(await useRows("entry", entry.id)).toEqual([use]);
+});
+
+it("ENT-UNPUB-2 unpublishes an entry that is not published without an error", async () => {
+	const entry = await seedEntry({ data: { fields: { title: "Draft" } } });
+
+	const output = await montiOf().entries.unpublish({ id: entry.id });
+
+	// ENT-UNPUB-2.1
+	expect(output).toMatchObject({ id: entry.id, slug: entry.slug, data: entry.data, published_at: null });
+});
+
+it("ENT-UNPUB-3 rejects entries.unpublish with NOT_FOUND for a trashed entry", async () => {
+	const { entry, published } = await seedPublishedEntry({ trashed: true });
+
+	// ENT-UNPUB-3.1
+	await expect(montiOf().entries.unpublish({ id: entry.id })).rejects.toMatchObject({ code: "NOT_FOUND" });
+	// ENT-UNPUB-3.2
+	expect(await publishedRow(entry.id, "ko")).toEqual(published);
+});
+
+it("ENT-UNPUB-4 unpublishes only the given non-source locale and keeps the other published copies", async () => {
+	const { entry, published } = await seedPublishedEntry();
+	await seedLocale(entry.id, "en", { data: { fields: { title: "Draft EN" } } });
+	await seedPublished(entry.id, "en", `live-en-${randomUUID()}`, { fields: { title: "Live EN" } });
+
+	const output = await montiOf().entries.unpublish({ id: entry.id, locale: "en" });
+
+	// ENT-UNPUB-4.1
+	expect(output).toMatchObject({ locale: "en", published_at: null });
+	// ENT-UNPUB-4.2
+	expect(await publishedRows()).toEqual([published]);
+});
+
+it("ENT-UNPUB-5 rejects entries.unpublish with NOT_FOUND for a locale the entry does not have", async () => {
+	const { entry, published } = await seedPublishedEntry();
+
+	// ENT-UNPUB-5.1
+	await expect(montiOf().entries.unpublish({ id: entry.id, locale: "en" })).rejects.toMatchObject({
+		code: "NOT_FOUND",
+	});
+	// ENT-UNPUB-5.2
+	expect(await publishedRows()).toEqual([published]);
+});
+
+it("ENT-DUP-1 duplicates the source locale's working copy and media_uses into an unpublished entry and leaves the translations out", async () => {
+	const folder = await seedFolder();
+	const [first, second] = [await seedMedia(), await seedMedia()];
+	const { entry: source, use } = await seedEntryUsing(first, {
+		folder_id: folder,
+		data: { fields: { title: "Draft", cover: first } },
+	});
+	await seedPublished(source.id, "ko", source.slug, { fields: { title: "Live" } });
+	const en = await seedLocale(source.id, "en", { data: { fields: { title: "Draft EN", cover: second } } });
+	await seedUse(coverUse(source.id, second));
+
+	const output = await montiOf().entries.duplicate({ id: source.id, slug: "copied" });
+
+	// ENT-DUP-1.1
+	expect({ ...output, id: UUID.test(output.id) && output.id !== source.id }).toEqual({
+		id: true,
+		collection: source.collection,
+		locale: "ko",
+		source_locale: "ko",
+		folder_id: folder,
+		slug: "copied",
+		data: source.data,
+		published_at: null,
+	});
+	// ENT-DUP-1.2
+	expect({
+		entries: (await entryRows()).filter((row) => row.id !== source.id),
+		locales: (await localeRows()).filter((row) => row.entry_id !== source.id),
+	}).toEqual({
+		entries: [
+			{ id: output.id, collection: source.collection, source_locale: "ko", folder_id: folder, trashed_at: null },
+		],
+		locales: [{ entry_id: output.id, locale: "ko", slug: "copied", data: source.data, translation_seen: {} }],
+	});
+	// ENT-DUP-1.3
+	expect([await entryRow(source.id), await localeRow(source.id, "ko"), await localeRow(source.id, "en")]).toEqual([
+		source.row,
+		source.working,
+		en,
+	]);
+	// ENT-DUP-1.4
+	expect((await publishedRows()).map((row) => row.entry_id)).toEqual([source.id]);
+	// ENT-DUP-1.5
+	expect(await useRows("entry", output.id)).toEqual([{ ...use, source_id: output.id }]);
+});
+
+it("ENT-DUP-2 gives a duplicate without a slug the first -copy slug no active entry has", async () => {
+	const source = await seedEntry({ slug: "hello" });
+	await seedEntry({ slug: "hello-copy" });
+
+	const output = await montiOf().entries.duplicate({ id: source.id });
+
+	// ENT-DUP-2.1
+	expect(output.slug).toBe("hello-copy-2");
+	// ENT-DUP-2.2
+	expect((await localeRow(output.id, "ko")).slug).toBe("hello-copy-2");
+});
+
+it("ENT-DUP-3 duplicates with the given __preset_id", async () => {
+	const source = await seedEntry();
+	const id = randomUUID();
+
+	const output = await montiOf().entries.duplicate({ id: source.id, __preset_id: id });
+
+	// ENT-DUP-3.1
+	expect(output.id).toBe(id);
+	// ENT-DUP-3.2
+	expect(idsOf(await entryRows())).toEqual(idsOf([source, { id }]));
+});
+
+it("ENT-DUP-4 rejects entries.duplicate with BAD_REQUEST for a slug with a space", async () => {
+	const source = await seedEntry();
+
+	// ENT-DUP-4.1
+	await expect(montiOf().entries.duplicate({ id: source.id, slug: "hello world" })).rejects.toMatchObject({
+		code: "BAD_REQUEST",
+	});
+	// ENT-DUP-4.2
+	expect(await entryRows()).toEqual([source.row]);
+});
+
+it("ENT-DUP-5 rejects entries.duplicate with CONFLICT for a slug an active entry has", async () => {
+	const source = await seedEntry({ slug: "hello" });
+
+	// ENT-DUP-5.1
+	await expect(montiOf().entries.duplicate({ id: source.id, slug: "hello" })).rejects.toMatchObject({
+		code: "CONFLICT",
+	});
+	// ENT-DUP-5.2
+	expect(await entryRows()).toEqual([source.row]);
+});
+
+it("ENT-DUP-6 rejects entries.duplicate with NOT_FOUND for a trashed entry", async () => {
+	const source = await seedEntry({ trashed: true });
+
+	// ENT-DUP-6.1
+	await expect(montiOf().entries.duplicate({ id: source.id })).rejects.toMatchObject({ code: "NOT_FOUND" });
+	// ENT-DUP-6.2
+	expect(await entryRows()).toEqual([source.row]);
+});
+
+/** Two topics, either optionally trashed, to replace references between. */
+async function seedTopics(seed: { oldTrashed?: boolean; newTrashed?: boolean } = {}) {
+	const old = await seedEntry({ collection: TOPICS, trashed: seed.oldTrashed });
+	const replacement = await seedEntry({ collection: TOPICS, trashed: seed.newTrashed });
+	return { old, replacement };
+}
+
+it("ENT-REF-1 points the working and published copies at the new entry and leaves the old entry as it is", async () => {
+	const { old, replacement } = await seedTopics();
+	const post = await seedEntry({ data: { fields: { title: "Draft", topic: old.id } } });
+	const published = await seedPublished(post.id, "ko", `live-${post.slug}`, {
+		fields: { title: "Live", topic: old.id },
+	});
+
+	const output = await montiOf().entries.replaceReferences({ from_id: old.id, into_id: replacement.id });
+
+	// ENT-REF-1.1
+	expect(output).toEqual({ from_id: old.id, into_id: replacement.id, updated_ids: [post.id] });
+	// ENT-REF-1.2
+	expect([(await localeRow(post.id, "ko")).data, (await publishedRow(post.id, "ko")).data]).toMatchObject([
+		{ fields: { topic: replacement.id } },
+		{ fields: { topic: replacement.id } },
+	]);
+	// ENT-REF-1.3
+	expect(await publishedRow(post.id, "ko")).toEqual({
+		...published,
+		data: { fields: { title: "Live", topic: replacement.id } },
+	});
+	// ENT-REF-1.4
+	expect((await entryRow(old.id)).trashed_at).toBeNull();
+});
+
+it("ENT-REF-2 keeps only the first place of the new entry in a relation field with many", async () => {
+	const { old, replacement } = await seedTopics();
+	const other = await seedEntry({ collection: TOPICS });
+	const page = await seedEntry({ collection: PAGES, data: { fields: { topic: [old.id, other.id, replacement.id] } } });
+
+	const output = await montiOf().entries.replaceReferences({ from_id: old.id, into_id: replacement.id });
+
+	// ENT-REF-2.1
+	expect(output.updated_ids).toEqual([page.id]);
+	// ENT-REF-2.2
+	expect((await localeRow(page.id, "ko")).data).toEqual({ fields: { topic: [replacement.id, other.id] } });
+});
+
+it("ENT-REF-3 also replaces a relation inside a conditional field", async () => {
+	const { old, replacement } = await seedTopics();
+	const note = await seedEntry({
+		collection: NOTES,
+		data: { fields: { kind: { option: "link", fields: { url: "https://monti.dev", topic: old.id } } } },
+	});
+
+	const output = await montiOf().entries.replaceReferences({ from_id: old.id, into_id: replacement.id });
+
+	// ENT-REF-3.1
+	expect(output.updated_ids).toEqual([note.id]);
+	// ENT-REF-3.2
+	expect((await localeRow(note.id, "ko")).data).toEqual({
+		fields: { kind: { option: "link", fields: { url: "https://monti.dev", topic: replacement.id } } },
+	});
+});
+
+it("ENT-REF-4 also replaces the references of a trashed entry", async () => {
+	const { old, replacement } = await seedTopics();
+	const trashed = await seedEntry({ data: { fields: { topic: old.id } }, trashed: true });
+
+	const output = await montiOf().entries.replaceReferences({ from_id: old.id, into_id: replacement.id });
+
+	// ENT-REF-4.1
+	expect(output.updated_ids).toEqual([trashed.id]);
+	// ENT-REF-4.2
+	expect((await localeRow(trashed.id, "ko")).data).toEqual({ fields: { topic: replacement.id } });
+});
+
+it("ENT-REF-5 replaces references to an old entry that is already trashed", async () => {
+	const { old, replacement } = await seedTopics({ oldTrashed: true });
+	const post = await seedEntry({ data: { fields: { topic: old.id } } });
+
+	const output = await montiOf().entries.replaceReferences({ from_id: old.id, into_id: replacement.id });
+
+	// ENT-REF-5.1
+	expect(output.updated_ids).toEqual([post.id]);
+	// ENT-REF-5.2
+	expect((await localeRow(post.id, "ko")).data).toEqual({ fields: { topic: replacement.id } });
+});
+
+it("ENT-REF-6 rejects entries.replaceReferences with BAD_REQUEST for the same entry on both sides", async () => {
+	const topic = await seedEntry({ collection: TOPICS });
+
+	// ENT-REF-6.1
+	await expect(montiOf().entries.replaceReferences({ from_id: topic.id, into_id: topic.id })).rejects.toMatchObject({
+		code: "BAD_REQUEST",
+	});
+});
+
+it("ENT-REF-7 rejects entries.replaceReferences with BAD_REQUEST for entries of different collections", async () => {
+	const old = await seedEntry({ collection: TOPICS });
+	const replacement = await seedEntry({ collection: PAGES });
+
+	// ENT-REF-7.1
+	await expect(montiOf().entries.replaceReferences({ from_id: old.id, into_id: replacement.id })).rejects.toMatchObject(
+		{ code: "BAD_REQUEST" },
+	);
+});
+
+it("ENT-REF-8 rejects entries.replaceReferences with NOT_FOUND for a trashed new entry and replaces nothing", async () => {
+	const { old, replacement } = await seedTopics({ newTrashed: true });
+	const post = await seedEntry({ data: { fields: { topic: old.id } } });
+
+	// ENT-REF-8.1
+	await expect(montiOf().entries.replaceReferences({ from_id: old.id, into_id: replacement.id })).rejects.toMatchObject(
+		{ code: "NOT_FOUND" },
+	);
+	// ENT-REF-8.2
+	expect((await localeRow(post.id, "ko")).data).toEqual(post.data);
+});
+
+it("ENT-REF-9 replaces the references in every locale's working and published copies and returns the entry id once", async () => {
+	const { old, replacement } = await seedTopics();
+	const post = await seedEntry({ data: { fields: { title: "Draft KO", topic: old.id } } });
+	await seedLocale(post.id, "en", { data: { fields: { title: "Draft EN", topic: old.id } } });
+	await seedPublished(post.id, "ko", post.slug, { fields: { title: "Live KO", topic: old.id } });
+	await seedPublished(post.id, "en", `${post.slug}-en`, { fields: { title: "Live EN", topic: old.id } });
+
+	const output = await montiOf().entries.replaceReferences({ from_id: old.id, into_id: replacement.id });
+
+	// ENT-REF-9.1
+	expect(output.updated_ids).toEqual([post.id]);
+	// ENT-REF-9.2
+	expect([(await localeRow(post.id, "ko")).data, (await localeRow(post.id, "en")).data]).toEqual([
+		{ fields: { title: "Draft KO", topic: replacement.id } },
+		{ fields: { title: "Draft EN", topic: replacement.id } },
+	]);
+	// ENT-REF-9.3
+	expect([(await publishedRow(post.id, "ko")).data, (await publishedRow(post.id, "en")).data]).toEqual([
+		{ fields: { title: "Live KO", topic: replacement.id } },
+		{ fields: { title: "Live EN", topic: replacement.id } },
+	]);
 });

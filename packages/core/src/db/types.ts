@@ -12,22 +12,28 @@ type NullableUuid = ColumnType<string | null, string | null | undefined, string 
 /** A `jsonb` column holding a JSON object, written as its JSON text. */
 type JsonObject = JSONColumnType<Record<string, unknown>>;
 
-/** The working copy and the translations of every collection's entries. */
+/** What an entry's locales share: its collection, the locale it was written in, its folder and whether it is trashed. */
 export interface EntriesTable {
 	id: string;
 	collection: string;
-	locale: string;
-	source_entry_id: NullableUuid;
+	source_locale: string;
 	folder_id: NullableUuid;
-	slug: string;
-	data: JsonObject;
-	translation_seen: JsonObject;
 	trashed_at: NullableTimestamp;
 }
 
-/** The published copy of an entry, the one the site reads. */
+/** The working copy of an entry in one locale. */
+export interface EntryLocalesTable {
+	entry_id: string;
+	locale: string;
+	slug: string;
+	data: JsonObject;
+	translation_seen: JsonObject;
+}
+
+/** The published copy of an entry in one locale, the one the site reads. */
 export interface EntryPublishedTable {
 	entry_id: string;
+	locale: string;
 	slug: string;
 	data: JsonObject;
 	published_at: Timestamp;
@@ -93,9 +99,10 @@ export interface ApiKeysTable {
 	last4: string;
 }
 
-/** The ten domain tables of the core. */
+/** The eleven domain tables of the core. */
 export interface Database {
 	entries: EntriesTable;
+	entry_locales: EntryLocalesTable;
 	entry_published: EntryPublishedTable;
 	templates: TemplatesTable;
 	folders: FoldersTable;
