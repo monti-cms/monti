@@ -37,6 +37,8 @@ const PROTECTED_FILES = new Set([
 	"packages/core/knip.jsonc",
 	"packages/core/.jscpd.json",
 	"packages/core/env.d.ts",
+	"packages/core/stryker.config.mjs",
+	"packages/core/vitest.config.ts",
 	".secretlintrc.json",
 ]);
 

@@ -39,7 +39,7 @@ const PARAMETERIZED = new Set(["each", "for"]);
 const BANNED_OPTIONS = new Set(["skip", "only", "todo"]);
 const BANNED_NAMES = new Set(["xit", "xtest", "xdescribe", "fit", "fdescribe"]);
 
-const SUPPRESSION = /biome-ignore|@ts-expect-error|@ts-nocheck|@ts-ignore|eslint-disable/;
+const SUPPRESSION = /biome-ignore|@ts-expect-error|@ts-nocheck|@ts-ignore|eslint-disable|Stryker\s+disable/;
 const FAKE_DATABASE = /^(?:pg-mem|pglite|@electric-sql\/pglite[\w-]*|better-sqlite3|sql\.js)(?:\/|$)/;
 const DATABASE_MODULE =
 	/^(?:pg|postgres|drizzle[\w-]*|kysely|prisma|typeorm|@prisma\/[\w-]+)(?:\/|$)|(?:^|\/)db(?:\/|\.|$)|database/i;

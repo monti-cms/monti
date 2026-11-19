@@ -506,6 +506,8 @@ describe("suppression comments", () => {
 		"// eslint-disable-next-line no-console",
 		"/* eslint-disable */",
 		"/** @ts-expect-error */",
+		"// Stryker disable next-line all: because",
+		"/* Stryker disable all */",
 	];
 	for (const comment of COMMENTS) {
 		test(`${comment} fails in any source file`, () => {
