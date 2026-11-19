@@ -375,7 +375,7 @@ erDiagram
 
 | 리소스 | 동사 | 고유 액션 |
 |---|---|---|
-| `entries` | `list`, `get`, `create`, `update`(필드·폴더·슬러그·순서·상태) | `publish`, `unpublish`, `duplicate`, `merge`, `preview` |
+| `entries` | `list`, `get`, `create`, `update`(필드·본문·폴더·슬러그) | `publish`, `unpublish`, `duplicate`, `merge` |
 | `translations` | `list`, `get`, `create`, `update`(블록 연결·건너뛰기·원문 확인) | |
 | `templates` | `list`, `get`, `create`, `update`, `delete` | |
 | `folders` | `list`, `create`, `update`(이름·이동) | |
@@ -525,6 +525,11 @@ flowchart TD
 | 2026-11-19 | `validateDoc`은 블록의 예약 속성 `attrs.mediaId`(`z.uuid()`)·`attrs.mediaIds`(`z.array(z.uuid())`)에 값이 주어지면 UUID 형식을 검사해 `DocIssue`로 보고하고, `resources/media/uses.ts`는 소문자 정규화로 대소문자 혼용 UUID 중복을 제거한다. | 소유자와 정함 |
 | 2026-11-19 | 동시 쓰기 경쟁 대비(`FOR UPDATE` 행 잠금, 추가 DB 유니크 인덱스)는 지금 도입하지 않고 필요할 때 다룬다. | 소유자와 정함 |
 | 2026-11-20 | 컬렉션은 `kind` 구분 없이 `{ body?, label?, description?, fields }`로 통일하고, `Schema`의 필드는 정의된 8종(`text`·`number`·`boolean`·`date`·`select`·`media`·`relation`·`conditional`)으로 타입을 명시한다(`schema.update`도 동일 스키마로 검증). | 소유자와 정함 |
+| 2026-11-20 | 글의 `data`는 `{ fields, body? }`(생략 시 기본 `{ fields: {} }`)로 두고, 작업본 쓰기(`create`·`update`)에서 필드 타입·제약(`date`는 타임존 포함 ISO 8601 날짜·시각 문자열), `body` 허용·`validateDoc`, 참조 무결성을 검사한다. `slug`는 필수이며 `^[a-z0-9]+(?:-[a-z0-9]+)*$` 형식과 같은 `(collection, locale)` 안 `trashed_at`이 `null`인 글끼리의 중복(`CONFLICT`)을 쓰기 시점에 검사한다. `required`는 발행 때 검사한다. | 소유자와 정함 |
+| 2026-11-20 | 번역본은 원문에 종속된 부가 엔티티로 두고, `relation` 필드는 `to` 컬렉션에서 `trashed_at`이 `null`이고 `source_entry_id`가 `null`인 원문 글만 가리키도록 한다. | 소유자와 정함 |
+| 2026-11-20 | `resources/media/uses.ts`의 엔트리 미디어 색인(`source_kind: "entry"`) 경로는 `data` 구조에 맞춰 본문 `"body"`, 최상위 필드 `"fields.<키>"`, `conditional` 하위 필드 `"fields.<조건키>.fields.<하위키>"`로 한다. | 소유자와 정함 |
+| 2026-11-20 | `entries.preview`는 core에서 빼고 `entries.get`·`entries.list`의 `draft?: boolean`(기본 `false`, 발행본 우선)으로 통일한다. `entries.list`는 다른 리소스 `list`와 마찬가지로 조건에 맞는 글이 없으면 빈 배열을 돌려준다. | 소유자와 정함 |
+| 2026-11-20 | 보관(archive) 상태와 `order` 열은 두지 않고, `entries.merge`는 core에 유지한다. | 소유자와 정함 |
 
 ## 11. 정하지 않은 것
 
@@ -536,6 +541,5 @@ flowchart TD
 - **사이트 이름을 스키마로 옮길지**. 옮기면 `config.update`와 `setConfig`가 필요 없어진다. 2단계 전에 정한다.
 - **DB 커밋 뒤 스키마·설정 파일 쓰기가 실패하면** 어떤 상태를 돌려줄지, **플러그인 Operation의 경로가 겹치면** 조립 때 거절할지. 2단계 테스트 계획 전.
 - **`loose_files`의 실제 삭제** 시점·실행 주체·실패 처리. `dryRun`에서는 외부 삭제가 일어나지 않아야 한다. 3단계 휴지통 테스트 계획 전.
-- **`resources/media/uses.ts`의 엔트리 미디어 필드 확장**. `templates`(본문 `Doc`)는 먼저 구현하고, 엔트리의 미디어 필드 색인은 `entries` 단계에서 함께 확장한다.
 - **플러그인 테이블 타입을 넘기는 호출 형태**(2단계 테스트 계획 전). `defineRead<AiTables>(…)`처럼 타입 매개변수 하나만 직접 지정하면 TypeScript가 나머지(`TSchema`, `TOutput`)를 추론하지 못한다. 3.5의 `TTables`를 어떤 호출 형태로 받을지 정한다.
 - **플러그인 밖에서 플러그인 Operation을 호출할 때의 타입.** 쓰는 곳이 생기면 상의한다.
