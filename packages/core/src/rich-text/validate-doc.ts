@@ -48,7 +48,7 @@ interface Check {
 /** Checks a rich-text body against the built-in and the given block and mark definitions; returns every problem found and never throws. */
 export function validateDoc(doc: unknown, options: ValidateDocOptions = {}): DocIssue[] {
 	const check: Check = {
-		blocks: byType(BUILT_IN_BLOCKS, options.blocks),
+		blocks: blockDefinitions(options),
 		marks: byType(BUILT_IN_MARKS, options.marks),
 		ids: new Set(),
 		issues: [],
@@ -56,6 +56,11 @@ export function validateDoc(doc: unknown, options: ValidateDocOptions = {}): Doc
 	if (isRecord(doc)) checkBlockList(check, doc.blocks, "blocks");
 	else report(check, "", "The document must be an object.");
 	return check.issues;
+}
+
+/** The built-in block definitions with the given ones added, by `type`; a given one replaces the built-in of its type. */
+export function blockDefinitions(options: ValidateDocOptions): Map<string, BlockDefinition> {
+	return byType(BUILT_IN_BLOCKS, options.blocks);
 }
 
 function byType<T extends { type: string }>(builtIn: readonly T[], added: readonly T[] = []): Map<string, T> {
