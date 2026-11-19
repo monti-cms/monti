@@ -1352,3 +1352,199 @@ it("ENT-REF-9 replaces the references in every locale's working and published co
 		{ fields: { title: "Live EN", topic: replacement.id } },
 	]);
 });
+
+it("ENT-LOC-1 adds a non-source locale to an active entry, even with the source locale's slug, and fills the defaults", async () => {
+	const folder = await seedFolder();
+	const entry = await seedEntry({ folder_id: folder });
+
+	const output = await montiOf().entries.addLocale({ id: entry.id, locale: "en", slug: entry.slug });
+
+	// ENT-LOC-1.1
+	expect(output).toEqual({
+		id: entry.id,
+		collection: POSTS,
+		locale: "en",
+		source_locale: "ko",
+		folder_id: folder,
+		slug: entry.slug,
+		data: { fields: {} },
+		published_at: null,
+	});
+	// ENT-LOC-1.2
+	expect(await localeRow(entry.id, "en")).toEqual({
+		entry_id: entry.id,
+		locale: "en",
+		slug: entry.slug,
+		data: { fields: {} },
+		translation_seen: {},
+	});
+	// ENT-LOC-1.3
+	expect(await publishedRows()).toEqual([]);
+});
+
+it("ENT-LOC-2 adds a locale with data and indexes the media of every locale of the entry", async () => {
+	const first = await seedMedia();
+	const second = await seedMedia();
+	const { entry } = await seedEntryUsing(first);
+	const data = { fields: { cover: second } };
+
+	const output = await montiOf().entries.addLocale({ id: entry.id, locale: "en", slug: "hello", data });
+
+	// ENT-LOC-2.1
+	expect(output.data).toEqual(data);
+	// ENT-LOC-2.2
+	expect(await useRows("entry", entry.id)).toEqual(
+		[coverUse(entry.id, first), coverUse(entry.id, second)].sort((a, b) => a.media_id.localeCompare(b.media_id)),
+	);
+});
+
+it("ENT-LOC-3 rejects entries.addLocale with BAD_REQUEST for a locale the schema does not have", async () => {
+	const entry = await seedEntry();
+
+	// ENT-LOC-3.1
+	await expect(montiOf().entries.addLocale({ id: entry.id, locale: "ja", slug: "hello" })).rejects.toMatchObject({
+		code: "BAD_REQUEST",
+	});
+	// ENT-LOC-3.2
+	expect(await localeRows()).toEqual([entry.working]);
+});
+
+it("ENT-LOC-4 rejects entries.addLocale with CONFLICT for a locale the entry already has", async () => {
+	const entry = await seedEntry();
+	const en = await seedLocale(entry.id, "en");
+
+	// ENT-LOC-4.1
+	await expect(montiOf().entries.addLocale({ id: entry.id, locale: "en", slug: "fresh-slug" })).rejects.toMatchObject({
+		code: "CONFLICT",
+	});
+	// ENT-LOC-4.2
+	expect(await localeRow(entry.id, "en")).toEqual(en);
+});
+
+it("ENT-LOC-5 rejects entries.addLocale with CONFLICT for a slug another active entry has in the collection and locale", async () => {
+	const first = await seedEntry();
+	await seedLocale(first.id, "en", { slug: "hello" });
+	const second = await seedEntry();
+
+	// ENT-LOC-5.1
+	await expect(montiOf().entries.addLocale({ id: second.id, locale: "en", slug: "hello" })).rejects.toMatchObject({
+		code: "CONFLICT",
+	});
+	// ENT-LOC-5.2
+	expect((await localeRows()).filter((row) => row.entry_id === second.id)).toEqual([second.working]);
+});
+
+it("ENT-LOC-6 rejects entries.addLocale with BAD_REQUEST for a slug with a space", async () => {
+	const entry = await seedEntry();
+
+	// ENT-LOC-6.1
+	await expect(montiOf().entries.addLocale({ id: entry.id, locale: "en", slug: "hello world" })).rejects.toMatchObject({
+		code: "BAD_REQUEST",
+	});
+	// ENT-LOC-6.2
+	expect(await localeRows()).toEqual([entry.working]);
+});
+
+it("ENT-LOC-7 rejects entries.addLocale with BAD_REQUEST for data that breaks a field's type", async () => {
+	const entry = await seedEntry();
+
+	// ENT-LOC-7.1
+	await expect(
+		montiOf().entries.addLocale({ id: entry.id, locale: "en", slug: "hello", data: { fields: { views: "ten" } } }),
+	).rejects.toMatchObject({ code: "BAD_REQUEST" });
+	// ENT-LOC-7.2
+	expect(await localeRows()).toEqual([entry.working]);
+});
+
+it("ENT-LOC-8 rejects entries.addLocale with NOT_FOUND for a trashed entry", async () => {
+	const entry = await seedEntry({ trashed: true });
+
+	// ENT-LOC-8.1
+	await expect(montiOf().entries.addLocale({ id: entry.id, locale: "en", slug: "hello" })).rejects.toMatchObject({
+		code: "NOT_FOUND",
+	});
+	// ENT-LOC-8.2
+	expect(await localeRows()).toEqual([entry.working]);
+});
+
+/** The `media_uses` row of an entry's `gallery` field referencing `media_id`. */
+function galleryUse(source_id: string, media_id: string): UseSeed {
+	return { media_id, source_kind: "entry", source_id, field_path: "fields.gallery" };
+}
+
+/** Each working copy's row sorted by `locale`, so a check does not hang on the order rows come back in. */
+function byLocale<Row extends { locale: string }>(rows: Row[]): Row[] {
+	return [...rows].sort((a, b) => a.locale.localeCompare(b.locale));
+}
+
+it("ENT-RLOC-1 deletes a non-source locale with its published copy and indexes the media of the locales left", async () => {
+	const first = await seedMedia();
+	const second = await seedMedia();
+	const entry = await seedEntry({ data: { fields: { gallery: [first] } } });
+	await seedLocale(entry.id, "en", { data: { fields: { gallery: [first, second] } } });
+	const ko = await seedPublished(entry.id, "ko", entry.slug, entry.data);
+	await seedPublished(entry.id, "en", `${entry.slug}-en`, { fields: { gallery: [first, second] } });
+	await seedUse(galleryUse(entry.id, first));
+	await seedUse(galleryUse(entry.id, second));
+
+	const output = await montiOf().entries.removeLocale({ id: entry.id, locale: "en" });
+
+	// ENT-RLOC-1.1
+	expect(output).toEqual({ id: entry.id, locale: "en" });
+	// ENT-RLOC-1.2
+	expect([
+		(await localeRows()).filter((row) => row.locale === "en"),
+		(await publishedRows()).filter((row) => row.locale === "en"),
+	]).toEqual([[], []]);
+	// ENT-RLOC-1.3
+	expect([await entryRows(), await localeRows(), await publishedRows()]).toEqual([[entry.row], [entry.working], [ko]]);
+	// ENT-RLOC-1.4
+	expect(await useRows("entry", entry.id)).toEqual([galleryUse(entry.id, first)]);
+});
+
+it("ENT-RLOC-2 deletes a non-source locale that is not published yet", async () => {
+	const entry = await seedEntry();
+	await seedLocale(entry.id, "en");
+
+	const output = await montiOf().entries.removeLocale({ id: entry.id, locale: "en" });
+
+	// ENT-RLOC-2.1
+	expect(output).toEqual({ id: entry.id, locale: "en" });
+	// ENT-RLOC-2.2
+	expect([await localeRows(), await entryRows()]).toEqual([[entry.working], [entry.row]]);
+});
+
+it("ENT-RLOC-3 rejects entries.removeLocale with BAD_REQUEST for the source locale", async () => {
+	const entry = await seedEntry();
+	const en = await seedLocale(entry.id, "en");
+
+	// ENT-RLOC-3.1
+	await expect(montiOf().entries.removeLocale({ id: entry.id, locale: "ko" })).rejects.toMatchObject({
+		code: "BAD_REQUEST",
+	});
+	// ENT-RLOC-3.2
+	expect([await entryRows(), byLocale(await localeRows())]).toEqual([[entry.row], [en, entry.working]]);
+});
+
+it("ENT-RLOC-4 rejects entries.removeLocale with NOT_FOUND for a locale the entry does not have", async () => {
+	const entry = await seedEntry();
+
+	// ENT-RLOC-4.1
+	await expect(montiOf().entries.removeLocale({ id: entry.id, locale: "en" })).rejects.toMatchObject({
+		code: "NOT_FOUND",
+	});
+	// ENT-RLOC-4.2
+	expect(await localeRow(entry.id, "ko")).toEqual(entry.working);
+});
+
+it("ENT-RLOC-5 rejects entries.removeLocale with NOT_FOUND for a trashed entry", async () => {
+	const entry = await seedEntry({ trashed: true });
+	const en = await seedLocale(entry.id, "en");
+
+	// ENT-RLOC-5.1
+	await expect(montiOf().entries.removeLocale({ id: entry.id, locale: "en" })).rejects.toMatchObject({
+		code: "NOT_FOUND",
+	});
+	// ENT-RLOC-5.2
+	expect(await localeRow(entry.id, "en")).toEqual(en);
+});

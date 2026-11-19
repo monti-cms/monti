@@ -132,6 +132,15 @@ export async function replaceEntryMediaUses(
 	data: EntryData,
 ): Promise<void> {
 	await rejectInactive(ctx, idsOf(addEntryUses(new Map(), collection, data)));
+	await recountEntryMediaUses(ctx, entryId, collection);
+}
+
+/** Replaces an entry's `media_uses` rows with the union of what every one of its locales' working copies references. */
+export async function recountEntryMediaUses(
+	ctx: WriteContext,
+	entryId: string,
+	collection: CollectionSchema,
+): Promise<void> {
 	const locales = await ctx.db
 		.selectFrom("entry_locales")
 		.select("data")

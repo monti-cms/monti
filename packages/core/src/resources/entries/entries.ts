@@ -4,6 +4,7 @@ import type { ReadContext } from "../../engine/types";
 import { uuidInput } from "../_shared/input";
 import { createEntry, createInput, folderInput } from "./create";
 import { duplicateEntry, duplicateInput } from "./duplicate";
+import { addLocale, addLocaleInput, removeLocale, removeLocaleInput } from "./locales";
 import { publishEntry, publishInput, unpublishEntry, unpublishInput } from "./publish";
 import { type Entry, findEntry, listEntries } from "./query";
 import { replaceInput, replaceReferences } from "./references";
@@ -46,4 +47,6 @@ export const entries = {
 	unpublish: defineWrite({ input: unpublishInput, run: unpublishEntry }),
 	duplicate: defineWrite({ input: duplicateInput, run: duplicateEntry }),
 	replaceReferences: defineWrite({ input: replaceInput, run: replaceReferences }),
+	addLocale: defineWrite({ input: addLocaleInput, run: addLocale }),
+	removeLocale: defineWrite({ input: removeLocaleInput, run: removeLocale }),
 };
