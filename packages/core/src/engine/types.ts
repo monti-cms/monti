@@ -1,6 +1,7 @@
 import type { Kysely, Transaction } from "kysely";
 import type { z } from "zod";
 import type { Database } from "../db/types";
+import type { BlockDefinition, MarkDefinition } from "../rich-text/types";
 
 /** The shape of the user schema (`monti.schema.ts`): the content languages and the collections with their fields. */
 export interface Schema {
@@ -21,6 +22,10 @@ export interface MontiConfig {
 	name: string;
 	/** Whether this is a dev server: only a dev server changes the schema and the config. */
 	dev?: boolean;
+	/** Block types added to the built-in ones; one with a built-in's `type` replaces it. */
+	blocks?: BlockDefinition[];
+	/** Mark types added to the built-in ones; one with a built-in's `type` replaces it. */
+	marks?: MarkDefinition[];
 }
 
 /** The schema and config the engine starts with, and the files it writes their changes to. */
