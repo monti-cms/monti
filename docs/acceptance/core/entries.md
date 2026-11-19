@@ -1,6 +1,6 @@
 # `resources/entries/` · `resources/media/uses.ts` (엔트리 확장) 인수 조건
 
-[`docs/refactor/core.md`](../../refactor/core.md) 3.1절(선택 입력 `__preset_id`), 6절(`entries`, `entry_locales`, `entry_published`, `media_uses`), 7절(`entries` 리소스), 10절(언어별 작업본·발행본 분리, 역방향 관계 조회, `Schema` 8종 필드, `publish`·`unpublish`·`duplicate`·`replaceReferences`·`addLocale`·`removeLocale`)의 인수 조건이다.
+[`docs/refactor/core.md`](../../refactor/core.md) 3.1절(선택 입력 `__preset_id`), 6절(`entries`, `entry_locales`, `entry_published`, `media_uses`), 7절(`entries` 리소스), 10절(언어별 작업본·발행본 분리, 역방향 관계 조회, `Schema` 8종 필드, `publish`·`unpublish`·`duplicate`·`replaceReferences`·`addLocale`·`removeLocale`·`setSourceLocale`)의 인수 조건이다.
 
 - 반환 모양: 작업본(`entry_locales`)과 발행본(`entry_published`) 조회 모두 `entries`의 공통 정보와 합쳐 `{ id, collection, locale, source_locale, folder_id, slug, data, published_at }` 모양으로 돌려준다. `id`는 항상 `entries.id`이고 `data`는 `{ fields, body? }` 구조이며, `published_at`은 해당 `(entry_id, locale)`의 `entry_published` 행이 있으면 그 시각, 없으면 `null`이다.
 - `entries.create`: 필수 `collection`, `locale`, `slug`와 선택 `__preset_id`(UUID), `folder_id`, `data`로 글(`entries`: `source_locale` = 입력 `locale`, `folder_id` 기본 `null`)과 원문 언어 작업본(`entry_locales`: `data` 기본 `{ fields: {} }`, `translation_seen: {}`)을 만든다. 작업본에서는 `required` 필드를 비워 둘 수 있다.
@@ -18,6 +18,7 @@
 - `entries.replaceReferences`: 같은 컬렉션의 서로 다른 글 `from_id`(옛 글) → `into_id`(새 글)에 대해 모든 `relation` 필드(최상위·`conditional` 하위, 단일·`many: true`)의 참조를 바꾼다(`many: true`에 새 글이 이미 있으면 먼저 등장한 위치 하나만 유지). 모든 언어의 작업본(`entry_locales.data`, 휴지통 글 포함)과 발행본(`entry_published.data`)을 각각 고치며 발행본의 `slug`·`published_at`과 `from_id`의 `trashed_at`은 건드리지 않는다. `from_id`·`into_id`가 없거나 `into_id`가 휴지통이면 `NOT_FOUND`(`from_id`는 휴지통 허용), 같은 글·컬렉션 불일치면 `BAD_REQUEST`로 거절하고 `{ from_id, into_id, updated_ids }`(바뀐 글 `id`당 한 번씩)를 돌려준다.
 - `entries.addLocale`: 활성 글에 새 비원문 언어 작업본(`{ id, locale, slug, data? }`, `data` 기본 `{ fields: {} }`, `translation_seen: {}`, `__preset_id` 없음)을 추가하고 글 전체 언어 기준으로 `media_uses`를 다시 계산해 표준 엔트리 모양(`published_at: null`)으로 돌려준다. 작업본에서는 `required` 필드를 비워 둘 수 있고 다른 언어와 같은 `slug`도 허용하며, 없는 언어·잘못된 `slug`·`data`는 `BAD_REQUEST`, 이미 있는 언어·같은 `(collection, locale)` 활성 글의 `slug` 중복은 `CONFLICT`, 없거나 휴지통 글은 `NOT_FOUND`로 거절한다.
 - `entries.removeLocale`: 활성 글의 비원문 언어(`{ id, locale }`)를 휴지통 없이 즉시 삭제하고(발행본이 있으면 함께 삭제) 남은 언어 기준으로 `media_uses`를 다시 계산해 `{ id, locale }`을 돌려준다. 원문 언어(`source_locale`)를 지우려 하면 `BAD_REQUEST`, 글이 없거나 휴지통이거나 해당 언어가 없으면 `NOT_FOUND`로 거절한다.
+- `entries.setSourceLocale`: 활성 글의 기준 언어(`source_locale`)를 그 글에 이미 있는 다른 언어(`{ id, locale }`)로 바꾸고 그 글의 모든 언어 `translation_seen`을 `{}`로 초기화한 뒤 새 기준 언어의 표준 엔트리 모양을 돌려준다(이미 기준 언어면 `translation_seen`을 건드리지 않고 그대로 반환). 글이 없거나 휴지통이거나 해당 언어가 없으면 `NOT_FOUND`로 거절한다.
 
 ---
 
@@ -573,6 +574,36 @@ ENT-RLOC-5  휴지통에 있는 글의 언어는 `NOT_FOUND`로 삭제를 거절
   행동  휴지통 글의 `id`와 `locale: "en"`으로 `entries.removeLocale`을 실행한다
   결과  ENT-RLOC-5.1  `NOT_FOUND` 오류를 던진다
         ENT-RLOC-5.2  휴지통 글의 `"en"` 행이 원래 그대로이다
+```
+
+## 10. 원문 언어 변경 (`setSourceLocale`)
+
+```
+ENT-SRC-1  기준 언어를 다른 언어로 바꾸면 원문 언어가 바뀌고 그 글의 모든 언어 번역 추적 기록이 초기화된다
+  전제  `ko` 원문(발행됨), `en` 작업본(발행됨, `translation_seen` 기록 있음), `ja` 작업본(`translation_seen` 기록 있음)을 가진 활성 글과 `translation_seen` 기록이 있는 다른 활성 글이 하나씩 있다
+  행동  첫 번째 글의 `id`와 `locale: "en"`으로 `entries.setSourceLocale`을 실행한다
+  결과  ENT-SRC-1.1  반환값의 `id`, `collection`, `folder_id`, `slug`, `data`, `published_at`이 첫 번째 글의 `"en"` 행과 같고 `locale`과 `source_locale`이 모두 `"en"`이다
+        ENT-SRC-1.2  `entries` 테이블에서 첫 번째 글의 `source_locale`이 `"en"`이다
+        ENT-SRC-1.3  `entry_locales` 테이블에서 첫 번째 글의 `"ko"`, `"en"`, `"ja"` 행 `translation_seen`이 모두 `{}`이다
+        ENT-SRC-1.4  첫 번째 글의 `entry_published` 행들과 다른 활성 글의 `translation_seen`이 원래 그대로이다
+
+ENT-SRC-2  이미 원문 언어인 언어를 다시 지정하면 번역 추적 기록을 유지한 채 그대로 돌려준다
+  전제  `ko` 원문과 `translation_seen` 기록이 있는 `en` 작업본을 가진 활성 글이 하나 있다
+  행동  해당 글의 `id`와 `locale: "ko"`로 `entries.setSourceLocale`을 실행한다
+  결과  ENT-SRC-2.1  반환값의 `locale`과 `source_locale`이 모두 `"ko"`이고 나머지 항목이 `"ko"` 행과 같다
+        ENT-SRC-2.2  `entry_locales` 테이블에서 `"en"` 행의 `translation_seen`이 원래 그대로이다
+
+ENT-SRC-3  글에 없는 언어를 원문 언어로 지정하려 하면 `NOT_FOUND`로 거절한다
+  전제  `ko` 원문 작업본만 가진 활성 글이 하나 있다
+  행동  해당 글의 `id`와 `locale: "en"`으로 `entries.setSourceLocale`을 실행한다
+  결과  ENT-SRC-3.1  `NOT_FOUND` 오류를 던진다
+        ENT-SRC-3.2  `entries` 테이블에서 해당 글의 `source_locale`이 `"ko"` 그대로이다
+
+ENT-SRC-4  휴지통에 있는 글은 `NOT_FOUND`로 원문 언어 변경을 거절한다
+  전제  `ko` 원문과 `translation_seen` 기록이 있는 `en` 작업본을 가진 휴지통 글(`trashed_at` 설정)이 하나 있다
+  행동  휴지통 글의 `id`와 `locale: "en"`으로 `entries.setSourceLocale`을 실행한다
+  결과  ENT-SRC-4.1  `NOT_FOUND` 오류를 던진다
+        ENT-SRC-4.2  휴지통 글의 `source_locale`과 `"en"` 행의 `translation_seen`이 원래 그대로이다
 ```
 
 

@@ -382,7 +382,7 @@ erDiagram
 
 | 리소스 | 동사 | 고유 액션 |
 |---|---|---|
-| `entries` | `list`, `get`, `create`, `update`(필드·본문·폴더·슬러그) | `publish`, `unpublish`, `duplicate`, `replaceReferences`, `addLocale`, `removeLocale` |
+| `entries` | `list`, `get`, `create`, `update`(필드·본문·폴더·슬러그) | `publish`, `unpublish`, `duplicate`, `replaceReferences`, `addLocale`, `removeLocale`, `setSourceLocale` |
 | `translationStatus` | `list`, `get`, `update`(블록 연결·건너뛰기·원문 확인) | |
 | `templates` | `list`, `get`, `create`, `update`, `delete` | |
 | `folders` | `list`, `create`, `update`(이름·이동) | |
@@ -541,6 +541,7 @@ flowchart TD
 | 2026-11-20 | 보관(archive) 상태와 `order` 열은 두지 않는다. 기존 `entries.merge`는 `body` 유무에 따른 직관 충돌을 없애기 위해 휴지통 이동을 분리한 `entries.replaceReferences({ from_id, into_id })`로 정리하고, 병합 UI는 `monti.transaction`으로 `trash.move`와 조합한다. | 소유자와 정함 |
 | 2026-11-20 | 리소스 공용 도우미(`uuidInput`·`timestampInput`·`docOf`)는 `resources/_shared/`에 두고, `uuidInput`은 JSON Schema 변환이 깨지지 않도록 `z.uuid().overwrite((id) => id.toLowerCase())`로 소문자 정규화한다. | 소유자와 정함 |
 | 2026-11-20 | `entries.publish`는 선택 입력 `published_at`(타임존 포함 ISO 8601)을 받으며 생략 시 최초 발행은 현재 시각, 재발행은 기존 시각을 유지한다. `entries.unpublish`는 미발행 글에도 멱등 성공한다. `entries.duplicate`는 원문 언어 작업본만 미발행 복제하며(쓰기 공통 검증 재적용), `slug` 생략 시 `-copy`, `-copy-2`…을 자동 부여한다. | 소유자와 정함 |
+| 2026-11-20 | 기준 언어 전환은 `entries.setSourceLocale({ id, locale })` 별도 액션으로 둔다. 글에 이미 있는 다른 언어로 바꾸면 그 글의 모든 `entry_locales.translation_seen`을 `{}`로 초기화하고(이미 기준 언어면 유지), 없거나 휴지통 글·없는 언어는 `NOT_FOUND`로 거절한다. | 소유자와 정함 |
 
 ## 11. 정하지 않은 것
 
