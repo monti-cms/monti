@@ -35,7 +35,7 @@
 - Operation은 `defineRead` 또는 `defineWrite`로 **한 번만** 정의하고, 리소스 객체 트리(`{ entries: { list, get, ... } }`)에 둔다. 키 경로(`entries.get`)가 곧 이름이다. 이름 문자열을 따로 적지 않는다.
 - 속성은 둘뿐이다. **`input`**(Zod 스키마, 선택 입력은 `optional()`)과 **`run`**(`(input, ctx) => Promise<output>`).
 - 읽기는 상태를 바꾸지 않는다. 쓰기는 트랜잭션 안에서 실행되며, 미디어 사용처 색인(`media_uses`) 갱신은 해당 리소스의 `run`이 같은 트랜잭션 안에서 한다.
-- 다른 쓰기가 참조할 수 있는 콘텐츠 생성 계열(`folders.create`, `templates.create`, `media.create`, `entries.create`, `entries.duplicate`의 새 행)은 내부 예약 선택 입력 `__preset_id`(UUID, 소문자로 저장)를 받는다. 호출자가 미리 정한 id로 앞뒤 쓰기를 잇기 위한 용도이며 일반 호출에서는 생략한다(`translations`·`keys`·`admin`·`session`·`media.startUpload`는 제외). 외부 입구(`next`, `cli`)가 이 입력을 그대로 받을지는 각 패키지 문서에서 정한다.
+- 다른 쓰기가 참조할 수 있는 콘텐츠 생성 계열(`folders.create`, `templates.create`, `media.create`, `entries.create`, `entries.duplicate`의 새 행)은 내부 예약 선택 입력 `__preset_id`(UUID, 소문자로 저장)를 받는다. 호출자가 미리 정한 id로 앞뒤 쓰기를 잇기 위한 용도이며 일반 호출에서는 생략한다(`entries.addLocale`·`keys`·`admin`·`session`·`media.startUpload`는 제외). 외부 입구(`next`, `cli`)가 이 입력을 그대로 받을지는 각 패키지 문서에서 정한다.
 - 같은 Operation을 `next`(HTTP), `cli`, `ai`, 사이트와 백그라운드 작업이 `monti.<resource>.<action>(input)`으로 직접 호출한다. 사이트 조회(`entries.get`, `entries.list` 등)와 휴지통의 만료 정리(`trash.delete`의 조건 입력)도 같은 Operation이다.
 
 ### 3.2 호출
@@ -382,8 +382,8 @@ erDiagram
 
 | 리소스 | 동사 | 고유 액션 |
 |---|---|---|
-| `entries` | `list`, `get`, `create`, `update`(필드·본문·폴더·슬러그) | `publish`, `unpublish`, `duplicate`, `replaceReferences` |
-| `translations` | `list`, `get`, `create`, `update`(블록 연결·건너뛰기·원문 확인), `delete`(비원문 언어 즉시 삭제) | |
+| `entries` | `list`, `get`, `create`, `update`(필드·본문·폴더·슬러그) | `publish`, `unpublish`, `duplicate`, `replaceReferences`, `addLocale`, `removeLocale` |
+| `translationStatus` | `list`, `get`, `update`(블록 연결·건너뛰기·원문 확인) | |
 | `templates` | `list`, `get`, `create`, `update`, `delete` | |
 | `folders` | `list`, `create`, `update`(이름·이동) | |
 | `media` | `list`, `get`, `create`(업로드 등록), `update`(메타·이동·파일 교체) | `startUpload` |
@@ -429,7 +429,7 @@ packages/core/src/
 │
 ├── resources/                  층 2: db, rich-text, engine, 다른 리소스(순환 금지)
 │   ├── _shared/                input.ts(uuid·timestamp 입력), doc.ts(본문 검사 오류 변환)
-│   ├── entries/  translations/  templates/  folders/  trash/
+│   ├── entries/  translation-status/  templates/  folders/  trash/
 │   ├── media/                  uses.ts [함수] 본문·필드에서 사용처를 모아 media_uses 갱신
 │   ├── schema/  config/        schema.get·update, config.get·update
 │   └── keys/  data/  session/  admin/
@@ -534,8 +534,8 @@ flowchart TD
 | 2026-11-19 | 동시 쓰기 경쟁 대비(`FOR UPDATE` 행 잠금, 추가 DB 유니크 인덱스)는 지금 도입하지 않고 필요할 때 다룬다. | 소유자와 정함 |
 | 2026-11-20 | 컬렉션은 `kind` 구분 없이 `{ body?, label?, description?, fields }`로 통일하고, `Schema`의 필드는 정의된 8종(`text`·`number`·`boolean`·`date`·`select`·`media`·`relation`·`conditional`)으로 타입을 명시한다(`schema.update`도 동일 스키마로 검증). | 소유자와 정함 |
 | 2026-11-20 | 글의 `data`는 `{ fields, body? }`(생략 시 기본 `{ fields: {} }`)로 두고, 작업본 쓰기(`create`·`update`)에서 필드 타입·제약(`date`는 타임존 포함 ISO 8601 날짜·시각 문자열), `body` 허용·`validateDoc`, 참조 무결성을 검사한다. `slug`는 필수이며 `^[a-z0-9]+(?:-[a-z0-9]+)*$` 형식과 같은 `(collection, locale)` 안 `trashed_at`이 `null`인 글끼리의 중복(`CONFLICT`)을 쓰기 시점에 검사한다. `required`는 발행 때 검사한다. | 소유자와 정함 |
-| 2026-11-20 | 글을 공통 정보(`entries`: `id`, `collection`, `source_locale`, `folder_id`, `trashed_at`), 언어별 작업본(`entry_locales`: `PK(entry_id, locale)`, `slug`, `data`, `translation_seen`), 언어별 발행본(`entry_published`: `PK(entry_id, locale)`, `slug`, `data`, `published_at`)으로 분리해 도메인 테이블을 11개로 둔다. 언어별 행에는 별도 `id`와 `trashed_at`을 두지 않아 공개 주소는 항상 `(id, locale)` 하나이며 `translations.create`는 `__preset_id`에서 뺀다. `relation` 필드는 `to` 컬렉션의 활성 글 ID(`entries.id`)를 가리키고, `media_uses`는 글의 모든 언어 작업본 참조를 합쳐 `source_id = entries.id`로 관리한다. | 소유자와 정함 |
-| 2026-11-20 | `entries.*`가 `{ id, locale? }`(생략 시 `source_locale`)로 각 언어의 내용·발행을 다루고, `entries.list`는 `locale`을 생략하면 각 글의 `source_locale` 1행을 돌려준다. `translations.*`는 번역 생성·조회·추적(`translation_seen` 하나에 필드·블록 연결·건너뛰기 보관)과 비원문 언어의 즉시 삭제(`translations.delete`, 휴지통 없음·원문 언어 삭제 거절)를 맡는다. | 소유자와 정함 |
+| 2026-11-20 | 글을 공통 정보(`entries`: `id`, `collection`, `source_locale`, `folder_id`, `trashed_at`), 언어별 작업본(`entry_locales`: `PK(entry_id, locale)`, `slug`, `data`, `translation_seen`), 언어별 발행본(`entry_published`: `PK(entry_id, locale)`, `slug`, `data`, `published_at`)으로 분리해 도메인 테이블을 11개로 둔다. 언어별 행에는 별도 `id`와 `trashed_at`을 두지 않아 공개 주소는 항상 `(id, locale)` 하나이며, 2026-11-19 `__preset_id` 목록의 `translations`는 제외한다(`entries.addLocale`은 `__preset_id`를 받지 않는다). `relation` 필드는 `to` 컬렉션의 활성 글 ID(`entries.id`)를 가리키고, `media_uses`는 글의 모든 언어 작업본 참조를 합쳐 `source_id = entries.id`로 관리한다. | 소유자와 정함 |
+| 2026-11-20 | 언어판 콘텐츠의 전체 생애는 `entries` 한 곳에 모은다(`list`·`get`·`create`·`update`·`publish`·`unpublish`·`duplicate`·`replaceReferences` + 비원문 언어 추가 `addLocale`·즉시 삭제 `removeLocale`, 원문 언어 단독 삭제 거절, `entries.list` `locale` 생략 시 각 글의 `source_locale` 1행). 기준 언어 대비 번역 변경 추적은 `translationStatus` 리소스(`list`·`get`·`update`, `entry_locales.translation_seen` 기반)로 분리해 추적 상태만 전용으로 다룬다. | 소유자와 정함 |
 | 2026-11-20 | `resources/media/uses.ts`의 엔트리 미디어 색인(`source_kind: "entry"`) 경로는 `data` 구조에 맞춰 본문 `"body"`, 최상위 필드 `"fields.<키>"`, `conditional` 하위 필드 `"fields.<조건키>.fields.<하위키>"`로 한다. | 소유자와 정함 |
 | 2026-11-20 | `entries.preview`는 core에서 빼고 `entries.get`·`entries.list`의 `draft?: boolean`(기본 `false`, 발행본 우선)으로 통일한다. `entries.list`는 다른 리소스 `list`와 마찬가지로 조건에 맞는 글이 없으면 빈 배열을 돌려준다. | 소유자와 정함 |
 | 2026-11-20 | 보관(archive) 상태와 `order` 열은 두지 않는다. 기존 `entries.merge`는 `body` 유무에 따른 직관 충돌을 없애기 위해 휴지통 이동을 분리한 `entries.replaceReferences({ from_id, into_id })`로 정리하고, 병합 UI는 `monti.transaction`으로 `trash.move`와 조합한다. | 소유자와 정함 |

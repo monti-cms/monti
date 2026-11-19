@@ -1,21 +1,23 @@
 # `resources/entries/` · `resources/media/uses.ts` (엔트리 확장) 인수 조건
 
-[`docs/refactor/core.md`](../../refactor/core.md) 3.1절(선택 입력 `__preset_id`), 6절(`entries`, `entry_locales`, `entry_published`, `media_uses`), 7절(`entries` 리소스), 10절(언어별 작업본·발행본 분리, 역방향 관계 조회, `Schema` 8종 필드, `publish`·`unpublish`·`duplicate`·`replaceReferences`)의 인수 조건이다.
+[`docs/refactor/core.md`](../../refactor/core.md) 3.1절(선택 입력 `__preset_id`), 6절(`entries`, `entry_locales`, `entry_published`, `media_uses`), 7절(`entries` 리소스), 10절(언어별 작업본·발행본 분리, 역방향 관계 조회, `Schema` 8종 필드, `publish`·`unpublish`·`duplicate`·`replaceReferences`·`addLocale`·`removeLocale`)의 인수 조건이다.
 
 - 반환 모양: 작업본(`entry_locales`)과 발행본(`entry_published`) 조회 모두 `entries`의 공통 정보와 합쳐 `{ id, collection, locale, source_locale, folder_id, slug, data, published_at }` 모양으로 돌려준다. `id`는 항상 `entries.id`이고 `data`는 `{ fields, body? }` 구조이며, `published_at`은 해당 `(entry_id, locale)`의 `entry_published` 행이 있으면 그 시각, 없으면 `null`이다.
 - `entries.create`: 필수 `collection`, `locale`, `slug`와 선택 `__preset_id`(UUID), `folder_id`, `data`로 글(`entries`: `source_locale` = 입력 `locale`, `folder_id` 기본 `null`)과 원문 언어 작업본(`entry_locales`: `data` 기본 `{ fields: {} }`, `translation_seen: {}`)을 만든다. 작업본에서는 `required` 필드를 비워 둘 수 있다.
-- 쓰기 공통 검증(`create`, `update`, `duplicate`):
+- 쓰기 공통 검증(`create`, `update`, `duplicate`, `addLocale`):
   - `slug`: 비어 있지 않은 `^[a-z0-9]+(?:-[a-z0-9]+)*$` 형식만 허용하며 어긋나면 `BAD_REQUEST`, 같은 `(collection, locale)`의 다른 활성 글(`entries.trashed_at`이 `null`)과 겹치면 `CONFLICT`로 거절한다.
-  - `folder_id`: `null`(루트) 또는 같은 컬렉션 `scope`의 활성 폴더만 허용하며 아니면 `BAD_REQUEST`로 거절한다.
+  - `folder_id`(`create`·`update`·`duplicate`만 해당, `addLocale` 입력에는 없음): `null`(루트) 또는 같은 컬렉션 `scope`의 활성 폴더만 허용하며 아니면 `BAD_REQUEST`로 거절한다.
   - `data.fields`: 스키마에 정의된 키만 허용하고 8종 필드(`text`·`number`·`boolean`·`date`·`select`·`media`·`relation`·`conditional`)의 타입·제약에 어긋나거나, `media`가 없거나 휴지통 미디어를 가리키거나, `relation`이 `to` 컬렉션의 활성 글(`entries.id`)이 아닌 대상을 가리키면 `BAD_REQUEST`로 거절한다.
   - `data.body`: `collection.body`가 `true`일 때만 허용하며 `validateDoc(body, ctx.config)` 실패 시 문제 목록 전체를 `details`에 담아 `BAD_REQUEST`로 거절한다.
 - `media_uses` 색인: `source_kind`를 `"entry"`, `source_id`를 `entries.id`로 하여 그 글의 모든 언어 작업본(`entry_locales`) 참조를 합쳐 본문은 `"body"`, 최상위 `media` 필드는 `"fields.<필드키>"`, `conditional` 하위 `media` 필드는 `"fields.<조건필드키>.fields.<하위필드키>"` 경로에 대소문자를 무시하고 한 번씩 기록한다.
 - `entries.get` · `entries.list`: `draft`를 생략하거나 `false`면 발행본(`entry_published`), `draft: true`면 작업본(`entry_locales`)을 돌려주며 휴지통 글은 제외한다. `get`은 `{ id, locale? }`(생략 시 `source_locale`) 또는 `{ collection, locale, slug }`(`draft` 모드에 맞는 `slug`)로 조회해 없거나 해당 언어가 없으면(설정에 없는 언어 포함) `NOT_FOUND`로 거절한다. `list`는 `collection`, `locale`(생략 시 각 글의 `source_locale` 1행씩, 지정 시 그 언어를 가진 글), `folder_id`(생략=전체, `null`=루트, UUID=직속), `relation`(`{ field, id }`), `draft`로 걸러 돌려준다(원문 언어가 미발행이고 비원문 언어만 발행된 글은 `locale`을 생략한 기본 목록에 나오지 않는다).
-- `entries.update`: 단건(`{ id, locale?, slug?, folder_id?, data? }`, `locale` 생략 시 `source_locale`)은 해당 언어 작업본의 `slug`·`data`(전체 교체)와 글 전체의 `folder_id`를 바꾸되 생략한 항목과 `entry_published`는 유지하고 `data`를 바꿀 때만 글 전체 언어 합집합으로 `media_uses`를 다시 계산한다. 다건(`{ ids, folder_id }`)은 글 전체의 `folder_id` 일괄 이동만 처리하며, 대상이 없거나 휴지통·없는 언어면 `NOT_FOUND`, 잘못된 폴더면 `BAD_REQUEST`로 전체 롤백한다.
+- `entries.update`: 단건(`{ id, locale?, slug?, folder_id?, data? }`, `locale` 생략 시 `source_locale`)은 해당 언어 작업본의 `slug`·`data`(전체 교체)와 글 전체의 `folder_id`를 바꾸되 생략한 항목·`translation_seen`·`entry_published`는 유지하고 `data`를 바꿀 때만 글 전체 언어 합집합으로 `media_uses`를 다시 계산한다. 다건(`{ ids, folder_id }`)은 글 전체의 `folder_id` 일괄 이동만 처리하며, 대상이 없거나 휴지통·없는 언어면 `NOT_FOUND`, 잘못된 폴더면 `BAD_REQUEST`로 전체 롤백한다.
 - `entries.publish`: 활성 글의 지정한 언어(`locale` 생략 시 `source_locale`) 작업본을 `entry_published`에 저장한다. `published_at`을 주면 그 시각으로, 생략하면 최초 발행은 현재 시각·재발행은 기존 시각을 유지한다. 필수 필드(선택한 `conditional` 하위 포함, `0`·`false`는 인정)가 비어 있으면 `BAD_REQUEST`, 같은 `(collection, locale)`에 같은 `slug`의 다른 활성 글 발행본이 있으면 `CONFLICT`, 없거나 휴지통 글이거나 해당 언어가 없으면 `NOT_FOUND`로 거절한다.
 - `entries.unpublish`: 활성 글의 지정한 언어(`locale` 생략 시 `source_locale`) `entry_published` 행만 지우고 `published_at: null`인 그 언어의 작업본을 돌려준다(이미 미발행이면 멱등 성공). 없거나 휴지통 글이거나 해당 언어가 없으면 `NOT_FOUND`로 거절한다.
 - `entries.duplicate`: 활성 글의 원문 언어(`source_locale`) 작업본만 복제해 새 미발행 글(`translation_seen: {}`, 다른 번역 언어는 복제하지 않음)을 만들고 쓰기 공통 검증과 `media_uses` 색인을 그대로 적용한다(선택 `__preset_id` 지원). `slug` 생략 시 같은 `collection`에서 `locale`이 원본의 `source_locale`과 같은 모든 활성 글의 언어 행(`entry_locales`)과 겹치지 않는 첫 `<원본slug>-copy`, `-copy-2`…을 부여하며, 없거나 휴지통 글은 `NOT_FOUND`로 거절한다.
 - `entries.replaceReferences`: 같은 컬렉션의 서로 다른 글 `from_id`(옛 글) → `into_id`(새 글)에 대해 모든 `relation` 필드(최상위·`conditional` 하위, 단일·`many: true`)의 참조를 바꾼다(`many: true`에 새 글이 이미 있으면 먼저 등장한 위치 하나만 유지). 모든 언어의 작업본(`entry_locales.data`, 휴지통 글 포함)과 발행본(`entry_published.data`)을 각각 고치며 발행본의 `slug`·`published_at`과 `from_id`의 `trashed_at`은 건드리지 않는다. `from_id`·`into_id`가 없거나 `into_id`가 휴지통이면 `NOT_FOUND`(`from_id`는 휴지통 허용), 같은 글·컬렉션 불일치면 `BAD_REQUEST`로 거절하고 `{ from_id, into_id, updated_ids }`(바뀐 글 `id`당 한 번씩)를 돌려준다.
+- `entries.addLocale`: 활성 글에 새 비원문 언어 작업본(`{ id, locale, slug, data? }`, `data` 기본 `{ fields: {} }`, `translation_seen: {}`, `__preset_id` 없음)을 추가하고 글 전체 언어 기준으로 `media_uses`를 다시 계산해 표준 엔트리 모양(`published_at: null`)으로 돌려준다. 작업본에서는 `required` 필드를 비워 둘 수 있고 다른 언어와 같은 `slug`도 허용하며, 없는 언어·잘못된 `slug`·`data`는 `BAD_REQUEST`, 이미 있는 언어·같은 `(collection, locale)` 활성 글의 `slug` 중복은 `CONFLICT`, 없거나 휴지통 글은 `NOT_FOUND`로 거절한다.
+- `entries.removeLocale`: 활성 글의 비원문 언어(`{ id, locale }`)를 휴지통 없이 즉시 삭제하고(발행본이 있으면 함께 삭제) 남은 언어 기준으로 `media_uses`를 다시 계산해 `{ id, locale }`을 돌려준다. 원문 언어(`source_locale`)를 지우려 하면 `BAD_REQUEST`, 글이 없거나 휴지통이거나 해당 언어가 없으면 `NOT_FOUND`로 거절한다.
 
 ---
 
@@ -483,3 +485,95 @@ ENT-REF-9  여러 언어가 있는 글의 참조를 바꾸면 모든 언어의 �
         ENT-REF-9.2  `entry_locales` 테이블의 `"ko"`와 `"en"` 행 모두 참조가 새 글로 바뀐다
         ENT-REF-9.3  `entry_published` 테이블의 `"ko"`와 `"en"` 행 모두 참조가 새 글로 바뀐다
 ```
+
+## 8. 언어 추가 (`addLocale`)
+
+```
+ENT-LOC-1  활성 글에 비원문 언어를 원문과 같은 슬러그로도 추가할 수 있고 생략한 항목에 기본값을 채운다
+  전제  스키마에 두 언어(`ko`, `en`)와 `required: true` 필드가 있는 컬렉션, 해당 컬렉션 `scope`의 활성 폴더가 있고, 그 폴더 안에 `ko` 원문 작업본만 가진 활성 글이 하나 있다
+  행동  해당 글의 `id`, `locale: "en"`, 원문 언어(`ko`)와 같은 `slug`만으로 `entries.addLocale`을 실행한다
+  결과  ENT-LOC-1.1  반환값의 `id`가 해당 글 `id`, `locale`이 `"en"`, `source_locale`이 `"ko"`, `slug`가 입력값, `data`가 `{ fields: {} }`, `published_at`이 `null`이고 `collection`과 `folder_id`가 해당 글과 같다
+        ENT-LOC-1.2  `entry_locales` 테이블에 `(entry_id, "en")` 행이 추가되고 `translation_seen`이 `{}`이다
+        ENT-LOC-1.3  `entry_published` 테이블에 `(entry_id, "en")` 행이 없다
+
+ENT-LOC-2  데이터를 담아 언어를 추가하면 글 전체 언어 기준으로 미디어 사용처를 갱신한다
+  전제  스키마에 `media` 필드가 있는 컬렉션과 두 언어(`ko`, `en`), 활성 미디어 둘이 있고, `ko` 작업본만 첫 번째 미디어를 참조하는 활성 글이 하나 있다
+  행동  두 번째 미디어를 참조하는 `data`와 `locale: "en"`, 유효한 `slug`로 `entries.addLocale`을 실행한다
+  결과  ENT-LOC-2.1  반환값의 `data`가 입력과 같다
+        ENT-LOC-2.2  `media_uses`에 해당 글(`source_kind: "entry"`, `source_id: id`)의 참조로 첫 번째 미디어와 두 번째 미디어가 모두 있다
+
+ENT-LOC-3  스키마에 없는 언어 코드이면 `BAD_REQUEST`로 거절한다
+  전제  스키마에 `ko`, `en` 두 언어만 있고 `ko` 원문 작업본만 가진 활성 글이 하나 있다
+  행동  스키마에 없는 `locale`(`"ja"`)과 유효한 `slug`로 `entries.addLocale`을 실행한다
+  결과  ENT-LOC-3.1  `BAD_REQUEST` 오류를 던진다
+        ENT-LOC-3.2  `entry_locales` 테이블에 `"ja"` 행이 생기지 않는다
+
+ENT-LOC-4  이미 있는 언어를 다시 추가하려 하면 `CONFLICT`로 거절한다
+  전제  `ko` 원문과 `en` 작업본을 모두 가진 활성 글이 하나 있다
+  행동  그 글에 `locale: "en"`과 새 유효한 `slug`를 주어 `entries.addLocale`을 실행한다
+  결과  ENT-LOC-4.1  `CONFLICT` 오류를 던진다
+        ENT-LOC-4.2  기존 `entry_locales`의 `"en"` 행이 원래 그대로이다
+
+ENT-LOC-5  같은 컬렉션·언어의 다른 활성 글과 슬러그가 겹치면 `CONFLICT`로 거절한다
+  전제  같은 컬렉션에 활성 글 둘이 있고, 첫 번째 글에는 `en` 언어 작업본이 `"hello"` 슬러그로 있으며 두 번째 글에는 `ko` 원문 작업본만 있다
+  행동  두 번째 글의 `id`, `locale: "en"`, `slug: "hello"`로 `entries.addLocale`을 실행한다
+  결과  ENT-LOC-5.1  `CONFLICT` 오류를 던진다
+        ENT-LOC-5.2  두 번째 글에 `"en"` 행이 생기지 않는다
+
+ENT-LOC-6  슬러그 형식이 맞지 않으면 `BAD_REQUEST`로 거절한다
+  전제  스키마에 두 언어(`ko`, `en`)가 있고 `ko` 원문 작업본만 가진 활성 글이 하나 있다
+  행동  해당 글의 `id`, `locale: "en"`, 공백이 포함된 `slug`로 `entries.addLocale`을 실행한다
+  결과  ENT-LOC-6.1  `BAD_REQUEST` 오류를 던진다
+        ENT-LOC-6.2  `entry_locales` 테이블에 `"en"` 행이 생기지 않는다
+
+ENT-LOC-7  필드의 타입이나 제약에 어긋난 데이터면 `BAD_REQUEST`로 거절한다
+  전제  스키마에 `number` 필드가 있는 컬렉션과 두 언어(`ko`, `en`)가 있고, `ko` 원문 작업본만 가진 활성 글이 하나 있다
+  행동  해당 글의 `id`, `locale: "en"`, 유효한 `slug`, `number` 필드에 문자열을 담은 `data`로 `entries.addLocale`을 실행한다
+  결과  ENT-LOC-7.1  `BAD_REQUEST` 오류를 던진다
+        ENT-LOC-7.2  `entry_locales` 테이블에 `"en"` 행이 생기지 않는다
+
+ENT-LOC-8  휴지통에 있는 글에는 `NOT_FOUND`로 언어 추가를 거절한다
+  전제  스키마에 두 언어(`ko`, `en`)가 있고 `ko` 원문 작업본만 가진 휴지통 글(`trashed_at` 설정)이 하나 있다
+  행동  휴지통 글의 `id`, `locale: "en"`, 유효한 `slug`로 `entries.addLocale`을 실행한다
+  결과  ENT-LOC-8.1  `NOT_FOUND` 오류를 던진다
+        ENT-LOC-8.2  휴지통 글에 `"en"` 행이 생기지 않는다
+```
+
+## 9. 언어 삭제 (`removeLocale`)
+
+```
+ENT-RLOC-1  비원문 언어를 즉시 삭제하면 발행본도 함께 지워지고 남은 언어 기준으로 미디어 사용처를 갱신한다
+  전제  스키마에 `many: true`인 `media` 필드가 있는 컬렉션과 두 언어(`ko`, `en`), 활성 미디어 둘이 있고, 활성 글 하나의 `ko` 작업본·발행본은 첫 번째 미디어를, `en` 작업본·발행본은 첫 번째와 두 번째 미디어를 모두 참조하며 `media_uses`에 두 미디어 참조가 모두 있다
+  행동  해당 글의 `id`와 `locale: "en"`으로 `entries.removeLocale`을 실행한다
+  결과  ENT-RLOC-1.1  반환값이 `{ id, locale: "en" }`이다
+        ENT-RLOC-1.2  `entry_locales`와 `entry_published` 테이블에서 `(entry_id, "en")` 행이 모두 사라진다
+        ENT-RLOC-1.3  `entries` 행과 `entry_locales`·`entry_published` 테이블의 `(entry_id, "ko")` 행이 모두 그대로 남는다
+        ENT-RLOC-1.4  `media_uses`에 첫 번째 미디어 참조는 남고 두 번째 미디어 참조는 사라진다
+
+ENT-RLOC-2  아직 발행하지 않은 비원문 언어도 즉시 삭제할 수 있다
+  전제  `ko` 원문과 미발행 `en` 작업본(`entry_published`에 `"en"` 행 없음)을 가진 활성 글이 하나 있다
+  행동  해당 글의 `id`와 `locale: "en"`으로 `entries.removeLocale`을 실행한다
+  결과  ENT-RLOC-2.1  반환값이 `{ id, locale: "en" }`이다
+        ENT-RLOC-2.2  `entry_locales` 테이블에서 `(entry_id, "en")` 행이 사라지고 `(entry_id, "ko")` 행과 `entries` 행은 그대로 남는다
+
+ENT-RLOC-3  원문 언어를 단독으로 삭제하려 하면 `BAD_REQUEST`로 거절한다
+  전제  `ko` 원문과 `en` 작업본을 가진 활성 글이 하나 있다
+  행동  해당 글의 `id`와 `locale: "ko"`로 `entries.removeLocale`을 실행한다
+  결과  ENT-RLOC-3.1  `BAD_REQUEST` 오류를 던진다
+        ENT-RLOC-3.2  `entries` 행과 `entry_locales`의 `"ko"`·`"en"` 행이 모두 그대로 남아 있다
+
+ENT-RLOC-4  글에 없는 언어를 삭제하려 하면 `NOT_FOUND`로 거절한다
+  전제  `ko` 원문 작업본만 가진 활성 글이 하나 있다
+  행동  해당 글의 `id`와 `locale: "en"`으로 `entries.removeLocale`을 실행한다
+  결과  ENT-RLOC-4.1  `NOT_FOUND` 오류를 던진다
+        ENT-RLOC-4.2  `entry_locales`의 `"ko"` 행이 원래 그대로이다
+
+ENT-RLOC-5  휴지통에 있는 글의 언어는 `NOT_FOUND`로 삭제를 거절한다
+  전제  `ko` 원문과 `en` 작업본을 가진 휴지통 글(`trashed_at` 설정)이 하나 있다
+  행동  휴지통 글의 `id`와 `locale: "en"`으로 `entries.removeLocale`을 실행한다
+  결과  ENT-RLOC-5.1  `NOT_FOUND` 오류를 던진다
+        ENT-RLOC-5.2  휴지통 글의 `"en"` 행이 원래 그대로이다
+```
+
+
+
