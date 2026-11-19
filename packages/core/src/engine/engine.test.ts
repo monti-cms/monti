@@ -322,3 +322,32 @@ it("ENG-11 rejects a plugin whose operation path is already taken", () => {
 		),
 	);
 });
+
+it("ENG-12 turns a PostgreSQL unique violation in a write into CONFLICT and rolls it back", async () => {
+	const create = defineWrite({
+		input: folderInput,
+		run: async (input, ctx) => {
+			await insertFolder(input, ctx);
+			return insertFolder(input, ctx);
+		},
+	});
+	const monti = createMonti(db, { folders: { create } });
+	const listener = vi.fn();
+	monti.onEvent(listener);
+
+	const direct = monti.folders.create({ id: randomUUID(), name: "Photos" });
+	const dryRun = monti.dryRun((tx) => tx.folders.create({ id: randomUUID(), name: "Videos" }));
+
+	// ENG-12.1
+	await expect(direct).rejects.toBeInstanceOf(MontiError);
+	// ENG-12.1
+	await expect(direct).rejects.toMatchObject({ code: "CONFLICT" });
+	// ENG-12.1
+	await expect(dryRun).rejects.toBeInstanceOf(MontiError);
+	// ENG-12.1
+	await expect(dryRun).rejects.toMatchObject({ code: "CONFLICT" });
+	// ENG-12.2
+	expect(await folderNames()).toEqual([]);
+	// ENG-12.3
+	expect(listener).not.toHaveBeenCalled();
+});

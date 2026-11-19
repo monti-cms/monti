@@ -9,12 +9,12 @@ interface UseSource {
 	source_id: string;
 }
 
-/** Every media id the blocks and their children reference in `attrs.mediaId` or `attrs.mediaIds`, each once. */
+/** Every media id the blocks and their children reference in `attrs.mediaId` or `attrs.mediaIds`, lowercased and each once. */
 function mediaIdsOf(blocks: readonly Block[], ids = new Set<string>()): Set<string> {
 	for (const block of blocks) {
 		const { mediaId, mediaIds } = block.attrs ?? {};
-		if (typeof mediaId === "string") ids.add(mediaId);
-		if (Array.isArray(mediaIds)) for (const id of mediaIds) if (typeof id === "string") ids.add(id);
+		if (typeof mediaId === "string") ids.add(mediaId.toLowerCase());
+		if (Array.isArray(mediaIds)) for (const id of mediaIds) if (typeof id === "string") ids.add(id.toLowerCase());
 		mediaIdsOf(block.children ?? [], ids);
 	}
 	return ids;

@@ -29,7 +29,7 @@ async function startUpload(input: z.infer<typeof startUploadInput>, ctx: WriteCo
 }
 
 const createInput = z.object({
-	id: z.uuid().optional(),
+	__preset_id: z.uuid().optional(),
 	folder_id: z.uuid().nullable().optional(),
 	key: z.string(),
 	metadata: metadataInput.optional(),
@@ -44,7 +44,7 @@ async function createMedia(input: z.infer<typeof createInput>, ctx: WriteContext
 	const row = await ctx.db
 		.insertInto("media")
 		.values({
-			id: input.id ?? randomUUID(),
+			id: input.__preset_id ?? randomUUID(),
 			folder_id: input.folder_id ?? null,
 			key: input.key,
 			mime_type: stat.mime,

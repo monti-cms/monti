@@ -78,11 +78,11 @@ it("FLD-1 creates a root folder in a collection scope", async () => {
 	expect(rows.map((row) => row.id)).toEqual([output.id]);
 });
 
-it("FLD-2 creates a child folder in the media scope with the given id", async () => {
+it("FLD-2 creates a child folder in the media scope with the given __preset_id", async () => {
 	const root = await seedFolder({ scope: MEDIA, name: "Root" });
 	const id = randomUUID();
 
-	const output = await montiOf().folders.create({ id, scope: MEDIA, name: "Photos", parent_id: root });
+	const output = await montiOf().folders.create({ __preset_id: id, scope: MEDIA, name: "Photos", parent_id: root });
 
 	// FLD-2.1
 	expect(output.id).toBe(id);

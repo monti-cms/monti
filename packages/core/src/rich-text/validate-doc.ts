@@ -1,4 +1,4 @@
-import type { z } from "zod";
+import { z } from "zod";
 import type { BlockDefinition, BlockHolds, DocIssue, MarkDefinition, ValidateDocOptions } from "./types";
 
 const LIST = ["listItem"];
@@ -29,6 +29,9 @@ const BUILT_IN_MARKS: readonly MarkDefinition[] = [
 	"sup",
 	"sub",
 ].map((type) => ({ type }));
+
+/** Attributes every block may carry, checked whatever its definition says. */
+const RESERVED_ATTRS: Record<string, z.ZodTypeAny> = { mediaId: z.uuid(), mediaIds: z.array(z.uuid()) };
 
 /** The `holds` a block needs for each key it may carry. */
 const HELD_BY: Record<"content" | "children", BlockHolds> = { content: "text", children: "blocks" };
@@ -101,8 +104,14 @@ function blockDefinition(check: Check, type: unknown, path: string): BlockDefini
 }
 
 function checkAttrs(check: Check, attrs: unknown, schema: z.ZodTypeAny | undefined, path: string): void {
-	if (attrs !== undefined && !isRecord(attrs)) report(check, path, "attrs must be an object.");
-	else if (schema) checkSchema(check, schema, attrs ?? {}, path);
+	if (attrs !== undefined && !isRecord(attrs)) {
+		report(check, path, "attrs must be an object.");
+		return;
+	}
+	if (schema) checkSchema(check, schema, attrs ?? {}, path);
+	for (const [key, reserved] of Object.entries(RESERVED_ATTRS)) {
+		if (attrs?.[key] !== undefined) checkSchema(check, reserved, attrs[key], `${path}.${key}`);
+	}
 }
 
 function checkHeld(check: Check, block: Value, definition: BlockDefinition, path: string): void {

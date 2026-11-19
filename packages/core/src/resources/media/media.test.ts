@@ -313,6 +313,19 @@ it("MED-15 rolls the bulk move back with NOT_FOUND when one of the ids is trashe
 	expect((await mediaRow(active.id)).folder_id).toBeNull();
 });
 
+it("MED-16 registers the media with the given __preset_id", async () => {
+	const id = randomUUID();
+	const key = randomUUID();
+	storage.seed(key, { mime: "image/png", size: 1024 });
+
+	const output = await montiOf().media.create({ __preset_id: id, key });
+
+	// MED-16.1
+	expect(output.id).toBe(id);
+	// MED-16.2
+	expect((await mediaRows()).map((row) => row.id)).toEqual([id]);
+});
+
 function byId(a: { id: string }, b: { id: string }): number {
 	return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
 }

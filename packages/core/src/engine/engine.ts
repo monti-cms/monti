@@ -142,9 +142,17 @@ function bind(operation: Operation, path: string, runner: Runner): (input: unkno
 async function execute(operation: Operation, path: string, raw: unknown, runner: Runner): Promise<unknown> {
 	const input = parseInput(operation, raw);
 	if (operation.kind === "read") return operation.run(input, runner.context());
-	const output = await runner.write((ctx) => operation.run(input, ctx));
+	const output = await runner.write((ctx) => operation.run(input, ctx)).catch(asConflict);
 	runner.emit({ operation: path, input, output });
 	return output;
+}
+
+/** A PostgreSQL unique violation (`23505`) becomes `CONFLICT`; any other error is thrown as it is. */
+function asConflict(error: unknown): never {
+	if (typeof error === "object" && error !== null && "code" in error && error.code === "23505") {
+		throw new MontiError("CONFLICT", "The write would duplicate a unique value");
+	}
+	throw error;
 }
 
 /** A call without an input is parsed as given first, then as `{}` when the schema does not accept `undefined`. */

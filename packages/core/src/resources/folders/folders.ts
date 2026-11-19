@@ -26,7 +26,7 @@ async function listFolders(input: z.infer<typeof listInput>, ctx: ReadContext): 
 }
 
 const createInput = z.object({
-	id: z.uuid().optional(),
+	__preset_id: z.uuid().optional(),
 	scope: z.string(),
 	name: z.string(),
 	parent_id: z.uuid().nullable().optional(),
@@ -38,15 +38,14 @@ async function createFolder(input: z.infer<typeof createInput>, ctx: WriteContex
 		throw new MontiError("BAD_REQUEST", `No collection or media has the scope "${input.scope}"`);
 	}
 	const folder = {
-		id: input.id ?? randomUUID(),
+		id: input.__preset_id ?? randomUUID(),
 		scope: input.scope,
 		name: input.name,
 		parent_id: input.parent_id ?? null,
 	};
 	if (folder.parent_id !== null) await rejectParent(ctx, folder.parent_id, folder.scope);
 	await rejectTaken(ctx, folder);
-	await ctx.db.insertInto("folders").values(folder).execute();
-	return folder;
+	return ctx.db.insertInto("folders").values(folder).returning(SHOWN).executeTakeFirstOrThrow();
 }
 
 /** Rejects a parent that is not an active folder of `scope`. */

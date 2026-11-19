@@ -182,10 +182,15 @@ it("TPL-1 creates and returns a template of a collection on an engine without st
 	expect(await templateRows()).toEqual([output]);
 });
 
-it("TPL-2 creates a template with the given id", async () => {
+it("TPL-2 creates a template with the given __preset_id", async () => {
 	const id = randomUUID();
 
-	const output = await montiOf().templates.create({ id, collection: POSTS, name: "Review", content: PLAIN });
+	const output = await montiOf().templates.create({
+		__preset_id: id,
+		collection: POSTS,
+		name: "Review",
+		content: PLAIN,
+	});
 
 	// TPL-2.1
 	expect(output.id).toBe(id);
@@ -204,7 +209,7 @@ it("TPL-3 creates a template whose name another collection already has", async (
 	expect(byId(await templateRows())).toEqual(byId([existing, output]));
 });
 
-it("TPL-4 records every media in the block tree's attrs.mediaId and attrs.mediaIds once in media_uses", async () => {
+it("TPL-4 records every media in the block tree's attrs.mediaId and attrs.mediaIds once in media_uses, ignoring case", async () => {
 	const first = await seedMedia();
 	const second = await seedMedia();
 	const third = await seedMedia();
@@ -216,7 +221,7 @@ it("TPL-4 records every media in the block tree's attrs.mediaId and attrs.mediaI
 				type: "quote",
 				children: [
 					{ id: "b3", type: "image", attrs: { mediaId: second } },
-					{ id: "b4", type: "gallery", attrs: { mediaIds: [second, third] } },
+					{ id: "b4", type: "gallery", attrs: { mediaIds: [second.toUpperCase(), third] } },
 				],
 			},
 		],

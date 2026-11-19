@@ -37,7 +37,7 @@ async function rejectTaken(ctx: WriteContext, template: Omit<Template, "content"
 }
 
 const createInput = z.object({
-	id: z.uuid().optional(),
+	__preset_id: z.uuid().optional(),
 	collection: z.string(),
 	name: z.string(),
 	content: z.unknown(),
@@ -49,7 +49,7 @@ async function createTemplate(input: z.infer<typeof createInput>, ctx: WriteCont
 		throw new MontiError("BAD_REQUEST", `No collection is named "${input.collection}"`);
 	}
 	const doc = docOf(input.content, ctx);
-	const template = { id: input.id ?? randomUUID(), collection: input.collection, name: input.name };
+	const template = { id: input.__preset_id ?? randomUUID(), collection: input.collection, name: input.name };
 	await rejectTaken(ctx, template);
 	await replaceMediaUses(ctx, { source_kind: "template", source_id: template.id }, "content", doc);
 	return ctx.db

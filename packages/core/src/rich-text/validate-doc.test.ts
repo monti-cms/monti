@@ -50,8 +50,8 @@ it("RT-1 returns no issues for a valid document", () => {
 		{ id: "b7", type: "checklist", children: [] },
 		{ id: "b8", type: "quote" },
 		{ id: "b9", type: "divider" },
-		{ id: "b10", type: "image", attrs: { mediaId: "m1" } },
-		{ id: "b11", type: "file", attrs: { mediaId: "m2" } },
+		{ id: "b10", type: "image", attrs: { mediaId: "6d1f3b2a-8c4e-4f7a-9b2d-3e5f7a9c1b20" } },
+		{ id: "b11", type: "file", attrs: { mediaId: "c3a5e7f9-2b4d-4e6f-8a1c-5d7e9f1b3c42" } },
 		{ id: "b12", type: "table", attrs: { rows: [["a", "b"]] } },
 		{ id: "b13", type: "listItem", children: [] },
 	];
@@ -240,4 +240,33 @@ it("RT-10 keeps and overrides built-in marks with registered definitions and che
 	expect(under(paths, "blocks[0].content[0]")).toEqual([]);
 	// RT-10.4
 	expect(under(paths, "blocks[0].content[1]")).toEqual([]);
+});
+
+it("RT-11 checks the reserved attrs.mediaId and attrs.mediaIds as UUIDs when they are given", () => {
+	const paths = pathsOf({
+		blocks: [
+			{ id: "b0", type: "image", attrs: { mediaId: "0b9b5f0e-3c1a-4a52-9d8e-6f1f0d6c2a11" } },
+			{
+				id: "b1",
+				type: "file",
+				attrs: { mediaIds: ["4f2c8e7a-1b3d-4c5e-8f9a-0b1c2d3e4f50", "9a8b7c6d-5e4f-4a3b-9c2d-1e0f9a8b7c6d"] },
+			},
+			{ id: "b2", type: "image", attrs: { mediaId: "not-a-uuid" } },
+			{ id: "b3", type: "image", attrs: { mediaId: null } },
+			{ id: "b4", type: "file", attrs: { mediaIds: ["4f2c8e7a-1b3d-4c5e-8f9a-0b1c2d3e4f50", "nope"] } },
+			{ id: "b5", type: "file", attrs: { mediaIds: "4f2c8e7a-1b3d-4c5e-8f9a-0b1c2d3e4f50" } },
+		],
+	});
+	// RT-11.1
+	expect(paths).toContain("blocks[2].attrs.mediaId");
+	// RT-11.2
+	expect(paths).toContain("blocks[3].attrs.mediaId");
+	// RT-11.3
+	expect(paths).toContain("blocks[4].attrs.mediaIds");
+	// RT-11.4
+	expect(paths).toContain("blocks[5].attrs.mediaIds");
+	// RT-11.5
+	expect(under(paths, "blocks[0]")).toEqual([]);
+	// RT-11.5
+	expect(under(paths, "blocks[1]")).toEqual([]);
 });
