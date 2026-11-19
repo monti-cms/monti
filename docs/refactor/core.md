@@ -170,6 +170,7 @@ export interface MontiConfig {
   dev?: boolean;
   storage?: StorageAdapter;
   blocks?: BlockDefinition[];
+  marks?: MarkDefinition[];
   plugins?: Plugin[];
 }
 ```
@@ -182,7 +183,7 @@ export interface MontiConfig {
 ## 4. 컨텍스트와 설정
 
 - `ctx`는 `db`, `schema`, `config`, `storage`다. 쓰기에는 `setSchema`, `setConfig`가 더해지고, 쓰기의 `db`는 항상 트랜잭션이다.
-- `monti.config.ts`: `name`, `dev?`, `storage?`, `blocks?`, `plugins?`. 관리자 표시 언어는 admin·Next 연결의 `localStorage`가 맡고, 콘텐츠 언어 목록은 `monti.schema.ts`의 `locales`에 둔다.
+- `monti.config.ts`: `name`, `dev?`, `storage?`, `blocks?`, `marks?`, `plugins?`. 관리자 표시 언어는 admin·Next 연결의 `localStorage`가 맡고, 콘텐츠 언어 목록은 `monti.schema.ts`의 `locales`에 둔다.
 - **개발 서버 판정**: `config.dev ?? (process.env.NODE_ENV === "development")`. 환경 변수가 없거나 `test`이면 개발 서버가 아니다.
 - **스키마·설정 수정**은 개발 서버에서만 된다(`setSchema`, `setConfig`, `schema.update`, `config.update`). 운영에서는 `FORBIDDEN`이다. 두 함수는 트랜잭션 안의 사본만 바꾸고, 커밋 뒤에 공유 상태와 파일에 반영한다. 롤백이나 `dryRun`이면 사본을 버린다. `setConfig`는 `name`만 받는다.
 - **저장소**: `storage`는 선택이다. 저장소가 필요한 기능을 설정 없이 부르면 `MontiError`로 거절한다. 테스트는 `__test__/`의 메모리 저장소를 쓴다.
@@ -395,7 +396,7 @@ packages/core/src/
 │       └── 0001-initial.ts     [함수] 첫 마이그레이션
 │
 ├── rich-text/                  층 0: 아무것도 import하지 않는다
-│   ├── types.ts                [타입] Doc, Block, BlockDefinition (검사에 쓰는 부분만)
+│   ├── types.ts                [타입] Doc, Block, BlockDefinition, MarkDefinition (검사에 쓰는 부분만)
 │   └── validate-doc.ts         [함수] 본문 검사. 오류를 던지지 않고 문제 목록을 돌려준다
 │
 ├── engine/                     층 1: db, rich-text만 import한다. 동력부
@@ -449,7 +450,7 @@ flowchart TD
 
 - `engine/`은 리소스 트리를 입력으로 받고 구체적인 `resources/`를 import하지 않는다. `index.ts`가 둘을 조립한다.
 - `engine/`의 `*-file.ts`와 `state.ts`가 스키마·설정의 상태를 들고 커밋 뒤 파일에 쓴다. `schema.update`·`config.update` 같은 기능은 `resources/schema/`와 `resources/config/`에 두고 `setSchema`·`setConfig`로 요청만 한다.
-- `BlockDefinition`의 데이터 계약은 `rich-text/types.ts`에 둔다. `engine/types.ts`의 `MontiConfig`가 이 타입을 쓰는 것은 아래 층을 쓰는 정상 방향이다. 화면 컴포넌트(`Site`, `Editor` 등)는 CMS의 블록 정의에 담지 않는다. 블록을 그리는 일은 사이트가 한다.
+- `BlockDefinition`·`MarkDefinition`의 데이터 계약은 `rich-text/types.ts`에 둔다. `engine/types.ts`의 `MontiConfig`가 이 타입들을 쓰는 것은 아래 층을 쓰는 정상 방향이다. 화면 컴포넌트(`Site`, `Editor` 등)는 CMS의 블록·서식 정의에 담지 않는다. 블록과 서식을 그리는 일은 사이트가 한다.
 - `rich-text/validate-doc.ts`는 오류를 던지지 않는다. 문제 목록을 `BAD_REQUEST`로 바꾸는 일은 부르는 리소스(`entries`, `templates`, `data`)가 한다. 특정 블록의 전용 규칙은 그 블록의 패키지에 둔다.
 - `Migration` 타입은 `db/types.ts`에 두고 `Plugin`이 이를 참조한다. `db/migrate.ts`는 `scope`(`"core"` 또는 플러그인 이름)와 `Migration[]` 배열만 받아서 `Plugin`을 모른다.
 - 외부 패키지와 사이트는 공개 Operation을 직접 호출한다.
@@ -502,14 +503,13 @@ flowchart TD
 | 2026-11-18 | 검증은 자동 검사, 다른 모델의 코드 리뷰, 단계 끝의 Stryker 세 겹이다. | 소유자와 정함 |
 | 2026-11-18 | TypeScript는 6을 쓰고, 돌연변이 테스트는 Stryker만 쓴다. | 소유자와 정함 |
 | 2026-11-18 | AC 폴더 이름은 `docs/acceptance/core/`다. | 만들며 정함 |
+| 2026-11-19 | 서식(mark)도 블록과 같이 `MontiConfig.marks?: MarkDefinition[]`로 등록해 내장 마크 8종과 합쳐 검사한다. | 소유자와 정함 |
 
 ## 11. 정하지 않은 것
 
 아래는 확정된 동작으로 다루지 않는다.
 
-- **본문 검사의 범위와 `rich-text/`의 파일 구성**. 글 저장·AI·가져오기가 모두 지나는 검사의 최소 목록을 3단계 `entries` 테스트 계획 전에 정한다.
 - **본문 검사의 문제 목록을 `BAD_REQUEST`로 바꿔 던지는 도우미의 위치.** 문제 목록 전체를 오류의 `details`에 실어서 던진다(첫 문제만 던지지 않는다). 위치는 3단계 `entries` 테스트 계획에서 정한다.
-- **core의 `BlockDefinition`에 담을 범위**. 검사에 쓰는 것만 담고 화면 정보는 담지 않는다. 2단계에서 설정 타입을 정할 때 함께 정한다.
 - **엔진 안의 파일 구성**(스키마·설정 파일을 읽고 검증하고 쓰는 코드, 상태 관리, 플러그인 모으기, 명세)과 **리소스 폴더 안의 파일 구성**. 각각 2단계와 3단계 테스트 계획에서 확정한다.
 - **죽은 코드 검사**(`knip`). 코어의 공개 출구(`index.ts`)가 생긴 뒤 코어에만 더한다. 그 전에는 아래층 코드가 아직 쓰이지 않아 오류만 난다.
 - **사이트 이름을 스키마로 옮길지**. 옮기면 `config.update`와 `setConfig`가 필요 없어진다. 2단계 전에 정한다.
