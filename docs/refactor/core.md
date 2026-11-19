@@ -370,7 +370,8 @@ erDiagram
 - 구조와 설정(컬렉션, 필드, 라벨, 설명, 배치, 편집기 옵션, `locales`, 사이트 이름)은 코드 파일이 유일한 원천이다.
 - 개인 화면 상태(열 너비, 숨김 열, 페이지 크기, 표시 언어)는 브라우저에 둔다.
 - `entry_locales`(언어별 작업본)와 `entry_published`(언어별 발행본)는 `entries`(공통 정보)와 합쳐 같은 모양으로 읽힌다. 일반 조회는 발행본, `draft: true`는 작업본이며, 이 선택은 `resources/entries/`의 Operation이 한다.
-- 번역의 원문 확인·블록 연결·건너뛰기 상태는 `entry_locales.translation_seen` 하나에 둔다.
+- 번역 상태는 번역 언어 작업본의 `entry_locales.translation_seen` 하나에 둔다. 번역하는 사람이 확인한 원문의 값(필드는 키별, 본문은 원문 블록 `id`별)을 값 그대로 기록하고, 본문 블록은 연결한 번역 블록의 `id`나 번역 제외 표시를 함께 기록한다. 연결은 번역 언어 작업본에만 있는 단방향이라 원문 언어 작업본에는 기록하지 않는다. `unseen`(기록 없음)·`seen`(기록한 값이 지금의 원문과 같음)·`outdated`(다름)는 저장하지 않고 읽을 때마다 비교해 계산하며, 화면이 확인한 값과 지금의 원문을 나란히 보여 줄 수 있도록 읽기 결과에 확인한 값도 담는다.
+- 번역 상태를 갖는 본문 블록은 글자나 내용을 직접 품는 블록(`holds`가 `text` 또는 `nothing`)이다. 다른 블록을 품는 컨테이너 블록(`holds`가 `blocks`)은 상태를 갖지 않고, 안에 든 블록이 깊이와 관계없이 각자 가진다.
 - 관계의 순서는 값 JSON에만 둔다. 역방향 관계(태그에서 그 태그가 달린 글)는 글의 관계 값을 조회해서 찾는다.
 - `media_uses`는 글·템플릿을 쓸 때 같은 트랜잭션 안에서 갱신한다. 글의 미디어 사용처는 해당 글의 모든 언어 작업본 참조를 합쳐 `source_id = entries.id`로 기록한다. 본문과 미디어 필드에서 사용처를 모으는 일은 `resources/media/`가 한다.
 - 외래 키 `entry_locales → entries`와 `entry_published → entry_locales(entry_id, locale)`는 `ON DELETE CASCADE`로 두어 글이나 비원문 언어를 지울 때 하위 행이 함께 지워지게 한다. `media_uses`는 논리 참조이므로 삭제·갱신하는 Operation이 같은 트랜잭션 안에서 직접 정리한다.
@@ -383,7 +384,7 @@ erDiagram
 | 리소스 | 동사 | 고유 액션 |
 |---|---|---|
 | `entries` | `list`, `get`, `create`, `update`(필드·본문·폴더·슬러그) | `publish`, `unpublish`, `duplicate`, `replaceReferences`, `addLocale`, `removeLocale`, `setSourceLocale` |
-| `translationStatus` | `list`, `get`, `update`(블록 연결·건너뛰기·원문 확인) | |
+| `translationStatus` | `list`, `get`, `update`(원문 확인·블록 연결·번역 제외) | |
 | `templates` | `list`, `get`, `create`, `update`, `delete` | |
 | `folders` | `list`, `create`, `update`(이름·이동) | |
 | `media` | `list`, `get`, `create`(업로드 등록), `update`(메타·이동·파일 교체) | `startUpload` |
@@ -542,6 +543,8 @@ flowchart TD
 | 2026-11-20 | 리소스 공용 도우미(`uuidInput`·`timestampInput`·`docOf`)는 `resources/_shared/`에 두고, `uuidInput`은 JSON Schema 변환이 깨지지 않도록 `z.uuid().overwrite((id) => id.toLowerCase())`로 소문자 정규화한다. | 소유자와 정함 |
 | 2026-11-20 | `entries.publish`는 선택 입력 `published_at`(타임존 포함 ISO 8601)을 받으며 생략 시 최초 발행은 현재 시각, 재발행은 기존 시각을 유지한다. `entries.unpublish`는 미발행 글에도 멱등 성공한다. `entries.duplicate`는 원문 언어 작업본만 미발행 복제하며(쓰기 공통 검증 재적용), `slug` 생략 시 `-copy`, `-copy-2`…을 자동 부여한다. | 소유자와 정함 |
 | 2026-11-20 | 기준 언어 전환은 `entries.setSourceLocale({ id, locale })` 별도 액션으로 둔다. 글에 이미 있는 다른 언어로 바꾸면 그 글의 모든 `entry_locales.translation_seen`을 `{}`로 초기화하고(이미 기준 언어면 유지), 없거나 휴지통 글·없는 언어는 `NOT_FOUND`로 거절한다. | 소유자와 정함 |
+| 2026-11-20 | 번역 상태의 연결은 원문 블록 `id` 기준의 원문 → 번역 단방향이고 번역 언어 작업본에만 저장한다(원문 언어 작업본에는 두지 않는다). 연결한 번역 블록이 번역 본문에서 지워지거나, 번역 제외로 표시한 원문 블록이 나중에 바뀌면 다시 `outdated`로 알린다. 표는 한 덩어리로 보고, 확인했던 원문 값과 지금의 원문을 비교해 보여 주는 일은 화면이 한다. | 소유자와 정함 |
+| 2026-11-20 | `translationStatus`는 번역 언어 작업본마다 확인한 원문의 값을 `translation_seen`에 그대로 기록하고 상태(`unseen`·`seen`·`outdated`)는 읽을 때 계산하며 읽기 결과에 확인한 값도 담는다. 상태를 갖는 본문 블록은 `holds`가 `text`·`nothing`인 블록이고 컨테이너 블록(`blocks`)은 갖지 않는다. 작업본의 생성은 `entries.addLocale`, 삭제는 `entries.removeLocale`, 전체 초기화는 `entries.setSourceLocale`이 하므로 `create`·`delete`를 두지 않는다. `update`는 `fields`(키별 `true` 확인·`null` 기록 삭제)와 `blocks`(원문 블록 `id`별 `{ link }` 연결·`{ exclude: true }` 번역 제외·`null` 기록 삭제)를 받는다. | 만들며 정함 |
 
 ## 11. 정하지 않은 것
 
@@ -554,3 +557,4 @@ flowchart TD
 - **`loose_files`의 실제 삭제** 시점·실행 주체·실패 처리. `dryRun`에서는 외부 삭제가 일어나지 않아야 한다. 3단계 휴지통 테스트 계획 전.
 - **플러그인 테이블 타입을 넘기는 호출 형태**(2단계 테스트 계획 전). `defineRead<AiTables>(…)`처럼 타입 매개변수 하나만 직접 지정하면 TypeScript가 나머지(`TSchema`, `TOutput`)를 추론하지 못한다. 3.5의 `TTables`를 어떤 호출 형태로 받을지 정한다.
 - **플러그인 밖에서 플러그인 Operation을 호출할 때의 타입.** 쓰는 곳이 생기면 상의한다.
+- **표 안의 칸 단위 번역 상태와 컨테이너 블록 자체 속성에 든 글자.** 표는 한 덩어리로 보고 칸 단위는 표 규격이 바뀔 때 정한다. 컨테이너 블록 자체의 속성에 글자가 있는 경우는 core가 어느 속성이 번역 대상인지 모르므로 블록 정의 쪽에서 정한다.
