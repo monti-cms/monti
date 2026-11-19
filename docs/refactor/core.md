@@ -524,6 +524,7 @@ flowchart TD
 | 2026-11-19 | 콘텐츠 생성 계열(`folders`·`templates`·`media`·`entries`·`translations` `create`, `entries.duplicate`)은 내부 예약 선택 입력 `__preset_id`(UUID)를 받고, 쓰기 중 PostgreSQL 고유 제약 위반(`23505`)은 엔진에서 `CONFLICT`로 변환한다. `@monti-cms/ai`는 LLM 스키마에서 `__preset_id`를 숨기고 실행기가 `randomUUID()`를 주입한다. | 소유자와 정함 |
 | 2026-11-19 | `validateDoc`은 블록의 예약 속성 `attrs.mediaId`(`z.uuid()`)·`attrs.mediaIds`(`z.array(z.uuid())`)에 값이 주어지면 UUID 형식을 검사해 `DocIssue`로 보고하고, `resources/media/uses.ts`는 소문자 정규화로 대소문자 혼용 UUID 중복을 제거한다. | 소유자와 정함 |
 | 2026-11-19 | 동시 쓰기 경쟁 대비(`FOR UPDATE` 행 잠금, 추가 DB 유니크 인덱스)는 지금 도입하지 않고 필요할 때 다룬다. | 소유자와 정함 |
+| 2026-11-20 | 컬렉션은 `kind` 구분 없이 `{ body?, label?, description?, fields }`로 통일하고, `Schema`의 필드는 정의된 8종(`text`·`number`·`boolean`·`date`·`select`·`media`·`relation`·`conditional`)으로 타입을 명시한다(`schema.update`도 동일 스키마로 검증). | 소유자와 정함 |
 
 ## 11. 정하지 않은 것
 
