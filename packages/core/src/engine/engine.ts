@@ -147,8 +147,10 @@ async function execute(operation: Operation, path: string, raw: unknown, runner:
 	return output;
 }
 
+/** A call without an input is parsed as given first, then as `{}` when the schema does not accept `undefined`. */
 function parseInput(operation: Operation, raw: unknown): unknown {
-	const result = operation.input.safeParse(raw);
+	const parsed = operation.input.safeParse(raw);
+	const result = !parsed.success && raw === undefined ? operation.input.safeParse({}) : parsed;
 	if (!result.success) throw new MontiError("BAD_REQUEST", result.error.message, result.error.issues);
 	return result.data;
 }

@@ -26,6 +26,22 @@ export interface MontiConfig {
 	blocks?: BlockDefinition[];
 	/** Mark types added to the built-in ones; one with a built-in's `type` replaces it. */
 	marks?: MarkDefinition[];
+	/** Where the media files live; without it the media resource is refused. */
+	storage?: StorageAdapter;
+}
+
+/**
+ * The object store of the media files. Which MIME types and sizes it accepts is the adapter's own policy: `ticket`
+ * rejects what it does not accept.
+ */
+export interface StorageAdapter {
+	/** A one-time upload to `key`: the client sends the file to `url` with `headers`. */
+	ticket(key: string, info: { mime: string; size: number }): Promise<{ url: string; headers: Record<string, string> }>;
+	/** The uploaded file at `key`, or null when there is none. */
+	stat(key: string): Promise<{ mime: string; size: number } | null>;
+	/** Where the file at `key` is read from. */
+	url(key: string): string;
+	remove(key: string): Promise<void>;
 }
 
 /** The schema and config the engine starts with, and the files it writes their changes to. */
@@ -41,6 +57,8 @@ export interface ReadContext {
 	db: Kysely<Database> | Transaction<Database>;
 	schema: Schema;
 	config: MontiConfig;
+	/** The same adapter as `config.storage`. */
+	storage?: StorageAdapter;
 }
 
 /** What a write's `run` gets: a write always runs inside a transaction. */
@@ -95,10 +113,17 @@ export type MontiClient<R extends ResourceTree> = { [K in keyof R]: ClientNode<R
 
 /** One node of `MontiClient`, mapped member by member so a node typed `Operation | ResourceTree` maps too. */
 type ClientNode<N> = N extends ReadOperation<infer I, infer O> | WriteOperation<infer I, infer O>
-	? (input: I) => Promise<O>
+	? Call<I, O>
 	: N extends ResourceTree
 		? MontiClient<N>
 		: never;
+
+/** One operation's call: an input that accepts `undefined` or `{}` may be left out (`Record<never, never>` is `{}`). */
+type Call<I, O> = [undefined] extends [I]
+	? (input?: I) => Promise<O>
+	: Record<never, never> extends I
+		? (input?: I) => Promise<O>
+		: (input: I) => Promise<O>;
 
 /** The writes of a resource tree only, at the same key paths: what a `dryRun` block gets. */
 export type MontiWriteClient<R extends ResourceTree> = {
@@ -107,11 +132,7 @@ export type MontiWriteClient<R extends ResourceTree> = {
 
 /** One node of `MontiWriteClient`, mapped member by member like `ClientNode`. */
 type WriteClientNode<N> =
-	N extends WriteOperation<infer I, infer O>
-		? (input: I) => Promise<O>
-		: N extends ResourceTree
-			? MontiWriteClient<N>
-			: never;
+	N extends WriteOperation<infer I, infer O> ? Call<I, O> : N extends ResourceTree ? MontiWriteClient<N> : never;
 
 export type Monti<R extends ResourceTree = ResourceTree> = MontiClient<R> & {
 	/** Runs the block's calls in one transaction; their events are sent in call order once it commits. */

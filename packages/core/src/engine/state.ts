@@ -9,7 +9,7 @@ import type { MontiConfig, MontiState, ReadContext, Schema, Stage, WriteContext 
 export function createState(initial: MontiState) {
 	const shared = { ...initial };
 	function readContext(db: Kysely<Database>): ReadContext {
-		return { db, schema: shared.schema, config: shared.config };
+		return { db, schema: shared.schema, config: shared.config, storage: shared.config?.storage };
 	}
 	function stage(): Stage {
 		return stageOf(shared);
@@ -38,7 +38,7 @@ function stageOf(shared: MontiState): Stage {
 		});
 	}
 	function context(db: Transaction<Database>): WriteContext {
-		return { db, schema: copy.schema, config: copy.config, setSchema, setConfig };
+		return { db, schema: copy.schema, config: copy.config, storage: copy.config?.storage, setSchema, setConfig };
 	}
 	async function commit(): Promise<void> {
 		for (const effect of effects) await effect();
