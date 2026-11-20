@@ -11,13 +11,13 @@
   - `data.body`: `collection.body`가 `true`일 때만 허용하며 `validateDoc(body, ctx.config)` 실패 시 문제 목록 전체를 `details`에 담아 `BAD_REQUEST`로 거절한다.
 - `media_uses` 색인: `source_kind`를 `"entry"`, `source_id`를 `entries.id`로 하여 그 글의 모든 언어 작업본(`entry_locales`) 참조를 합쳐 본문은 `"body"`, 최상위 `media` 필드는 `"fields.<필드키>"`, `conditional` 하위 `media` 필드는 `"fields.<조건필드키>.fields.<하위필드키>"` 경로에 대소문자를 무시하고 한 번씩 기록한다.
 - `entries.get` · `entries.list`: 기본은 발행본(`entry_published`), `draft: true`는 작업본(`entry_locales`)을 돌려주며 휴지통 글은 제외한다. `get`은 `{ id, locale? }` 또는 `{ collection, locale, slug }`로, `list`는 `collection`·`locale`·`folder_id`·`relation`으로 거른다. 없는 글이나 언어는 `NOT_FOUND`다(2절).
-- `entries.update`: 단건은 한 언어 작업본의 `slug`·`data`(전체 교체)와 글 전체의 `folder_id`를 바꾸고, 다건(`{ ids, folder_id }`)은 폴더 일괄 이동만 한다. `data`를 바꿀 때만 `media_uses`를 모든 언어 기준으로 다시 세고, 발행본은 건드리지 않는다(3절).
-- `entries.publish`: 활성 글의 한 언어 작업본을 발행본으로 저장한다(`published_at`은 생략하면 최초 발행은 지금, 재발행은 기존 시각). 발행할 때 작업본을 지금의 스키마·설정·참조 상태로 다시 검사하고(지워진 필드의 옛 값은 건너뛴다) 필수 필드가 비어 있으면 `BAD_REQUEST`, 같은 슬러그의 다른 발행본이 있으면 `CONFLICT`로 거절한다(4절).
+- `entries.update`: 단건은 한 언어 작업본의 `slug`·`data`(전체 교체)와 글 전체의 `folder_id`를 바꾸고, 다건(`{ ids, folder_id }`)은 폴더 일괄 이동만 한다. `data`를 바꿀 때만 `media_uses`를 모든 언어 기준으로 다시 계산하고, 발행본은 건드리지 않는다(3절).
+- `entries.publish`: 활성 글의 한 언어 작업본을 발행본으로 저장한다(`published_at`은 생략하면 최초 발행은 지금, 재발행은 기존 시각). 발행할 때 작업본을 지금의 스키마·설정·참조 상태로 다시 검사하고(지워진 필드에 남은 값은 무시한다) 필수 필드가 비어 있으면 `BAD_REQUEST`, 같은 슬러그의 다른 발행본이 있으면 `CONFLICT`로 거절한다(4절).
 - `entries.unpublish`: 한 언어의 발행본만 지우고 작업본을 돌려준다. 이미 미발행이어도 성공한다(5절).
 - `entries.duplicate`: 원문 언어 작업본만 복제해 새 미발행 글을 만들며 쓰기 공통 검증과 `media_uses`를 그대로 적용하고 `__preset_id`를 받는다. `slug`를 생략하면 겹치지 않는 `-copy`, `-copy-2`…를 붙인다(6절).
 - `entries.replaceReferences`: 같은 컬렉션의 `from_id` 글을 가리키는 모든 `relation`(조건부 하위, 여러 개 선택 포함)을 `into_id`로 바꾼다. 모든 언어의 작업본과 발행본, 휴지통 글까지 고치고 `{ from_id, into_id, updated_ids }`를 돌려준다(7절).
-- `entries.addLocale`: 활성 글에 새 비원문 언어 작업본을 추가하고 모든 언어 기준으로 `media_uses`를 다시 센다. 작업본은 `required` 필드를 비워 둘 수 있고 다른 언어와 같은 `slug`도 된다(8절).
-- `entries.removeLocale`: 비원문 언어를 휴지통 없이 즉시 지우고(발행본 포함) 남은 언어 기준으로 `media_uses`를 다시 센다. 원문 언어는 지울 수 없다(`BAD_REQUEST`)(9절).
+- `entries.addLocale`: 활성 글에 새 비원문 언어 작업본을 추가하고 모든 언어 기준으로 `media_uses`를 다시 계산한다. 작업본은 `required` 필드를 비워 둘 수 있고 다른 언어와 같은 `slug`도 된다(8절).
+- `entries.removeLocale`: 비원문 언어를 휴지통 없이 즉시 지우고(발행본 포함) 남은 언어 기준으로 `media_uses`를 다시 계산한다. 원문 언어는 지울 수 없다(`BAD_REQUEST`)(9절).
 - `entries.setSourceLocale`: 기준 언어를 글에 이미 있는 다른 언어로 바꾸고 모든 언어의 `translation_seen`을 `{}`로 초기화한다. 이미 기준 언어면 그대로 돌려준다(10절).
 
 ---
@@ -291,13 +291,13 @@ ENT-UPD-13  글에 없는 언어를 지정해 단건 수정하면 `NOT_FOUND`로
   결과  ENT-UPD-13.1  `NOT_FOUND` 오류를 던진다
         ENT-UPD-13.2  `entry_locales` 테이블의 `"ko"` 행이 원래 그대로이다
 
-ENT-UPD-14  다른 언어 작업본에 스키마에 없는 값이 남아 있어도 단건 수정은 성공하고, 그 값은 미디어 사용처에 세지 않는다
+ENT-UPD-14  다른 언어 작업본에 스키마에 없는 값이 남아 있어도 단건 수정은 성공하고, 그 값은 `media_uses`에 기록하지 않는다
   전제  원문 언어(`ko`)와 비원문 언어(`en`) 작업본이 있는 활성 글이 하나 있고, `ko` 작업본의 `data.fields`에 스키마에 없는 키가 활성 미디어의 `id`를 값으로 담고 있다. 활성 미디어가 하나 더 있다
   행동  해당 글의 `id`, `locale: "en"`, 두 번째 미디어만 참조하는 새 `data`로 `entries.update`를 실행한다
   결과  ENT-UPD-14.1  오류 없이 끝나고 반환값의 `data`가 새 `data`이다
         ENT-UPD-14.2  `media_uses`에서 해당 글의 참조는 두 번째 미디어 하나뿐이다
 
-ENT-UPD-15  다른 언어 작업본이 영구 삭제된 미디어를 가리켜도 단건 수정은 성공하고, 그 미디어는 사용처에 세지 않는다
+ENT-UPD-15  다른 언어 작업본이 영구 삭제된 미디어를 가리켜도 단건 수정은 성공하고, 그 미디어는 `media_uses`에 기록하지 않는다
   전제  원문 언어(`ko`)와 비원문 언어(`en`) 작업본이 있는 활성 글이 하나 있고, `ko` 작업본의 `media` 필드가 영구 삭제되어 `media` 테이블에 없는 미디어의 `id`를 담고 있다. 활성 미디어가 하나 있다
   행동  해당 글의 `id`, `locale: "en"`, 활성 미디어만 참조하는 새 `data`로 `entries.update`를 실행한다
   결과  ENT-UPD-15.1  오류 없이 끝나고 반환값의 `data`가 새 `data`이다
@@ -522,7 +522,7 @@ ENT-REF-9  여러 언어가 있는 글의 참조를 바꾸면 모든 언어의 �
         ENT-REF-9.2  `entry_locales` 테이블의 `"ko"`와 `"en"` 행 모두 참조가 새 글로 바뀐다
         ENT-REF-9.3  `entry_published` 테이블의 `"ko"`와 `"en"` 행 모두 참조가 새 글로 바뀐다
 
-ENT-REF-10  옛 값이 남은 글이 있어도 참조 교체는 오류 없이 끝나고 그 글은 건드리지 않는다
+ENT-REF-10  지워진 필드의 값이 남은 글이 있어도 참조 교체는 오류 없이 끝나고 그 글은 건드리지 않는다
   전제  같은 컬렉션에 활성 글 둘(옛 글, 새 글)이 있고, 다른 컬렉션에 옛 글을 가리키는 글 하나와, 옛 글과 관계없이 스키마에서 지워진 필드의 값이 남은 글 하나가 있다
   행동  옛 글을 `from_id`, 새 글을 `into_id`로 넣어 `entries.replaceReferences`를 실행한다
   결과  ENT-REF-10.1  오류 없이 끝나고 `updated_ids`가 옛 글을 가리키던 글의 `id` 하나뿐이다
