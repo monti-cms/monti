@@ -30,7 +30,6 @@ const RESULT_LINE = new RegExp(`^\\s*(?:결과\\s+)?(${ID}\\.\\d+)\\s+\\S`);
 const DEFERRED = /\[보류(?::[^\]]*)?\]\s*$/;
 const TEST_TITLE = new RegExp(`^(${ID})\\s+(\\S.*)$`, "s");
 const RESULT_COMMENT = new RegExp(`^//\\s*(${ID}\\.\\d+)\\s*$`);
-const HANGUL = /[ᄀ-ᇿㄱ-ㆎ가-힣]/;
 
 const TEST_ROOTS = new Set(["it", "test", "describe"]);
 const TEST_MODIFIERS = new Set(["concurrent", "sequential", "fails", "skip", "only", "todo"]);
@@ -490,7 +489,6 @@ function readTests(ts, sf, nodes, at, tests) {
 		if (title === undefined) problems.push(where("the test title must be a string"));
 		else if (!match)
 			problems.push(where(`the title "${title}" must start with an AC number and then say what is checked`));
-		else if (HANGUL.test(title)) problems.push(where(`the title "${title}" must be in English`));
 		else found.push({ node, id: match[1], at: at(node.getStart()), expects: [] });
 	}
 

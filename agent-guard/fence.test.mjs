@@ -273,8 +273,8 @@ it("DB-3 second", () => {
 		}
 	});
 
-	test("a Korean title fails", () => {
-		fails(files(dbTest(ALL_CHECKS, "DB-3 실패한 마이그레이션을 되돌린다")), /must be in English/);
+	test("a Korean title passes", () => {
+		passes(files(dbTest(ALL_CHECKS, "DB-3 실패한 마이그레이션을 되돌린다")));
 	});
 
 	test("a title that is not a plain string fails", () => {
