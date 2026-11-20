@@ -436,7 +436,7 @@ packages/core/src/
 │   ├── entries/  translation-status/  templates/  folders/  trash/
 │   ├── media/                  uses.ts [함수] 본문·필드에서 사용처를 모아 media_uses 갱신
 │   ├── schema/  config/        schema.get·update, config.get·update
-│   └── keys/  data/  session/  admin/
+│   └── keys/  session/  admin/
 │
 └── __test__/                   [함수] 공용 도우미: database.ts, global-setup.ts, memory-storage.ts
 ```
