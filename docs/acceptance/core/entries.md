@@ -12,7 +12,7 @@
 - `media_uses` 색인: `source_kind`를 `"entry"`, `source_id`를 `entries.id`로 하여 그 글의 모든 언어 작업본(`entry_locales`) 참조를 합쳐 본문은 `"body"`, 최상위 `media` 필드는 `"fields.<필드키>"`, `conditional` 하위 `media` 필드는 `"fields.<조건필드키>.fields.<하위필드키>"` 경로에 대소문자를 무시하고 한 번씩 기록한다.
 - `entries.get` · `entries.list`: `draft`를 생략하거나 `false`면 발행본(`entry_published`), `draft: true`면 작업본(`entry_locales`)을 돌려주며 휴지통 글은 제외한다. `get`은 `{ id, locale? }`(생략 시 `source_locale`) 또는 `{ collection, locale, slug }`(`draft` 모드에 맞는 `slug`)로 조회해 없거나 해당 언어가 없으면(설정에 없는 언어 포함) `NOT_FOUND`로 거절한다. `list`는 `collection`, `locale`(생략 시 각 글의 `source_locale` 1행씩, 지정 시 그 언어를 가진 글), `folder_id`(생략=전체, `null`=루트, UUID=직속), `relation`(`{ field, id }`), `draft`로 걸러 돌려준다(원문 언어가 미발행이고 비원문 언어만 발행된 글은 `locale`을 생략한 기본 목록에 나오지 않는다).
 - `entries.update`: 단건(`{ id, locale?, slug?, folder_id?, data? }`, `locale` 생략 시 `source_locale`)은 해당 언어 작업본의 `slug`·`data`(전체 교체)와 글 전체의 `folder_id`를 바꾸되 생략한 항목·`translation_seen`·`entry_published`는 유지하고 `data`를 바꿀 때만 글 전체 언어 합집합으로 `media_uses`를 다시 계산한다. 다건(`{ ids, folder_id }`)은 글 전체의 `folder_id` 일괄 이동만 처리하며, 대상이 없거나 휴지통·없는 언어면 `NOT_FOUND`, 잘못된 폴더면 `BAD_REQUEST`로 전체 롤백한다.
-- `entries.publish`: 활성 글의 지정한 언어(`locale` 생략 시 `source_locale`) 작업본을 `entry_published`에 저장한다. `published_at`을 주면 그 시각으로, 생략하면 최초 발행은 현재 시각·재발행은 기존 시각을 유지한다. 작업본 `data`가 지금의 스키마·설정·참조 상태에서 저장할 때와 같은 검사(`data.fields`·`data.body`, `relation`·`media` 대상이 활성인지)를 통과하지 못하거나 필수 필드(선택한 `conditional` 하위 포함, `0`·`false`는 인정)가 비어 있으면 `BAD_REQUEST`, 같은 `(collection, locale)`에 같은 `slug`의 다른 활성 글 발행본이 있으면 `CONFLICT`, 없거나 휴지통 글이거나 해당 언어가 없으면 `NOT_FOUND`로 거절한다.
+- `entries.publish`: 활성 글의 지정한 언어(`locale` 생략 시 `source_locale`) 작업본을 `entry_published`에 저장한다. `published_at`을 주면 그 시각으로, 생략하면 최초 발행은 현재 시각·재발행은 기존 시각을 유지한다. 작업본 `data`의 지금도 있는 필드와 본문이 지금의 스키마·설정에서 저장 검사를 통과하지 못하거나 `relation`·`media` 대상이 활성이 아니거나 필수 필드(선택한 `conditional` 하위 포함, `0`·`false`는 인정)가 비어 있으면 `BAD_REQUEST`, 같은 `(collection, locale)`에 같은 `slug`의 다른 활성 글 발행본이 있으면 `CONFLICT`, 없거나 휴지통 글이거나 해당 언어가 없으면 `NOT_FOUND`로 거절한다.
 - `entries.unpublish`: 활성 글의 지정한 언어(`locale` 생략 시 `source_locale`) `entry_published` 행만 지우고 `published_at: null`인 그 언어의 작업본을 돌려준다(이미 미발행이면 멱등 성공). 없거나 휴지통 글이거나 해당 언어가 없으면 `NOT_FOUND`로 거절한다.
 - `entries.duplicate`: 활성 글의 원문 언어(`source_locale`) 작업본만 복제해 새 미발행 글(`translation_seen: {}`, 다른 번역 언어는 복제하지 않음)을 만들고 쓰기 공통 검증과 `media_uses` 색인을 그대로 적용한다(선택 `__preset_id` 지원). `slug` 생략 시 같은 `collection`에서 `locale`이 원본의 `source_locale`과 같은 모든 활성 글의 언어 행(`entry_locales`)과 겹치지 않는 첫 `<원본slug>-copy`, `-copy-2`…을 부여하며, 없거나 휴지통 글은 `NOT_FOUND`로 거절한다.
 - `entries.replaceReferences`: 같은 컬렉션의 서로 다른 글 `from_id`(옛 글) → `into_id`(새 글)에 대해 모든 `relation` 필드(최상위·`conditional` 하위, 단일·`many: true`)의 참조를 바꾼다(`many: true`에 새 글이 이미 있으면 먼저 등장한 위치 하나만 유지). 모든 언어의 작업본(`entry_locales.data`, 휴지통 글 포함)과 발행본(`entry_published.data`)을 각각 고치며 발행본의 `slug`·`published_at`과 `from_id`의 `trashed_at`은 건드리지 않는다. `from_id`·`into_id`가 없거나 `into_id`가 휴지통이면 `NOT_FOUND`(`from_id`는 휴지통 허용), 같은 글·컬렉션 불일치면 `BAD_REQUEST`로 거절하고 `{ from_id, into_id, updated_ids }`(바뀐 글 `id`당 한 번씩)를 돌려준다.
@@ -290,6 +290,12 @@ ENT-UPD-13  글에 없는 언어를 지정해 단건 수정하면 `NOT_FOUND`로
   행동  해당 글의 `id`, `locale: "en"`, 새 `slug`로 `entries.update`를 실행한다
   결과  ENT-UPD-13.1  `NOT_FOUND` 오류를 던진다
         ENT-UPD-13.2  `entry_locales` 테이블의 `"ko"` 행이 원래 그대로이다
+
+ENT-UPD-14  다른 언어 작업본에 스키마에 없는 값이 남아 있어도 단건 수정은 성공하고, 그 값은 미디어 사용처에 세지 않는다
+  전제  원문 언어(`ko`)와 비원문 언어(`en`) 작업본이 있는 활성 글이 하나 있고, `ko` 작업본의 `data.fields`에 스키마에 없는 키가 활성 미디어의 `id`를 값으로 담고 있다. 활성 미디어가 하나 더 있다
+  행동  해당 글의 `id`, `locale: "en"`, 두 번째 미디어만 참조하는 새 `data`로 `entries.update`를 실행한다
+  결과  ENT-UPD-14.1  오류 없이 끝나고 반환값의 `data`가 새 `data`이다
+        ENT-UPD-14.2  `media_uses`에서 해당 글의 참조는 두 번째 미디어 하나뿐이다
 ```
 
 ## 4. 발행 (`publish`)
@@ -366,6 +372,12 @@ ENT-PUB-12  발행할 때 작업본이 지금의 스키마와 맞지 않으면 `
   행동  해당 글의 `id`로 `entries.publish`를 실행한다
   결과  ENT-PUB-12.1  `BAD_REQUEST` 오류를 던진다
         ENT-PUB-12.2  `entry_published` 테이블이 비어 있다
+
+ENT-PUB-13  스키마에서 지워진 필드의 값이 남아 있어도 발행은 성공한다
+  전제  필수 필드는 채워져 있고 스키마에서 지워진 필드의 값이 작업본 `data`에 남아 있는 미발행 활성 글이 하나 있다
+  행동  해당 글의 `id`로 `entries.publish`를 실행한다
+  결과  ENT-PUB-13.1  오류 없이 반환값의 `slug`와 `data`가 작업본과 같다
+        ENT-PUB-13.2  `entry_published` 테이블에 해당 글의 행이 하나 생긴다
 ```
 
 ## 5. 발행 취소 (`unpublish`)
@@ -503,6 +515,12 @@ ENT-REF-9  여러 언어가 있는 글의 참조를 바꾸면 모든 언어의 �
   결과  ENT-REF-9.1  반환값의 `updated_ids`가 그 글의 `id` 하나뿐이다
         ENT-REF-9.2  `entry_locales` 테이블의 `"ko"`와 `"en"` 행 모두 참조가 새 글로 바뀐다
         ENT-REF-9.3  `entry_published` 테이블의 `"ko"`와 `"en"` 행 모두 참조가 새 글로 바뀐다
+
+ENT-REF-10  옛 값이 남은 글이 있어도 참조 교체는 오류 없이 끝나고 그 글은 건드리지 않는다
+  전제  같은 컬렉션에 활성 글 둘(옛 글, 새 글)이 있고, 다른 컬렉션에 옛 글을 가리키는 글 하나와, 옛 글과 관계없이 스키마에서 지워진 필드의 값이 남은 글 하나가 있다
+  행동  옛 글을 `from_id`, 새 글을 `into_id`로 넣어 `entries.replaceReferences`를 실행한다
+  결과  ENT-REF-10.1  오류 없이 끝나고 `updated_ids`가 옛 글을 가리키던 글의 `id` 하나뿐이다
+        ENT-REF-10.2  지워진 필드의 값이 남은 글의 `data`가 원래 그대로이다
 ```
 
 ## 8. 언어 추가 (`addLocale`)

@@ -3,7 +3,7 @@
 [`docs/refactor/core.md`](../../refactor/core.md) 3.5절(`ReadContext`, `WriteContext`, `MontiConfig`), 4절(컨텍스트와 설정), 7절(`schema`, `config` 리소스), 8절(`state.ts`, `schema-file.ts`, `config-file.ts`)의 인수 조건이다.
 
 - `schema.get`: 현재 스키마(`ctx.schema`)를 돌려준다.
-- `schema.update`: 개발 서버(`config.dev: true`)에서만 스키마를 바꾸고 커밋 뒤에 공유 상태와 스키마 파일에 반영한다. 정의된 8종 필드(`text`·`number`·`boolean`·`date`·`select`·`media`·`relation`·`conditional`) 외의 `type`이면 `BAD_REQUEST`, 개발 서버가 아니면 `FORBIDDEN`으로 거절하며, 롤백·`dryRun`이면 공유 상태와 파일을 바꾸지 않는다.
+- `schema.update`: 개발 서버(`config.dev: true`)에서만 스키마를 바꾸고 커밋 뒤에 공유 상태와 스키마 파일에 반영한다. 정의된 8종 필드(`text`·`number`·`boolean`·`date`·`select`·`media`·`relation`·`conditional`) 외의 `type`이면 `BAD_REQUEST`, 개발 서버가 아니면 `FORBIDDEN`으로 거절하며, 롤백·`dryRun`이면 공유 상태와 파일을 바꾸지 않는다. 저장된 글 데이터는 건드리지 않는다.
 - `config.get`: 현재 사이트 설정(`ctx.config`)을 돌려준다.
 - `config.update`: 개발 서버에서만 사이트 `name`을 바꾸고 커밋 뒤에 공유 상태와 설정 파일에 반영한다. 개발 서버가 아니면 `FORBIDDEN`으로 거절하며, 롤백·`dryRun`이면 공유 상태와 파일을 바꾸지 않는다.
 
