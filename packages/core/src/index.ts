@@ -20,8 +20,48 @@ import { templates } from "./resources/templates/templates";
 import { translationStatus } from "./resources/translation-status/translation-status";
 import { trash } from "./resources/trash/trash";
 
+// The public entry: what the apps (`next`, `cli`), the plugins and the packages that handle the body use.
+export type {
+	ApiKeysTable,
+	Database,
+	EntriesTable,
+	EntryLocalesTable,
+	EntryPublishedTable,
+	FoldersTable,
+	LooseFilesTable,
+	MediaTable,
+	MediaUsesTable,
+	Migration,
+	MontiAdminTable,
+	MontiSessionTable,
+	TemplatesTable,
+} from "./db/types";
+export { MontiError } from "./engine/errors";
+export { defineRead, defineWrite } from "./engine/operation";
+export type {
+	CollectionSchema,
+	ErrorCode,
+	FieldSchema,
+	KeyServiceDefinition,
+	Monti,
+	MontiConfig,
+	MontiEvent,
+	OperationSpec,
+	Plugin,
+	ReadContext,
+	ReadOperation,
+	Schema,
+	StorageAdapter,
+	ValueFieldSchema,
+	WriteContext,
+	WriteOperation,
+} from "./engine/types";
+export { removeLooseFiles } from "./resources/media/loose-files";
+export type { Block, BlockDefinition, Doc, DocIssue, MarkDefinition, ValidateDocOptions } from "./rich-text/types";
+export { validateDoc } from "./rich-text/validate-doc";
+
 /** What the app hands `startMonti`: the database, and the schema and config it loaded from the two files. */
-interface StartOptions extends MontiState {
+export interface StartOptions extends MontiState {
 	db: Kysely<Database>;
 }
 
