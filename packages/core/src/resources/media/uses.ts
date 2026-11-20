@@ -121,6 +121,15 @@ function addEntryUses(uses: UsesByPath, collection: CollectionSchema, data: Entr
 	return uses;
 }
 
+/** Rejects checked entry `data` whose media fields or body reference media that is not active. */
+export async function rejectInactiveEntryMedia(
+	ctx: WriteContext,
+	collection: CollectionSchema,
+	data: EntryData,
+): Promise<void> {
+	await rejectInactive(ctx, idsOf(addEntryUses(new Map(), collection, data)));
+}
+
 /**
  * Replaces an entry's `media_uses` rows with the union of what every one of its locales' working copies references,
  * after rejecting inactive media in `data`, the working copy being written. Call it once that copy is stored.
@@ -131,7 +140,7 @@ export async function replaceEntryMediaUses(
 	collection: CollectionSchema,
 	data: EntryData,
 ): Promise<void> {
-	await rejectInactive(ctx, idsOf(addEntryUses(new Map(), collection, data)));
+	await rejectInactiveEntryMedia(ctx, collection, data);
 	await recountEntryMediaUses(ctx, entryId, collection);
 }
 

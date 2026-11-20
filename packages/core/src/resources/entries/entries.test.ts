@@ -1050,6 +1050,39 @@ it("ENT-PUB-9 rejects entries.publish with NOT_FOUND for a locale the entry does
 	expect(await publishedRows()).toEqual([]);
 });
 
+it("ENT-PUB-10 rejects entries.publish with BAD_REQUEST for a relation to an entry trashed after the save", async () => {
+	const topic = await seedEntry({ collection: TOPICS });
+	const entry = await seedEntry({ data: { fields: { title: "Hello", topic: topic.id } } });
+	await db.updateTable("entries").set({ trashed_at: new Date() }).where("id", "=", topic.id).execute();
+
+	// ENT-PUB-10.1
+	await expect(montiOf().entries.publish({ id: entry.id })).rejects.toMatchObject({ code: "BAD_REQUEST" });
+	// ENT-PUB-10.2
+	expect(await publishedRows()).toEqual([]);
+});
+
+it("ENT-PUB-11 rejects entries.publish with BAD_REQUEST for media trashed after the save", async () => {
+	const media = await seedMedia();
+	const { entry } = await seedEntryUsing(media, { data: { fields: { title: "Hello", cover: media } } });
+	await db.updateTable("media").set({ trashed_at: new Date() }).where("id", "=", media).execute();
+
+	// ENT-PUB-11.1
+	await expect(montiOf().entries.publish({ id: entry.id })).rejects.toMatchObject({ code: "BAD_REQUEST" });
+	// ENT-PUB-11.2
+	expect(await publishedRows()).toEqual([]);
+});
+
+it("ENT-PUB-12 rejects entries.publish with BAD_REQUEST for a conditional option removed from the schema after the save", async () => {
+	// `removed` stands for an option the schema had when the entry was saved and has no longer.
+	const data = { fields: { ...FILLED.fields, kind: { option: "removed", fields: { note: "Gone" } } } };
+	const entry = await seedEntry({ collection: NOTES, data });
+
+	// ENT-PUB-12.1
+	await expect(montiOf().entries.publish({ id: entry.id })).rejects.toMatchObject({ code: "BAD_REQUEST" });
+	// ENT-PUB-12.2
+	expect(await publishedRows()).toEqual([]);
+});
+
 it("ENT-UNPUB-1 deletes only the published copy and keeps the working copy and media_uses", async () => {
 	const media = await seedMedia();
 	const { entry, use } = await seedEntryUsing(media);

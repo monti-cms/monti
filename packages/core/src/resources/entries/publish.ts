@@ -2,9 +2,10 @@ import { z } from "zod";
 import { MontiError } from "../../engine/errors";
 import type { FieldSchema, WriteContext } from "../../engine/types";
 import { timestampInput, uuidInput } from "../_shared/input";
+import { rejectInactiveEntryMedia } from "../media/uses";
 import type { ConditionalValue } from "./fields";
 import { type Entry, entryView, findEntry } from "./query";
-import { collectionOf } from "./validate";
+import { checkData, collectionOf } from "./validate";
 
 export const publishInput = z.object({
 	id: uuidInput,
@@ -35,6 +36,17 @@ function emptyRequired(
 	});
 }
 
+/**
+ * Rejects a working copy a save would reject now: fields, body, relation targets and media checked against the schema,
+ * config and references of this moment. What is published stays the stored `data`.
+ */
+async function rejectStaleData(ctx: WriteContext, entry: Entry): Promise<void> {
+	const collection = collectionOf(ctx, entry.collection);
+	const data = await checkData(ctx, collection, entry.data);
+	// Only data that matches the schema can be walked for media.
+	await rejectInactiveEntryMedia(ctx, collection, data);
+}
+
 /** Rejects a working copy that leaves a required field empty. */
 function rejectEmptyRequired(ctx: WriteContext, entry: Entry): void {
 	const empty = emptyRequired(collectionOf(ctx, entry.collection).fields, entry.data.fields as Record<string, unknown>);
@@ -58,6 +70,8 @@ async function rejectPublishedSlug(ctx: WriteContext, entry: Entry): Promise<voi
  */
 export async function publishEntry(input: z.infer<typeof publishInput>, ctx: WriteContext): Promise<Entry> {
 	const entry = await findEntry(ctx, { id: input.id, locale: input.locale }, true);
+	// Before the required check, which walks the chosen options and needs data that matches the schema.
+	await rejectStaleData(ctx, entry);
 	rejectEmptyRequired(ctx, entry);
 	await rejectPublishedSlug(ctx, entry);
 	const published = {
