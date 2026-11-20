@@ -52,23 +52,23 @@ ENG-EVT-2  해제한 이벤트 구독자는 통지를 받지 않는다
 ## 3. 트랜잭션 · 드라이런 (`transaction` · `dryRun`)
 
 ```
-ENG-TX-1  트랜잭션 블록 안의 호출은 한 트랜잭션을 공유하고 커밋된 뒤 호출 순서대로 이벤트를 통지한다
+ENG-TX-1  `transaction` 콜백 안의 호출은 한 트랜잭션을 공유하고 커밋된 뒤 호출 순서대로 이벤트를 통지한다
   전제  DB에 행을 추가하는 쓰기 두 개, 행을 조회하는 읽기, `onEvent` 구독자가 등록되어 있다
   행동  `monti.transaction` 안에서 `tx`로 첫 번째 쓰기, 읽기, 두 번째 쓰기를 순서대로 호출한다
   결과  ENG-TX-1.1  세 호출 모두 같은 트랜잭션(`ctx.db`)을 공유한다
-        ENG-TX-1.2  블록 안의 읽기가 첫 번째 쓰기가 추가한 행을 조회한다
-        ENG-TX-1.3  블록이 커밋되기 전에는 `onEvent` 구독자가 호출되지 않는다
-        ENG-TX-1.4  블록이 커밋된 뒤 `onEvent` 구독자가 두 쓰기의 이벤트만 첫 번째 쓰기, 두 번째 쓰기 순서로 받는다
+        ENG-TX-1.2  콜백 안의 읽기가 첫 번째 쓰기가 추가한 행을 조회한다
+        ENG-TX-1.3  트랜잭션이 커밋되기 전에는 `onEvent` 구독자가 호출되지 않는다
+        ENG-TX-1.4  트랜잭션이 커밋된 뒤 `onEvent` 구독자가 두 쓰기의 이벤트만 첫 번째 쓰기, 두 번째 쓰기 순서로 받는다
         ENG-TX-1.5  콜백의 반환값이 `monti.transaction`의 결과로 반환된다
 
-ENG-TX-2  트랜잭션 블록이 중간에 실패하면 전체를 롤백하고 이벤트를 통지하지 않는다
+ENG-TX-2  `transaction` 콜백이 중간에 실패하면 전체를 롤백하고 이벤트를 통지하지 않는다
   전제  DB에 행을 추가하는 쓰기 Operation과 `onEvent` 구독자가 등록되어 있다
   행동  `monti.transaction` 안에서 쓰기를 실행한 뒤 오류를 던진다
   결과  ENG-TX-2.1  오류가 던져진다
         ENG-TX-2.2  추가했던 행이 DB에 남아 있지 않는다
         ENG-TX-2.3  `onEvent` 구독자가 호출되지 않는다
 
-ENG-TX-3  드라이런 블록은 쓰기만 노출하고 실행 뒤 롤백하며 이벤트를 통지하지 않는다
+ENG-TX-3  `dryRun` 콜백은 쓰기만 노출하고 실행 뒤 롤백하며 이벤트를 통지하지 않는다
   전제  DB에 행을 추가하는 쓰기 Operation, 읽기 Operation, `onEvent` 구독자가 등록되어 있다
   행동  `monti.dryRun` 안에서 쓰기 Operation을 호출하고 그 결과를 반환한다
   결과  ENG-TX-3.1  `tx`에 읽기 Operation이 노출되지 않는다
@@ -78,10 +78,17 @@ ENG-TX-3  드라이런 블록은 쓰기만 노출하고 실행 뒤 롤백하며 
 
 ENG-TX-4  쓰기 중 DB 고유 제약 위반이 나면 `CONFLICT`로 변환하고 롤백한다
   전제  한 번의 실행 안에서 행 하나를 추가한 뒤 같은 기본 키로 다시 추가하는 쓰기 Operation과 `onEvent` 구독자가 등록되어 있다
-  행동  해당 쓰기 Operation을 직접 호출하고, 같은 Operation을 `dryRun` 블록 안에서도 호출한다
+  행동  해당 쓰기 Operation을 직접 호출하고, 같은 Operation을 `dryRun` 콜백 안에서도 호출한다
   결과  ENG-TX-4.1  두 호출 모두 `code`가 `"CONFLICT"`인 `MontiError`가 던져진다
         ENG-TX-4.2  먼저 추가했던 행이 롤백되어 DB에 남아 있지 않는다
         ENG-TX-4.3  `onEvent` 구독자가 호출되지 않는다
+
+ENG-TX-5  `transaction`이나 `dryRun` 콜백 안에서 `CONFLICT`가 난 뒤 콜백이 그 오류를 무시하고 끝까지 가도 `transaction`과 `dryRun`은 `CONFLICT`로 실패한다
+  전제  ENG-TX-4와 같이 같은 기본 키를 두 번 넣어 `CONFLICT`가 나는 쓰기 Operation과 `onEvent` 구독자가 등록되어 있다
+  행동  `monti.transaction`과 `monti.dryRun`에 각각 콜백을 넘기고, 콜백 안에서 그 쓰기 Operation을 호출하되 던져진 오류를 받아 무시한 채 콜백을 끝까지 실행한다
+  결과  ENG-TX-5.1  `transaction`과 `dryRun` 모두 `code`가 `"CONFLICT"`인 `MontiError`로 실패하고 성공 값을 돌려주지 않는다
+        ENG-TX-5.2  콜백 안에서 먼저 추가했던 행이 롤백되어 DB에 남아 있지 않는다
+        ENG-TX-5.3  `onEvent` 구독자가 호출되지 않는다
 ```
 
 ## 4. 플러그인 (`plugins`)

@@ -44,7 +44,7 @@
 |---|---|
 | 읽기 `monti.a.b(input)` | 입력 검사, `run`. 트랜잭션 없음. |
 | 쓰기 `monti.a.b(input)` | 입력 검사, 트랜잭션 시작, `run`, 커밋, 이벤트 통지. |
-| `monti.transaction(async (tx) => …)` | 블록 안의 호출이 한 트랜잭션을 공유한다. 블록이 끝나 커밋된 뒤, 쌓인 이벤트를 호출 순서대로 통지한다. 실패하면 롤백하고 이벤트는 없다. |
+| `monti.transaction(async (tx) => …)` | 콜백 안의 호출이 한 트랜잭션을 공유한다. 콜백이 끝나 커밋된 뒤, 쌓인 이벤트를 호출 순서대로 통지한다. 실패하면 롤백하고 이벤트는 없다. |
 | `monti.dryRun(async (tx) => …)` | `tx`에는 쓰기만 보인다. 실제와 같은 `run`을 실행하고 마지막에 롤백한다. 이벤트도 파일 쓰기도 없다. |
 
 외부 패키지는 이 호출과 명세를 쓴다. 쓰기를 미리 시험하는 일(발행할 수 있는지, 옮길 수 있는지, 가져오기 결과)은 해당 쓰기의 `dryRun`으로 한다. 외부 서버 연결을 시험하는 `keys.check`는 별도 액션이다.
@@ -91,7 +91,7 @@ sequenceDiagram
 
 ### 3.4 오류
 
-`MontiError` 하나로 통일한다. 코드는 `BAD_REQUEST`, `UNAUTHORIZED`, `FORBIDDEN`, `NOT_FOUND`, `CONFLICT`. 입력 검사 실패는 `BAD_REQUEST`이며, 쓰기 중 발생하는 PostgreSQL 고유 제약 위반(`23505`, 중복 `id` 포함)은 엔진이 `CONFLICT`로 변환한다. 이 변환은 직접 호출·`transaction`·`dryRun` 모두에 적용되며, 블록 안에서 발생하면 그 블록 전체가 실패한다(잡고 계속할 수 없다). HTTP 상태로의 변환은 외부 입구가 한다.
+`MontiError` 하나로 통일한다. 코드는 `BAD_REQUEST`, `UNAUTHORIZED`, `FORBIDDEN`, `NOT_FOUND`, `CONFLICT`. 입력 검사 실패는 `BAD_REQUEST`이며, 쓰기 중 발생하는 PostgreSQL 고유 제약 위반(`23505`, 중복 `id` 포함)은 엔진이 `CONFLICT`로 변환한다. 이 변환은 직접 호출·`transaction`·`dryRun` 모두에 적용되며, 콜백 안에서 `CONFLICT`가 났으면 콜백이 그 오류를 잡고 계속해도 `transaction`과 `dryRun` 모두 끝에서 그 `CONFLICT`로 실패한다(`dryRun`이 성공으로 끝나고 실제 실행은 실패하는 일이 없게 하려는 것이다). HTTP 상태로의 변환은 외부 입구가 한다.
 
 ### 3.5 타입 명세
 
@@ -144,7 +144,7 @@ export interface MontiEvent<TInput = unknown, TOutput = unknown> {
   output: TOutput;
 }
 
-// 5. 엔진 인스턴스: 직접 호출과 transaction · dryRun 블록
+// 5. 엔진 인스턴스: 직접 호출과 transaction · dryRun 콜백
 export type Monti<R extends ResourceTree = ResourceTree> = MontiClient<R> & {
   transaction<T>(fn: (tx: MontiClient<R>) => Promise<T>): Promise<T>;
   dryRun<T>(fn: (tx: MontiWriteClient<R>) => Promise<T>): Promise<T>;
@@ -553,7 +553,7 @@ flowchart TD
 | 2026-11-20 | 글을 되살리면 모든 언어의 발행본(`entry_published`)을 지워 초안으로 돌려보낸다. 휴지통에 보낼 때는 지우지 않는다. | 소유자와 정함 |
 | 2026-11-20 | 되살릴 항목의 상위 폴더가 휴지통에 있으면 그 폴더는 그대로 두고 같은 이름의 활성 폴더를 새로 만들어(같은 위치에 있으면 그 폴더를 써서) 그 안에 되살린다. 이름이 겹치면(폴더 이름, 글의 작업본 `slug`) 거절하지 않고 `-2`, `-3`…을 붙이며 폴더를 합치지 않는다. | 소유자와 정함 |
 | 2026-11-20 | 폴더를 영구 삭제하면 함께 들어간 항목을 지우고, 먼저 따로 버린 항목은 지우지 않고 `folder_id`·`parent_id`를 `null`로 옮겨 휴지통에 둔다. 다른 제품에 같은 근거가 없는 데이터 보존 정책이다. | 소유자와 정함 |
-| 2026-11-20 | 미디어를 영구 삭제하면 DB 행과 사용처 기록만 지우고 파일 `key`는 `loose_files`에 올린다. 실제 삭제는 `resources/media/`의 일반 함수 `removeLooseFiles({ db, storage })`가 하며, Operation이 아니라서 `transaction`·`dryRun` 블록과 AI 도구에는 나오지 않는다. 부르는 시점과 주체는 웹 쪽이다. | 소유자와 정함 |
+| 2026-11-20 | 미디어를 영구 삭제하면 DB 행과 사용처 기록만 지우고 파일 `key`는 `loose_files`에 올린다. 실제 삭제는 `resources/media/`의 일반 함수 `removeLooseFiles({ db, storage })`가 하며, Operation이 아니라서 `transaction`·`dryRun` 콜백과 AI 도구에는 나오지 않는다. 부르는 시점과 주체는 웹 쪽이다. | 소유자와 정함 |
 | 2026-11-20 | `StorageAdapter.remove`는 없는 `key`에도 오류 없이 끝나고 공급자의 정확한 미존재 오류만 어댑터가 성공으로 바꾼다. `trash.delete`의 `{ id }`는 `{ kind, id }` 하나를, `{ ids }`·`{ before }`·`{ all }`은 배열을 돌려주며 `before`는 `trashed_at`이 그 시각보다 앞선 항목이다. 한 호출의 `trashed_at`은 DB 시계로 한 번 읽어 쓴다. | 만들며 정함 |
 | 2026-11-21 | `entries.publish`는 발행할 때 작업본 `data`를 지금의 스키마·설정·참조 상태로 다시 검사하고(지금도 있는 필드와 본문의 값, `relation`·`media` 대상이 활성인지) 어긋나면 `BAD_REQUEST`로 거절한다. 저장 뒤에 대상이 휴지통에 가거나 조건부 분기가 스키마에서 사라진 글이 그대로 공개되거나 서버 오류로 터지는 일을 막는다. | 소유자와 정함 |
 | 2026-11-21 | 저장된 글 데이터와 스키마: 쓸 때는 지금의 스키마로 엄격히 검사하고, 저장된 데이터를 읽거나 훑을 때(미디어 사용처 다시 세기, `replaceReferences`)는 스키마가 모르는 필드·분기의 값과 영구 삭제된 미디어의 아이디를 건너뛴다(사용처 표에는 지금 있는 미디어만 넣는다). 글 데이터를 JSON 한 칸에 두는 구조의 대가이며 같은 계열(Sanity, Contentful, Payload-MongoDB)의 관례와 같다. Payload-SQL은 관계 표의 외래 키(`CASCADE`·`SET NULL`)가 삭제 때 참조를 비우는 다른 구조다. 발행은 지워진 필드의 옛 값 때문에 거절하지 않는다. 옛 값은 그 언어를 다시 저장하면 사라지고, 나머지는 개발자가 치운다. 다른 CMS 조사(Payload의 읽기 때 모르는 키 제거와 운영 마이그레이션 필수, Astro·Zod의 모르는 키 제거, MongoDB·Django·Prisma의 개발자 책임 정리)가 같은 방향이다. | 소유자와 정함 |
@@ -565,6 +565,7 @@ flowchart TD
 - **스키마 파일이 바뀐 뒤(파일 배포 포함) 글에 남는 지워진 필드·분기의 옛 값을 개발자가 치우는 방법.** `schema.update`는 DB를 건드리지 않고 운영에서는 막혀 있다. 지운 필드 이름을 다른 종류로 다시 만들면 남은 옛 값이 되살아나는 점도 함께 본다. `data`(내보내기·가져오기) 리소스를 설계할 때 정한다.
 - **저장된 글 데이터의 알려진 한계**(고치지 않기로 한 것이며 확정된 동작이 아니다): 휴지통 비우기와 같은 글의 저장이 같은 순간에 일어나면 한쪽이 외래 키 오류로 한 번 실패할 수 있다(다시 하면 성공한다). 한 글에 영구 삭제된 미디어 아이디가 수만 개 남으면 사용처 조회가 쿼리 변수 한도에 걸린다. 필드 종류가 바뀐 필드는 다시 저장하고 발행하기 전까지 발행본이 옛 종류의 값을 돌려준다. 컬렉션의 `body`를 끈 뒤에도 남은 본문의 미디어는 사용처에 센다.
 - **본문 블록 속성 검증의 제한.** 블록 정의의 속성 검사에 비동기 검증을 쓰면 `safeParse`가 예외를 던지고, `z.date()`처럼 JSON으로 저장되지 않는 값을 받는 속성은 저장은 되지만 다시 읽은 데이터가 검사를 통과하지 못한다. 블록 속성 검사를 동기·JSON 값으로 제한하는 규칙을 `blocks.md`와 함께 정한다.
+- **콜백 안에서 `CONFLICT` 외의 오류를 잡고 계속하면 그 쓰기가 이미 한 변경이 남는 점.** 트랜잭션 안에 되돌림 지점(세이브포인트)이 없다. 모든 쓰기 오류를 콜백 실패로 볼지는 4단계 Operation 명세 때 정한다.
 - **엔진 안의 파일 구성**(스키마·설정 파일을 읽고 검증하고 쓰는 코드, 상태 관리, 플러그인 모으기, 명세)과 **리소스 폴더 안의 파일 구성**. 각각 2단계와 3단계 테스트 계획에서 확정한다.
 - **죽은 코드 검사**(`knip`). 코어의 공개 출구(`index.ts`)가 생긴 뒤 코어에만 더한다. 그 전에는 아래층 코드가 아직 쓰이지 않아 오류만 난다.
 - **사이트 이름을 스키마로 옮길지**. 옮기면 `config.update`와 `setConfig`가 필요 없어진다. 2단계 전에 정한다.

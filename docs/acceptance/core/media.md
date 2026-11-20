@@ -7,7 +7,7 @@
 - `media.create`: 선택 `__preset_id`(UUID)를 받고 `storage.stat`으로 파일 존재와 `mime_type`을 확인해 `media`에 등록한 뒤 `loose_files`에서 해당 `key`를 지운다. 스토리지에 없는 `key`나 `"media"` 범위가 아닌 폴더면 `BAD_REQUEST`, 이미 등록된 `key`(휴지통 포함)면 `CONFLICT`로 거절한다.
 - `media.list`·`media.get`: 활성 미디어만 `url`과 함께 돌려준다. `list`의 `folder_id`는 생략=전체, `null`=루트, UUID=해당 폴더 직속이며, `get`은 없거나 휴지통에 있으면 `NOT_FOUND`로 거절한다.
 - `media.update`: 단건(`id`)은 `metadata` 전체 교체·폴더 이동·파일 교체(`key` 변경 시 이전 `key`를 `loose_files`에 24시간 대기로 추가)를, 다건(`ids`)은 폴더 일괄 이동(`folder_id`)만 처리하며 대상 중 하나라도 휴지통에 있으면 `NOT_FOUND`로 전체 롤백한다.
-- `removeLooseFiles({ db, storage })`: `resources/media/`의 함수로 `trash`나 `media`의 Operation이 아니며, 삭제 대기 시각(`remove_after`)이 지난 `loose_files` 행의 `key`만 `storage.remove`로 지워 목록에서 빼고 지우지 못한 `key`는 목록에 남긴 채 나머지를 계속 지운다. Operation이 아니라서 `transaction`·`dryRun` 블록 안에서는 부를 수 없다.
+- `removeLooseFiles({ db, storage })`: `resources/media/`의 함수로 `trash`나 `media`의 Operation이 아니며, 삭제 대기 시각(`remove_after`)이 지난 `loose_files` 행의 `key`만 `storage.remove`로 지워 목록에서 빼고 지우지 못한 `key`는 목록에 남긴 채 나머지를 계속 지운다. Operation이 아니라서 `transaction`·`dryRun` 콜백 안에서는 부를 수 없다.
 
 ---
 
