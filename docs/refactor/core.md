@@ -169,7 +169,7 @@ export interface StorageAdapter {
   ticket(key: string, info: { mime: string; size: number }): Promise<{ url: string; headers: Record<string, string> }>;
   stat(key: string): Promise<{ mime: string; size: number } | null>;
   url(key: string): string;
-  remove(key: string): Promise<void>;
+  remove(key: string): Promise<void>;        // 없는 key도 오류 없이 끝난다
 }
 
 export interface MontiConfig {
@@ -183,6 +183,7 @@ export interface MontiConfig {
 ```
 
 - `ctx.storage`는 `ctx.config.storage`와 같은 어댑터를 가리키는 읽기용 접근 경로다. 저장소 상태를 따로 두지 않는다.
+- `StorageAdapter.remove`는 없는 `key`에도 오류 없이 끝난다. 공급자가 없는 객체에 오류를 주면(GCS 404, Azure Blob `BlobNotFound`, Backblaze B2 `file_not_present`) 어댑터가 그 정확한 미존재 오류만 성공으로 바꾸고 권한·인증·네트워크 오류는 그대로 올린다.
 - `Monti<R>`와 `ResourceTree`는 `engine/`의 공통 계약이다. `CoreResources`를 지정한 공개 타입은 `index.ts`의 조립 단계에서 만든다. 엔진과 플러그인 계약은 구체적인 리소스 타입을 import하지 않는다.
 - `KeyServiceDefinition`은 `engine/types.ts`에 두고 `resources/keys/`가 사용한다. `Migration`은 `db/types.ts`에 둔다.
 - `schema.update`와 `config.update` 같은 구조 변경 Operation은 `setSchema`, `setConfig`로 바꾼 사본을 커밋 직후 파일에 기록한다(4절).
@@ -376,6 +377,8 @@ erDiagram
 - `media_uses`는 글·템플릿을 쓸 때 같은 트랜잭션 안에서 갱신한다. 글의 미디어 사용처는 해당 글의 모든 언어 작업본 참조를 합쳐 `source_id = entries.id`로 기록한다. 본문과 미디어 필드에서 사용처를 모으는 일은 `resources/media/`가 한다.
 - 외래 키 `entry_locales → entries`와 `entry_published → entry_locales(entry_id, locale)`는 `ON DELETE CASCADE`로 두어 글이나 비원문 언어를 지울 때 하위 행이 함께 지워지게 한다. `media_uses`는 논리 참조이므로 삭제·갱신하는 Operation이 같은 트랜잭션 안에서 직접 정리한다.
 - 휴지통은 `trashed_at`만 둔다. 글은 `entries` 단위로만 휴지통에 들어가고 복원되며, 비원문 언어 1개만 지우는 일은 휴지통 없이 즉시 삭제한다.
+- 폴더를 휴지통에 보내면 그 아래 활성 하위 폴더·글·미디어가 같은 `trashed_at`을 받고, 이 시각이 같은 항목은 폴더와 함께 들어간 것으로 보아 목록에서 폴더 한 줄로 묶는다. 먼저 따로 버린 항목은 자기 시각과 자기 줄을 갖는다.
+- 글을 되살리면 모든 언어의 발행본을 지워 초안으로 돌아온다. 되살릴 때 이름이 겹치면(폴더 이름, 글의 작업본 `slug`) 거절하지 않고 `-2`, `-3`…을 붙이며 폴더를 합치지 않는다.
 
 ## 7. 리소스
 
@@ -545,6 +548,12 @@ flowchart TD
 | 2026-11-20 | 기준 언어 전환은 `entries.setSourceLocale({ id, locale })` 별도 액션으로 둔다. 글에 이미 있는 다른 언어로 바꾸면 그 글의 모든 `entry_locales.translation_seen`을 `{}`로 초기화하고(이미 기준 언어면 유지), 없거나 휴지통 글·없는 언어는 `NOT_FOUND`로 거절한다. | 소유자와 정함 |
 | 2026-11-20 | 번역 상태의 연결은 원문 블록 `id` 기준의 원문 → 번역 단방향이고 번역 언어 작업본에만 저장한다(원문 언어 작업본에는 두지 않는다). 연결한 번역 블록이 번역 본문에서 지워지거나, 번역 제외로 표시한 원문 블록이 나중에 바뀌면 다시 `outdated`로 알린다. 표는 한 덩어리로 보고, 확인했던 원문 값과 지금의 원문을 비교해 보여 주는 일은 화면이 한다. | 소유자와 정함 |
 | 2026-11-20 | `translationStatus`는 번역 언어 작업본마다 확인한 원문의 값을 `translation_seen`에 그대로 기록하고 상태(`unseen`·`seen`·`outdated`)는 읽을 때 계산하며 읽기 결과에 확인한 값도 담는다. 상태를 갖는 본문 블록은 `holds`가 `text`·`nothing`인 블록이고 컨테이너 블록(`blocks`)은 갖지 않는다. 작업본의 생성은 `entries.addLocale`, 삭제는 `entries.removeLocale`, 전체 초기화는 `entries.setSourceLocale`이 하므로 `create`·`delete`를 두지 않는다. `update`는 `fields`(키별 `true` 확인·`null` 기록 삭제)와 `blocks`(원문 블록 `id`별 `{ link }` 연결·`{ exclude: true }` 번역 제외·`null` 기록 삭제)를 받는다. | 만들며 정함 |
+| 2026-11-20 | 휴지통은 글·폴더·미디어에 `trashed_at`만 두고, 폴더를 보내면 그 아래 활성 항목이 같은 시각을 받아 목록에서 폴더 한 줄로 묶인다(별도 칸은 두지 않는다). 폴더보다 먼저 따로 버린 항목은 자기 줄로 나오고, 휴지통 폴더 안을 열어 일부만 되살리는 길은 두지 않는다. | 소유자와 정함 |
+| 2026-11-20 | 글을 되살리면 모든 언어의 발행본(`entry_published`)을 지워 초안으로 돌려보낸다. 휴지통에 보낼 때는 지우지 않는다. | 소유자와 정함 |
+| 2026-11-20 | 되살릴 항목의 상위 폴더가 휴지통에 있으면 그 폴더는 그대로 두고 같은 이름의 활성 폴더를 새로 만들어(같은 위치에 있으면 그 폴더를 써서) 그 안에 되살린다. 이름이 겹치면(폴더 이름, 글의 작업본 `slug`) 거절하지 않고 `-2`, `-3`…을 붙이며 폴더를 합치지 않는다. | 소유자와 정함 |
+| 2026-11-20 | 폴더를 영구 삭제하면 함께 들어간 항목을 지우고, 먼저 따로 버린 항목은 지우지 않고 `folder_id`·`parent_id`를 `null`로 옮겨 휴지통에 둔다. 다른 제품에 같은 근거가 없는 데이터 보존 정책이다. | 소유자와 정함 |
+| 2026-11-20 | 미디어를 영구 삭제하면 DB 행과 사용처 기록만 지우고 파일 `key`는 `loose_files`에 올린다. 실제 삭제는 `resources/media/`의 일반 함수 `removeLooseFiles({ db, storage })`가 하며, Operation이 아니라서 `transaction`·`dryRun` 블록과 AI 도구에는 나오지 않는다. 부르는 시점과 주체는 웹 쪽이다. | 소유자와 정함 |
+| 2026-11-20 | `StorageAdapter.remove`는 없는 `key`에도 오류 없이 끝나고 공급자의 정확한 미존재 오류만 어댑터가 성공으로 바꾼다. `trash.delete`의 `{ id }`는 `{ kind, id }` 하나를, `{ ids }`·`{ before }`·`{ all }`은 배열을 돌려주며 `before`는 `trashed_at`이 그 시각보다 앞선 항목이다. 한 호출의 `trashed_at`은 DB 시계로 한 번 읽어 쓴다. | 만들며 정함 |
 
 ## 11. 정하지 않은 것
 
@@ -554,7 +563,6 @@ flowchart TD
 - **죽은 코드 검사**(`knip`). 코어의 공개 출구(`index.ts`)가 생긴 뒤 코어에만 더한다. 그 전에는 아래층 코드가 아직 쓰이지 않아 오류만 난다.
 - **사이트 이름을 스키마로 옮길지**. 옮기면 `config.update`와 `setConfig`가 필요 없어진다. 2단계 전에 정한다.
 - **DB 커밋 뒤 스키마·설정 파일 쓰기가 실패하면** 어떤 상태를 돌려줄지, **플러그인 Operation의 경로가 겹치면** 조립 때 거절할지. 2단계 테스트 계획 전.
-- **`loose_files`의 실제 삭제** 시점·실행 주체·실패 처리. `dryRun`에서는 외부 삭제가 일어나지 않아야 한다. 3단계 휴지통 테스트 계획 전.
 - **플러그인 테이블 타입을 넘기는 호출 형태**(2단계 테스트 계획 전). `defineRead<AiTables>(…)`처럼 타입 매개변수 하나만 직접 지정하면 TypeScript가 나머지(`TSchema`, `TOutput`)를 추론하지 못한다. 3.5의 `TTables`를 어떤 호출 형태로 받을지 정한다.
 - **플러그인 밖에서 플러그인 Operation을 호출할 때의 타입.** 쓰는 곳이 생기면 상의한다.
 - **표 안의 칸 단위 번역 상태와 컨테이너 블록 자체 속성에 든 글자.** 표는 한 덩어리로 보고 칸 단위는 표 규격이 바뀔 때 정한다. 컨테이너 블록 자체의 속성에 글자가 있는 경우는 core가 어느 속성이 번역 대상인지 모르므로 블록 정의 쪽에서 정한다.

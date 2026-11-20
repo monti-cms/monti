@@ -7,6 +7,7 @@
 - `media.create`: 선택 `__preset_id`(UUID)를 받고 `storage.stat`으로 파일 존재와 `mime_type`을 확인해 `media`에 등록한 뒤 `loose_files`에서 해당 `key`를 지운다. 스토리지에 없는 `key`나 `"media"` 범위가 아닌 폴더면 `BAD_REQUEST`, 이미 등록된 `key`(휴지통 포함)면 `CONFLICT`로 거절한다.
 - `media.list`·`media.get`: 활성 미디어만 `url`과 함께 돌려준다. `list`의 `folder_id`는 생략=전체, `null`=루트, UUID=해당 폴더 직속이며, `get`은 없거나 휴지통에 있으면 `NOT_FOUND`로 거절한다.
 - `media.update`: 단건(`id`)은 `metadata` 전체 교체·폴더 이동·파일 교체(`key` 변경 시 이전 `key`를 `loose_files`에 24시간 대기로 추가)를, 다건(`ids`)은 폴더 일괄 이동(`folder_id`)만 처리하며 대상 중 하나라도 휴지통에 있으면 `NOT_FOUND`로 전체 롤백한다.
+- `removeLooseFiles({ db, storage })`: `resources/media/`의 함수로 `trash`나 `media`의 Operation이 아니며, 삭제 대기 시각(`remove_after`)이 지난 `loose_files` 행의 `key`만 `storage.remove`로 지워 목록에서 빼고 지우지 못한 `key`는 목록에 남긴 채 나머지를 계속 지운다. Operation이 아니라서 `transaction`·`dryRun` 블록 안에서는 부를 수 없다.
 
 ---
 
@@ -129,4 +130,21 @@ MED-UPD-4  다건 수정 대상 중 하나라도 휴지통에 있으면 `NOT_FOU
   행동  두 미디어의 `ids`와 해당 `folder_id`로 `media.update`를 실행한다
   결과  MED-UPD-4.1  `NOT_FOUND` 오류를 던진다
         MED-UPD-4.2  `media` 테이블에서 활성 미디어의 `folder_id`가 `null` 그대로이다
+```
+
+## 5. 임시 파일 정리 (`removeLooseFiles`)
+
+```
+MED-CLN-1  임시 파일 정리는 삭제 대기 시각이 지난 임시 파일만 스토리지에서 지우고 목록에서 뺀다
+  전제  `storage`가 설정되어 있고, 삭제 대기 시각(`remove_after`)이 지금보다 앞선 `loose_files` 행과 뒤인 행이 하나씩 있다
+  행동  `removeLooseFiles({ db, storage })`를 실행한다
+  결과  MED-CLN-1.1  앞선 행의 `key`로 스토리지의 `remove`를 호출하고 `loose_files` 테이블에서 그 행이 없다
+        MED-CLN-1.2  뒤인 행은 `loose_files` 테이블에 원래 그대로 있고 그 `key`로는 `remove`를 호출하지 않는다
+
+MED-CLN-2  스토리지에서 지우지 못한 임시 파일은 목록에 남기고 나머지는 계속 지운다
+  전제  `storage`가 설정되어 있고, 삭제 대기 시각이 지금보다 앞선 `loose_files` 행이 둘 있으며 스토리지가 그중 한 `key`를 지울 때만 오류를 던진다
+  행동  `removeLooseFiles({ db, storage })`를 실행한다
+  결과  MED-CLN-2.1  지울 수 있었던 `key`의 행은 `loose_files` 테이블에서 없어진다
+        MED-CLN-2.2  지우지 못한 `key`의 행은 `loose_files` 테이블에 그대로 남는다
+        MED-CLN-2.3  오류를 던지지 않는다
 ```
