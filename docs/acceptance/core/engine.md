@@ -105,3 +105,15 @@ ENG-PLG-2  플러그인의 작업 경로가 기존 경로와 겹치면 엔진 �
   행동  엔진을 생성한다
   결과  ENG-PLG-2.1  오류가 던져진다
 ```
+
+## 5. 명세 (`spec`)
+
+```
+ENG-SPEC-1  명세는 엔진의 모든 Operation을 이름, 읽기·쓰기 구분, 입력 JSON Schema로 나열한다
+  전제  읽기 Operation 하나(입력: 문자열 `id`와 선택 문자열 `locale`)와 쓰기 Operation 하나를 가진 리소스, 같은 리소스에 쓰기 Operation을 더하는 플러그인이 등록되어 있다
+  행동  `monti.spec()`을 실행한다
+  결과  ENG-SPEC-1.1  Operation마다 `{ name, kind, input }` 하나씩이고 `name`은 `<resource>.<action>` 키 경로이다
+        ENG-SPEC-1.2  `kind`가 읽기 Operation은 `"read"`, 쓰기 Operation은 `"write"`이다
+        ENG-SPEC-1.3  읽기 Operation의 `input`이 `id`는 필수 문자열, `locale`은 선택 문자열인 객체의 JSON Schema이다
+        ENG-SPEC-1.4  플러그인이 더한 Operation도 포함된다
+```
