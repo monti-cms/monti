@@ -101,6 +101,10 @@ export interface StorageAdapter {
 	stat(key: string): Promise<{ mime: string; size: number } | null>;
 	/** Where the file at `key` is read from. */
 	url(key: string): string;
+	/**
+	 * Removes the file at `key`; a key with no file is a success. The adapter turns only the provider's exact not-found
+	 * error into a success: permission, auth and network errors are thrown.
+	 */
 	remove(key: string): Promise<void>;
 }
 

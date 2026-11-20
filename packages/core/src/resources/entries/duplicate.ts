@@ -1,6 +1,7 @@
 import { z } from "zod";
 import type { WriteContext } from "../../engine/types";
 import { uuidInput } from "../_shared/input";
+import { firstFree } from "../_shared/names";
 import { createEntry, slugInput } from "./create";
 import { type Entry, findEntry } from "./query";
 
@@ -10,22 +11,18 @@ export const duplicateInput = z.object({
 	__preset_id: uuidInput.optional(),
 });
 
-/** The first of `<slug>-copy`, `<slug>-copy-2`, `<slug>-copy-3`… no active entry of the collection has in the locale. */
-async function copySlug(ctx: WriteContext, entry: Entry): Promise<string> {
-	const base = `${entry.slug}-copy`;
+/** The first of `base`, `<base>-2`, `<base>-3`… no active entry of `collection` has in `locale`. */
+export async function freeSlug(ctx: WriteContext, owner: Pick<Entry, "collection" | "locale">, base: string) {
 	const rows = await ctx.db
 		.selectFrom("entry_locales")
 		.innerJoin("entries", "entries.id", "entry_locales.entry_id")
 		.select("entry_locales.slug")
-		.where("entries.collection", "=", entry.collection)
+		.where("entries.collection", "=", owner.collection)
 		.where("entries.trashed_at", "is", null)
-		.where("entry_locales.locale", "=", entry.locale)
+		.where("entry_locales.locale", "=", owner.locale)
 		.where("entry_locales.slug", "like", `${base}%`)
 		.execute();
-	const taken = new Set(rows.map((row) => row.slug));
-	let slug = base;
-	for (let n = 2; taken.has(slug); n++) slug = `${base}-${n}`;
-	return slug;
+	return firstFree(base, new Set(rows.map((row) => row.slug)));
 }
 
 /**
@@ -39,7 +36,7 @@ export async function duplicateEntry(input: z.infer<typeof duplicateInput>, ctx:
 			__preset_id: input.__preset_id,
 			collection: source.collection,
 			locale: source.locale,
-			slug: input.slug ?? (await copySlug(ctx, source)),
+			slug: input.slug ?? (await freeSlug(ctx, source, `${source.slug}-copy`)),
 			folder_id: source.folder_id,
 			data: source.data,
 		},

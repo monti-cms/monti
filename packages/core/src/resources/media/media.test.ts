@@ -7,6 +7,7 @@ import { migrate } from "../../db/migrate";
 import { initial } from "../../db/migrations/0001-initial";
 import type { Database } from "../../db/types";
 import { createMonti } from "../../engine/engine";
+import { removeLooseFiles } from "./loose-files";
 import { media } from "./media";
 
 let testDb: TestDatabase;
@@ -329,3 +330,55 @@ it("MED-CRT-2 registers the media with the given __preset_id", async () => {
 function byId(a: { id: string }, b: { id: string }): number {
 	return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
 }
+
+/** Puts `key` in loose_files with `remove_after` an hour before or after now. */
+async function seedLooseFileAt(key: string, hours: number): Promise<void> {
+	await db
+		.insertInto("loose_files")
+		.values({ key, remove_after: new Date(Date.now() + hours * 60 * 60 * 1000) })
+		.execute();
+}
+
+it("MED-CLN-1 removes only the loose files past remove_after from the storage and from loose_files", async () => {
+	const past = randomUUID();
+	const future = randomUUID();
+	await seedLooseFileAt(past, -1);
+	await seedLooseFileAt(future, 1);
+	const kept = await looseFile(future);
+
+	await removeLooseFiles({ db, storage });
+
+	// MED-CLN-1.1
+	expect({ removed: storage.removed.includes(past), row: await looseFile(past) }).toEqual({
+		removed: true,
+		row: undefined,
+	});
+	// MED-CLN-1.2
+	expect({ removed: storage.removed.includes(future), row: await looseFile(future) }).toEqual({
+		removed: false,
+		row: kept,
+	});
+});
+
+it("MED-CLN-2 keeps a loose file the storage failed to remove and goes on with the rest", async () => {
+	const failing = randomUUID();
+	const removable = randomUUID();
+	await seedLooseFileAt(failing, -1);
+	await seedLooseFileAt(removable, -1);
+	const flaky = {
+		...storage,
+		remove: async (key: string) => {
+			if (key === failing) throw new Error("The storage is unreachable");
+			await storage.remove(key);
+		},
+	};
+
+	const run = removeLooseFiles({ db, storage: flaky });
+
+	// MED-CLN-2.3
+	await expect(run).resolves.toBeUndefined();
+	// MED-CLN-2.1
+	expect(await looseFile(removable)).toBeUndefined();
+	// MED-CLN-2.2
+	expect((await looseFile(failing))?.key).toBe(failing);
+});

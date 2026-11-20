@@ -68,18 +68,22 @@ async function rejectParent(ctx: WriteContext, parentId: string, scope: string):
 	}
 }
 
+/** The active folders of `scope` directly under `parentId`, or at the root when it is null. */
+export function activeChildren(ctx: ReadContext, scope: string, parentId: string | null) {
+	const query = ctx.db
+		.selectFrom("folders")
+		.select(["id", "name"])
+		.where("scope", "=", scope)
+		.where("trashed_at", "is", null);
+	return parentId === null ? query.where("parent_id", "is", null) : query.where("parent_id", "=", parentId);
+}
+
 /** Rejects a name another active folder already has under the same parent of the same scope; `id` is the folder itself, left out. */
 async function rejectTaken(ctx: WriteContext, folder: Folder): Promise<void> {
-	let query = ctx.db
-		.selectFrom("folders")
-		.select("id")
+	const taken = await activeChildren(ctx, folder.scope, folder.parent_id)
 		.where("id", "<>", folder.id)
-		.where("scope", "=", folder.scope)
 		.where("name", "=", folder.name)
-		.where("trashed_at", "is", null);
-	query =
-		folder.parent_id === null ? query.where("parent_id", "is", null) : query.where("parent_id", "=", folder.parent_id);
-	const taken = await query.executeTakeFirst();
+		.executeTakeFirst();
 	if (taken !== undefined) throw new MontiError("CONFLICT", "An active folder here already has this name");
 }
 
