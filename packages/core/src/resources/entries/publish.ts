@@ -38,12 +38,12 @@ function emptyRequired(
 
 /**
  * Rejects a working copy a save would reject now: fields, body, relation targets and media checked against the schema,
- * config and references of this moment. What is published stays the stored `data`.
+ * config and references of this moment. A value of a field the schema no longer has is not checked, and what is
+ * published stays the stored `data`, that value included.
  */
 async function rejectStaleData(ctx: WriteContext, entry: Entry): Promise<void> {
 	const collection = collectionOf(ctx, entry.collection);
-	const data = await checkData(ctx, collection, entry.data);
-	// Only data that matches the schema can be walked for media.
+	const data = await checkData(ctx, collection, entry.data, "drop");
 	await rejectInactiveEntryMedia(ctx, collection, data);
 }
 

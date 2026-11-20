@@ -2,7 +2,7 @@ import { z } from "zod";
 import { MontiError } from "../../engine/errors";
 import type { CollectionSchema, FieldSchema, WriteContext } from "../../engine/types";
 import { uuidInput } from "../_shared/input";
-import type { ConditionalValue } from "./fields";
+import { fieldOf, isKnownOption } from "./fields";
 
 export const replaceInput = z.object({ from_id: uuidInput, into_id: uuidInput });
 
@@ -42,15 +42,23 @@ function swapIds(value: unknown, swap: Swap): unknown {
 	return swapped.filter((id, index) => id !== swap.into || swapped.indexOf(id) === index);
 }
 
-/** Field values with the swap applied to every relation to the swap's collection, a chosen option's included. */
+/**
+ * Field values with the swap applied to every relation to the swap's collection, a chosen option's included. A key or an
+ * option the schema no longer has keeps its stored value.
+ */
 function swapFields(fields: Record<string, FieldSchema>, values: Record<string, unknown>, swap: Swap) {
-	return Object.fromEntries(Object.entries(values).map(([key, value]) => [key, swapValue(fields[key], value, swap)]));
+	return Object.fromEntries(
+		Object.entries(values).map(([key, value]) => {
+			const field = fieldOf(fields, key);
+			return [key, field === undefined ? value : swapValue(field, value, swap)];
+		}),
+	);
 }
 
 function swapValue(field: FieldSchema, value: unknown, swap: Swap): unknown {
 	if (field.type === "conditional") {
-		const chosen = value as ConditionalValue;
-		return { ...chosen, fields: swapFields(field.options[chosen.option].fields, chosen.fields, swap) };
+		if (!isKnownOption(field, value)) return value;
+		return { ...value, fields: swapFields(field.options[value.option].fields, value.fields, swap) };
 	}
 	return field.type === "relation" && field.to === swap.collection ? swapIds(value, swap) : value;
 }

@@ -3,7 +3,7 @@ import type { CollectionSchema, ReadContext, WriteContext } from "../../engine/t
 import { docOf } from "../_shared/doc";
 import { isActiveFolder } from "../folders/folders";
 import { type EntryData, entryFieldValues } from "../media/uses";
-import { fieldsSchema } from "./fields";
+import { fieldsSchema, type UnknownKeys } from "./fields";
 
 /** The `data` a write is given; `fields` left out means none. */
 interface DataInput {
@@ -81,9 +81,17 @@ async function rejectInactiveTargets(ctx: WriteContext, collection: string, ids:
 	}
 }
 
-/** The data as stored, `{ fields, body? }`; rejects fields, a body or relations the collection does not accept. */
-export async function checkData(ctx: WriteContext, collection: CollectionSchema, data: DataInput): Promise<EntryData> {
-	const parsed = fieldsSchema(collection.fields).safeParse(data.fields ?? {});
+/**
+ * The data as stored, `{ fields, body? }`; rejects fields, a body or relations the collection does not accept. Keys the
+ * schema does not define are rejected, or with `unknownKeys: "drop"` left out of what it returns.
+ */
+export async function checkData(
+	ctx: WriteContext,
+	collection: CollectionSchema,
+	data: DataInput,
+	unknownKeys: UnknownKeys = "reject",
+): Promise<EntryData> {
+	const parsed = fieldsSchema(collection.fields, unknownKeys).safeParse(data.fields ?? {});
 	if (!parsed.success) {
 		throw new MontiError("BAD_REQUEST", "The fields do not match the collection", parsed.error.issues);
 	}

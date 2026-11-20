@@ -928,6 +928,21 @@ it("ENT-UPD-13 rejects entries.update with NOT_FOUND for a locale the entry does
 	expect(await localeRows()).toEqual([entry.working]);
 });
 
+it("ENT-UPD-14 updates a locale while another locale keeps a value the schema no longer has, and does not count it in media_uses", async () => {
+	const [leftover, second] = [await seedMedia(), await seedMedia()];
+	// `removedCover` stands for a field the schema had when the `ko` copy was saved and has no longer.
+	const entry = await seedEntry({ data: { fields: { title: "Korean", removedCover: leftover } } });
+	await seedLocale(entry.id, "en", { data: { fields: { title: "English" } } });
+	const data = { fields: { cover: second } };
+
+	const output = await montiOf().entries.update({ id: entry.id, locale: "en", data });
+
+	// ENT-UPD-14.1
+	expect(output).toMatchObject({ data });
+	// ENT-UPD-14.2
+	expect(await useRows("entry", entry.id)).toEqual([coverUse(entry.id, second)]);
+});
+
 /** Note data that fills every required field, with `0` and `false` as the values. */
 const FILLED = { fields: { title: "Hello", rank: 0, pinned: false } };
 
@@ -1081,6 +1096,18 @@ it("ENT-PUB-12 rejects entries.publish with BAD_REQUEST for a conditional option
 	await expect(montiOf().entries.publish({ id: entry.id })).rejects.toMatchObject({ code: "BAD_REQUEST" });
 	// ENT-PUB-12.2
 	expect(await publishedRows()).toEqual([]);
+});
+
+it("ENT-PUB-13 publishes a working copy that keeps the value of a field removed from the schema", async () => {
+	// `removed` stands for a field the schema had when the entry was saved and has no longer.
+	const entry = await seedEntry({ collection: NOTES, data: { fields: { ...FILLED.fields, removed: "Gone" } } });
+
+	const output = await montiOf().entries.publish({ id: entry.id });
+
+	// ENT-PUB-13.1
+	expect({ slug: output.slug, data: output.data }).toEqual({ slug: entry.slug, data: entry.data });
+	// ENT-PUB-13.2
+	expect((await publishedRows()).map((row) => row.entry_id)).toEqual([entry.id]);
 });
 
 it("ENT-UNPUB-1 deletes only the published copy and keeps the working copy and media_uses", async () => {
@@ -1385,6 +1412,20 @@ it("ENT-REF-9 replaces the references in every locale's working and published co
 		{ fields: { title: "Live KO", topic: replacement.id } },
 		{ fields: { title: "Live EN", topic: replacement.id } },
 	]);
+});
+
+it("ENT-REF-10 replaces references while another entry keeps a value the schema no longer has, and leaves that entry as it is", async () => {
+	const { old, replacement } = await seedTopics();
+	const post = await seedEntry({ data: { fields: { title: "Draft", topic: old.id } } });
+	// `removed` stands for a field the schema had when the page was saved and has no longer.
+	const stale = await seedEntry({ collection: PAGES, data: { fields: { removed: "Gone" } } });
+
+	const output = await montiOf().entries.replaceReferences({ from_id: old.id, into_id: replacement.id });
+
+	// ENT-REF-10.1
+	expect(output.updated_ids).toEqual([post.id]);
+	// ENT-REF-10.2
+	expect((await localeRow(stale.id, "ko")).data).toEqual(stale.data);
 });
 
 it("ENT-LOC-1 adds a non-source locale to an active entry, even with the source locale's slug, and fills the defaults", async () => {

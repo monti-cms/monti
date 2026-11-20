@@ -2,6 +2,7 @@ import type { MediaUsesTable } from "../../db/types";
 import { MontiError } from "../../engine/errors";
 import type { CollectionSchema, FieldSchema, ValueFieldSchema, WriteContext } from "../../engine/types";
 import type { Block, Doc } from "../../rich-text/types";
+import { fieldOf, isKnownOption } from "../entries/fields";
 
 /** The entry or template whose `media_uses` rows are written. */
 interface UseSource {
@@ -37,8 +38,9 @@ function mediaIdsOf(blocks: readonly Block[], ids = new Set<string>()): Set<stri
 }
 
 /**
- * The value fields that checked `values` set: a top-level one at `fields.<key>`, a conditional's sub-field at
- * `fields.<key>.fields.<sub>` under its chosen option.
+ * The value fields that `values` set: a top-level one at `fields.<key>`, a conditional's sub-field at
+ * `fields.<key>.fields.<sub>` under its chosen option. A key or an option the schema no longer has is skipped, as stored
+ * data may keep one after the schema changed.
  */
 export function entryFieldValues(
 	fields: Record<string, FieldSchema>,
@@ -47,12 +49,12 @@ export function entryFieldValues(
 ): EntryFieldValue[] {
 	return Object.entries(values).flatMap(([key, value]) => {
 		// An explicit `undefined` is a field left out, as `JSON.stringify` stores it.
-		if (value === undefined) return [];
-		const field = fields[key];
+		const field = fieldOf(fields, key);
+		if (value === undefined || field === undefined) return [];
 		const path = `${prefix}.${key}`;
 		if (field.type !== "conditional") return [{ path, field, value }];
-		const chosen = value as { option: string; fields: Record<string, unknown> };
-		return entryFieldValues(field.options[chosen.option].fields, chosen.fields, `${path}.fields`);
+		if (!isKnownOption(field, value)) return [];
+		return entryFieldValues(field.options[value.option].fields, value.fields, `${path}.fields`);
 	});
 }
 
@@ -112,7 +114,7 @@ function addUses(uses: UsesByPath, field_path: string, ids: Iterable<string>): v
 	uses.set(field_path, pathIds);
 }
 
-/** Adds the media checked entry `data` references in its media fields and its body to `uses`, by `field_path`. */
+/** Adds the media entry `data` references in its media fields and its body to `uses`, by `field_path`; keys the schema no longer has are skipped. */
 function addEntryUses(uses: UsesByPath, collection: CollectionSchema, data: EntryData): UsesByPath {
 	for (const { path, field, value } of entryFieldValues(collection.fields, data.fields)) {
 		if (field.type === "media") addUses(uses, path, [value].flat() as string[]);
