@@ -189,7 +189,7 @@ type Call<I, O> = [undefined] extends [I]
 		? (input?: I) => Promise<O>
 		: (input: I) => Promise<O>;
 
-/** The writes of a resource tree only, at the same key paths: what a `dryRun` block gets. */
+/** The writes of a resource tree only, at the same key paths: what a `dryRun` callback gets. */
 export type MontiWriteClient<R extends ResourceTree> = {
 	[K in keyof R as R[K] extends { kind: "read" } ? never : K]: WriteClientNode<R[K]>;
 };
@@ -199,9 +199,9 @@ type WriteClientNode<N> =
 	N extends WriteOperation<infer I, infer O> ? Call<I, O> : N extends ResourceTree ? MontiWriteClient<N> : never;
 
 export type Monti<R extends ResourceTree = ResourceTree> = MontiClient<R> & {
-	/** Runs the block's calls in one transaction; their events are sent in call order once it commits. */
+	/** Runs the callback's calls in one transaction; their events are sent in call order once it commits. */
 	transaction<T>(fn: (tx: MontiClient<R>) => Promise<T>): Promise<T>;
-	/** Runs the block's writes as they would run, then rolls them back: no event is sent. */
+	/** Runs the callback's writes as they would run, then rolls them back: no event is sent. */
 	dryRun<T>(fn: (tx: MontiWriteClient<R>) => Promise<T>): Promise<T>;
 	/** Adds a subscriber to committed writes; the returned function removes it. */
 	onEvent(listener: EventListener): () => void;

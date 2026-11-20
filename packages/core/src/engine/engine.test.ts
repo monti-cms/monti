@@ -167,7 +167,7 @@ it("ENG-EVT-2 does not notify a subscriber that was removed", async () => {
 	expect(listener).not.toHaveBeenCalled();
 });
 
-it("ENG-TX-1 shares one transaction across a transaction block's calls and sends their events in call order after the commit", async () => {
+it("ENG-TX-1 shares one transaction across a transaction callback's calls and sends their events in call order after the commit", async () => {
 	const contexts: ReadContext["db"][] = [];
 	const create = defineWrite({
 		input: folderInput,
@@ -200,14 +200,14 @@ it("ENG-TX-1 shares one transaction across a transaction block's calls and sends
 	});
 	const first = { id: randomUUID(), name: "Photos" };
 	const second = { id: randomUUID(), name: "Videos" };
-	let namesInBlock: string[] | undefined;
-	let eventsInBlock: number | undefined;
+	let namesInCallback: string[] | undefined;
+	let eventsInCallback: number | undefined;
 
 	const result = await monti.transaction(async (tx) => {
 		await tx.folders.create(first);
-		namesInBlock = await tx.folders.list({});
+		namesInCallback = await tx.folders.list({});
 		await tx.folders.add(second);
-		eventsInBlock = events.length;
+		eventsInCallback = events.length;
 		return "done";
 	});
 
@@ -218,9 +218,9 @@ it("ENG-TX-1 shares one transaction across a transaction block's calls and sends
 	// ENG-TX-1.1
 	expect(contexts[0]?.isTransaction).toBe(true);
 	// ENG-TX-1.2
-	expect(namesInBlock).toEqual(["Photos"]);
+	expect(namesInCallback).toEqual(["Photos"]);
 	// ENG-TX-1.3
-	expect(eventsInBlock).toBe(0);
+	expect(eventsInCallback).toBe(0);
 	// ENG-TX-1.4
 	expect(events).toEqual([
 		{ operation: "folders.create", input: first, output: { id: first.id } },
@@ -235,25 +235,25 @@ it("ENG-TX-1 shares one transaction across a transaction block's calls and sends
 	expect(result).toBe("done");
 });
 
-it("ENG-TX-2 rolls back a transaction block that fails midway and sends no event", async () => {
+it("ENG-TX-2 rolls back a transaction callback that fails midway and sends no event", async () => {
 	const monti = createMonti(db, { folders: { create: defineWrite({ input: folderInput, run: insertFolder }) } });
 	const listener = vi.fn();
 	monti.onEvent(listener);
 
 	const call = monti.transaction(async (tx) => {
 		await tx.folders.create({ id: randomUUID(), name: "Photos" });
-		throw new Error("the block fails");
+		throw new Error("the callback fails");
 	});
 
 	// ENG-TX-2.1
-	await expect(call).rejects.toThrow("the block fails");
+	await expect(call).rejects.toThrow("the callback fails");
 	// ENG-TX-2.2
 	expect(await folderNames()).toEqual([]);
 	// ENG-TX-2.3
 	expect(listener).not.toHaveBeenCalled();
 });
 
-it("ENG-TX-3 shows only the writes in a dryRun block, rolls them back and sends no event", async () => {
+it("ENG-TX-3 shows only the writes in a dryRun callback, rolls them back and sends no event", async () => {
 	const list = defineRead({
 		input: z.object({}),
 		run: async (_input, ctx) => ctx.db.selectFrom("folders").select("name").execute(),
@@ -349,5 +349,44 @@ it("ENG-TX-4 turns a PostgreSQL unique violation in a write into CONFLICT and ro
 	// ENG-TX-4.2
 	expect(await folderNames()).toEqual([]);
 	// ENG-TX-4.3
+	expect(listener).not.toHaveBeenCalled();
+});
+
+it("ENG-TX-5 fails transaction and dryRun with the CONFLICT a callback caught and ignored", async () => {
+	const add = defineWrite({ input: folderInput, run: insertFolder });
+	const create = defineWrite({
+		input: folderInput,
+		run: async (input, ctx) => {
+			await insertFolder(input, ctx);
+			return insertFolder(input, ctx);
+		},
+	});
+	const monti = createMonti(db, { folders: { add, create } });
+	const listener = vi.fn();
+	monti.onEvent(listener);
+
+	// The `add` before the duplicate queues an event that must not be sent.
+	const transaction = monti.transaction(async (tx) => {
+		await tx.folders.add({ id: randomUUID(), name: "Albums" });
+		await tx.folders.create({ id: randomUUID(), name: "Photos" }).catch(() => undefined);
+		return "done";
+	});
+	// ENG-TX-5.1
+	await expect(transaction).rejects.toBeInstanceOf(MontiError);
+	// ENG-TX-5.1
+	await expect(transaction).rejects.toMatchObject({ code: "CONFLICT" });
+
+	const dryRun = monti.dryRun(async (tx) => {
+		await tx.folders.add({ id: randomUUID(), name: "Videos" });
+		await tx.folders.create({ id: randomUUID(), name: "Clips" }).catch(() => undefined);
+		return "done";
+	});
+	// ENG-TX-5.1
+	await expect(dryRun).rejects.toBeInstanceOf(MontiError);
+	// ENG-TX-5.1
+	await expect(dryRun).rejects.toMatchObject({ code: "CONFLICT" });
+	// ENG-TX-5.2
+	expect(await folderNames()).toEqual([]);
+	// ENG-TX-5.3
 	expect(listener).not.toHaveBeenCalled();
 });

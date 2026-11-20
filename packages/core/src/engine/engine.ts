@@ -20,14 +20,16 @@ import type {
 
 type State = ReturnType<typeof createState>;
 
-/** How the calls of one client run: a direct call, a `transaction` block or a `dryRun` block. */
+/** How the calls of one client run: a direct call, a `transaction` callback or a `dryRun` callback. */
 interface Runner {
 	/** What a read's `run` gets. */
 	context(): ReadContext;
-	/** Runs a write's `run` in a transaction: a new one for a direct call, the block's own one inside a block. */
+	/** Runs a write's `run` in a transaction: a new one for a direct call, the callback's own one inside a callback. */
 	write(run: (ctx: WriteContext) => Promise<unknown>): Promise<unknown>;
-	/** Takes a write's event: sent at once after a direct call's commit, queued inside a block. */
+	/** Takes a write's event: sent at once after a direct call's commit, queued inside a callback. */
 	emit(event: MontiEvent): void;
+	/** Takes the `CONFLICT` made of a unique violation: a callback keeps it to fail the whole call even when the callback caught it. */
+	conflict?(error: MontiError): void;
 }
 
 /**
@@ -79,7 +81,12 @@ function directRunner(db: Kysely<Database>, state: State, emit: (event: MontiEve
 	return { context, write, emit };
 }
 
-function blockRunner(trx: Transaction<Database>, stage: Stage, queue: MontiEvent[]): Runner {
+function callbackRunner(
+	trx: Transaction<Database>,
+	stage: Stage,
+	queue: MontiEvent[],
+	conflicts: MontiError[],
+): Runner {
 	function context(): ReadContext {
 		return stage.context(trx);
 	}
@@ -89,10 +96,20 @@ function blockRunner(trx: Transaction<Database>, stage: Stage, queue: MontiEvent
 	function emit(event: MontiEvent): void {
 		queue.push(event);
 	}
-	return { context, write, emit };
+	function conflict(error: MontiError): void {
+		conflicts.push(error);
+	}
+	return { context, write, emit, conflict };
 }
 
-/** A block's calls share one transaction; once it commits, the queued events are sent in call order. */
+/** A callback's value, or the first unique violation one of its writes raised, even when the callback caught it. */
+function settled<T>(value: T, conflicts: MontiError[]): T {
+	const [first] = conflicts;
+	if (first !== undefined) throw first;
+	return value;
+}
+
+/** A callback's calls share one transaction; once it commits, the queued events are sent in call order. */
 function transactionOf<R extends ResourceTree>(
 	db: Kysely<Database>,
 	state: State,
@@ -101,20 +118,24 @@ function transactionOf<R extends ResourceTree>(
 ) {
 	return async function transaction<T>(fn: (tx: MontiClient<R>) => Promise<T>): Promise<T> {
 		const queue: MontiEvent[] = [];
-		const result = await committed(db, state, (trx, stage) =>
-			fn(buildClient(tree, "", blockRunner(trx, stage, queue), true) as MontiClient<R>),
-		);
+		const conflicts: MontiError[] = [];
+		const result = await committed(db, state, async (trx, stage) => {
+			const client = buildClient(tree, "", callbackRunner(trx, stage, queue, conflicts), true);
+			return settled(await fn(client as MontiClient<R>), conflicts);
+		});
 		for (const event of queue) emit(event);
 		return result;
 	};
 }
 
-/** A block of writes only, run as they would run and then rolled back; its queued events and its stage are dropped. */
+/** A callback of writes only, run as they would run and then rolled back; its queued events and its stage are dropped. */
 function dryRunOf<R extends ResourceTree>(db: Kysely<Database>, state: State, tree: ResourceTree) {
 	return async function dryRun<T>(fn: (tx: MontiWriteClient<R>) => Promise<T>): Promise<T> {
 		const trx = await db.startTransaction().execute();
+		const conflicts: MontiError[] = [];
 		try {
-			return await fn(buildClient(tree, "", blockRunner(trx, state.stage(), []), false) as MontiWriteClient<R>);
+			const client = buildClient(tree, "", callbackRunner(trx, state.stage(), [], conflicts), false);
+			return settled(await fn(client as MontiWriteClient<R>), conflicts);
 		} finally {
 			await trx.rollback().execute();
 		}
@@ -142,15 +163,20 @@ function bind(operation: Operation, path: string, runner: Runner): (input: unkno
 async function execute(operation: Operation, path: string, raw: unknown, runner: Runner): Promise<unknown> {
 	const input = parseInput(operation, raw);
 	if (operation.kind === "read") return operation.run(input, runner.context());
-	const output = await runner.write((ctx) => operation.run(input, ctx)).catch(asConflict);
+	const output = await runner.write((ctx) => operation.run(input, ctx)).catch((error) => asConflict(error, runner));
 	runner.emit({ operation: path, input, output });
 	return output;
 }
 
-/** A PostgreSQL unique violation (`23505`) becomes `CONFLICT`; any other error is thrown as it is. */
-function asConflict(error: unknown): never {
+/**
+ * A PostgreSQL unique violation (`23505`) becomes `CONFLICT` and is handed to the runner, as it leaves the transaction
+ * aborted. Any other error is thrown as it is, a `CONFLICT` a resource throws itself included: it aborts nothing.
+ */
+function asConflict(error: unknown, runner: Runner): never {
 	if (typeof error === "object" && error !== null && "code" in error && error.code === "23505") {
-		throw new MontiError("CONFLICT", "The write would duplicate a unique value");
+		const conflict = new MontiError("CONFLICT", "The write would duplicate a unique value");
+		runner.conflict?.(conflict);
+		throw conflict;
 	}
 	throw error;
 }
