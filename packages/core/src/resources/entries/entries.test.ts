@@ -943,6 +943,21 @@ it("ENT-UPD-14 updates a locale while another locale keeps a value the schema no
 	expect(await useRows("entry", entry.id)).toEqual([coverUse(entry.id, second)]);
 });
 
+it("ENT-UPD-15 updates a locale while another locale references media deleted for good, and does not count it in media_uses", async () => {
+	const active = await seedMedia();
+	// No `media` row has this id: it stands for media deleted for good after the `ko` copy was saved.
+	const entry = await seedEntry({ data: { fields: { title: "Korean", cover: randomUUID() } } });
+	await seedLocale(entry.id, "en", { data: { fields: { title: "English" } } });
+	const data = { fields: { cover: active } };
+
+	const output = await montiOf().entries.update({ id: entry.id, locale: "en", data });
+
+	// ENT-UPD-15.1
+	expect(output).toMatchObject({ data });
+	// ENT-UPD-15.2
+	expect(await useRows("entry", entry.id)).toEqual([coverUse(entry.id, active)]);
+});
+
 /** Note data that fills every required field, with `0` and `false` as the values. */
 const FILLED = { fields: { title: "Hello", rank: 0, pinned: false } };
 

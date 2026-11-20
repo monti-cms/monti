@@ -2,6 +2,7 @@ import type { MediaUsesTable } from "../../db/types";
 import { MontiError } from "../../engine/errors";
 import type { CollectionSchema, FieldSchema, ValueFieldSchema, WriteContext } from "../../engine/types";
 import type { Block, Doc } from "../../rich-text/types";
+import { uuidInput } from "../_shared/input";
 import { fieldOf, isKnownOption } from "../entries/fields";
 
 /** The entry or template whose `media_uses` rows are written. */
@@ -107,17 +108,17 @@ export async function replaceMediaUses(
 	await writeUses(ctx, source, uses);
 }
 
-/** Adds `ids` to the ones `uses` has at `field_path`, lowercased. */
-function addUses(uses: UsesByPath, field_path: string, ids: Iterable<string>): void {
+/** Adds the strings among `ids` to the ones `uses` has at `field_path`, lowercased; stored data may keep other values. */
+function addUses(uses: UsesByPath, field_path: string, ids: Iterable<unknown>): void {
 	const pathIds = uses.get(field_path) ?? new Set<string>();
-	for (const id of ids) pathIds.add(id.toLowerCase());
+	for (const id of ids) if (typeof id === "string") pathIds.add(id.toLowerCase());
 	uses.set(field_path, pathIds);
 }
 
 /** Adds the media entry `data` references in its media fields and its body to `uses`, by `field_path`; keys the schema no longer has are skipped. */
 function addEntryUses(uses: UsesByPath, collection: CollectionSchema, data: EntryData): UsesByPath {
 	for (const { path, field, value } of entryFieldValues(collection.fields, data.fields)) {
-		if (field.type === "media") addUses(uses, path, [value].flat() as string[]);
+		if (field.type === "media") addUses(uses, path, [value].flat());
 	}
 	if (data.body !== undefined) addUses(uses, "body", mediaIdsOf(data.body.blocks));
 	return uses;
@@ -146,7 +147,25 @@ export async function replaceEntryMediaUses(
 	await recountEntryMediaUses(ctx, entryId, collection);
 }
 
-/** Replaces an entry's `media_uses` rows with the union of what every one of its locales' working copies references. */
+/** The ids among `ids` that have a `media` row, trashed or not; ids that are not UUIDs have none. */
+async function existingMediaIds(ctx: WriteContext, ids: readonly string[]): Promise<Set<string>> {
+	const uuids = ids.filter((id) => uuidInput.safeParse(id).success);
+	// `in ()` is not SQL: no UUIDs find nothing.
+	if (uuids.length === 0) return new Set();
+	const rows = await ctx.db.selectFrom("media").select("id").where("id", "in", uuids).execute();
+	return new Set(rows.map((row) => row.id));
+}
+
+/** `uses` without the media that has no `media` row, as stored data may keep the id of media deleted for good. */
+async function existingUses(ctx: WriteContext, uses: UsesByPath): Promise<UsesByPath> {
+	const existing = await existingMediaIds(ctx, idsOf(uses));
+	return new Map([...uses].map(([path, pathIds]) => [path, new Set([...pathIds].filter((id) => existing.has(id)))]));
+}
+
+/**
+ * Replaces an entry's `media_uses` rows with the union of what every one of its locales' working copies references,
+ * skipping the media that no longer exists.
+ */
 export async function recountEntryMediaUses(
 	ctx: WriteContext,
 	entryId: string,
@@ -160,5 +179,5 @@ export async function recountEntryMediaUses(
 		.execute();
 	const uses: UsesByPath = new Map();
 	for (const row of locales) addEntryUses(uses, collection, row.data);
-	await writeUses(ctx, { source_kind: "entry", source_id: entryId }, uses);
+	await writeUses(ctx, { source_kind: "entry", source_id: entryId }, await existingUses(ctx, uses));
 }
