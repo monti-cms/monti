@@ -26,7 +26,7 @@
 - 외부 서비스 키의 암호화 보관(`keys`).
 - 공개 호출(`monti.<resource>.<action>(input)`)과 Operation 명세(이름, 종류, 입력 JSON Schema).
 
-**core가 하지 않는 일**: HTTP·쿠키·CLI 입출력, 화면과 개인 보기 설정, AI 대화·제안·모델과 본문의 블록 단위 읽기·편집, 웹훅 큐와 활동 기록·되돌리기, Markdown/MDX 변환, 본문 렌더링과 코드 블록 전용 기능, 실제 객체 저장소 어댑터, SEO. 받는 문서는 [next](next.md), [plugins-and-cli](plugins-and-cli.md), [ai](ai.md), [admin](admin.md), [mdx](mdx.md), [blocks](blocks.md), [rendering](rendering.md), [storage-s3](storage-s3.md), [seo](seo.md)다.
+**core가 하지 않는 일**: HTTP·쿠키·CLI 입출력, 화면과 개인 보기 설정, AI 대화·제안·모델과 본문의 블록 단위 읽기·편집, 웹훅 큐와 활동 기록·되돌리기, 콘텐츠 내보내기·가져오기(코어의 공개 읽기·쓰기를 조합하는 바깥의 일), Markdown/MDX 변환, 본문 렌더링과 코드 블록 전용 기능, 실제 객체 저장소 어댑터, SEO. 받는 문서는 [next](next.md), [plugins-and-cli](plugins-and-cli.md), [ai](ai.md), [admin](admin.md), [mdx](mdx.md), [blocks](blocks.md), [rendering](rendering.md), [storage-s3](storage-s3.md), [seo](seo.md)다.
 
 ## 3. Operation과 엔진
 
@@ -47,7 +47,7 @@
 | `monti.transaction(async (tx) => …)` | 콜백 안의 호출이 한 트랜잭션을 공유한다. 콜백이 끝나 커밋된 뒤, 쌓인 이벤트를 호출 순서대로 통지한다. 실패하면 롤백하고 이벤트는 없다. |
 | `monti.dryRun(async (tx) => …)` | `tx`에는 쓰기만 보인다. 실제와 같은 `run`을 실행하고 마지막에 롤백한다. 이벤트도 파일 쓰기도 없다. |
 
-외부 패키지는 이 호출과 명세를 쓴다. 쓰기를 미리 시험하는 일(발행할 수 있는지, 옮길 수 있는지, 가져오기 결과)은 해당 쓰기의 `dryRun`으로 한다. 외부 서버 연결을 시험하는 `keys.check`는 별도 액션이다.
+외부 패키지는 이 호출과 명세를 쓴다. 쓰기를 미리 시험하는 일(발행할 수 있는지, 옮길 수 있는지)은 해당 쓰기의 `dryRun`으로 한다. 외부 서버 연결을 시험하는 `keys.check`는 별도 액션이다.
 
 ```mermaid
 sequenceDiagram
@@ -396,7 +396,6 @@ erDiagram
 | `schema` | `get`, `update`(개발 서버만) | |
 | `config` | `get`, `update`(개발 서버만) | |
 | `keys` | `list`, `create`, `update`, `delete` | `check` |
-| `data` | | `export`, `import` |
 | `session` | `get`, `create`(로그인), `delete` | |
 | `admin` | `create`(최초 계정), `update` | |
 
@@ -471,7 +470,7 @@ flowchart TD
 - `engine/`은 리소스 트리를 입력으로 받고 구체적인 `resources/`를 import하지 않는다. `index.ts`가 둘을 조립한다.
 - `engine/`의 `*-file.ts`와 `state.ts`가 스키마·설정의 상태를 들고 커밋 뒤 파일에 쓴다. `schema.update`·`config.update` 같은 기능은 `resources/schema/`와 `resources/config/`에 두고 `setSchema`·`setConfig`로 요청만 한다.
 - `BlockDefinition`·`MarkDefinition`의 데이터 계약은 `rich-text/types.ts`에 둔다. `engine/types.ts`의 `MontiConfig`가 이 타입들을 쓰는 것은 아래 층을 쓰는 정상 방향이다. 화면 컴포넌트(`Site`, `Editor` 등)는 CMS의 블록·서식 정의에 담지 않는다. 블록과 서식을 그리는 일은 사이트가 한다.
-- `rich-text/validate-doc.ts`는 오류를 던지지 않는다. 문제 목록을 `BAD_REQUEST`로 바꾸는 일은 부르는 리소스(`entries`, `templates`, `data`)가 한다. 특정 블록의 전용 규칙은 그 블록의 패키지에 둔다.
+- `rich-text/validate-doc.ts`는 오류를 던지지 않는다. 문제 목록을 `BAD_REQUEST`로 바꾸는 일은 부르는 리소스(`entries`, `templates`)가 한다. 특정 블록의 전용 규칙은 그 블록의 패키지에 둔다.
 - `Migration` 타입은 `db/types.ts`에 두고 `Plugin`이 이를 참조한다. `db/migrate.ts`는 `scope`(`"core"` 또는 플러그인 이름)와 `Migration[]` 배열만 받아서 `Plugin`을 모른다.
 - 외부 패키지와 사이트는 공개 Operation을 직접 호출한다.
 - CLI는 `packages/cli/`, HTTP 입구는 `packages/next/`에 둔다. 두 패키지가 core를 사용한다.
@@ -557,16 +556,18 @@ flowchart TD
 | 2026-11-20 | `StorageAdapter.remove`는 없는 `key`에도 오류 없이 끝나고 공급자의 정확한 미존재 오류만 어댑터가 성공으로 바꾼다. `trash.delete`의 `{ id }`는 `{ kind, id }` 하나를, `{ ids }`·`{ before }`·`{ all }`은 배열을 돌려주며 `before`는 `trashed_at`이 그 시각보다 앞선 항목이다. 한 호출의 `trashed_at`은 DB 시계로 한 번 읽어 쓴다. | 만들며 정함 |
 | 2026-11-21 | `entries.publish`는 발행할 때 작업본 `data`를 지금의 스키마·설정·참조 상태로 다시 검사하고(지금도 있는 필드와 본문의 값, `relation`·`media` 대상이 활성인지) 어긋나면 `BAD_REQUEST`로 거절한다. 저장 뒤에 대상이 휴지통에 가거나 조건부 분기가 스키마에서 사라진 글이 그대로 공개되거나 서버 오류로 터지는 일을 막는다. | 소유자와 정함 |
 | 2026-11-21 | 저장된 글 데이터와 스키마: 쓸 때는 지금의 스키마로 엄격히 검사하고, 저장된 데이터를 읽어 처리하는 코드(`media_uses` 다시 계산, `replaceReferences`)는 스키마에 없는 필드·분기의 값과 영구 삭제된 미디어의 아이디를 무시한다(`media_uses`에는 지금 있는 미디어만 넣는다). 글 데이터를 JSON 한 칸에 두는 구조의 대가이며 같은 방식(Sanity, Contentful, Payload-MongoDB)의 관례와 같다. Payload-SQL은 관계 표의 외래 키(`CASCADE`·`SET NULL`)가 삭제 때 참조를 비우는 다른 구조다. 발행은 지워진 필드에 남은 값 때문에 거절하지 않는다. 남은 값은 그 언어를 다시 저장하면 사라지고, 나머지는 개발자가 치운다. 다른 CMS 조사(Payload의 읽기 때 모르는 키 제거와 운영 마이그레이션 필수, Astro·Zod의 모르는 키 제거, MongoDB·Django·Prisma의 개발자 책임 정리)가 같은 방향이다. | 소유자와 정함 |
+| 2026-11-21 | 내보내기·가져오기(`data`)는 core 리소스가 아니다. 코어의 공개 읽기·쓰기·`__preset_id`·`transaction`·`dryRun`을 조합하는 일이라 "core를 얇게 유지한다"는 기준에 따라 플러그인이나 `cli`가 맡는다(Operation으로 만들어 플러그인이 같은 트리에 합칠 수 있다). 파일 모양과 미디어 파일 처리는 그쪽이 정한다. | 소유자와 정함 |
 
 ## 11. 정하지 않은 것
 
 아래는 확정된 동작으로 다루지 않는다.
 
-- **스키마 파일이 바뀐 뒤(파일 배포 포함) 글에 남는 지워진 필드·분기의 값을 개발자가 치우는 방법.** `schema.update`는 DB를 건드리지 않고 운영에서는 막혀 있다. 지운 필드 이름을 다른 종류로 다시 만들면 남은 값이 되살아나는 점도 함께 본다. `data`(내보내기·가져오기) 리소스를 설계할 때 정한다.
+- **스키마 파일이 바뀐 뒤(파일 배포 포함) 글에 남는 지워진 필드·분기의 값을 개발자가 치우는 방법.** `schema.update`는 DB를 건드리지 않고 운영에서는 막혀 있다. 지운 필드 이름을 다른 종류로 다시 만들면 남은 값이 되살아나는 점도 함께 본다. 코어 밖의 `data` 기능(내보내기·가져오기)을 설계할 때 정한다.
 - **저장된 글 데이터의 알려진 한계**(고치지 않기로 한 것이며 확정된 동작이 아니다): 휴지통 비우기와 같은 글의 저장이 같은 순간에 일어나면 한쪽이 외래 키 오류로 한 번 실패할 수 있다(다시 하면 성공한다). 한 글에 영구 삭제된 미디어 아이디가 수만 개 남으면 `media_uses` 계산이 쿼리 변수 한도에 걸린다. 필드 종류가 바뀐 필드는 다시 저장하고 발행하기 전까지 발행본이 이전 종류의 값을 돌려준다. 컬렉션의 `body`를 끈 뒤에도 남은 본문의 미디어는 `media_uses`에 기록된다.
 - **본문 블록 속성 검증의 제한.** 블록 정의의 속성 검사에 비동기 검증을 쓰면 `safeParse`가 예외를 던지고, `z.date()`처럼 JSON으로 저장되지 않는 값을 받는 속성은 저장은 되지만 다시 읽은 데이터가 검사를 통과하지 못한다. 블록 속성 검사를 동기·JSON 값으로 제한하는 규칙을 `blocks.md`와 함께 정한다.
 - **콜백 안에서 DB 고유 제약 위반 외의 오류(리소스 코드가 던진 `CONFLICT` 포함)를 잡고 계속하면 그 쓰기가 이미 한 변경이 남는 점.** 트랜잭션 안에 되돌림 지점(세이브포인트)이 없다. 모든 쓰기 오류를 콜백 실패로 볼지는 4단계 Operation 명세 때 정한다.
-- **콜백 안에서 쓰기를 `Promise.all`로 동시에 실행하다 하나가 실패하는 경우.** 실패 때문에 롤백이 시작된 뒤에도 나머지 쓰기가 같은 연결에서 이어져, 트랜잭션 밖에서 실행되어 남을 수 있다는 리뷰 지적이 있다(콜백이 오류를 잡든 말든 같다). 콜백 안의 쓰기는 하나씩 `await`하는 것을 규칙으로 하고, 4단계 Operation 명세와 `data` 가져오기 설계 때 다시 확인한다.
+- **콜백 안에서 쓰기를 `Promise.all`로 동시에 실행하다 하나가 실패하는 경우.** 실패 때문에 롤백이 시작된 뒤에도 나머지 쓰기가 같은 연결에서 이어져, 트랜잭션 밖에서 실행되어 남을 수 있다는 리뷰 지적이 있다(콜백이 오류를 잡든 말든 같다). 콜백 안의 쓰기는 하나씩 `await`하는 것을 규칙으로 하고, 4단계 Operation 명세와 코어 밖의 가져오기 설계 때 다시 확인한다.
+- **코어 밖의 `data` 기능이 쓰는 코어의 공개 출구**(`validateDoc` 등)를 어디까지 내보낼지. 4단계 공개 export 때 정한다.
 - **엔진 안의 파일 구성**(스키마·설정 파일을 읽고 검증하고 쓰는 코드, 상태 관리, 플러그인 모으기, 명세)과 **리소스 폴더 안의 파일 구성**. 각각 2단계와 3단계 테스트 계획에서 확정한다.
 - **죽은 코드 검사**(`knip`). 코어의 공개 출구(`index.ts`)가 생긴 뒤 코어에만 더한다. 그 전에는 아래층 코드가 아직 쓰이지 않아 오류만 난다.
 - **사이트 이름을 스키마로 옮길지**. 옮기면 `config.update`와 `setConfig`가 필요 없어진다. 2단계 전에 정한다.
