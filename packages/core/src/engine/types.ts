@@ -1,6 +1,6 @@
 import type { Kysely, Transaction } from "kysely";
 import type { z } from "zod";
-import type { Database } from "../db/types";
+import type { Database, Migration } from "../db/types";
 import type { BlockDefinition, MarkDefinition } from "../rich-text/types";
 
 /** The shape of the user schema (`monti.schema.ts`): the content languages and the collections with their fields. */
@@ -88,6 +88,8 @@ export interface MontiConfig {
 	marks?: MarkDefinition[];
 	/** Where the media files live; without it the media resource is refused. */
 	storage?: StorageAdapter;
+	/** The server plugins, in the order their migrations run. */
+	plugins?: Plugin[];
 }
 
 /**
@@ -205,7 +207,16 @@ export type Monti<R extends ResourceTree = ResourceTree> = MontiClient<R> & {
 	dryRun<T>(fn: (tx: MontiWriteClient<R>) => Promise<T>): Promise<T>;
 	/** Adds a subscriber to committed writes; the returned function removes it. */
 	onEvent(listener: EventListener): () => void;
+	/** Every operation of the resource tree, plugin operations included. */
+	spec(): OperationSpec[];
 };
+
+/** One operation in `monti.spec()`: its key path, whether it reads or writes, and its input as JSON Schema. */
+export interface OperationSpec {
+	name: string;
+	kind: Operation["kind"];
+	input: Record<string, unknown>;
+}
 
 /** An external service whose keys the key store keeps: `check` resolves when `secret` connects and rejects when not. */
 export interface KeyServiceDefinition {
@@ -213,10 +224,15 @@ export interface KeyServiceDefinition {
 	check(secret: string): Promise<void>;
 }
 
-/** A server plugin: the operations it adds to the resource tree, its key services and its subscriber to committed writes. */
+/**
+ * A server plugin: the operations it adds to the resource tree, its key services, the migrations of its tables and its
+ * subscriber to committed writes.
+ */
 export interface Plugin {
 	name: string;
 	operations?: Record<string, Record<string, Operation>>;
 	keyServices?: KeyServiceDefinition[];
+	/** Run once each, in array order, after the core's, under the plugin's `name` as scope. */
+	migrations?: Migration[];
 	onEvent?: (event: MontiEvent, ctx: { monti: Monti }) => void | Promise<void>;
 }

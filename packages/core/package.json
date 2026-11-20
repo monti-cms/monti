@@ -5,6 +5,9 @@
 	"description": "Monti's core: operations, the engine that runs them, and the entry points they produce",
 	"license": "MIT",
 	"type": "module",
+	"exports": {
+		".": "./src/index.ts"
+	},
 	"scripts": {
 		"lint:deps": "depcruise --config .dependency-cruiser.cjs src",
 		"lint:dup": "jscpd src",

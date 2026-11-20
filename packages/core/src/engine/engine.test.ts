@@ -323,6 +323,42 @@ it("ENG-PLG-2 rejects a plugin whose operation path is already taken", () => {
 	);
 });
 
+it("ENG-SPEC-1 lists every operation with its name, its kind and its input as JSON Schema", () => {
+	const get = defineRead({
+		input: z.object({ id: z.string(), locale: z.string().optional() }),
+		run: async () => null,
+	});
+	const create = defineWrite({ input: folderInput, run: insertFolder });
+	const rename = defineWrite({ input: folderInput, run: insertFolder });
+	const plugin: Plugin = { name: "albums-plugin", operations: { albums: { rename } } };
+	const monti = createMonti(db, { albums: { get, create } }, [plugin]);
+
+	const spec = monti.spec();
+	const named = (name: string) => spec.find((entry) => entry.name === name);
+
+	// ENG-SPEC-1.1
+	expect(spec.map((entry) => Object.keys(entry).sort())).toEqual([
+		["input", "kind", "name"],
+		["input", "kind", "name"],
+		["input", "kind", "name"],
+	]);
+	// ENG-SPEC-1.1
+	expect(spec.map((entry) => entry.name).sort()).toEqual(["albums.create", "albums.get", "albums.rename"]);
+	// ENG-SPEC-1.2
+	expect(named("albums.get")?.kind).toBe("read");
+	// ENG-SPEC-1.2
+	expect(named("albums.create")?.kind).toBe("write");
+	// ENG-SPEC-1.3
+	expect(named("albums.get")?.input).toEqual({
+		$schema: "https://json-schema.org/draft/2020-12/schema",
+		type: "object",
+		properties: { id: { type: "string" }, locale: { type: "string" } },
+		required: ["id"],
+	});
+	// ENG-SPEC-1.4
+	expect(named("albums.rename")).toMatchObject({ name: "albums.rename", kind: "write" });
+});
+
 it("ENG-TX-4 turns a PostgreSQL unique violation in a write into CONFLICT and rolls it back", async () => {
 	const create = defineWrite({
 		input: folderInput,

@@ -2,7 +2,9 @@ import type { Kysely, Transaction } from "kysely";
 import type { Database } from "../db/types";
 import { MontiError } from "./errors";
 import { createEvents } from "./events";
+import { isOperation } from "./operation";
 import { withPlugins } from "./plugins";
+import { specOf } from "./spec";
 import { createState } from "./state";
 import type {
 	Monti,
@@ -51,6 +53,7 @@ export function createMonti<R extends ResourceTree>(
 		onEvent: events.onEvent,
 		transaction: transactionOf<R>(db, state, tree, events.emit),
 		dryRun: dryRunOf<R>(db, state, tree),
+		spec: specOf(tree),
 	});
 	for (const plugin of plugins) {
 		const { onEvent } = plugin;
@@ -187,9 +190,4 @@ function parseInput(operation: Operation, raw: unknown): unknown {
 	const result = !parsed.success && raw === undefined ? operation.input.safeParse({}) : parsed;
 	if (!result.success) throw new MontiError("BAD_REQUEST", result.error.message, result.error.issues);
 	return result.data;
-}
-
-/** Whether a node of the resource tree is an operation rather than a resource holding more nodes. */
-function isOperation(node: Operation | ResourceTree): node is Operation {
-	return typeof node.run === "function";
 }
