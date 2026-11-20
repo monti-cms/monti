@@ -83,7 +83,7 @@ ENG-TX-4  쓰기 중 DB 고유 제약 위반이 나면 `CONFLICT`로 변환하�
         ENG-TX-4.2  먼저 추가했던 행이 롤백되어 DB에 남아 있지 않는다
         ENG-TX-4.3  `onEvent` 구독자가 호출되지 않는다
 
-ENG-TX-5  `transaction`이나 `dryRun` 콜백 안에서 `CONFLICT`가 난 뒤 콜백이 그 오류를 무시하고 끝까지 가도 `transaction`과 `dryRun`은 `CONFLICT`로 실패한다
+ENG-TX-5  `transaction`이나 `dryRun` 콜백 안에서 DB 고유 제약 위반으로 `CONFLICT`가 난 뒤 콜백이 그 오류를 무시하고 끝까지 가도 `transaction`과 `dryRun`은 `CONFLICT`로 실패한다
   전제  ENG-TX-4와 같이 같은 기본 키를 두 번 넣어 `CONFLICT`가 나는 쓰기 Operation과 `onEvent` 구독자가 등록되어 있다
   행동  `monti.transaction`과 `monti.dryRun`에 각각 콜백을 넘기고, 콜백 안에서 그 쓰기 Operation을 호출하되 던져진 오류를 받아 무시한 채 콜백을 끝까지 실행한다
   결과  ENG-TX-5.1  `transaction`과 `dryRun` 모두 `code`가 `"CONFLICT"`인 `MontiError`로 실패하고 성공 값을 돌려주지 않는다
