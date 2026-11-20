@@ -1,6 +1,6 @@
 # `resources/trash/` 인수 조건
 
-[`docs/refactor/core.md`](../../refactor/core.md) 6절(`trashed_at`, `media_uses`, `loose_files`), 7절(`trash` 리소스), 10절의 인수 조건이다.
+[`docs/refactor/core.md`](../../refactor/core.md) 6절(`trashed_at`, `media_uses`, `loose_files`), 7절(`trash` 리소스)의 인수 조건이다.
 
 - 휴지통 항목: `trashed_at`이 설정된 글(`entries`), 폴더(`folders`), 미디어(`media`)이고 `kind`는 `"entry"`, `"folder"`, `"media"`이다. 템플릿은 휴지통 없이 `templates.delete`로 지운다.
 - `trash.move`: `{ id }`의 활성 글·폴더·미디어를 휴지통으로 보내고 그 항목의 `{ kind, id }`를 돌려준다. 폴더를 보내면 그 아래의 활성 하위 폴더·글·미디어가 같은 `trashed_at`으로 함께 들어가고, 글 자신과 그것을 가리키는 관계 값·미디어 사용처 기록은 그대로 두며, 이미 휴지통에 있거나 없는 대상은 `NOT_FOUND`로 거절한다.

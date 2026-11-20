@@ -117,3 +117,7 @@ ENG-SPEC-1  명세는 엔진의 모든 Operation을 이름, 읽기·쓰기 구�
         ENG-SPEC-1.3  읽기 Operation의 `input`이 `id`는 필수 문자열, `locale`은 선택 문자열인 객체의 JSON Schema이다
         ENG-SPEC-1.4  플러그인이 더한 Operation도 포함된다
 ```
+
+## 6. 알려진 한계
+
+- `transaction`·`dryRun` 콜백 안에서 쓰기를 `Promise.all`로 동시에 실행하다 하나가 실패하면 나머지 쓰기가 트랜잭션 밖에서 실행되어 남을 수 있다. 콜백 안의 쓰기는 하나씩 `await`한다.

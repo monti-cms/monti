@@ -1,6 +1,6 @@
 # `resources/entries/` · `resources/media/uses.ts` (엔트리 확장) 인수 조건
 
-[`docs/refactor/core.md`](../../refactor/core.md) 3.1절(선택 입력 `__preset_id`), 6절(`entries`, `entry_locales`, `entry_published`, `media_uses`), 7절(`entries` 리소스), 10절(언어별 작업본·발행본 분리, 역방향 관계 조회, `Schema` 8종 필드, `publish`·`unpublish`·`duplicate`·`replaceReferences`·`addLocale`·`removeLocale`·`setSourceLocale`)의 인수 조건이다.
+[`docs/refactor/core.md`](../../refactor/core.md) 3.1절(선택 입력 `__preset_id`), 6절(`entries`, `entry_locales`, `entry_published`, `media_uses`), 7절(`entries` 리소스), (언어별 작업본·발행본 분리, 역방향 관계 조회, `Schema` 8종 필드, `publish`·`unpublish`·`duplicate`·`replaceReferences`·`addLocale`·`removeLocale`·`setSourceLocale`)의 인수 조건이다.
 
 - 반환 모양: 작업본(`entry_locales`)과 발행본(`entry_published`) 조회 모두 `entries`의 공통 정보와 합쳐 `{ id, collection, locale, source_locale, folder_id, slug, data, published_at }` 모양으로 돌려준다. `id`는 항상 `entries.id`이고 `data`는 `{ fields, body? }` 구조이며, `published_at`은 해당 `(entry_id, locale)`의 `entry_published` 행이 있으면 그 시각, 없으면 `null`이다.
 - `entries.create`: 필수 `collection`, `locale`, `slug`와 선택 `__preset_id`(UUID), `folder_id`, `data`로 글(`entries`: `source_locale` = 입력 `locale`, `folder_id` 기본 `null`)과 원문 언어 작업본(`entry_locales`: `data` 기본 `{ fields: {} }`, `translation_seen: {}`)을 만든다. 작업본에서는 `required` 필드를 비워 둘 수 있다.
@@ -648,5 +648,7 @@ ENT-SRC-4  휴지통에 있는 글은 `NOT_FOUND`로 원문 언어 변경을 거
         ENT-SRC-4.2  휴지통 글의 `source_locale`과 `"en"` 행의 `translation_seen`이 원래 그대로이다
 ```
 
+## 11. 알려진 한계
 
-
+- 고치지 않기로 한 것이며 확정된 동작이 아니다: 휴지통 비우기와 같은 글의 저장이 동시에 일어나면 한쪽이 외래 키 오류로 한 번 실패할 수 있고, 영구 삭제된 미디어 아이디가 수만 개 남은 글은 `media_uses` 계산이 쿼리 변수 한도에 걸린다.
+- 종류가 바뀐 필드는 다시 저장·발행하기 전까지 발행본에 이전 값이 남고, `body`를 끈 컬렉션에 남은 본문의 미디어도 `media_uses`에 기록된다.

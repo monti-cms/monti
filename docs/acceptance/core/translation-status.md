@@ -1,6 +1,6 @@
 # `resources/translation-status/` 인수 조건
 
-[`docs/refactor/core.md`](../../refactor/core.md) 6절(`entry_locales.translation_seen`), 7절(`translationStatus` 리소스), 10절(번역 상태)의 인수 조건이다.
+[`docs/refactor/core.md`](../../refactor/core.md) 6절(`entry_locales.translation_seen`), 7절(`translationStatus` 리소스)의 인수 조건이다.
 
 - 번역 상태: 번역 언어(원문이 아닌 언어) 작업본마다 번역하는 사람이 확인한 원문의 값을 그대로 기록해 두고, 읽을 때 지금의 원문과 비교해 미확인(`unseen`)·확인 완료(`seen`)·원문 변경(`outdated`)으로 알려 주는 기능이다. 기록은 번역 언어 작업본에만 하고 원문 언어 작업본에는 하지 않는다.
 - 상태를 갖는 단위: 원문 `data.fields`의 최상위 키 하나(필드)와, 원문 본문에서 글자나 내용을 직접 품는 블록(`holds`가 `text` 또는 `nothing`) 하나(본문 블록)이다. 다른 블록을 품는 컨테이너 블록(`holds`가 `blocks`)은 상태를 갖지 않고, 안에 든 블록이 깊이와 관계없이 각자 가진다.
