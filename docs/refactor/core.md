@@ -192,7 +192,7 @@ export interface MontiConfig {
 
 - `ctx`는 `db`, `schema`, `config`, `storage`다. 쓰기에는 `setSchema`, `setConfig`가 더해지고, 쓰기의 `db`는 항상 트랜잭션이다.
 - `monti.config.ts`: `name`, `dev?`, `storage?`, `blocks?`, `marks?`, `plugins?`. 관리자 표시 언어는 admin·Next 연결의 `localStorage`가 맡고, 콘텐츠 언어 목록은 `monti.schema.ts`의 `locales`에 둔다.
-- **개발 서버 판정**: `config.dev ?? (process.env.NODE_ENV === "development")`. 환경 변수가 없거나 `test`이면 개발 서버가 아니다.
+- **개발 서버 판정**: `config.dev`가 `true`일 때만 개발 서버다. 코어는 환경 변수를 읽지 않는다.
 - **스키마·설정 수정**은 개발 서버에서만 된다(`setSchema`, `setConfig`, `schema.update`, `config.update`). 운영에서는 `FORBIDDEN`이다. 두 함수는 트랜잭션 안의 사본만 바꾸고, 커밋 뒤에 공유 상태와 파일에 반영한다. 롤백이나 `dryRun`이면 사본을 버린다. `setConfig`는 `name`만 받는다.
 - **저장소**: `storage`는 선택이다. 저장소가 필요한 기능을 설정 없이 부르면 `MontiError`로 거절한다. 테스트는 `__test__/`의 메모리 저장소를 쓴다.
 
@@ -559,6 +559,7 @@ flowchart TD
 | 2026-11-21 | 내보내기·가져오기(`data`)는 core 리소스가 아니다. 코어의 공개 읽기·쓰기·`__preset_id`·`transaction`·`dryRun`을 조합하는 일이라 "core를 얇게 유지한다"는 기준에 따라 플러그인이나 `cli`가 맡는다(Operation으로 만들어 플러그인이 같은 트리에 합칠 수 있다). 파일 모양과 미디어 파일 처리는 그쪽이 정한다. | 소유자와 정함 |
 | 2026-11-21 | `config.get`은 설정 전체(`ctx.config`)를 돌려준다. 설정을 읽고 고치는 Operation이라서 일부만 돌려주지 않는다. 이 결정은 여러 번 확인되었으므로 다시 묻지 않는다. | 소유자와 정함 |
 | 2026-11-21 | `monti.spec()`은 Operation 이름, 읽기·쓰기 구분, 입력 JSON Schema만 돌려준다. 앱은 `startMonti`로 코어를 켜고, 스키마와 설정은 부르는 쪽이 파일에서 불러 넘긴다. | 소유자와 정함 |
+| 2026-11-21 | 개발 서버는 `config.dev`가 `true`일 때만이다. 코어는 `NODE_ENV`를 읽지 않는다. | 소유자와 정함 |
 
 ## 11. 정하지 않은 것
 
