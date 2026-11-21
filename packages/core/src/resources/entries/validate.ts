@@ -65,7 +65,7 @@ export async function checkData(
 	if (!parsed.success) throw new MontiError("BAD_REQUEST", "필드가 컬렉션과 맞지 않는다", parsed.error.issues);
 	const fields = parsed.data as Record<string, unknown>;
 	const body = checkBody(ctx, collection, data.body);
-	const checked = body === undefined ? { fields } : { fields, body };
+	const checked = { fields, body };
 	const kept = existing === undefined ? undefined : referencesOf(collection, existing);
 	await rejectInactive(ctx, referencesOf(collection, checked), kept);
 	return checked;

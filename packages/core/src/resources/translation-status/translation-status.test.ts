@@ -43,9 +43,9 @@ const CONFIG: MontiConfig = { name: "Monti Blog", dev: false };
 /** `posts`·`notes` 원문의 필드 값. */
 const FIELDS = { title: "제목", summary: "요약" };
 
-function montiOf() {
+function montiOf(schema: Schema = SCHEMA) {
 	return createMonti(db, { entries, translationStatus }, [], {
-		schema: SCHEMA,
+		schema,
 		config: CONFIG,
 		schemaFile: "unused-schema-file",
 		configFile: "unused-config-file",
@@ -164,7 +164,9 @@ it("TST-READ-2 확인한 필드는 원문이 그대로이면 확인 완료, 바�
 
 it("TST-READ-3 본문에서는 글자나 내용이 직접 들어 있는 블록마다 상태를 갖고 컨테이너 블록은 상태를 갖지 않는다", async () => {
 	const table: Block = { id: "s-table", type: "table" };
-	const blocks = [paragraph("s1", "첫 문단"), quote("s-quote", [paragraph("s2", "인용 문단")]), table];
+	// `children`을 생략한 빈 인용도 컨테이너라 상태를 갖지 않는다.
+	const empty: Block = { id: "s-empty", type: "quote" };
+	const blocks = [paragraph("s1", "첫 문단"), quote("s-quote", [paragraph("s2", "인용 문단")]), empty, table];
 	const entry = await createEntry({ fields: FIELDS, blocks });
 	await addLocale(entry.id, "en");
 
@@ -321,6 +323,13 @@ it("TST-READ-13 확인한 원문 필드가 가리키는 대상이 휴지통에 �
 
 	// TST-READ-13.1
 	expect(output.fields.cover).toEqual({ status: "seen", seen_value: media });
+});
+
+it("TST-READ-14 스키마에 없는 컬렉션으로는 번역 상태 목록을 조회할 수 없다", async () => {
+	const monti = montiOf({ locales: SCHEMA.locales, collections: { [POSTS]: SCHEMA.collections[POSTS] } });
+
+	// TST-READ-14.1
+	await expect(monti.translationStatus.list({ collection: "unknown" })).rejects.toMatchObject({ code: "BAD_REQUEST" });
 });
 
 // ---- 갱신 (update) ----

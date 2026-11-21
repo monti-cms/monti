@@ -167,6 +167,7 @@ it("SCH-UPD-2 컬렉션을 추가하면 글 기본 테이블과 글자·숫자·
 					labels: { type: "select", options: ["a", "b"], many: true },
 				},
 			},
+			notes: { fields: {} },
 		}),
 	);
 
@@ -188,6 +189,8 @@ it("SCH-UPD-2 컬렉션을 추가하면 글 기본 테이블과 글자·숫자·
 		"translation_seen",
 		"views",
 	]);
+	// SCH-UPD-2.3
+	expect(await dataTypeOf("notes_data", "body")).toBeUndefined();
 });
 
 it("SCH-UPD-3 하나를 고르는 미디어·관계 필드는 데이터 테이블의 외래 키 열로 만들어진다", async () => {
@@ -207,17 +210,18 @@ it("SCH-UPD-3 하나를 고르는 미디어·관계 필드는 데이터 테이�
 	expect(await referencedTable("posts_data", "author")).toBe("authors");
 });
 
-it("SCH-UPD-4 여러 개를 고르는 미디어·관계 필드는 순서를 저장하는 연결 테이블로 만들어진다", async () => {
-	const tags: CollectionSchema = { fields: { label: { type: "text" } } };
-	const monti = await montiOf(true, withCollections({ tags }));
+it("SCH-UPD-4 여러 개를 고르는 미디어·관계 필드는 순서를 저장하는 연결 테이블로 만들어지고 데이터 테이블에는 열을 만들지 않는다", async () => {
+	const targets = { authors: { fields: {} }, tags: { fields: {} } };
+	const monti = await montiOf(true, withCollections(targets));
 
 	await monti.schema.update(
 		withCollections({
-			tags,
+			...targets,
 			posts: {
 				fields: {
+					author: { type: "relation", to: "authors" },
 					gallery: { type: "media", many: true },
-					topics: { type: "relation", to: "tags", many: true },
+					tags: { type: "relation", to: "tags", many: true },
 				},
 			},
 		}),
@@ -233,16 +237,30 @@ it("SCH-UPD-4 여러 개를 고르는 미디어·관계 필드는 순서를 저�
 		"status",
 		"tags_id",
 	]);
+	// SCH-UPD-4.2
+	expect([await dataTypeOf("posts_data", "gallery"), await dataTypeOf("posts_data", "tags")]).toEqual([
+		undefined,
+		undefined,
+	]);
 });
 
-it("SCH-UPD-5 조건부 필드는 선택한 분기 열과 각 분기의 하위 입력칸 열로 펼쳐져 만들어진다", async () => {
-	const monti = await montiOf(true, empty);
+it("SCH-UPD-5 조건부 필드는 선택한 분기 열과 각 분기의 하위 입력칸 열·연결 테이블로 펼쳐져 만들어진다", async () => {
+	const tags: CollectionSchema = { fields: {} };
+	const monti = await montiOf(true, withCollections({ tags }));
 
 	await monti.schema.update(
 		withCollections({
+			tags,
 			products: {
 				fields: {
-					discount: { type: "conditional", options: { yes: { fields: { price: { type: "number" } } } } },
+					discount: {
+						type: "conditional",
+						options: {
+							yes: {
+								fields: { price: { type: "number" }, badges: { type: "relation", to: "tags", many: true } },
+							},
+						},
+					},
 				},
 			},
 		}),
@@ -253,72 +271,111 @@ it("SCH-UPD-5 조건부 필드는 선택한 분기 열과 각 분기의 하위 �
 	expect(columns).toContain("discount");
 	// SCH-UPD-5.2
 	expect(columns).toContain("discount__yes__price");
+	// SCH-UPD-5.3
+	expect(await columnsOf(testDb.db, "products_rels")).toContain("tags_id");
 });
 
-it("SCH-UPD-6 컬렉션에 필드를 새로 넣으면 열이 추가되고 기존 필드를 빼면 열이 삭제된다", async () => {
-	const monti = await montiOf(true, withCollections({ posts: { fields: { old_field: { type: "text" } } } }));
+it("SCH-UPD-6 컬렉션에 필드를 새로 넣으면 열이 추가되고 기존 필드를 빼면 열이 삭제되며 바꾸지 않은 필드의 값은 유지된다", async () => {
+	const keep_field = { type: "text" as const };
+	const monti = await montiOf(
+		true,
+		withCollections({ posts: { fields: { keep_field, old_field: { type: "text" } } } }),
+	);
+	const id = randomUUID();
+	await sql`insert into posts (id, source_locale) values (${id}, 'ko')`.execute(db);
+	await sql`insert into posts_data (entry_id, locale, status, keep_field, old_field)
+		values (${id}, 'ko', 'draft', '남길 값', '지울 값')`.execute(db);
 
-	await monti.schema.update(withCollections({ posts: { fields: { new_field: { type: "text" } } } }));
+	await monti.schema.update(withCollections({ posts: { fields: { keep_field, new_field: { type: "text" } } } }));
 	const columns = await columnsOf(testDb.db, "posts_data");
+	const { rows } = await sql<{ keep_field: string }>`select keep_field from posts_data`.execute(db);
 
 	// SCH-UPD-6.1
 	expect(columns).toContain("new_field");
 	// SCH-UPD-6.2
 	expect(columns).not.toContain("old_field");
+	// SCH-UPD-6.3
+	expect(rows).toEqual([{ keep_field: "남길 값" }]);
 });
 
-it("SCH-UPD-7 필드의 종류를 바꾸면 데이터 테이블의 열도 새 종류로 바뀌고 변환 가능한 값은 유지되며 호환되지 않는 값은 비워진다", async () => {
+it("SCH-UPD-7 필드의 종류나 관계 대상을 바꾸면 데이터 테이블의 열도 새 종류로 바뀌고 변환 가능한 값은 유지되며 호환되지 않는 값은 비워진다", async () => {
+	const people = { authors: { fields: {} }, members: { fields: {} } };
 	const category = { type: "select" as const, options: ["news", "tech"] };
+	const labels = { type: "select" as const, options: ["a", "b"] };
 	const monti = await montiOf(
 		true,
 		withCollections({
+			...people,
 			posts: {
 				fields: {
 					code: { type: "number" },
 					flag: { type: "boolean" },
+					active: { type: "boolean" },
+					event_at: { type: "date" },
 					category,
+					labels: { ...labels, many: true },
 					score: { type: "text" },
 					note: { type: "text" },
+					owner: { type: "relation", to: "authors" },
 				},
 			},
 		}),
 	);
-	const id = randomUUID();
+	const [id, author] = [randomUUID(), randomUUID()];
+	await sql`insert into authors (id, source_locale) values (${author}, 'ko')`.execute(db);
 	await sql`insert into posts (id, source_locale) values (${id}, 'ko')`.execute(db);
-	await sql`insert into posts_data (entry_id, locale, status, code, flag, category, score, note)
-		values (${id}, 'ko', 'draft', 42, true, 'news', '3.5', 'hello')`.execute(db);
+	await sql`insert into posts_data (entry_id, locale, status, code, flag, active, event_at, category, labels, score, note, owner)
+		values (${id}, 'ko', 'draft', 42, true, true, '2026-11-20T01:00:00Z', 'news', array['a', 'b'], '3.5', 'hello', ${author})`.execute(
+		db,
+	);
+	// 날짜를 글자로 바꾼 값은 DB 세션의 시간대를 따르므로, 바꾸기 전에 DB가 글자로 쓴 값과 비교한다.
+	const before = await sql<{ event_at: string }>`select event_at::text as event_at from posts_data`.execute(db);
 
 	await monti.schema.update(
 		withCollections({
+			...people,
 			posts: {
 				fields: {
 					code: { type: "text" },
 					flag: { type: "number" },
+					active: { type: "text" },
+					event_at: { type: "text" },
 					category: { ...category, many: true },
+					labels,
 					score: { type: "number" },
 					note: { type: "number" },
+					owner: { type: "relation", to: "members" },
 				},
 			},
 		}),
 	);
-	const { rows } = await sql<Record<string, unknown>>`select code, flag, category, score, note from posts_data`.execute(
-		db,
-	);
+	const { rows } = await sql<Record<string, unknown>>`select * from posts_data`.execute(db);
+	const typesOf = (columns: string[]) => Promise.all(columns.map((column) => dataTypeOf("posts_data", column)));
 
 	// SCH-UPD-7.1
-	expect({ type: await dataTypeOf("posts_data", "code"), value: rows[0]?.code }).toEqual({ type: "text", value: "42" });
+	expect({
+		types: await typesOf(["code", "active", "event_at"]),
+		values: [rows[0]?.code, rows[0]?.active, rows[0]?.event_at],
+	}).toEqual({
+		types: ["text", "text", "text"],
+		values: ["42", "true", before.rows[0]?.event_at],
+	});
 	// SCH-UPD-7.2
 	expect({ type: await dataTypeOf("posts_data", "flag"), value: rows[0]?.flag }).toEqual({
 		type: "double precision",
 		value: null,
 	});
 	// SCH-UPD-7.3
-	expect({ type: await dataTypeOf("posts_data", "category"), value: rows[0]?.category }).toEqual({
-		type: "text[]",
-		value: ["news"],
+	expect({ types: await typesOf(["category", "labels"]), values: [rows[0]?.category, rows[0]?.labels] }).toEqual({
+		types: ["text[]", "text"],
+		values: [["news"], "a"],
 	});
 	// SCH-UPD-7.4
-	expect({ score: rows[0]?.score, note: rows[0]?.note }).toEqual({ score: 3.5, note: null });
+	expect({ score: rows[0]?.score, note: rows[0]?.note, owner: rows[0]?.owner }).toEqual({
+		score: 3.5,
+		note: null,
+		owner: null,
+	});
 });
 
 it("SCH-UPD-8 스키마에서 컬렉션을 지우면 그 컬렉션의 테이블들이 모두 삭제된다", async () => {
@@ -390,55 +447,101 @@ it("SCH-UPD-12 지원하지 않는 필드 종류가 들어 있으면 스키마�
 
 it("SCH-UPD-13 코어 기본 테이블 이름이나 `_data`·`_rels`로 끝나는 이름은 컬렉션 이름으로 쓸 수 없다", async () => {
 	const monti = await montiOf(true);
-
-	const codes = [
-		await codeOf(monti.schema.update(withCollections({ media: { fields: {} } }))),
-		await codeOf(monti.schema.update(withCollections({ posts_data: { fields: {} } }))),
+	const reserved = [
+		"templates",
+		"folders",
+		"media",
+		"media_uses",
+		"loose_files",
+		"admin",
+		"session",
+		"api_keys",
+		"migrations",
+		"posts_data",
+		"posts_rels",
 	];
 
+	const codes: (string | null)[] = [];
+	for (const key of reserved) codes.push(await codeOf(monti.schema.update(withCollections({ [key]: { fields: {} } }))));
+
 	// SCH-UPD-13.1
-	expect(codes).toEqual(["BAD_REQUEST", "BAD_REQUEST"]);
+	expect(codes).toEqual(reserved.map(() => "BAD_REQUEST"));
 	// SCH-UPD-13.2
 	expect(await monti.schema.get({})).toEqual(original);
 });
 
 it("SCH-UPD-14 데이터 테이블의 고정 열 이름은 컬렉션의 필드 이름으로 쓸 수 없다", async () => {
 	const monti = await montiOf(true);
-
-	const codes = [
-		await codeOf(monti.schema.update(withCollections({ posts: { fields: { status: { type: "text" } } } }))),
-		await codeOf(monti.schema.update(withCollections({ posts: { fields: { slug: { type: "text" } } } }))),
+	const title = { type: "text" as const };
+	const fixedNames = [
+		withCollections({ posts: { fields: { title, status: { type: "text" } } } }),
+		withCollections({ posts: { fields: { slug: { type: "text" } } } }),
+		withCollections({ posts: { fields: { body: { type: "text" } } } }),
+		withCollections({
+			posts: {
+				fields: { hero: { type: "conditional", options: { quote: { fields: { status: { type: "text" } } } } } },
+			},
+		}),
 	];
 
+	const codes: (string | null)[] = [];
+	for (const next of fixedNames) codes.push(await codeOf(monti.schema.update(next)));
+
 	// SCH-UPD-14.1
-	expect(codes).toEqual(["BAD_REQUEST", "BAD_REQUEST"]);
+	expect(codes).toEqual(fixedNames.map(() => "BAD_REQUEST"));
 	// SCH-UPD-14.2
 	expect(await monti.schema.get({})).toEqual(original);
 });
 
-it("SCH-UPD-15 만들어질 테이블이나 열 이름이 63바이트를 넘는 스키마는 저장할 수 없다", async () => {
-	const monti = await montiOf(true);
-	// 하위 필드 열 이름 `배치__강조__설명설명…`은 24자지만 UTF-8로 64바이트다.
-	const [field, option, subfield] = ["배치", "강조", "설명".repeat(8)];
-	const long = withCollections({
+/** `option` 분기에 `subfield` 하나를 가진 조건부 필드 `field`만 있는 `posts` 스키마. */
+function withSubfield(field: string, option: string, subfield: string): Schema {
+	return withCollections({
 		posts: {
 			fields: { [field]: { type: "conditional", options: { [option]: { fields: { [subfield]: { type: "text" } } } } } },
 		},
 	});
+}
+
+it("SCH-UPD-15 키나 만들어질 테이블·열 이름이 63바이트를 넘거나 금지된 기호가 들어 있으면 스키마를 저장할 수 없다", async () => {
+	const monti = await montiOf(true);
+	// 한글 한 글자는 UTF-8로 3바이트다. 컬렉션 키 58바이트에 `_data`·`_rels`가 붙으면 63바이트이고, 필드 키는 21자로 63바이트다.
+	const exact = withCollections({ ["c".repeat(58)]: { fields: { ["가".repeat(21)]: { type: "text" } } } });
+	const rejected = [
+		// 다건 미디어 필드의 키가 22자로 66바이트다.
+		withCollections({ posts: { fields: { ["가".repeat(22)]: { type: "media", many: true } } } }),
+		// 하위 필드 열 이름 `배치__강조__설명설명…`은 24자지만 UTF-8로 64바이트다. 각 키는 63바이트 안이다.
+		withSubfield("배치", "강조", "설명".repeat(8)),
+		// 컬렉션 키는 59바이트지만 `_data`가 붙으면 64바이트다.
+		withCollections({ ["c".repeat(59)]: { fields: {} } }),
+		withCollections({ 'po"sts': { fields: {} } }),
+		withCollections({ posts: { fields: { "cover.alt": { type: "text" } } } }),
+		withSubfield("hero", "big__image", "caption"),
+		withSubfield("hero", "quote", 'say"ing'),
+	];
+
+	// SCH-UPD-15.2
+	await expect(monti.schema.update(exact)).resolves.toEqual(exact);
+	const codes: (string | null)[] = [];
+	for (const next of rejected) codes.push(await codeOf(monti.schema.update(next)));
 
 	// SCH-UPD-15.1
-	await expect(monti.schema.update(long)).rejects.toMatchObject({ code: "BAD_REQUEST" });
-	// SCH-UPD-15.2
-	expect(await monti.schema.get({})).toEqual(original);
+	expect(codes).toEqual(rejected.map(() => "BAD_REQUEST"));
+	// SCH-UPD-15.3
+	expect(await monti.schema.get({})).toEqual(exact);
 });
 
 it("SCH-UPD-16 관계 필드가 스키마에 없는 컬렉션을 가리키면 스키마를 저장할 수 없다", async () => {
 	const monti = await montiOf(true);
-	const toFolders = withCollections({ posts: { fields: { folder: { type: "relation", to: "folders" } } } });
+	const author = { type: "relation" as const, to: "authors" };
+	const toFolders = withCollections({
+		authors: { fields: {} },
+		posts: { fields: { author, folder: { type: "relation", to: "folders" } } },
+	});
 	const toMissing = withCollections({
 		posts: {
 			fields: {
-				layout: { type: "conditional", options: { hero: { fields: { author: { type: "relation", to: "authors" } } } } },
+				related: { type: "relation", to: "posts" },
+				layout: { type: "conditional", options: { hero: { fields: { author } } } },
 			},
 		},
 	});

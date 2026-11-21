@@ -94,6 +94,14 @@ async function looseFile(key: string) {
 	return db.selectFrom("loose_files").selectAll().where("key", "=", key).executeTakeFirst();
 }
 
+/** 실행이 거절되면 그 오류 코드, 성공하면 null. */
+async function codeOf(run: Promise<unknown>): Promise<string | null> {
+	return run.then(
+		() => null,
+		(error: { code: string }) => error.code,
+	);
+}
+
 it("MED-UPL-1 issues an upload ticket for a new UUID key and records it in loose_files for 24 hours", async () => {
 	const startedAt = Date.now();
 	const output = await montiOf().media.startUpload({ mime_type: "image/png", size: 1024 });
@@ -130,7 +138,7 @@ it("MED-CRT-1 스토리지 파일을 확인해 미디어로 등록하고 임시 
 	await seedLooseFile(key);
 	await seedLooseFile(other);
 
-	const output = await montiOf().media.create({ key });
+	const output = await montiOf().media.create({ key, width: 1200, height: 800 });
 	const row = await mediaRow(output.id);
 
 	// MED-CRT-1.1
@@ -148,8 +156,8 @@ it("MED-CRT-1 스토리지 파일을 확인해 미디어로 등록하고 임시 
 		mime_type: "image/webp",
 		size: 2048,
 		folder_id: null,
-		width: null,
-		height: null,
+		width: 1200,
+		height: 800,
 	});
 	// MED-CRT-1.2
 	expect(output.url).toBe(`memory://${key}`);
@@ -170,8 +178,8 @@ it("MED-CRT-1 스토리지 파일을 확인해 미디어로 등록하고 임시 
 		mime_type: "image/webp",
 		size: 2048,
 		folder_id: null,
-		width: null,
-		height: null,
+		width: 1200,
+		height: 800,
 	});
 	// MED-CRT-1.4
 	expect(await looseFile(key)).toBeUndefined();
@@ -371,6 +379,36 @@ it("MED-UPD-5 단건 수정에서 파일 이름을 빈 문자열로 바꿀 수 �
 	await expect(montiOf().media.update({ id: row.id, filename: "" })).rejects.toMatchObject({ code: "BAD_REQUEST" });
 	// MED-UPD-5.2
 	expect((await mediaRow(row.id)).filename).toBe("image.png");
+});
+
+it("MED-UPD-6 단건 수정에서 바꿀 항목이 없거나 같은 파일 키를 다시 주면 기존 미디어를 그대로 돌려준다", async () => {
+	const row = await seedMedia();
+	const monti = montiOf();
+	const same = { id: row.id, key: row.key, filename: row.filename };
+
+	const outputs = [await monti.media.update({ id: row.id }), await monti.media.update({ id: row.id, key: row.key })];
+
+	// MED-UPD-6.1
+	expect({ outputs, loose: await looseKeys() }).toMatchObject({ outputs: [same, same], loose: [] });
+});
+
+it("MED-UPD-7 미디어 수정에서 미디어 범위가 아닌 폴더로 옮길 수 없고, 다건 수정에서는 폴더를 비워 루트로 옮길 수 있다", async () => {
+	const folder = await seedFolder("media");
+	const [first, second] = [await seedMedia({ folder_id: folder }), await seedMedia({ folder_id: folder })];
+	const postsFolder = await seedFolder(POSTS);
+	const ids = [first.id, second.id];
+	const monti = montiOf();
+
+	const codes = [
+		await codeOf(monti.media.update({ id: first.id, folder_id: postsFolder })),
+		await codeOf(monti.media.update({ ids, folder_id: postsFolder })),
+	];
+	await monti.media.update({ ids, folder_id: null });
+
+	// MED-UPD-7.1
+	expect(codes).toEqual(["BAD_REQUEST", "BAD_REQUEST"]);
+	// MED-UPD-7.2
+	expect([(await mediaRow(first.id)).folder_id, (await mediaRow(second.id)).folder_id]).toEqual([null, null]);
 });
 
 it("MED-CRT-2 registers the media with the given __preset_id", async () => {

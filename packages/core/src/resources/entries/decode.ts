@@ -34,7 +34,7 @@ function storedValue(slot: Slot, stored: Stored, isActive: IsActive): unknown {
 		return ids.length > 0 ? ids : undefined;
 	}
 	const value = stored.row[slot.column];
-	if (value === null || value === undefined || !kept(slot, value, isActive)) return undefined;
+	if (value === null || !kept(slot, value, isActive)) return undefined;
 	return value instanceof Date ? value.toISOString() : value;
 }
 
@@ -54,11 +54,9 @@ export function decodeData(collection: CollectionSchema, stored: Stored, isActiv
 	for (const slot of slotsOf(collection)) {
 		const value = storedValue(slot, stored, isActive);
 		if (value === undefined) continue;
+		// 고르지 않은 분기의 하위 열은 늘 비어 있으므로, 값이 있는 하위 열은 `chosenOptions`가 담은 분기의 것이다.
 		if (slot.sub === undefined) fields[slot.key] = value;
-		else {
-			const chosen = fields[slot.key] as ConditionalValue | undefined;
-			if (chosen !== undefined && chosen.option === slot.option) chosen.fields[slot.sub] = value;
-		}
+		else (fields[slot.key] as ConditionalValue).fields[slot.sub] = value;
 	}
 	const body = stored.row.body;
 	return body === null || body === undefined ? { fields } : { fields, body: body as Doc };

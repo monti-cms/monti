@@ -12,7 +12,7 @@
 const toTextFrom: readonly string[] = ["double precision", "boolean", "timestamp with time zone"];
 
 export function castExpression(column: string, from: string, to: string): string {
-	const name = `"${column.replaceAll('"', '""')}"`;
+	const name = `"${column}"`;
 	if (from === "text" && to === "text[]") return `case when ${name} is null then null else array[${name}] end`;
 	if (from === "text[]" && to === "text") return `${name}[1]`;
 	if (toTextFrom.includes(from) && to === "text") return `${name}::text`;

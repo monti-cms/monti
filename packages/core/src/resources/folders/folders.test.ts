@@ -277,3 +277,13 @@ it("FLD-UPD-10 바꿀 항목 없이 폴더 수정을 호출하면 기존 폴더�
 	// FLD-UPD-10.1
 	expect(output).toEqual({ id: folder, scope: POSTS, name: "Drafts", parent_id: parent });
 });
+
+it("FLD-UPD-11 같은 위치의 다른 활성 폴더와 같은 이름으로 바꿀 수 없다", async () => {
+	await seedFolder({ name: "Drafts" });
+	const second = await seedFolder({ name: "Archive" });
+
+	// FLD-UPD-11.1
+	await expect(montiOf().folders.update({ id: second, name: "Drafts" })).rejects.toMatchObject({ code: "CONFLICT" });
+	// FLD-UPD-11.2
+	expect((await folderRow(second)).name).toBe("Archive");
+});

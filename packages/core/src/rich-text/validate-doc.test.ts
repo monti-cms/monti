@@ -46,7 +46,7 @@ const VALID_BLOCKS: Block[] = [
 	{ id: "b1", type: "paragraph", content: INLINES },
 	{ id: "b2", type: "heading", attrs: { level: 2 }, content: [] },
 	{ id: "b3", type: "codeBlock", attrs: { language: "ts" }, content: [{ type: "text", text: "let a = 1;" }] },
-	{ id: "b4", type: "footnote", attrs: { id: "fn-1" } },
+	{ id: "b4", type: "footnote", attrs: { id: "fn-1" }, content: [{ type: "text", text: "각주 내용" }] },
 	{
 		id: "b5",
 		type: "bulletList",
@@ -60,6 +60,7 @@ const VALID_BLOCKS: Block[] = [
 	{ id: "b11", type: "file", attrs: { mediaId: "c3a5e7f9-2b4d-4e6f-8a1c-5d7e9f1b3c42" } },
 	{ id: "b12", type: "table", attrs: { rows: [["a", "b"]] } },
 	{ id: "b13", type: "listItem", children: [] },
+	{ id: "b14", type: "paragraph" },
 ];
 
 const UUID_A = "4f2c8e7a-1b3d-4c5e-8f9a-0b1c2d3e4f50";
@@ -71,10 +72,11 @@ it("RT-DOC-1 유효한 본문 문서는 빈 문제 목록을 돌려준다", () =
 	expect(validateDoc(doc)).toEqual([]);
 });
 
-it("RT-DOC-2 문서의 블록 목록이 배열이 아니면 예외를 던지지 않고 문제를 돌려준다", () => {
-	const paths = pathsOf({ blocks: {} });
+it("RT-DOC-2 문서가 객체가 아니거나 블록 목록이 배열이 아니면 예외를 던지지 않고 문제를 돌려준다", () => {
 	// RT-DOC-2.1
-	expect(paths).toContain("blocks");
+	expect(pathsOf(null)).toContain("");
+	// RT-DOC-2.1
+	expect(pathsOf({ blocks: {} })).toContain("blocks");
 });
 
 it("RT-DOC-3 블록이 객체가 아니면 해당 블록 경로의 문제를 돌려준다", () => {
@@ -210,10 +212,15 @@ it("RT-BLK-6 허용된 자식 목록에 없는 하위 블록이 들어 있으면
 	expect(under(paths, "blocks[0].children[0]")).toEqual([]);
 });
 
-it("RT-INL-1 등록되지 않은 종류의 인라인 노드는 문제를 돌려준다", () => {
-	const paths = pathsOf({ blocks: [{ id: "b0", type: "paragraph", content: [{ type: "emoji", name: "smile" }] }] });
+it("RT-INL-1 인라인 노드가 객체가 아니거나 등록되지 않은 종류이거나 각주 참조 ID가 문자열이 아니면 문제를 돌려준다", () => {
+	const content = [null, { type: "emoji", name: "smile" }, { type: "footnoteRef" }];
+	const paths = pathsOf({ blocks: [{ id: "b0", type: "paragraph", content }] });
 	// RT-INL-1.1
-	expect(paths).toContain("blocks[0].content[0].type");
+	expect(paths).toContain("blocks[0].content[0]");
+	// RT-INL-1.2
+	expect(paths).toContain("blocks[0].content[1].type");
+	// RT-INL-1.3
+	expect(paths).toContain("blocks[0].content[2].id");
 });
 
 it("RT-INL-2 글자 노드의 텍스트가 문자열이 아니면 문제를 돌려준다", () => {
@@ -222,13 +229,22 @@ it("RT-INL-2 글자 노드의 텍스트가 문자열이 아니면 문제를 돌�
 	expect(paths).toContain("blocks[0].content[0].text");
 });
 
-it("RT-INL-3 마크에 종류가 없거나 등록되지 않은 마크이면 문제를 돌려준다", () => {
-	const content = [text("이름 없는 마크", [{ href: "https://example.com" }]), text("모르는 마크", [{ type: "glow" }])];
+it("RT-INL-3 마크 목록이나 마크 항목 형식이 잘못되었거나 등록되지 않은 마크이면 문제를 돌려준다", () => {
+	const content = [
+		text("이름 없는 마크", [{ href: "https://example.com" }]),
+		text("모르는 마크", [{ type: "glow" }]),
+		{ type: "text", text: "배열이 아닌 마크 목록", marks: { type: "bold" } },
+		text("객체가 아닌 마크", [null]),
+	];
 	const paths = pathsOf({ blocks: [{ id: "b0", type: "paragraph", content }] });
 	// RT-INL-3.1
 	expect(paths).toContain("blocks[0].content[0].marks[0].type");
 	// RT-INL-3.2
 	expect(paths).toContain("blocks[0].content[1].marks[0].type");
+	// RT-INL-3.3
+	expect(paths).toContain("blocks[0].content[2].marks");
+	// RT-INL-3.4
+	expect(paths).toContain("blocks[0].content[3].marks[0]");
 });
 
 it("RT-INL-4 추가로 등록한 사용자 정의 마크의 속성을 스키마로 검사한다", () => {

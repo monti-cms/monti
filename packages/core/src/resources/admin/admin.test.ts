@@ -131,3 +131,10 @@ it("ADM-UPD-3 새 이메일 형식이 맞지 않거나 새 비밀번호가 비�
 	// ADM-UPD-3.3
 	expect(await db.selectFrom("session").selectAll().execute()).toEqual(before.session);
 });
+
+it("ADM-UPD-4 관리자 계정이 없으면 관리자 정보를 바꿀 수 없다", async () => {
+	// ADM-UPD-4.1
+	await expect(monti.admin.update({ currentPassword: owner.password, ...changed })).rejects.toMatchObject({
+		code: "UNAUTHORIZED",
+	});
+});

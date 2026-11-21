@@ -99,25 +99,40 @@ function namedFieldsOf(collectionFields: z.infer<typeof fields>): NamedField[] {
 	);
 }
 
-/** 값 필드가 만드는 열 이름: 단건은 `_data`의 그 열, 다건 관계는 `_rels`의 `<to>_id` 열, 다건 미디어는 고정 열 `media_id`를 쓴다. */
-function columnsOf({ column, field }: NamedField): string[] {
-	if (field.type === "relation" && field.many === true) return [`${field.to}_id`];
-	return field.type === "media" && field.many === true ? [] : [column];
+/** 컬렉션 하나의 키: 컬렉션 키, 필드 키(하위 필드 포함), 조건부 분기 이름. */
+function keysOf(key: string, collectionFields: z.infer<typeof fields>): string[] {
+	const branches = Object.values(collectionFields)
+		.filter((field) => field.type === "conditional")
+		.flatMap((field) => Object.keys(field.options));
+	return [key, ...fieldKeysOf(collectionFields), ...branches];
 }
 
-/** 컬렉션 `key`가 만들 테이블과 열의 이름: 세 테이블, 조건부 필드가 고른 분기를 담는 열, 값 필드의 열. */
-function identifiersOf(key: string, collectionFields: z.infer<typeof fields>): string[] {
-	const branchColumns = Object.keys(collectionFields).filter((name) => collectionFields[name].type === "conditional");
-	return [key, `${key}_data`, `${key}_rels`, ...branchColumns, ...namedFieldsOf(collectionFields).flatMap(columnsOf)];
+/** 키에 쓸 수 없는 문자열: SQL 식별자를 감싸는 큰따옴표, 점, 하위 필드 열 이름을 잇는 연속 밑줄. */
+const forbiddenInKeys = ['"', ".", "__"];
+
+/** 모든 컬렉션의 키에 금지된 문자열이 없는지. */
+function hasAllowedKeys(collections: Collections): boolean {
+	return Object.entries(collections).every(([key, { fields: collectionFields }]) =>
+		keysOf(key, collectionFields).every((name) => !forbiddenInKeys.some((part) => name.includes(part))),
+	);
+}
+
+/** 컬렉션 하나가 만들 테이블·열 이름: `<collection>_data`, `<collection>_rels`, 값 필드 열(조건부 하위 열 포함), `<to>_id`. */
+function createdNamesOf(key: string, collectionFields: z.infer<typeof fields>): string[] {
+	const named = namedFieldsOf(collectionFields);
+	const targets = named.flatMap(({ field }) => (field.type === "relation" ? [`${field.to}_id`] : []));
+	return [`${key}_data`, `${key}_rels`, ...named.map(({ column }) => column), ...targets];
 }
 
 /** PostgreSQL 식별자 한도(UTF-8 바이트). DB는 이보다 긴 이름을 오류 없이 잘라 만든다. */
 const MAX_IDENTIFIER_BYTES = 63;
 
-/** 모든 컬렉션이 만들 테이블·열 이름이 식별자 한도 안인지. */
+/** 모든 컬렉션의 키와 만들어질 테이블·열 이름이 식별자 한도 안인지. */
 function fitsIdentifiers(collections: Collections): boolean {
 	return Object.entries(collections).every(([key, { fields: collectionFields }]) =>
-		identifiersOf(key, collectionFields).every((name) => Buffer.byteLength(name, "utf8") <= MAX_IDENTIFIER_BYTES),
+		[...keysOf(key, collectionFields), ...createdNamesOf(key, collectionFields)].every(
+			(name) => Buffer.byteLength(name) <= MAX_IDENTIFIER_BYTES,
+		),
 	);
 }
 
@@ -131,8 +146,8 @@ function hasRelationTargets(collections: Collections): boolean {
 }
 
 /**
- * 사용자 스키마가 가져야 할 모양: 필드는 정의된 8종이고, 컬렉션 키는 예약어가 아니며, 만들어질 테이블·열 이름은 식별자
- * 한도 안이고, 관계 필드는 같은 스키마의 컬렉션을 가리킨다.
+ * 사용자 스키마가 가져야 할 모양: 필드는 정의된 8종이고, 컬렉션 키는 예약어가 아니며, 키에 금지된 문자열이 없고, 키와
+ * 만들어질 테이블·열 이름은 식별자 한도 안이며, 관계 필드는 같은 스키마의 컬렉션을 가리킨다.
  */
 export const schemaShape: z.ZodType<Schema> = z.object({
 	locales: z.array(z.string()),
@@ -141,7 +156,8 @@ export const schemaShape: z.ZodType<Schema> = z.object({
 		.refine(hasCollectionKeys, {
 			message: "코어 기본 테이블 이름이나 _data·_rels로 끝나는 이름은 컬렉션 이름으로 쓸 수 없습니다",
 		})
-		.refine(fitsIdentifiers, { message: "만들어질 테이블이나 열 이름이 UTF-8 63바이트를 넘습니다" })
+		.refine(hasAllowedKeys, { message: "키에는 큰따옴표, 점, 연속 밑줄을 쓸 수 없습니다" })
+		.refine(fitsIdentifiers, { message: "키나 만들어질 테이블·열 이름이 UTF-8 63바이트를 넘습니다" })
 		.refine(hasRelationTargets, { message: "관계 필드의 `to`가 스키마에 없는 컬렉션입니다" }),
 });
 

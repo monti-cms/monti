@@ -93,13 +93,17 @@ it("ENG-OP-2 runs a write called directly in a transaction and sends its event a
 	expect(await namesAtEvent).toEqual(["Photos"]);
 });
 
-it("ENG-OP-3 throws BAD_REQUEST for an input that does not match the schema and does not run", async () => {
-	const run = vi.fn(insertFolder);
-	const monti = createMonti(db, { folders: { create: defineWrite({ input: folderInput, run }) } });
+it("ENG-OP-3 입력이 스키마에 맞지 않으면 실행하지 않고 거절한다", async () => {
+	const run = vi.fn(async () => null);
+	// 모든 항목이 선택이라 빈 입력(`{}`)은 통과하는 입력 스키마다.
+	const input = z.object({ name: z.string().optional() });
+	const monti = createMonti(db, { folders: { rename: defineWrite({ input, run }) } });
 	const listener = vi.fn();
 	monti.onEvent(listener);
+	// 타입 검사를 거치지 않은 호출자가 보내는 모양: `name`이 문자열이 아니다.
+	const wrong: z.infer<typeof input> = JSON.parse(JSON.stringify({ name: 1 }));
 
-	const call = monti.folders.create({ id: "not-a-uuid", name: "Photos" });
+	const call = monti.folders.rename(wrong);
 
 	// ENG-OP-3.1
 	await expect(call).rejects.toBeInstanceOf(MontiError);

@@ -15,7 +15,8 @@ export function mediaIdsOf(blocks: readonly Block[], ids = new Set<string>()): S
 	for (const block of blocks) {
 		const { mediaId, mediaIds } = block.attrs ?? {};
 		if (typeof mediaId === "string") ids.add(mediaId.toLowerCase());
-		if (Array.isArray(mediaIds)) for (const id of mediaIds) if (typeof id === "string") ids.add(id.toLowerCase());
+		// 본문은 `validateDoc`을 통과해 `mediaIds`가 UUID 문자열 배열이다.
+		if (Array.isArray(mediaIds)) for (const id of mediaIds as string[]) ids.add(id.toLowerCase());
 		mediaIdsOf(block.children ?? [], ids);
 	}
 	return ids;

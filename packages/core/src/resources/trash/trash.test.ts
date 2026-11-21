@@ -493,13 +493,33 @@ it("TRH-RST-8 휴지통에 있지 않은 항목은 되살릴 수 없다", async 
 	await expect(montiOf().trash.restore({ id: entry.id })).rejects.toMatchObject({ code: "NOT_FOUND" });
 });
 
+it("TRH-RST-9 미디어 폴더를 되살리면 함께 들어갔던 하위 폴더와 미디어가 함께 돌아온다", async () => {
+	const parent = await createFolder("media");
+	const child = await createFolder("media", parent.id);
+	const inParent = await createMedia(parent.id);
+	const inChild = await createMedia(child.id);
+	await moveToTrash(parent.id);
+
+	const output = await montiOf().trash.restore({ id: parent.id });
+
+	// TRH-RST-9.1
+	expect([
+		(await folderRow(parent.id))?.trashed_at,
+		(await folderRow(child.id))?.trashed_at,
+		(await mediaRow(inParent.id))?.trashed_at,
+		(await mediaRow(inChild.id))?.trashed_at,
+	]).toEqual([null, null, null, null]);
+	// TRH-RST-9.2
+	expect(output).toEqual({ kind: "folder", id: parent.id });
+});
+
 it("TRH-DEL-1 글을 영구 삭제하면 그 글의 모든 데이터와 다른 글이 그 글을 가리키던 참조가 함께 정리된다", async () => {
 	const item = await createMedia();
 	const tag = await createPublishedEntry({ collection: TAGS, fields: { title: "태그", icon: item.id } });
 	const post = await createEntry({ fields: { title: "제목", tag: tag.id, tags: [tag.id] } });
 	await moveToTrash(tag.id);
 
-	await montiOf().trash.delete({ id: tag.id });
+	const output = await montiOf().trash.delete({ id: tag.id });
 
 	// TRH-DEL-1.1
 	expect({
@@ -511,6 +531,8 @@ it("TRH-DEL-1 글을 영구 삭제하면 그 글의 모든 데이터와 다른 �
 	expect(await usesOfEntry(tag.id)).toEqual([]);
 	// TRH-DEL-1.3
 	expect({ tag: (await copyRows(post.id))[0].tag, rels: await relRows(post.id) }).toEqual({ tag: null, rels: [] });
+	// TRH-DEL-1.4
+	expect(output).toEqual({ kind: "entry", id: tag.id });
 });
 
 it("TRH-DEL-2 미디어를 영구 삭제하면 DB와 다른 글의 미디어 참조에서 완전히 정리되고 파일은 임시 파일 목록에 올라간다", async () => {

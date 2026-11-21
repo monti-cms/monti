@@ -24,12 +24,15 @@ const PAGES = "pages";
 const TOPICS = "topics";
 const NOTES = "notes";
 const CARDS = "cards";
+const SERIES = "series";
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const PUBLISHED_AT = new Date("2026-11-01T09:00:00.000Z");
 
 /**
- * `posts`는 본문과 모든 필드 종류를 가진다. `pages`는 `topic`을 여러 개 고르고, `topics`는 본문이 없다. `notes`는 필수
- * 필드와 첫 분기에 필수 하위 필드·관계를 가진 조건부 필드를 가진다. `cards`는 필수 관계와 선택 미디어를 가진다.
+ * `posts`는 본문과 모든 필드 종류를 가지고, 조건부 필드의 두 분기에 같은 이름의 하위 미디어 필드(`image`)가 있다.
+ * `pages`는 `topic`을 여러 개 고르고, `topics`는 본문이 없다. `notes`는 필수 필드(다건 `select` 포함)와 첫 분기에 필수
+ * 하위 필드·관계를 가진 조건부 필드를 가진다. `cards`는 필수 관계와 선택 미디어를 가진다. `series`는 `topics`가 아닌
+ * 컬렉션(`pages`)을 가리키는 다건 관계만 가진다.
  */
 const SCHEMA: Schema = {
 	locales: ["ko", "en"],
@@ -43,9 +46,9 @@ const SCHEMA: Schema = {
 				date: { type: "date" },
 				category: { type: "select", options: ["news", "tech"] },
 				tags: { type: "select", options: ["news", "tech"], many: true },
-				cover: { type: "media" },
+				cover: { type: "media", many: false },
 				gallery: { type: "media", many: true },
-				topic: { type: "relation", to: TOPICS },
+				topic: { type: "relation", to: TOPICS, many: false },
 				related: { type: "relation", to: TOPICS, many: true },
 				layout: {
 					type: "conditional",
@@ -58,7 +61,7 @@ const SCHEMA: Schema = {
 								photos: { type: "media", many: true },
 							},
 						},
-						plain: { fields: { note: { type: "text" } } },
+						plain: { fields: { note: { type: "text" }, image: { type: "media" } } },
 					},
 				},
 			},
@@ -70,6 +73,7 @@ const SCHEMA: Schema = {
 				title: { type: "text", required: true },
 				rank: { type: "number", required: true },
 				pinned: { type: "boolean", required: true },
+				labels: { type: "select", options: ["a", "b"], many: true, required: true },
 				kind: {
 					type: "conditional",
 					options: {
@@ -85,6 +89,7 @@ const SCHEMA: Schema = {
 				cover: { type: "media", required: false },
 			},
 		},
+		[SERIES]: { fields: { pages: { type: "relation", to: PAGES, many: true } } },
 	},
 };
 
@@ -361,12 +366,12 @@ function sortedIds(ids: string[]): string[] {
 // ---- 1. 생성 ----
 
 it("ENT-CRT-1 필수 정보만으로 빈 초안 작업본을 만들면 슬러그와 필수 필드를 비워 둔 채 기본값을 채운다", async () => {
-	const output = await montiOf().entries.create({ collection: POSTS, locale: "ko" });
+	const output = await montiOf().entries.create({ collection: NOTES, locale: "ko" });
 
 	// ENT-CRT-1.1
-	expect(output).toEqual({
+	expect(output).toStrictEqual({
 		id: expect.stringMatching(UUID),
-		collection: POSTS,
+		collection: NOTES,
 		locale: "ko",
 		source_locale: "ko",
 		folder_id: null,
@@ -375,9 +380,9 @@ it("ENT-CRT-1 필수 정보만으로 빈 초안 작업본을 만들면 슬러그
 		published_at: null,
 	});
 	// ENT-CRT-1.2
-	expect(await entryRows(POSTS)).toEqual([{ id: output.id, source_locale: "ko", folder_id: null, trashed_at: null }]);
+	expect(await entryRows(NOTES)).toEqual([{ id: output.id, source_locale: "ko", folder_id: null, trashed_at: null }]);
 	// ENT-CRT-1.3
-	expect(await dataRows(POSTS)).toMatchObject([
+	expect(await dataRows(NOTES)).toMatchObject([
 		{ entry_id: output.id, locale: "ko", status: "draft", slug: null, translation_seen: {} },
 	]);
 });
@@ -554,14 +559,15 @@ it("ENT-CRT-9 스키마에 정의되지 않은 필드가 들어 있으면 글을
 });
 
 it("ENT-CRT-10 필드의 타입이나 길이 제한에 어긋난 값이면 글을 만들 수 없다", async () => {
+	const monti = montiOf();
+
+	const codes = [
+		await codeOf(monti.entries.create({ collection: POSTS, locale: "ko", fields: { views: "3" } })),
+		await codeOf(monti.entries.create({ collection: POSTS, locale: "ko", fields: { title: "x".repeat(21) } })),
+	];
+
 	// ENT-CRT-10.1
-	await expect(
-		montiOf().entries.create({
-			collection: POSTS,
-			locale: "ko",
-			fields: { views: "3", title: "x".repeat(21) },
-		}),
-	).rejects.toMatchObject({ code: "BAD_REQUEST" });
+	expect(codes).toEqual(["BAD_REQUEST", "BAD_REQUEST"]);
 	// ENT-CRT-10.2
 	expect(await entryRows(POSTS)).toEqual([]);
 });
@@ -672,16 +678,19 @@ it("ENT-READ-1 기본 단건 조회는 발행된 글의 원문 언어 발행본�
 });
 
 it("ENT-READ-2 컬렉션·언어·발행 슬러그로 발행본을 단건 조회한다", async () => {
-	const { entry, published } = await seedPublishedEntry();
-	await seedPublishedEntry();
+	const topic = await seedEntry({ collection: TOPICS, columns: { name: "Draft" } });
+	await seedCopy(TOPICS, topic.id, "ko", "published", { slug: "shared", columns: { name: "Live" } });
+	// 컬렉션을 보지 않고 찾으면 먼저 나오는 `posts`에 같은 언어·발행 슬러그의 글이 있다.
+	const post = await seedEntry({ columns: { title: "Draft" } });
+	await seedCopy(POSTS, post.id, "ko", "published", { slug: "shared", columns: { title: "Live" } });
 
-	const output = await montiOf().entries.get({ collection: POSTS, locale: "ko", slug: published.slug });
+	const output = await montiOf().entries.get({ collection: TOPICS, locale: "ko", slug: "shared", status: "published" });
 
 	// ENT-READ-2.1
 	expect(output).toMatchObject({
-		id: entry.id,
-		slug: published.slug,
-		fields: { title: "Live" },
+		id: topic.id,
+		slug: "shared",
+		fields: { name: "Live" },
 		published_at: PUBLISHED_AT,
 	});
 });
@@ -734,9 +743,19 @@ it("ENT-READ-6 조건 없이 목록을 조회하면 활성 글의 발행된 원�
 	});
 });
 
+/** `gallery` 필드가 미디어 `id` 하나를 담는 `<collection>_rels` 행. */
+function galleryOf(id: string): RelSeed[] {
+	return [{ path: "gallery", column: "media_id", ids: [id] }];
+}
+
 it("ENT-READ-7 초안 상태로 목록을 조회하면 모든 활성 글의 원문 언어 작업본을 돌려준다", async () => {
-	const { entry: publishedEntry } = await seedPublishedEntry();
-	const unpublished = await seedEntry({ columns: { title: "Only draft" } });
+	const [draftImage, liveImage, onlyDraftImage] = [await seedMedia(), await seedMedia(), await seedMedia()];
+	const publishedEntry = await seedEntry({ columns: { title: "Draft" }, rels: galleryOf(draftImage) });
+	await seedCopy(POSTS, publishedEntry.id, "ko", "published", {
+		columns: { title: "Live" },
+		rels: galleryOf(liveImage),
+	});
+	const unpublished = await seedEntry({ columns: { title: "Only draft" }, rels: galleryOf(onlyDraftImage) });
 	await seedPublishedEntry({ trashed: true });
 
 	const output = await montiOf().entries.list({ status: "draft" });
@@ -745,8 +764,8 @@ it("ENT-READ-7 초안 상태로 목록을 조회하면 모든 활성 글의 원�
 	// ENT-READ-7.1
 	expect(output.map(({ id, fields }) => ({ id, fields })).sort((a, b) => a.id.localeCompare(b.id))).toEqual(
 		[
-			{ id: publishedEntry.id, fields: { title: "Draft" } },
-			{ id: unpublished.id, fields: { title: "Only draft" } },
+			{ id: publishedEntry.id, fields: { title: "Draft", gallery: [draftImage] } },
+			{ id: unpublished.id, fields: { title: "Only draft", gallery: [onlyDraftImage] } },
 		].sort((a, b) => a.id.localeCompare(b.id)),
 	);
 	// ENT-READ-7.2
@@ -799,10 +818,13 @@ it("ENT-READ-10 역방향 관계 조건으로 목록을 조회하면 해당 대�
 });
 
 it("ENT-READ-11 비원문 언어를 지정해 단건 조회하면 해당 언어의 발행본을 돌려준다", async () => {
-	const { entry } = await seedPublishedEntry();
-	await seedCopy(POSTS, entry.id, "en", "draft", { columns: { title: "En draft" } });
+	const [koLive, enDraft, enLive] = [await seedMedia(), await seedMedia(), await seedMedia()];
+	const entry = await seedEntry({ columns: { title: "Draft" } });
+	await seedCopy(POSTS, entry.id, "ko", "published", { columns: { title: "Live" }, rels: galleryOf(koLive) });
+	await seedCopy(POSTS, entry.id, "en", "draft", { columns: { title: "En draft" }, rels: galleryOf(enDraft) });
 	const en = await seedCopy(POSTS, entry.id, "en", "published", {
 		columns: { title: "En live" },
+		rels: galleryOf(enLive),
 		published_at: new Date("2026-11-05T00:00:00.000Z"),
 	});
 
@@ -813,7 +835,7 @@ it("ENT-READ-11 비원문 언어를 지정해 단건 조회하면 해당 언어�
 	// ENT-READ-11.2
 	expect(output).toMatchObject({
 		slug: en.slug,
-		fields: { title: "En live" },
+		fields: { title: "En live", gallery: [enLive] },
 		published_at: en.published_at,
 	});
 });
@@ -877,6 +899,18 @@ it("ENT-READ-15 초안 조회에서는 휴지통에 들어간 미디어나 글�
 
 	// ENT-READ-15.1
 	expect(output.fields).toEqual({ cover: media, related: [first.id, second.id] });
+});
+
+it("ENT-READ-16 스키마에 없는 컬렉션으로는 글을 조회할 수 없다", async () => {
+	const monti = montiOf({ locales: SCHEMA.locales, collections: { [POSTS]: SCHEMA.collections[POSTS] } });
+
+	const codes = [
+		await codeOf(monti.entries.get({ collection: "unknown", locale: "ko", slug: "hello" })),
+		await codeOf(monti.entries.list({ collection: "unknown" })),
+	];
+
+	// ENT-READ-16.1
+	expect(codes).toEqual(["BAD_REQUEST", "BAD_REQUEST"]);
 });
 
 // ---- 3. 수정 ----
@@ -1160,13 +1194,45 @@ it("ENT-UPD-16 단건 수정에서 필드만 바꾸면 본문이 유지되고 �
 	expect({ fields: second.fields, body: second.body }).toEqual({ fields, body });
 });
 
+it("ENT-UPD-17 단건 수정에서 다른 범위나 휴지통의 폴더로 옮길 수 없고, 다건 수정에서는 폴더를 비워 루트로 옮길 수 있다", async () => {
+	const folder = await seedFolder();
+	const [first, second] = [await seedEntry({ folder_id: folder }), await seedEntry({ folder_id: folder })];
+	const mediaFolder = await seedFolder({ scope: "media" });
+	const monti = montiOf();
+
+	const code = await codeOf(monti.entries.update({ id: first.id, folder_id: mediaFolder }));
+	const unmoved = (await entryRow(POSTS, first.id)).folder_id;
+	await monti.entries.update({ ids: [first.id, second.id], folder_id: null });
+
+	// ENT-UPD-17.1
+	expect({ code, folder_id: unmoved }).toEqual({ code: "BAD_REQUEST", folder_id: folder });
+	// ENT-UPD-17.2
+	expect([(await entryRow(POSTS, first.id)).folder_id, (await entryRow(POSTS, second.id)).folder_id]).toEqual([
+		null,
+		null,
+	]);
+});
+
+it("ENT-UPD-18 필드와 본문을 보내지 않고 슬러그나 폴더만 바꿀 때는 기존 필드와 본문을 다시 검사하지 않는다", async () => {
+	const media = await seedMedia();
+	const entry = await seedEntry({ columns: { title: "제목", body: JSON.stringify(imageDoc(media)) } });
+	// 미디어를 휴지통에서 영구 삭제했다: `media` 행이 없다.
+	await db.deleteFrom("media").where("id", "=", media).execute();
+
+	// ENT-UPD-18.1
+	await expect(montiOf().entries.update({ id: entry.id, slug: "renamed" })).resolves.toMatchObject({ slug: "renamed" });
+});
+
 // ---- 4. 발행 ----
 
 /** 필수 필드를 모두 채운 `notes` 작업본. */
-const FILLED_NOTE = { title: "Note", rank: 0, pinned: false };
+const FILLED_NOTE = { title: "Note", rank: 0, pinned: false, labels: ["a"] };
 
 it("ENT-PUB-1 슬러그와 필수 필드가 채워진 작업본으로 발행본을 만든다", async () => {
-	const entry = await seedEntry({ collection: NOTES, slug: "note", columns: FILLED_NOTE });
+	// 스키마에 있는 분기를 고른 조건부 필드도 함께 채운다.
+	const columns = { ...FILLED_NOTE, kind: "plain", kind__plain__note: "메모" };
+	const fields = { ...FILLED_NOTE, kind: { option: "plain", fields: { note: "메모" } } };
+	const entry = await seedEntry({ collection: NOTES, slug: "note", columns });
 	const before = new Date();
 
 	const output = await montiOf().entries.publish({ id: entry.id });
@@ -1177,11 +1243,11 @@ it("ENT-PUB-1 슬러그와 필수 필드가 채워진 작업본으로 발행본�
 		slug: output.slug,
 		fields: output.fields,
 		inRange: output.published_at !== null && output.published_at >= before && output.published_at <= after,
-	}).toEqual({ slug: "note", fields: FILLED_NOTE, inRange: true });
+	}).toEqual({ slug: "note", fields, inRange: true });
 	// ENT-PUB-1.2
 	expect(await dataRow(NOTES, entry.id, "ko", "published")).toMatchObject({
 		slug: "note",
-		...FILLED_NOTE,
+		...columns,
 		published_at: output.published_at,
 	});
 });
@@ -1229,12 +1295,21 @@ it("ENT-PUB-4 슬러그가 비어 있으면 글을 발행할 수 없다", async 
 });
 
 it("ENT-PUB-5 필수 필드가 비어 있으면 글을 발행할 수 없다", async () => {
-	const entry = await seedEntry({ collection: NOTES, columns: { rank: 1, pinned: true } });
+	const notes = [
+		// 필수 `text` 필드 `title`을 생략했다.
+		await seedEntry({ collection: NOTES, columns: { rank: 0, pinned: false, labels: ["a"] } }),
+		await seedEntry({ collection: NOTES, columns: { ...FILLED_NOTE, title: "" } }),
+		await seedEntry({ collection: NOTES, columns: { ...FILLED_NOTE, labels: [] } }),
+	];
+	const monti = montiOf();
+
+	const codes: (string | null)[] = [];
+	for (const note of notes) codes.push(await codeOf(monti.entries.publish({ id: note.id })));
 
 	// ENT-PUB-5.1
-	await expect(montiOf().entries.publish({ id: entry.id })).rejects.toMatchObject({ code: "BAD_REQUEST" });
+	expect(codes).toEqual(["BAD_REQUEST", "BAD_REQUEST", "BAD_REQUEST"]);
 	// ENT-PUB-5.2
-	expect(await dataRow(NOTES, entry.id, "ko", "published")).toBeUndefined();
+	expect((await dataRows(NOTES)).filter((row) => row.status === "published")).toEqual([]);
 });
 
 it("ENT-PUB-6 선택한 조건부 분기의 필수 하위 필드가 비어 있으면 글을 발행할 수 없다", async () => {
@@ -1471,16 +1546,23 @@ it("ENT-DUP-1 글의 원문 언어 작업본과 미디어 사용처를 새 슬�
 	expect(await useRows("entry", output.id)).toEqual([coverUse(output.id, first)]);
 });
 
-it("ENT-DUP-2 슬러그를 생략하고 복제하면 겹치지 않는 `-copy` 슬러그를 붙인다", async () => {
+it("ENT-DUP-2 슬러그를 생략하고 복제하면 겹치지 않는 `-copy` 슬러그를 붙이고 원본 슬러그가 비어 있으면 비워 둔다", async () => {
 	const hello = await seedEntry({ slug: "hello" });
 	await seedEntry({ slug: "hello-copy" });
+	await seedEntry({ slug: "hello-copy-2" });
+	const untitled = await seedEntry({ slug: null });
+	const monti = montiOf();
 
-	const output = await montiOf().entries.duplicate({ id: hello.id });
+	const first = await monti.entries.duplicate({ id: hello.id });
+	const second = await monti.entries.duplicate({ id: untitled.id });
 
 	// ENT-DUP-2.1
-	expect(output.slug).toBe("hello-copy-2");
+	expect({ slug: first.slug, row: await dataRow(POSTS, first.id, "ko", "draft") }).toMatchObject({
+		slug: "hello-copy-3",
+		row: { slug: "hello-copy-3" },
+	});
 	// ENT-DUP-2.2
-	expect(await dataRow(POSTS, output.id, "ko", "draft")).toMatchObject({ slug: "hello-copy-2" });
+	expect(second.slug).toBeNull();
 });
 
 it("ENT-DUP-3 지정한 ID로 복제한다", async () => {
@@ -1690,6 +1772,19 @@ it("ENT-REF-9 여러 언어가 있는 글의 참조를 바꾸면 모든 언어�
 	expect(await topics("published")).toEqual([into.id, into.id]);
 });
 
+it("ENT-REF-10 존재하지 않는 글 ID로는 참조를 바꿀 수 없다", async () => {
+	const topic = await seedEntry({ collection: TOPICS });
+	const monti = montiOf();
+
+	const codes = [
+		await codeOf(monti.entries.replaceReferences({ from_id: randomUUID(), into_id: topic.id })),
+		await codeOf(monti.entries.replaceReferences({ from_id: topic.id, into_id: randomUUID() })),
+	];
+
+	// ENT-REF-10.1
+	expect(codes).toEqual(["NOT_FOUND", "NOT_FOUND"]);
+});
+
 // ---- 8. 언어 추가 ----
 
 it("ENT-LOC-1 활성 글에 비원문 언어를 추가할 때 슬러그를 생략하면 원문 언어의 슬러그를 기본으로 복사한다", async () => {
@@ -1816,16 +1911,20 @@ it("ENT-LOC-9 휴지통에 있는 대상을 참조해 언어를 추가할 수 �
 // ---- 9. 언어 삭제 ----
 
 it("ENT-RLOC-1 비원문 언어를 즉시 삭제하면 발행본도 함께 지워지고 남은 언어 기준으로 미디어 사용처를 갱신한다", async () => {
-	const first = await seedMedia();
-	const second = await seedMedia();
-	const ko = [{ path: "gallery", column: "media_id", ids: [first] }];
+	const [first, second, third] = [await seedMedia(), await seedMedia(), await seedMedia()];
+	const ko = {
+		rels: [{ path: "gallery", column: "media_id", ids: [first] }],
+		columns: { body: JSON.stringify(imageDoc(third)) },
+	};
 	const en = [{ path: "gallery", column: "media_id", ids: [first, second] }];
-	const entry = await seedEntry({ rels: ko });
-	await seedCopy(POSTS, entry.id, "ko", "published", { rels: ko });
+	const entry = await seedEntry(ko);
+	await seedCopy(POSTS, entry.id, "ko", "published", ko);
 	await seedCopy(POSTS, entry.id, "en", "draft", { rels: en });
 	await seedCopy(POSTS, entry.id, "en", "published", { rels: en });
 	for (const media_id of [first, second])
 		await seedUse({ media_id, source_kind: "entry", source_id: entry.id, field_path: "gallery" });
+	// 세 번째 미디어를 휴지통에서 영구 삭제했다: `media` 행이 없고 본문의 참조만 남았다.
+	await db.deleteFrom("media").where("id", "=", third).execute();
 	const kept = {
 		entry: await entryRow(POSTS, entry.id),
 		ko: (await dataRows(POSTS, entry.id)).filter((row) => row.locale === "ko"),
