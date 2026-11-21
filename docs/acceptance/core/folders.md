@@ -2,7 +2,7 @@
 
 [`docs/refactor/core.md`](../../refactor/core.md) 3.1절(선택 입력 `__preset_id`), 6절(`folders`), 7절(`folders` 리소스)의 인수 조건이다.
 
-- `folders.create`: `scope`(컬렉션 키 또는 `"media"`), `name`, 선택 `parent_id`와 `__preset_id`(UUID)로 폴더를 만든다. 없는 `scope`이거나 부모가 같은 `scope`의 활성 폴더가 아니면 `BAD_REQUEST`, 같은 위치에 같은 `name`의 활성 폴더가 이미 있으면 `CONFLICT`로 거절한다.
+- `folders.create`: `scope`(컬렉션 키 또는 `"media"`), `name`, 선택 `parent_id`와 `__preset_id`(UUID)로 폴더를 만든다. 없는 `scope`이거나 빈 `name`이거나 부모가 같은 `scope`의 활성 폴더가 아니면 `BAD_REQUEST`, 같은 위치에 같은 `name`의 활성 폴더가 이미 있으면 `CONFLICT`로 거절한다.
 - `folders.list`: 지정한 `scope`에서 휴지통에 있지 않은 활성 폴더 목록을 돌려준다.
 - `folders.update`: `id`로 폴더의 `name`이나 `parent_id`(`null`이면 루트로 이동)를 바꾼다. 대상이 없거나 휴지통에 있으면 `NOT_FOUND`, 빈 `name`이거나 새 부모가 같은 `scope`의 활성 폴더가 아니거나 자기 자신·자손이면 `BAD_REQUEST`, 같은 위치에 같은 `name`의 활성 폴더가 이미 있으면 `CONFLICT`로 거절한다.
 
@@ -49,6 +49,12 @@ FLD-CRT-6  같은 위치에 같은 이름의 활성 폴더가 이미 있으면 �
   행동  같은 `scope`와 같은 `name`으로 루트 `folders.create`를 실행한다
   결과  FLD-CRT-6.1  `CONFLICT` 오류를 던진다
         FLD-CRT-6.2  `folders` 테이블의 행은 원래 하나 그대로이다
+
+FLD-CRT-7  빈 이름으로는 폴더를 만들 수 없다
+  전제  스키마에 컬렉션이 하나 있고 `folders`가 비어 있다
+  행동  해당 컬렉션 `scope`와 빈 문자열 `name: ""`로 `folders.create`를 실행한다
+  결과  FLD-CRT-7.1  `BAD_REQUEST` 오류를 던진다
+        FLD-CRT-7.2  `folders` 테이블은 비어 있다
 ```
 
 ## 2. 목록 (`list`)

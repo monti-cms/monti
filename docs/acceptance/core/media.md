@@ -4,7 +4,7 @@
 
 - `storage`가 설정되지 않은 엔진에서는 `media` 리소스 전체를 `BAD_REQUEST`로 거절한다.
 - `media.startUpload`: 새 UUID `key`로 `storage.ticket`을 발급하고 `loose_files`에 24시간 뒤 만료로 기록한다.
-- `media.create`: `key`와 선택 `__preset_id`(UUID), `folder_id`, `filename`(생략 시 `key`), `width`, `height`(생략 시 `null`)를 받고 `storage.stat`으로 파일 존재와 `mime_type`(`mime`)·`size`를 확인해 `media`에 등록한 뒤 `loose_files`에서 해당 `key`를 지운다. 스토리지에 없는 `key`나 `"media"` 범위가 아닌 폴더면 `BAD_REQUEST`, 이미 등록된 `key`(휴지통 포함)면 `CONFLICT`로 거절한다.
+- `media.create`: `key`와 선택 `__preset_id`(UUID), `folder_id`, `filename`(생략 시 `key`, 빈 문자열이면 `BAD_REQUEST`), `width`, `height`(생략 시 `null`)를 받고 `storage.stat`으로 파일 존재와 `mime_type`(`mime`)·`size`를 확인해 `media`에 등록한 뒤 `loose_files`에서 해당 `key`를 지운다. 스토리지에 없는 `key`나 `"media"` 범위가 아닌 폴더면 `BAD_REQUEST`, 이미 등록된 `key`(휴지통 포함)면 `CONFLICT`로 거절한다.
 - `media.list`·`media.get`: 활성 미디어만 `url`과 함께 돌려준다. `list`의 `folder_id`는 생략=전체, `null`=루트, UUID=해당 폴더 직속이며, `get`은 사용처 목록(`uses`)을 함께 돌려주고 없거나 휴지통에 있으면 `NOT_FOUND`로 거절한다.
 - `media.update`: 단건(`id`)은 `filename`(빈 문자열이면 `BAD_REQUEST`)·`width`·`height` 수정·폴더 이동·파일 교체(`key` 변경 시 새 파일의 `mime_type`·`size`로 갱신하고 이전 `key`를 `loose_files`에 24시간 대기로 추가)를, 다건(`ids`)은 폴더 일괄 이동(`folder_id`)만 처리하며 대상 중 하나라도 휴지통에 있으면 `NOT_FOUND`로 전체 롤백한다.
 - `removeLooseFiles({ db, storage })`: `resources/media/`의 함수로 `trash`나 `media`의 Operation이 아니며, 삭제 대기 시각(`remove_after`)이 지난 `loose_files` 행의 `key`만 `storage.remove`로 지워 목록에서 빼고 지우지 못한 `key`는 목록에 남긴 채 나머지를 계속 지운다. Operation이 아니라서 `transaction`·`dryRun` 콜백 안에서는 부를 수 없다.
@@ -65,6 +65,12 @@ MED-CRT-5  미디어 범위가 아닌 폴더에는 미디어를 등록할 수 �
   행동  해당 컬렉션 폴더의 `id`를 `folder_id`로 주어 `media.create`를 실행한다
   결과  MED-CRT-5.1  `BAD_REQUEST` 오류를 던진다
         MED-CRT-5.2  `media` 테이블이 비어 있다
+
+MED-CRT-6  빈 파일 이름으로는 미디어를 등록할 수 없다
+  전제  `storage`에 파일이 올라가 있고 `media`가 비어 있다
+  행동  올라간 `key`와 빈 문자열 `filename: ""`로 `media.create`를 실행한다
+  결과  MED-CRT-6.1  `BAD_REQUEST` 오류를 던진다
+        MED-CRT-6.2  `media` 테이블이 비어 있다
 ```
 
 ## 3. 조회 (`list` · `get`)
