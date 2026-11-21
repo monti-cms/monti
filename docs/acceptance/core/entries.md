@@ -7,14 +7,14 @@
 - 쓰기 공통 검증(`create`, `update`, `duplicate`, `addLocale`):
   - `slug`: `null`(초안 빈칸) 또는 `^[a-z0-9]+(?:-[a-z0-9]+)*$` 형식만 허용하며 빈 문자열(`""`)이나 어긋난 형식이면 `BAD_REQUEST`, `null`이 아닐 때 같은 `(collection, locale)`의 다른 활성 글 작업본과 겹치면 `CONFLICT`로 거절한다.
   - `folder_id`(`create`·`update`만 해당): `null`(루트) 또는 같은 컬렉션 `scope`의 활성 폴더만 허용하며 아니면 `BAD_REQUEST`로 거절한다.
-  - `fields`: 스키마에 정의된 키만 허용하고 8종 필드(`text`·`number`·`boolean`·`date`·`select`·`media`·`relation`·`conditional`)의 타입·제약에 어긋나거나, `media`·`relation`이 존재하지 않는 대상(또는 다른 컬렉션의 글)을 가리키거나, 새로 넣는 참조 대상이 휴지통에 있으면 `BAD_REQUEST`로 거절한다. 단, `entries.update`에서 기존 작업본의 같은 필드 경로에 이미 저장되어 있던 참조 ID를 그대로 유지하는 것은 대상이 휴지통에 있어도 허용한다.
-  - `body`: `collection.body`가 `true`일 때만 허용하며 `validateDoc(body, ctx.config)` 실패 시 문제 목록 전체를 `details`에 담아 `BAD_REQUEST`로 거절하고, 본문 블록 트리가 존재하지 않는 미디어를 참조하거나 새로 넣는 미디어가 휴지통에 있으면 `BAD_REQUEST`로 거절한다. 단, `entries.update`에서 기존 작업본 본문에 이미 들어 있던 미디어 ID를 그대로 유지하는 것은 그 미디어가 휴지통에 있어도 허용한다.
+  - `fields`: 스키마에 정의된 키만 허용하고 8종 필드(`text`·`number`·`boolean`·`date`·`select`·`media`·`relation`·`conditional`)의 타입·제약에 어긋나거나, `media`·`relation`이 존재하지 않는 대상(또는 다른 컬렉션의 글)을 가리키거나, 새로 넣는 참조 대상이 휴지통에 있으면 `BAD_REQUEST`로 거절한다. 단, `entries.update`에서 고치는 언어 작업본의 같은 경로(`"<필드키>"`, 조건부 하위는 `"<조건필드키>.<분기>.<하위필드키>"`)에 이미 저장되어 있던 참조 ID(다건은 순서와 관계없이 그 목록에 있던 ID)를 그대로 유지하는 것은 대상이 휴지통에 있어도 허용한다.
+  - `body`: `collection.body`가 `true`일 때만 허용하며 `validateDoc(body, ctx.config)` 실패 시 문제 목록 전체를 `details`에 담아 `BAD_REQUEST`로 거절하고, 본문 블록 트리가 존재하지 않는 미디어를 참조하거나 새로 넣는 미디어가 휴지통에 있으면 `BAD_REQUEST`로 거절한다. 단, `entries.update`에서 고치는 언어 작업본의 본문에 이미 들어 있던 미디어 ID는 블록 위치와 관계없이 그 미디어가 휴지통에 있어도 그대로 유지할 수 있다.
 - `media_uses` 색인: `source_kind`를 `"entry"`, `source_id`를 `<collection>.id`로 하여 그 글의 모든 언어 작업본 참조를 합쳐 본문은 `"body"`, 최상위 `media` 필드는 `"<필드키>"`, `conditional` 하위 `media` 필드는 `"<조건필드키>.<분기>.<하위필드키>"` 경로에 한 번씩 기록한다.
 - `entries.get` · `entries.list`: `status?: "published" | "draft"`(기본값 `"published"`)로 발행본 또는 작업본을 돌려주며 휴지통 글은 제외한다. `get`은 `{ id, locale?, status? }` 또는 `{ collection, locale, slug, status? }`로, `list`는 `collection`·`locale`·`folder_id`·`relation`·`status`로 거른다. 없는 글이나 언어는 `NOT_FOUND`다(2절).
 - `entries.update`: 단건은 한 언어 작업본의 `slug`·`fields`·`body`(필드·본문 교체)와 글 전체의 `folder_id`를 바꾸고, 다건(`{ ids, folder_id }`)은 폴더 일괄 이동만 한다. `fields`나 `body`를 바꿀 때만 `media_uses`를 모든 언어 기준으로 다시 계산하고, 발행본은 건드리지 않는다(3절).
-- `entries.publish`: 활성 글의 한 언어 작업본을 발행본(`status = 'published'`)으로 저장한다(`published_at`은 생략하면 최초 발행은 지금, 재발행은 기존 시각). 발행할 때 작업본의 `slug`와 필수(`required: true`) 필드가 채워져 있는지, 그리고 작업본의 모든 참조 필드(`required` 여부와 무관한 `media`·`relation`, 조건부 하위 포함)와 본문(`body`)이 가리키는 대상이 모두 활성 상태(휴지통이 아님)인지 검사하며, 비어 있거나 휴지통 대상을 참조하면 `BAD_REQUEST`, 같은 슬러그의 다른 활성 글 발행본이 있으면 `CONFLICT`로 거절한다(4절).
+- `entries.publish`: 활성 글의 한 언어 작업본을 발행본(`status = 'published'`)으로 저장한다(`published_at`은 생략하면 최초 발행은 지금, 재발행은 기존 시각). 발행할 때 작업본의 `slug`와 필수(`required: true`) 필드가 채워져 있는지, 그리고 작업본의 모든 참조 필드(`required` 여부와 무관한 `media`·`relation`, 조건부 하위 포함)와 본문(`body`)이 가리키는 대상이 모두 활성 상태(휴지통이 아님)인지 검사하며, 슬러그나 필수값이 비어 있거나 휴지통 대상을 참조하면 `BAD_REQUEST`, 같은 슬러그의 다른 활성 글 발행본이 있으면 `CONFLICT`로 거절한다(4절).
 - `entries.unpublish`: 한 언어의 발행본(`status = 'published'`)만 지우고 작업본을 돌려준다. 이미 미발행이어도 성공한다(5절).
-- `entries.duplicate`: 원문 언어 작업본만 복제해 새 미발행 글을 만들며 `__preset_id`를 받는다. `slug`를 생략하면 원본 `slug`가 있을 때는 겹치지 않는 `-copy`, `-copy-2`…를 붙이고 원본 `slug`가 `null`이면 `null`로 둔다(6절).
+- `entries.duplicate`: 원문 언어 작업본만 복제해 새 미발행 글을 만들며 `__preset_id`를 받는다. `slug`를 생략하면 원본 `slug`가 있을 때는 겹치지 않는 `-copy`, `-copy-2`…를 붙이고 원본 `slug`가 `null`이면 `null`로 두며, 원문 작업본이 휴지통 대상을 참조하면 `BAD_REQUEST`로 거절한다(6절).
 - `entries.replaceReferences`: 같은 컬렉션의 `from_id` 글을 가리키는 모든 `relation`(조건부 하위, 여러 개 선택 포함)을 `into_id`로 바꾼다. 모든 언어의 작업본과 발행본, 휴지통 글까지 고치고 `{ from_id, into_id, updated_ids }`를 돌려준다(7절).
 - `entries.addLocale`: 활성 글에 새 비원문 언어 작업본을 추가하고 모든 언어 기준으로 `media_uses`를 다시 계산한다. `slug`를 생략하면 원문 언어 작업본의 `slug`를 기본으로 복사한다(8절).
 - `entries.removeLocale`: 비원문 언어를 휴지통 없이 즉시 지우고(발행본 포함) 남은 언어 기준으로 `media_uses`를 다시 계산한다. 원문 언어는 지울 수 없다(`BAD_REQUEST`)(9절).
@@ -206,11 +206,15 @@ ENT-READ-13  언어를 생략해 목록을 조회하면 번역 언어가 있어�
   행동  `status: "draft"`만으로 `entries.list`를 실행한다
   결과  ENT-READ-13.1  첫 번째 글의 `"ko"` 행과 두 번째 글의 `"en"` 행, 총 두 개만 돌려준다
 
-ENT-READ-14  참조된 글이나 미디어가 휴지통에 들어가 있으면 발행본 조회에서는 빈칸으로 걸러 돌려주고 초안 조회에서는 원래 참조 ID를 그대로 돌려준다
+ENT-READ-14  발행본 조회에서는 휴지통에 들어간 미디어나 글을 가리키는 참조가 빠진다
   전제  단건 `media` 필드와 다건 `relation` 필드를 가진 활성 글이 미디어 하나와 대상 글 두 개(첫 번째 대상 글, 두 번째 대상 글)를 참조하도록 발행된 뒤, 그 미디어와 첫 번째 대상 글이 휴지통으로 이동했다
-  행동  해당 글의 `id`로 기본 발행본(`status: "published"`) `entries.get`과 초안(`status: "draft"`) `entries.get`을 각각 실행한다
-  결과  ENT-READ-14.1  발행본 조회 반환값의 `fields`에서 단건 `media` 필드는 비어 있고, 다건 `relation` 필드는 활성 상태인 두 번째 대상 글 하나만 담고 있다
-        ENT-READ-14.2  초안 조회 반환값의 `fields`에서 단건 `media` 필드는 휴지통에 간 미디어의 `id`이고, 다건 `relation` 필드는 첫 번째 대상 글과 두 번째 대상 글 두 개를 원래 순서대로 모두 담고 있다
+  행동  해당 글의 `id`만으로 `entries.get`을 실행한다
+  결과  ENT-READ-14.1  반환값의 `fields`에 단건 `media` 필드 키가 없고, 다건 `relation` 필드는 활성 상태인 두 번째 대상 글 하나만 담고 있다
+
+ENT-READ-15  초안 조회에서는 휴지통에 들어간 미디어나 글을 가리키는 참조도 그대로 보인다
+  전제  단건 `media` 필드와 다건 `relation` 필드를 가진 활성 글의 작업본이 미디어 하나와 대상 글 두 개(첫 번째 대상 글, 두 번째 대상 글)를 참조하도록 저장된 뒤, 그 미디어와 첫 번째 대상 글이 휴지통으로 이동했다
+  행동  해당 글의 `id`와 `status: "draft"`로 `entries.get`을 실행한다
+  결과  ENT-READ-15.1  반환값의 `fields`에서 단건 `media` 필드는 휴지통에 간 미디어의 `id`이고, 다건 `relation` 필드는 첫 번째 대상 글과 두 번째 대상 글을 원래 순서대로 담고 있다
 ```
 
 ## 3. 수정 (`update`)
@@ -239,15 +243,15 @@ ENT-UPD-3  단건 수정에서 폴더를 비우면 글을 루트로 이동한다
   결과  ENT-UPD-3.1  반환값의 `folder_id`가 `null`이다
         ENT-UPD-3.2  `<collection>` 테이블에서 해당 행의 `folder_id`가 `null`이다
 
-ENT-UPD-4  단건 수정에서 필드나 본문이 존재하지 않거나 휴지통에 있는 미디어를 참조하면 수정을 거절하고 기존 상태를 유지한다
-  전제  미디어를 참조해 `media_uses` 행이 있는 글 하나와 휴지통에 들어가 있는(`trashed_at` 설정) 미디어가 하나 있다
+ENT-UPD-4  단건 수정에서 존재하지 않거나 기존에 없던 휴지통 미디어를 필드나 본문에 새로 넣으면 수정을 거절하고 기존 상태를 유지한다
+  전제  첫 번째 활성 미디어를 참조해 `media_uses` 행이 있는 글 하나와, 그 글이 참조하지 않던 휴지통(`trashed_at` 설정) 미디어가 하나 있다
   행동  해당 글의 `id`와 존재하지 않는 UUID를 `media` 필드에 담거나 휴지통 미디어의 `id`를 `body`의 `attrs.mediaId`에 담아 `entries.update`를 실행한다
   결과  ENT-UPD-4.1  `BAD_REQUEST` 오류를 던진다
         ENT-UPD-4.2  `<collection>_data` 테이블에서 해당 작업본 행이 원래 그대로이다
         ENT-UPD-4.3  `media_uses`에 해당 글의 기존 참조가 그대로 남아 있다
 
-ENT-UPD-5  단건 수정에서 휴지통에 있는 글을 관계 필드에 연결하려 하면 거절한다
-  전제  `relation` 필드를 가진 글 하나와 `to` 컬렉션에서 휴지통에 들어가 있는(`trashed_at` 설정) 글 하나가 있다
+ENT-UPD-5  단건 수정에서 기존에 없던 휴지통 글을 관계 필드에 새로 연결하려 하면 거절한다
+  전제  `relation` 필드를 가진 글 하나와 `to` 컬렉션에서 그 글이 참조하지 않던 휴지통(`trashed_at` 설정) 글 하나가 있다
   행동  해당 글의 `id`와 휴지통 글의 `id`를 `relation` 필드에 담은 `fields`로 `entries.update`를 실행한다
   결과  ENT-UPD-5.1  `BAD_REQUEST` 오류를 던진다
         ENT-UPD-5.2  `<collection>_data` 테이블에서 해당 작업본 행이 원래 그대로이다
@@ -300,13 +304,14 @@ ENT-UPD-13  글에 없는 언어를 지정하면 수정할 수 없다
   결과  ENT-UPD-13.1  `NOT_FOUND` 오류를 던진다
         ENT-UPD-13.2  `<collection>_data` 테이블의 `"ko"` 작업본 행이 원래 그대로이다
 
-ENT-UPD-14  이미 작업본에 들어 있던 참조 대상이 휴지통에 들어가도 그 참조를 그대로 유지한 채 다른 필드나 본문을 수정해 임시저장할 수 있다
-  전제  `text` 필드, `media` 필드, `relation` 필드, `body: true`를 가진 활성 글이 미디어와 대상 글을 참조하도록 저장된 뒤 그 미디어와 대상 글이 휴지통으로 이동했다(`trashed_at` 설정)
+ENT-UPD-14  작업본에 이미 있던 참조는 대상이 휴지통에 들어가도 그대로 둔 채 다른 항목을 고쳐 저장할 수 있다
+  전제  `text` 필드, 단건 `media` 필드, 다건 `relation` 필드, `body: true`를 가진 활성 글이 `media` 필드와 `body` 블록(`attrs.mediaId`)으로 같은 미디어 하나를, 다건 `relation` 필드로 대상 글 하나를 참조하도록 저장된 뒤 그 미디어와 대상 글이 휴지통으로 이동했다(`trashed_at` 설정)
   행동  해당 글의 `id`와 기존 참조 ID들을 그대로 유지하고 `text` 필드와 `body`의 문단 글자만 바꾼 `fields`·`body`로 `entries.update`를 실행한다
   결과  ENT-UPD-14.1  반환값의 `fields`와 `body`에 바뀐 글자와 기존 참조 ID들이 그대로 들어 있다
         ENT-UPD-14.2  `media_uses`에 해당 글의 기존 미디어 참조가 그대로 남아 있다
+        ENT-UPD-14.3  `<collection>_data` 작업본 행의 `media` 열과 `<collection>_rels`의 다건 관계 행이 기존 참조 ID 그대로이다
 
-ENT-UPD-15  단건 수정에서 슬러그를 빈 문자열이나 잘못된 형식으로 바꿀 수 없다
+ENT-UPD-15  단건 수정에서 슬러그를 빈 문자열로 바꿀 수 없다
   전제  유효한 `slug`가 있는 활성 글이 하나 있다
   행동  해당 글의 `id`와 빈 문자열 `slug: ""`로 `entries.update`를 실행한다
   결과  ENT-UPD-15.1  `BAD_REQUEST` 오류를 던진다
@@ -377,9 +382,9 @@ ENT-PUB-10  글에 없는 언어를 지정하면 발행할 수 없다
         ENT-PUB-10.2  `<collection>_data` 테이블에 `status = 'published'` 행이 없다
 
 ENT-PUB-11  참조 필드나 본문이 가리키던 대상이 휴지통에 들어가 있으면 필수 여부와 관계없이 발행할 수 없다
-  전제  필수가 아닌(`required: false`) `media` 필드, 필수(`required: true`)인 `relation` 필드, 또는 `body` 블록이 활성 대상을 가리키도록 저장된 미발행 글이 있고, 가리키던 대상이 그 뒤에 휴지통으로 이동했다(`trashed_at` 설정)
+  전제  유효한 `slug`와 필수값이 모두 채워진 미발행 글이 필수가 아닌(`required: false`) `media` 필드, 필수(`required: true`)인 `relation` 필드, 또는 `body` 블록(`attrs.mediaId`)으로 활성 대상을 가리키도록 저장된 뒤, 가리키던 대상이 휴지통으로 이동했다(`trashed_at` 설정)
   행동  해당 글의 `id`로 `entries.publish`를 실행한다
-  결과  ENT-PUB-11.1  `BAD_REQUEST` 오류를 던진다
+  결과  ENT-PUB-11.1  세 경우 모두 `BAD_REQUEST` 오류를 던진다
         ENT-PUB-11.2  `<collection>_data` 테이블에 `status = 'published'` 행이 없다
 ```
 
@@ -460,11 +465,11 @@ ENT-DUP-6  휴지통에 있는 글은 복제할 수 없다
   결과  ENT-DUP-6.1  `NOT_FOUND` 오류를 던진다
         ENT-DUP-6.2  `<collection>` 테이블의 행은 원래 하나 그대로이다
 
-ENT-DUP-7  원문 작업본의 필드나 본문이 휴지통에 있는 대상(미디어·글)을 참조하고 있으면 복제할 수 없다
-  전제  원문 언어 작업본의 `media`·`relation` 필드 또는 `body`가 활성 대상을 가리키도록 저장된 활성 글이 있고, 그 대상이 휴지통으로 이동했다(`trashed_at` 설정)
+ENT-DUP-7  원문 작업본의 필드나 본문이 휴지통에 있는 대상을 참조하고 있으면 복제할 수 없다
+  전제  원문 언어 작업본의 `media`·`relation` 필드 또는 `body` 블록이 활성 대상을 가리키도록 저장된 활성 글이 있고, 그 대상이 휴지통으로 이동했다(`trashed_at` 설정)
   행동  해당 글의 `id`로 `entries.duplicate`를 실행한다
   결과  ENT-DUP-7.1  `BAD_REQUEST` 오류를 던진다
-        ENT-DUP-7.2  `<collection>` 테이블의 행은 원래 하나 그대로이다
+        ENT-DUP-7.2  `<collection>` 테이블에 복제본 행이 추가되지 않는다
 ```
 
 ## 7. 참조 교체 (`replaceReferences`)
@@ -577,6 +582,12 @@ ENT-LOC-8  휴지통에 있는 글에는 언어를 추가할 수 없다
   행동  휴지통 글의 `id`와 `locale: "en"`으로 `entries.addLocale`을 실행한다
   결과  ENT-LOC-8.1  `NOT_FOUND` 오류를 던진다
         ENT-LOC-8.2  휴지통 글에 `"en"` 행이 생기지 않는다
+
+ENT-LOC-9  휴지통에 있는 대상을 참조해 언어를 추가할 수 없다
+  전제  스키마에 `media` 필드가 있는 컬렉션과 두 언어(`ko`, `en`)가 있고, `ko` 원문 작업본만 가진 활성 글과 휴지통에 들어가 있는(`trashed_at` 설정) 미디어가 하나 있다
+  행동  해당 글의 `id`, `locale: "en"`, 휴지통 미디어의 `id`를 `media` 필드에 담은 `fields`로 `entries.addLocale`을 실행한다
+  결과  ENT-LOC-9.1  `BAD_REQUEST` 오류를 던진다
+        ENT-LOC-9.2  `<collection>_data` 테이블에 `"en"` 행이 생기지 않는다
 ```
 
 ## 9. 언어 삭제 (`removeLocale`)

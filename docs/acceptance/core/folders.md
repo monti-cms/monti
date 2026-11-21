@@ -4,7 +4,7 @@
 
 - `folders.create`: `scope`(컬렉션 키 또는 `"media"`), `name`, 선택 `parent_id`와 `__preset_id`(UUID)로 폴더를 만든다. 없는 `scope`이거나 부모가 같은 `scope`의 활성 폴더가 아니면 `BAD_REQUEST`, 같은 위치에 같은 `name`의 활성 폴더가 이미 있으면 `CONFLICT`로 거절한다.
 - `folders.list`: 지정한 `scope`에서 휴지통에 있지 않은 활성 폴더 목록을 돌려준다.
-- `folders.update`: `id`로 폴더의 `name`이나 `parent_id`(`null`이면 루트로 이동)를 바꾼다. 대상이 없거나 휴지통에 있으면 `NOT_FOUND`, 새 부모가 같은 `scope`의 활성 폴더가 아니거나 자기 자신·자손이면 `BAD_REQUEST`, 같은 위치에 같은 `name`의 활성 폴더가 이미 있으면 `CONFLICT`로 거절한다.
+- `folders.update`: `id`로 폴더의 `name`이나 `parent_id`(`null`이면 루트로 이동)를 바꾼다. 대상이 없거나 휴지통에 있으면 `NOT_FOUND`, 빈 `name`이거나 새 부모가 같은 `scope`의 활성 폴더가 아니거나 자기 자신·자손이면 `BAD_REQUEST`, 같은 위치에 같은 `name`의 활성 폴더가 이미 있으면 `CONFLICT`로 거절한다.
 
 ---
 
@@ -109,7 +109,7 @@ FLD-UPD-7  휴지통에 있는 폴더는 수정할 수 없다
   결과  FLD-UPD-7.1  `NOT_FOUND` 오류를 던진다
         FLD-UPD-7.2  `folders` 테이블에서 해당 폴더의 `name`이 원래 `name` 그대로이다
 
-FLD-UPD-8  옮기거나 이름을 바꾼 위치에 같은 이름의 활성 폴더가 이미 있으면 수정할 수 없다
+FLD-UPD-8  옮긴 위치에 같은 이름의 활성 폴더가 이미 있으면 수정할 수 없다
   전제  같은 `scope`의 루트 폴더 아래에 하위 폴더가 하나 있고, 루트에 그 하위 폴더와 같은 `name`의 다른 루트 폴더가 있다
   행동  하위 폴더의 `parent_id`를 `null`로 바꾸는 `folders.update`를 실행한다
   결과  FLD-UPD-8.1  `CONFLICT` 오류를 던진다

@@ -43,7 +43,7 @@ START-6  개발 서버로 시작하면 스키마에 정의된 컬렉션 테이�
   행동  `startMonti`를 실행한다
   결과  START-6.1  DB에 `posts`와 `posts_data` 테이블이 만들어져 있다
 
-START-7  운영 서버로 시작하면 코어 마이그레이션만 실행하고 컬렉션 테이블은 자동으로 만들지 않는다
+START-7  운영 서버로 시작하면 등록된 마이그레이션만 실행하고 컬렉션 테이블은 자동으로 만들지 않는다
   전제  비어 있는 DB와 `posts` 컬렉션이 정의된 스키마, `config.dev: false` 설정이 있다
   행동  `startMonti`를 실행한다
   결과  START-7.1  DB에 `migrations` 테이블은 있고 `posts`와 `posts_data` 테이블은 없다

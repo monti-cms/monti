@@ -118,8 +118,8 @@ TPL-UPD-4  본문 형식이 맞지 않으면 문제 목록을 담아 템플릿 �
         TPL-UPD-4.2  오류의 `details`가 같은 `content`와 `config`에 대한 `validateDoc`의 반환값과 같다
         TPL-UPD-4.3  `templates` 테이블에서 해당 행의 `content`가 원래 그대로이다
 
-TPL-UPD-5  본문이 존재하지 않거나 휴지통에 있는 미디어를 참조하면 템플릿을 수정할 수 없다
-  전제  미디어를 참조하고 `media_uses` 행이 있는 템플릿 하나와 휴지통에 들어가 있는(`trashed_at` 설정) 미디어가 하나 있다
+TPL-UPD-5  본문에 존재하지 않거나 기존에 없던 휴지통 미디어를 새로 넣어 템플릿을 수정할 수 없다
+  전제  첫 번째 미디어를 참조하고 `media_uses` 행이 있는 템플릿 하나와 그 템플릿이 참조하지 않던 휴지통(`trashed_at` 설정) 미디어가 하나 있다
   행동  해당 `id`와 존재하지 않는 UUID 또는 휴지통 미디어의 `id`를 `attrs.mediaId`로 참조하는 유효한 `content`로 `templates.update`를 실행한다
   결과  TPL-UPD-5.1  `BAD_REQUEST` 오류를 던진다
         TPL-UPD-5.2  `templates` 테이블에서 해당 행의 `content`가 원래 그대로이다

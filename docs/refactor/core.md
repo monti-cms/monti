@@ -184,7 +184,7 @@ DB는 **고정 도메인 테이블 8개**와 스키마의 컬렉션마다 생성
 |---|---|---|
 | 콘텐츠 (컬렉션별) | `<collection>` | 해당 컬렉션 글의 공통 정보(`id`, 원문 언어 `source_locale`, `folder_id`, `trashed_at`) |
 | | `<collection>_data` | 글의 언어·상태별 데이터(`(entry_id, locale, status)`, `status`는 `'draft'` \| `'published'`, `slug`, `published_at`, `translation_seen`, `body?`, 각 필드 컬럼) |
-| | `<collection>_rels` | 다중 참조(`many: true`인 `media`·`relation`) 연결 행(`(entry_id, locale, status, path, position)`, 대상 외래 키) |
+| | `<collection>_rels` | 다중 참조(`many: true`인 `media`·`relation`) 연결 행(`(entry_id, locale, status, path, position)`, `media_id` 및 대상 컬렉션별 `<to>_id` 외래 키) |
 | 콘텐츠 (고정) | `templates` | 재사용 본문 템플릿 |
 | 미디어·폴더 | `media` | 파일 정보(`key`, `filename`, `mime_type`, `size`, `width`, `height`) |
 | | `media_uses` | 글·템플릿의 미디어 사용처 색인 |
@@ -203,7 +203,7 @@ erDiagram
   collection ||--|{ collection_data : "entry_id (ON DELETE CASCADE)"
   collection_data ||--o{ collection_rels : "entry_id, locale, status (ON DELETE CASCADE)"
   media ||--o{ collection_rels : "media_id (ON DELETE CASCADE)"
-  collection ||--o{ collection_rels : "target_id (ON DELETE CASCADE)"
+  collection ||--o{ collection_rels : "<to>_id (ON DELETE CASCADE)"
 
   templates ||--o{ media_uses : "source_kind=template, source_id"
   media ||--o{ media_uses : "media_id (ON DELETE CASCADE)"
@@ -235,7 +235,7 @@ erDiagram
     text path PK
     int position PK
     uuid media_id FK
-    uuid target_id FK
+    uuid to_id FK "대상 컬렉션별 <to>_id"
   }
 
   templates {
@@ -333,16 +333,16 @@ erDiagram
 
 - **휴지통 이동 (`trash.move`)**: 글·미디어·폴더는 `trashed_at`에 시각을 기록해 휴지통으로 보낸다. 폴더를 휴지통에 보내면 그 안의 활성 하위 폴더·글·미디어가 같은 `trashed_at`을 받고, 휴지통 목록에서는 그 폴더 한 줄로 묶어 보여 준다.
 - **휴지통 항목을 가리키는 참조**: 참조된 글이나 미디어가 휴지통에 들어가도 나중에 복원할 수 있도록 DB의 참조 값은 그대로 남겨 둔다.
-  - **발행본 조회 (`status: "published"`, 기본값)**: 홈페이지에 노출되는 발행본을 조회(`entries.get`·`list`)할 때는 참조 대상이 휴지통에 들어가 있으면 `fields`에서 빈칸(단일 참조는 생략, 다중 참조는 목록에서 제외)으로 걸러 돌려준다.
+  - **발행본 조회 (`status: "published"`, 기본값)**: 홈페이지에 노출되는 발행본을 조회(`entries.get`·`list`)할 때는 참조 대상이 휴지통에 들어가 있으면 `fields`에서 빈칸(단일 참조는 생략, 다중 참조는 목록에서 제외)으로 걸러 돌려준다(본문 `body` 블록 트리는 그대로 돌려준다).
   - **초안 조회 (`status: "draft"`)**: 편집자가 작업하는 초안을 조회할 때는 참조 대상이 휴지통에 들어가 있더라도 DB에 저장된 참조 ID를 숨기지 않고 그대로 돌려주어, 편집기에서 휴지통 항목임을 표시하고 다른 필드를 수정·저장할 때 기존 연결이 유실되지 않게 한다.
-  - **생성·언어 추가·복제 (`entries.create`·`addLocale`·`duplicate`, `templates.create`)**: 새로 만드는 글·번역 언어·복제본·템플릿의 필드나 본문이 없거나 휴지통에 있는 대상(미디어·글)을 참조하면 `BAD_REQUEST`로 거절한다.
-  - **수정 (`entries.update`, `templates.update`)**: 존재하지 않는 대상을 참조하거나, 기존 작업본(또는 기존 템플릿 본문)에 없던 휴지통 대상을 새로 참조하면 `BAD_REQUEST`로 거절한다. 반대로 해당 작업본의 같은 필드 경로(또는 본문)에 이미 저장되어 있던 참조 ID를 그대로 유지한 채 다른 항목을 고쳐 임시저장하는 것은 참조 대상이 휴지통에 있어도 허용한다.
-  - **발행 (`entries.publish`)**: 발행할 때는 작업본의 필드(`required` 여부와 무관)나 본문(`body`)이 가리키는 참조 대상(미디어·글) 중 하나라도 휴지통에 들어가 있으면 `BAD_REQUEST`로 거절한다.
+  - **생성·언어 추가·복제 (`entries.create`·`addLocale`·`duplicate`, `templates.create`)**: 새로 만드는 글·번역 언어·복제본·템플릿의 필드가 없거나 휴지통에 있는 미디어·글을 참조하거나, 본문이 없거나 휴지통에 있는 미디어를 참조하면 `BAD_REQUEST`로 거절한다.
+  - **수정 (`entries.update`, `templates.update`)**: 존재하지 않는 대상을 참조하거나 휴지통에 있는 대상을 새로 참조하면 `BAD_REQUEST`로 거절한다. 다만 고치는 작업본(같은 언어)이나 템플릿의 같은 경로에 이미 저장되어 있던 참조 ID는 대상이 휴지통에 있어도 그대로 둔 채 저장할 수 있다. 경로는 `_rels.path`·`media_uses.field_path`와 같은 단위(최상위 필드 `"<field>"`, 조건부 하위 필드 `"<field>.<option>.<subfield>"`, 글 본문 `"body"`, 템플릿 본문 `"content"`)이며, 다건 필드는 순서와 관계없이 그 목록에 이미 있던 ID면 유지로 보고 본문은 블록 위치와 관계없이 그 본문에 이미 있던 미디어 ID면 유지로 본다.
+  - **발행 (`entries.publish`)**: 발행할 때는 작업본의 필드(`required` 여부와 무관)나 본문(`body`)이 가리키는 참조 대상(미디어·글) 중 하나라도 존재하지 않거나 휴지통에 들어가 있으면 `BAD_REQUEST`로 거절한다.
 - **휴지통 복원 (`trash.restore`)**:
   - 글을 되살리면 모든 언어의 발행본(`status = 'published'`)을 지워 초안 상태로 되살린다.
   - 원래 상위 폴더가 휴지통에 있으면 같은 이름의 활성 폴더를 원래 위치에 새로 만들어(이미 있으면 그 폴더를 써서) 그 안에 되살린다.
   - 되살릴 때 활성 폴더 이름이나 활성 글의 초안 `slug`와 겹치면 거절하지 않고 뒤에 `-2`, `-3`…을 붙인다.
-- **영구 삭제 (`trash.delete`)**: 글이나 미디어를 영구 삭제하면 DB 외래 키(`ON DELETE SET NULL` / `ON DELETE CASCADE`)가 다른 글의 참조 컬럼·다중 참조 행·`media_uses`를 찌꺼기 없이 자동 정리한다. 미디어를 영구 삭제하거나 파일을 교체할 때 남는 실제 저장소 파일 키는 `loose_files` 대기열에 적재해 정리한다.
+- **영구 삭제 (`trash.delete`)**: 글이나 미디어를 영구 삭제하면 DB 외래 키(`ON DELETE SET NULL` / `ON DELETE CASCADE`)가 다른 글의 참조 컬럼·다중 참조 행과 삭제된 미디어의 `media_uses`를 자동 정리하고, 삭제된 글이 쓰던 `media_uses`도 함께 지운다. 미디어를 영구 삭제하거나 파일을 교체할 때 남는 실제 저장소 파일 키는 `loose_files` 대기열(영구 삭제는 즉시, 파일 교체는 24시간 뒤)에 적재해 정리한다.
 
 ### 6.5 번역 상태와 미디어 사용처 색인
 

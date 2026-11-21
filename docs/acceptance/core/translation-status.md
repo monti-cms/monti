@@ -78,7 +78,7 @@ TST-READ-12  컬렉션과 언어를 지정하면 둘 다 일치하는 줄만 돌
   행동  첫 번째 컬렉션과 `locale: "en"`으로 `translationStatus.list`를 실행한다
   결과  TST-READ-12.1  첫 번째 컬렉션 글의 `en` 줄 하나만 돌려준다
 
-TST-READ-13  확인한 원문 참조 필드의 대상이 휴지통에 들어가도 원문 참조 ID가 바뀌지 않았으면 확인 완료 상태를 유지한다
+TST-READ-13  확인한 원문 필드가 가리키는 대상이 휴지통에 들어가도 확인 완료 상태가 유지된다
   전제  `ko` 원문 작업본이 활성 미디어를 참조하고 `en` 번역 언어에서 `translationStatus.update`로 그 필드를 확인한 뒤, 그 미디어가 휴지통으로 이동했다(`trashed_at` 설정)
   행동  해당 글의 `id`와 `locale: "en"`으로 `translationStatus.get`을 실행한다
   결과  TST-READ-13.1  반환값의 `fields`에서 그 필드가 `status: "seen"`이고 `seen_value`가 그 미디어의 `id`이다
