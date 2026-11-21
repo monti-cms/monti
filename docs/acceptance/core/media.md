@@ -86,11 +86,12 @@ MED-READ-3  조건 없이 조회하면 모든 활성 미디어를 URL과 함께 
   결과  MED-READ-3.1  `trashed_at`이 `null`인 미디어 두 개만 돌려준다
         MED-READ-3.2  반환된 각 항목의 `url`이 `storage.url(key)`이다
 
-MED-READ-4  활성 미디어 1건을 URL과 함께 돌려준다
-  전제  `storage`가 설정되어 있고 활성 미디어가 하나 있다
+MED-READ-4  활성 미디어 1건을 URL 및 사용처 목록과 함께 돌려준다
+  전제  `storage`가 설정되어 있고 활성 미디어가 하나 있으며 `media_uses`에 그 미디어를 가리키는 행이 하나 있다
   행동  해당 미디어의 `id`로 `media.get`을 실행한다
   결과  MED-READ-4.1  반환값의 `id`가 해당 미디어의 `id`이다
         MED-READ-4.2  반환값의 `url`이 `storage.url(key)`이다
+        MED-READ-4.3  반환값의 `uses`가 `media_uses`에 기록된 `{ source_kind, source_id, field_path }` 목록이다
 
 MED-READ-5  휴지통에 있는 미디어는 조회할 수 없다
   전제  휴지통에 들어가 있는(`trashed_at` 설정) 미디어가 하나 있다

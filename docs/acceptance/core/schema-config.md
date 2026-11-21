@@ -57,10 +57,11 @@ SCH-UPD-6  컬렉션에 필드를 새로 넣으면 열이 추가되고 기존 �
   결과  SCH-UPD-6.1  `posts_data` 테이블에 `new_field` 열이 있다
         SCH-UPD-6.2  `posts_data` 테이블에 `old_field` 열이 없다
 
-SCH-UPD-7  필드의 종류를 바꾸면 데이터 테이블의 열도 새 종류로 바뀐다
-  전제  `config.dev`가 `true`이고 숫자 종류의 `code` 필드를 가진 `posts` 컬렉션이 적용되어 있다
-  행동  `code` 필드의 종류를 글자(`text`)로 바꾼 스키마로 `schema.update`를 실행한다
-  결과  SCH-UPD-7.1  `posts_data` 테이블에서 `code` 열의 데이터 타입이 `text`이다
+SCH-UPD-7  필드의 종류를 바꾸면 데이터 테이블의 열도 새 종류로 바뀌고 호환되지 않는 기존 값은 비워진다
+  전제  `config.dev`가 `true`이고 숫자 종류의 `code` 필드와 참거짓 종류의 `flag` 필드에 값이 저장된 글이 있는 `posts` 컬렉션이 적용되어 있다
+  행동  `code` 필드를 글자(`text`)로, `flag` 필드를 숫자(`number`)로 바꾼 스키마로 `schema.update`를 실행한다
+  결과  SCH-UPD-7.1  `posts_data` 테이블에서 `code` 열의 데이터 타입이 `text`이고 기존 숫자 값이 문자열로 유지된다
+        SCH-UPD-7.2  `posts_data` 테이블에서 `flag` 열의 데이터 타입이 `double precision`이고 변환할 수 없는 기존 값은 `null`로 비워진다
 
 SCH-UPD-8  스키마에서 컬렉션을 지우면 그 컬렉션의 테이블들이 모두 삭제된다
   전제  `config.dev`가 `true`이고 `posts` 컬렉션이 적용되어 `posts`, `posts_data`, `posts_rels` 테이블이 있다
@@ -100,6 +101,12 @@ SCH-UPD-13  코어 기본 테이블 이름이나 `_data`·`_rels`로 끝나는 �
   행동  예약어(`media` 또는 `posts_data`)를 컬렉션 키로 가진 스키마로 `schema.update`를 실행한다
   결과  SCH-UPD-13.1  `BAD_REQUEST` 오류를 던진다
         SCH-UPD-13.2  `schema.get`을 실행하면 원래 스키마 그대로이다
+
+SCH-UPD-14  데이터 테이블의 고정 열 이름은 컬렉션의 필드 이름으로 쓸 수 없다
+  전제  `config.dev`가 `true`이고 초기 스키마 파일이 있다
+  행동  고정 열 이름(`status` 또는 `slug`)을 필드 키로 가진 컬렉션 스키마로 `schema.update`를 실행한다
+  결과  SCH-UPD-14.1  `BAD_REQUEST` 오류를 던진다
+        SCH-UPD-14.2  `schema.get`을 실행하면 원래 스키마 그대로이다
 ```
 
 ## 3. 설정 조회 (`config.get`)

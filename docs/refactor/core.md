@@ -298,7 +298,7 @@ erDiagram
 
 ### 6.1 8종 필드의 DB 매핑 규칙
 
-- **예약어 차단**: 고정 테이블 이름(`templates`, `folders`, `media`, `media_uses`, `loose_files`, `admin`, `session`, `api_keys`, `migrations`)과 `_data`, `_rels`로 끝나는 이름은 컬렉션 키로 쓸 수 없다.
+- **예약어 차단**: 고정 테이블 이름(`templates`, `folders`, `media`, `media_uses`, `loose_files`, `admin`, `session`, `api_keys`, `migrations`)과 `_data`, `_rels`로 끝나는 이름은 컬렉션 키로 쓸 수 없다. 데이터 테이블의 고정 열 이름(`entry_id`, `locale`, `status`, `slug`, `published_at`, `translation_seen`, `body`)은 필드(하위 필드 포함) 이름으로 쓸 수 없다.
 - **단일 값 필드 (`<collection>_data` 컬럼)**
   - `text` → `text`
   - `number` → `double precision`
@@ -316,7 +316,7 @@ erDiagram
 
 ### 6.2 스키마 변경과 마이그레이션
 
-- **개발 서버 (`config.dev === true`)**: 엔진 시작 시와 `schema.update` 실행 시 현재 스키마와 DB의 컬렉션 테이블 구조를 비교해 같은 트랜잭션 안에서 테이블·컬럼·외래 키를 즉시 맞춘다(`CREATE` / `ALTER` / `DROP`).
+- **개발 서버 (`config.dev === true`)**: 엔진 시작 시와 `schema.update` 실행 시 현재 스키마와 DB의 컬렉션 테이블 구조를 비교해 같은 트랜잭션 안에서 테이블·컬럼·외래 키를 즉시 맞춘다(`CREATE` / `ALTER` / `DROP`). 열의 타입을 바꿀 때 단건 `select` → 다건 `select`(`text[]`)는 기존 값을 1개짜리 배열로 감싸고, 호환되지 않거나 변환할 수 없는 값은 `NULL`로 비워 변환한다(이 열 타입 변환 SQL 규칙은 순수 함수로 분리해 마이그레이션 CLI와 공유한다).
 - **운영 서버 (`config.dev !== true`)**: 서버가 임의로 테이블을 추측해 바꾸지 않고 등록된 마이그레이션 단계만 순서대로 실행한다. 배포 전 마이그레이션 파일 생성은 CLI가 맡는다.
 
 ### 6.3 초안(`draft`)과 발행본(`published`), `slug`와 필수값(`required`)
@@ -340,7 +340,7 @@ erDiagram
 ### 6.5 번역 상태와 미디어 사용처 색인
 
 - **번역 상태 (`translation_seen`)**: 번역 언어 초안(`status = 'draft'`)의 `translation_seen` 컬럼에 번역자가 확인한 원문 값과 본문 블록 연결·번역 제외 여부를 기록한다. 읽을 때 현재 원문 값과 비교해 `unseen`(미확인)·`seen`(최신)·`outdated`(원문 변경됨)를 계산해 돌려준다.
-- **미디어 사용처 (`media_uses`)**: 글이나 템플릿을 저장할 때 같은 트랜잭션 안에서 미디어 필드와 본문(`body`)의 미디어 참조를 모아 갱신한다. 글의 사용처는 모든 언어 초안의 참조 합집합을 `source_id = <collection>.id`로 기록한다.
+- **미디어 사용처 (`media_uses`)**: 글이나 템플릿을 저장할 때 같은 트랜잭션 안에서 미디어 필드와 본문(`body`)의 미디어 참조를 모아 갱신한다. 글의 사용처는 모든 언어 초안의 참조 합집합을 `source_id = <collection>.id`로 기록하며, `media.get`이 해당 미디어의 `uses`(`{ source_kind, source_id, field_path }[]`)를 함께 돌려준다.
 
 ## 7. 리소스
 
