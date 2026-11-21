@@ -35,8 +35,8 @@ MED-UPL-2  스토리지가 설정되지 않은 엔진에서는 업로드를 시�
 ```
 MED-CRT-1  스토리지 파일을 확인해 미디어로 등록하고 임시 목록에서 해당 키만 지운다
   전제  `storage`에 파일이 올라가 있고, 그 `key`와 다른 `key` 하나가 `loose_files`에 들어 있다
-  행동  올라간 `key`로 `media.create`를 실행한다
-  결과  MED-CRT-1.1  반환값의 `key`, `filename`(`key`), `mime_type`(`storage.stat`의 `mime`), `size`(`storage.stat`의 `size`), `folder_id`(`null`), `width`(`null`), `height`(`null`)가 일치한다
+  행동  올라간 `key`와 `width`, `height`로 `media.create`를 실행한다
+  결과  MED-CRT-1.1  반환값의 `key`, `filename`(`key`), `mime_type`(`storage.stat`의 `mime`), `size`(`storage.stat`의 `size`), `folder_id`(`null`), `width`, `height`가 일치한다
         MED-CRT-1.2  반환값의 `url`이 `storage.url(key)`이다
         MED-CRT-1.3  `media` 테이블에 해당 `id`, `key`, `filename`, `mime_type`, `size`, `folder_id`, `width`, `height`를 가진 행이 저장된다
         MED-CRT-1.4  `loose_files`에서 등록한 `key`는 삭제된다
@@ -143,6 +143,17 @@ MED-UPD-5  단건 수정에서 파일 이름을 빈 문자열로 바꿀 수 없�
   행동  해당 미디어의 `id`와 빈 문자열 `filename: ""`로 `media.update`를 실행한다
   결과  MED-UPD-5.1  `BAD_REQUEST` 오류를 던진다
         MED-UPD-5.2  `media` 테이블에서 해당 미디어의 `filename`이 원래 그대로이다
+
+MED-UPD-6  단건 수정에서 바꿀 항목이 없거나 같은 파일 키를 다시 주면 기존 미디어를 그대로 돌려준다
+  전제  활성 미디어가 하나 있다
+  행동  해당 미디어의 `id`만으로 `media.update`를 실행하고, 이어서 같은 `key`로 `media.update`를 실행한다
+  결과  MED-UPD-6.1  두 호출 모두 기존 미디어와 같은 `id`, `key`, `filename`을 돌려주고 `loose_files`에 행이 생기지 않는다
+
+MED-UPD-7  미디어 수정에서 미디어 범위가 아닌 폴더로 옮길 수 없고, 다건 수정에서는 폴더를 비워 루트로 옮길 수 있다
+  전제  `"media"` 폴더에 속한 활성 미디어 둘과 컬렉션 `scope`의 폴더가 하나 있다
+  행동  단건·다건 `media.update`에 컬렉션 폴더의 `id`를 주고, 이어서 다건 `media.update`에 `folder_id: null`을 준다
+  결과  MED-UPD-7.1  컬렉션 폴더를 준 단건·다건 호출 모두 `BAD_REQUEST` 오류를 던진다
+        MED-UPD-7.2  `folder_id: null` 다건 호출은 두 미디어의 `folder_id`를 모두 `null`로 바꾼다
 ```
 
 ## 5. 임시 파일 정리 (`removeLooseFiles`)

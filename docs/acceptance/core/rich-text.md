@@ -13,10 +13,10 @@ RT-DOC-1  유효한 본문 문서는 빈 문제 목록을 돌려준다
   행동  `validateDoc`으로 문서를 검사한다
   결과  RT-DOC-1.1  빈 배열 `[]`을 돌려준다
 
-RT-DOC-2  문서의 블록 목록이 배열이 아니면 예외를 던지지 않고 문제를 돌려준다
-  전제  `blocks`가 배열이 아닌 객체(`{ blocks: {} }`)가 주어진다
-  행동  `validateDoc`으로 해당 값을 검사한다
-  결과  RT-DOC-2.1  `path`가 `"blocks"`인 문제가 보고된다
+RT-DOC-2  문서가 객체가 아니거나 블록 목록이 배열이 아니면 예외를 던지지 않고 문제를 돌려준다
+  전제  객체가 아닌 값(`null`)과 `blocks`가 배열이 아닌 객체(`{ blocks: {} }`)가 주어진다
+  행동  `validateDoc`으로 각 값을 검사한다
+  결과  RT-DOC-2.1  객체가 아닌 값에서는 `path`가 `""`인 문제가 보고되고, `blocks`가 배열이 아닌 객체에서는 `path`가 `"blocks"`인 문제가 보고된다
 
 RT-DOC-3  블록이 객체가 아니면 해당 블록 경로의 문제를 돌려준다
   전제  `blocks[0]`이 `null`인 문서가 주어진다
@@ -89,21 +89,25 @@ RT-BLK-6  허용된 자식 목록에 없는 하위 블록이 들어 있으면 �
 ## 3. 인라인 · 마크
 
 ```
-RT-INL-1  등록되지 않은 종류의 인라인 노드는 문제를 돌려준다
-  전제  `blocks[0]` `paragraph`의 `content[0]`에 알 수 없는 인라인 `type`이 들어 있다
+RT-INL-1  인라인 노드가 객체가 아니거나 등록되지 않은 종류이거나 각주 참조 ID가 문자열이 아니면 문제를 돌려준다
+  전제  `blocks[0]` `paragraph`의 `content[0]`에 객체가 아닌 값(`null`), `content[1]`에 알 수 없는 인라인 `type`, `content[2]`에 문자열 `id`가 없는 `footnoteRef`가 들어 있다
   행동  `validateDoc`으로 문서를 검사한다
-  결과  RT-INL-1.1  `blocks[0].content[0].type` 경로의 문제가 보고된다
+  결과  RT-INL-1.1  `blocks[0].content[0]` 경로의 문제가 보고된다
+        RT-INL-1.2  `blocks[0].content[1].type` 경로의 문제가 보고된다
+        RT-INL-1.3  `blocks[0].content[2].id` 경로의 문제가 보고된다
 
 RT-INL-2  글자 노드의 텍스트가 문자열이 아니면 문제를 돌려준다
   전제  `blocks[0]` `paragraph`의 `content[0]`에 문자열이 아닌 `text` 속성을 가진 글자 노드가 들어 있다
   행동  `validateDoc`으로 문서를 검사한다
   결과  RT-INL-2.1  `blocks[0].content[0].text` 경로의 문제가 보고된다
 
-RT-INL-3  마크에 종류가 없거나 등록되지 않은 마크이면 문제를 돌려준다
-  전제  `blocks[0]` `paragraph`의 `content[0]`은 첫 마크에 `type`이 없는 `text`이고, `content[1]`은 등록되지 않은 마크 `type`을 가진 `text`이다
+RT-INL-3  마크 목록이나 마크 항목 형식이 잘못되었거나 등록되지 않은 마크이면 문제를 돌려준다
+  전제  `blocks[0]` `paragraph`의 `content[0]`은 첫 마크에 `type`이 없는 `text`, `content[1]`은 등록되지 않은 마크 `type`을 가진 `text`, `content[2]`는 배열이 아닌 `marks`를 가진 `text`, `content[3]`은 객체가 아닌 마크(`null`)를 가진 `text`이다
   행동  `validateDoc`으로 문서를 검사한다
   결과  RT-INL-3.1  `blocks[0].content[0].marks[0].type` 경로의 문제가 보고된다
         RT-INL-3.2  `blocks[0].content[1].marks[0].type` 경로의 문제가 보고된다
+        RT-INL-3.3  `blocks[0].content[2].marks` 경로의 문제가 보고된다
+        RT-INL-3.4  `blocks[0].content[3].marks[0]` 경로의 문제가 보고된다
 
 RT-INL-4  추가로 등록한 사용자 정의 마크의 속성을 스키마로 검사한다
   전제  `blocks[0]` `paragraph`의 `content[0]`은 `attrs` 스키마를 만족하는 사용자 정의 마크를 가진 `text`이고, `content[1]`은 `attrs` 스키마를 어긴 같은 사용자 정의 마크를 가진 `text`이다

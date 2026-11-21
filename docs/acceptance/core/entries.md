@@ -26,9 +26,9 @@
 
 ```
 ENT-CRT-1  필수 정보만으로 빈 초안 작업본을 만들면 슬러그와 필수 필드를 비워 둔 채 기본값을 채운다
-  전제  스키마에 `required: true` 필드가 있는 컬렉션과 `locale`이 있고 컬렉션 테이블들이 비어 있다
+  전제  스키마에 `body`가 없고 `required: true` 필드가 있는 컬렉션과 `locale`이 있고 컬렉션 테이블들이 비어 있다
   행동  해당 `collection`과 `locale`만으로 `entries.create`를 실행한다
-  결과  ENT-CRT-1.1  반환값의 `id`가 UUID 형식이고 `collection`과 `locale`이 입력과 같으며 `source_locale`이 입력 `locale`, `slug`는 `null`, `fields`는 `{}`, `folder_id`와 `published_at`은 `null`이다
+  결과  ENT-CRT-1.1  반환값의 `id`가 UUID 형식이고 `collection`과 `locale`이 입력과 같으며 `source_locale`이 입력 `locale`, `slug`는 `null`, `fields`는 `{}`, `folder_id`와 `published_at`은 `null`이며 `body` 키는 없다
         ENT-CRT-1.2  `<collection>` 테이블에 `id`, `source_locale`이 반환값과 같고 `folder_id`와 `trashed_at`이 `null`인 행이 하나 생긴다
         ENT-CRT-1.3  `<collection>_data` 테이블에 `entry_id`, `locale`, `status: "draft"`, `slug: null`, `translation_seen: {}`인 행이 하나 생기고 `status: "published"` 행은 없다
 
@@ -83,8 +83,8 @@ ENT-CRT-9  스키마에 정의되지 않은 필드가 들어 있으면 글을 �
 
 ENT-CRT-10  필드의 타입이나 길이 제한에 어긋난 값이면 글을 만들 수 없다
   전제  스키마에 `number` 필드와 `max`가 설정된 `text` 필드가 있는 컬렉션이 있고 `<collection>` 테이블이 비어 있다
-  행동  `number` 필드에 문자열을, `text` 필드에 `max`를 넘는 길이의 문자열을 담아 `entries.create`를 실행한다
-  결과  ENT-CRT-10.1  `BAD_REQUEST` 오류를 던진다
+  행동  `number` 필드에 문자열만 담은 입력과 `text` 필드에 `max`를 넘는 문자열만 담은 입력으로 각각 `entries.create`를 실행한다
+  결과  ENT-CRT-10.1  두 경우 모두 `BAD_REQUEST` 오류를 던진다
         ENT-CRT-10.2  `<collection>` 테이블이 비어 있다
 
 ENT-CRT-11  조건부 필드에서 선택한 분기에 없는 하위 필드가 들어 있으면 글을 만들 수 없다
@@ -215,6 +215,11 @@ ENT-READ-15  초안 조회에서는 휴지통에 들어간 미디어나 글을 �
   전제  단건 `media` 필드와 다건 `relation` 필드를 가진 활성 글의 작업본이 미디어 하나와 대상 글 두 개(첫 번째 대상 글, 두 번째 대상 글)를 참조하도록 저장된 뒤, 그 미디어와 첫 번째 대상 글이 휴지통으로 이동했다
   행동  해당 글의 `id`와 `status: "draft"`로 `entries.get`을 실행한다
   결과  ENT-READ-15.1  반환값의 `fields`에서 단건 `media` 필드는 휴지통에 간 미디어의 `id`이고, 다건 `relation` 필드는 첫 번째 대상 글과 두 번째 대상 글을 원래 순서대로 담고 있다
+
+ENT-READ-16  스키마에 없는 컬렉션으로는 글을 조회할 수 없다
+  전제  스키마에 컬렉션이 하나 있다
+  행동  스키마에 없는 `collection`으로 `entries.get`과 `entries.list`를 실행한다
+  결과  ENT-READ-16.1  두 호출 모두 `BAD_REQUEST` 오류를 던진다
 ```
 
 ## 3. 수정 (`update`)
@@ -322,6 +327,17 @@ ENT-UPD-16  단건 수정에서 필드만 바꾸면 본문이 유지되고 본�
   행동  해당 글의 `id`와 새 `fields`만으로 `entries.update`를 실행하고, 이어서 새 `body`만으로 `entries.update`를 실행한다
   결과  ENT-UPD-16.1  첫 번째 수정 결과의 `fields`가 새 값이고 `body`가 원래 본문 그대로이다
         ENT-UPD-16.2  두 번째 수정 결과의 `body`가 새 본문이고 `fields`가 첫 번째 수정에서 바뀐 값 그대로이다
+
+ENT-UPD-17  단건 수정에서 다른 범위나 휴지통의 폴더로 옮길 수 없고, 다건 수정에서는 폴더를 비워 루트로 옮길 수 있다
+  전제  컬렉션에 활성 글 둘(폴더에 속한 글 둘)과 `"media"` `scope`의 폴더가 하나 있다
+  행동  첫 번째 글의 `id`와 `"media"` 폴더의 `id`로 단건 `entries.update`를 실행하고, 두 글의 `ids`와 `folder_id: null`로 다건 `entries.update`를 실행한다
+  결과  ENT-UPD-17.1  단건 수정은 `BAD_REQUEST` 오류를 던지고 첫 번째 글의 `folder_id`가 원래 그대로이다
+        ENT-UPD-17.2  다건 수정은 두 글의 `folder_id`를 모두 `null`로 바꾼다
+
+ENT-UPD-18  필드와 본문을 보내지 않고 슬러그나 폴더만 바꿀 때는 기존 필드와 본문을 다시 검사하지 않는다
+  전제  `body: true` 컬렉션의 활성 글 본문이 미디어를 참조하도록 저장된 뒤 그 미디어가 휴지통에서 영구 삭제되었다
+  행동  해당 글의 `id`와 새 `slug`만으로 `entries.update`를 실행한다
+  결과  ENT-UPD-18.1  반환값의 `slug`가 새 `slug`이고 오류를 던지지 않는다
 ```
 
 ## 4. 발행 (`publish`)
@@ -352,9 +368,9 @@ ENT-PUB-4  슬러그가 비어 있으면 글을 발행할 수 없다
         ENT-PUB-4.2  `<collection>_data` 테이블에 `status = 'published'` 행이 없다
 
 ENT-PUB-5  필수 필드가 비어 있으면 글을 발행할 수 없다
-  전제  유효한 `slug`는 있지만 필수(`required: true`)인 `text` 필드 값이 비어 있는 미발행 글이 하나 있다
-  행동  해당 글의 `id`로 `entries.publish`를 실행한다
-  결과  ENT-PUB-5.1  `BAD_REQUEST` 오류를 던진다
+  전제  유효한 `slug`는 있지만 필수(`required: true`)인 `text` 필드가 생략되었거나 빈 문자열(`""`)이거나 필수 다건 `select` 필드가 빈 배열(`[]`)인 미발행 글이 있다
+  행동  각 글의 `id`로 `entries.publish`를 실행한다
+  결과  ENT-PUB-5.1  세 경우 모두 `BAD_REQUEST` 오류를 던진다
         ENT-PUB-5.2  `<collection>_data` 테이블에 `status = 'published'` 행이 없다
 
 ENT-PUB-6  선택한 조건부 분기의 필수 하위 필드가 비어 있으면 글을 발행할 수 없다
@@ -447,11 +463,11 @@ ENT-DUP-1  글의 원문 언어 작업본과 미디어 사용처를 새 슬러�
         ENT-DUP-1.4  `<collection>_data` 테이블에 새 글의 `status = 'published'` 행은 생기지 않는다
         ENT-DUP-1.5  `media_uses`에 새 글의 참조가 첫 번째 미디어의 경로만 생긴다
 
-ENT-DUP-2  슬러그를 생략하고 복제하면 겹치지 않는 `-copy` 슬러그를 붙인다
-  전제  같은 `collection`과 `locale`에 `slug`가 `"hello"`인 활성 글과 `"hello-copy"`인 활성 글이 하나씩 있다
-  행동  `"hello"` 글의 `id`만으로 `entries.duplicate`를 실행한다
-  결과  ENT-DUP-2.1  반환값의 `slug`가 `"hello-copy-2"`이다
-        ENT-DUP-2.2  `<collection>_data` 테이블에 `slug`가 `"hello-copy-2"`인 새 작업본 행이 생긴다
+ENT-DUP-2  슬러그를 생략하고 복제하면 겹치지 않는 `-copy` 슬러그를 붙이고 원본 슬러그가 비어 있으면 비워 둔다
+  전제  같은 `collection`과 `locale`에 `slug`가 `"hello"`, `"hello-copy"`, `"hello-copy-2"`인 활성 글 셋과 `slug`가 `null`인 활성 글 하나가 있다
+  행동  `"hello"` 글의 `id`와 `slug`가 `null`인 글의 `id`만으로 각각 `entries.duplicate`를 실행한다
+  결과  ENT-DUP-2.1  첫 번째 복제 반환값의 `slug`가 `"hello-copy-3"`이고 `<collection>_data` 테이블에 `slug`가 `"hello-copy-3"`인 새 작업본 행이 생긴다
+        ENT-DUP-2.2  두 번째 복제 반환값의 `slug`가 `null`이다
 
 ENT-DUP-3  지정한 ID로 복제한다
   전제  활성 글이 하나 있다
@@ -541,6 +557,11 @@ ENT-REF-9  여러 언어가 있는 글의 참조를 바꾸면 모든 언어의 �
   결과  ENT-REF-9.1  반환값의 `updated_ids`가 그 글의 `id` 하나뿐이다
         ENT-REF-9.2  `<collection>_data` 테이블의 `"ko"`와 `"en"` 작업본(`status = 'draft'`) 행 모두 참조가 새 글로 바뀐다
         ENT-REF-9.3  `<collection>_data` 테이블의 `"ko"`와 `"en"` 발행본(`status = 'published'`) 행 모두 참조가 새 글로 바뀐다
+
+ENT-REF-10  존재하지 않는 글 ID로는 참조를 바꿀 수 없다
+  전제  활성 글이 하나 있다
+  행동  존재하지 않는 UUID를 `from_id` 또는 `into_id`로 넣어 `entries.replaceReferences`를 실행한다
+  결과  ENT-REF-10.1  두 경우 모두 `NOT_FOUND` 오류를 던진다
 ```
 
 ## 8. 언어 추가 (`addLocale`)
@@ -606,12 +627,12 @@ ENT-LOC-9  휴지통에 있는 대상을 참조해 언어를 추가할 수 없�
 
 ```
 ENT-RLOC-1  비원문 언어를 즉시 삭제하면 발행본도 함께 지워지고 남은 언어 기준으로 미디어 사용처를 갱신한다
-  전제  스키마에 `many: true`인 `media` 필드가 있는 컬렉션과 두 언어(`ko`, `en`), 활성 미디어 둘이 있고, 활성 글 하나의 `ko` 작업본·발행본은 첫 번째 미디어를, `en` 작업본·발행본은 첫 번째와 두 번째 미디어를 모두 참조하며 `media_uses`에 두 미디어 참조가 모두 있다
+  전제  스키마에 `body: true`와 `many: true`인 `media` 필드가 있는 컬렉션과 두 언어(`ko`, `en`), 활성 미디어 셋이 있고, 활성 글 하나의 `ko` 작업본·발행본은 첫 번째 미디어를 필드로, 세 번째 미디어를 본문으로 참조하며 `en` 작업본·발행본은 첫 번째와 두 번째 미디어를 참조한다. 이후 세 번째 미디어는 휴지통에서 영구 삭제되었다
   행동  해당 글의 `id`와 `locale: "en"`으로 `entries.removeLocale`을 실행한다
   결과  ENT-RLOC-1.1  반환값이 `{ id, locale: "en" }`이다
         ENT-RLOC-1.2  `<collection>_data` 테이블에서 `(entry_id, "en")`의 작업본과 발행본 행이 모두 사라진다
         ENT-RLOC-1.3  `<collection>` 행과 `<collection>_data` 테이블의 `(entry_id, "ko")` 작업본·발행본 행이 모두 그대로 남는다
-        ENT-RLOC-1.4  `media_uses`에 첫 번째 미디어 참조는 남고 두 번째 미디어 참조는 사라진다
+        ENT-RLOC-1.4  `media_uses`에 첫 번째 미디어 참조는 남고 두 번째 미디어와 영구 삭제된 세 번째 미디어 참조는 없다
 
 ENT-RLOC-2  아직 발행하지 않은 비원문 언어도 즉시 삭제할 수 있다
   전제  `ko` 원문과 미발행 `en` 작업본을 가진 활성 글이 하나 있다

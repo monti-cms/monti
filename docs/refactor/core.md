@@ -301,7 +301,7 @@ erDiagram
 
 ### 6.1 8종 필드의 DB 매핑 규칙
 
-- **예약어·식별자·관계 대상 차단**: 고정 테이블 이름(`templates`, `folders`, `media`, `media_uses`, `loose_files`, `admin`, `session`, `api_keys`, `migrations`)과 `_data`, `_rels`로 끝나는 이름은 컬렉션 키로 쓸 수 없다. 데이터 테이블의 고정 열 이름(`entry_id`, `locale`, `status`, `slug`, `published_at`, `translation_seen`, `body`)은 필드(하위 필드 포함) 이름으로 쓸 수 없다. 만들어질 테이블·열 이름(`<collection>_data`, `<collection>_rels`, `<field>__<option>__<subfield>`, `<to>_id`)은 PostgreSQL 식별자 한도(UTF-8 63바이트)를 넘을 수 없고, 모든 `relation` 필드(조건부 하위 포함)의 `to`는 같은 스키마의 `collections`에 존재하는 키여야 한다.
+- **예약어·식별자·관계 대상 차단**: 고정 테이블 이름(`templates`, `folders`, `media`, `media_uses`, `loose_files`, `admin`, `session`, `api_keys`, `migrations`)과 `_data`, `_rels`로 끝나는 이름은 컬렉션 키로 쓸 수 없다. 데이터 테이블의 고정 열 이름(`entry_id`, `locale`, `status`, `slug`, `published_at`, `translation_seen`, `body`)은 필드(하위 필드 포함) 이름으로 쓸 수 없다. 컬렉션 키, 필드 키, 조건부 분기 이름에는 큰따옴표(`"`), 점(`.`), 연속 밑줄(`__`)을 쓸 수 없고, 모든 키와 만들어질 테이블·열 이름(`<collection>_data`, `<collection>_rels`, `<field>__<option>__<subfield>`, `<to>_id`)은 PostgreSQL 식별자 한도(UTF-8 63바이트)를 넘을 수 없다. 모든 `relation` 필드(조건부 하위 포함)의 `to`는 같은 스키마의 `collections`에 존재하는 키여야 한다.
 - **단일 값 필드 (`<collection>_data` 컬럼)**
   - `text` → `text`
   - `number` → `double precision`
@@ -319,7 +319,7 @@ erDiagram
 
 ### 6.2 스키마 변경과 마이그레이션
 
-- **개발 서버 (`config.dev === true`)**: 엔진 시작 시와 `schema.update` 실행 시 현재 스키마와 DB의 컬렉션 테이블 구조를 비교해 같은 트랜잭션 안에서 테이블·컬럼·외래 키를 즉시 맞춘다(`CREATE` / `ALTER` / `DROP`). 열의 타입을 바꿀 때 `number`·`boolean`·`date` → `text`는 기존 값을 문자열로 유지하고, `text` → `number`는 숫자 형태의 값만 숫자로 바꾸고 나머지는 `NULL`로 비우며, 단건 `select` → 다건 `select`(`text[]`)는 기존 값을 1개짜리 배열로 감싸고, 호환되지 않거나 변환할 수 없는 값은 `NULL`로 비워 변환한다(이 열 타입 변환 SQL 규칙은 순수 함수로 분리해 마이그레이션 CLI와 공유한다).
+- **개발 서버 (`config.dev === true`)**: 엔진 시작 시와 `schema.update` 실행 시 현재 스키마와 DB의 컬렉션 테이블 구조를 비교해 같은 트랜잭션 안에서 테이블·컬럼·외래 키를 즉시 맞춘다(`CREATE` / `ALTER` / `DROP`). 열의 타입을 바꿀 때 `number`·`boolean`·`date` → `text`는 기존 값을 문자열로 유지하고, `text` → `number`는 숫자 형태의 값만 숫자로 바꾸고 나머지는 `NULL`로 비우며, 단건 `select` → 다건 `select`(`text[]`)는 기존 값을 1개짜리 배열로 감싸고, 다건 `select`(`text[]`) → 단건 `select`는 첫 번째 원소만 남기며, `relation` 필드의 대상 컬렉션(`to`)이 바뀌거나 호환되지 않거나 변환할 수 없는 값은 `NULL`로 비워 변환한다(이 열 타입 변환 SQL 규칙은 순수 함수로 분리해 마이그레이션 CLI와 공유한다). 변경하지 않은 필드의 기존 값은 그대로 유지한다.
 - **운영 서버 (`config.dev !== true`)**: 서버가 임의로 테이블을 추측해 바꾸지 않고 등록된 마이그레이션 단계만 순서대로 실행한다. 배포 전 마이그레이션 파일 생성은 CLI가 맡는다.
 
 ### 6.3 초안(`draft`)과 발행본(`published`), `slug`와 필수값(`required`)

@@ -131,4 +131,10 @@ FLD-UPD-10  바꿀 항목 없이 폴더 수정을 호출하면 기존 폴더를 
   전제  활성 폴더가 하나 있다
   행동  해당 폴더의 `id`만으로 `folders.update`를 실행한다
   결과  FLD-UPD-10.1  반환값의 `id`, `scope`, `name`, `parent_id`가 기존 폴더 그대로이다
+
+FLD-UPD-11  같은 위치의 다른 활성 폴더와 같은 이름으로 바꿀 수 없다
+  전제  같은 `scope`의 루트에 서로 다른 이름의 활성 폴더 둘이 있다
+  행동  두 번째 폴더의 `id`와 첫 번째 폴더의 `name`만으로 `folders.update`를 실행한다
+  결과  FLD-UPD-11.1  `CONFLICT` 오류를 던진다
+        FLD-UPD-11.2  `folders` 테이블에서 두 번째 폴더의 `name`이 원래 그대로이다
 ```

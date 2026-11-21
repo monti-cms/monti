@@ -131,6 +131,12 @@ TRH-RST-8  휴지통에 있지 않은 항목은 되살릴 수 없다
   전제  휴지통에 들어가 있지 않은 활성 글(`trashed_at`이 `null`)이 하나 있다
   행동  해당 글의 `id`로 `trash.restore`를 실행한다
   결과  TRH-RST-8.1  `NOT_FOUND` 오류를 던진다
+
+TRH-RST-9  미디어 폴더를 되살리면 함께 들어갔던 하위 폴더와 미디어가 함께 돌아온다
+  전제  `storage`가 설정되어 있고 `"media"` `scope`의 상위 폴더(하위 폴더와 미디어 각 하나 포함)를 `trash.move`로 보냈다
+  행동  상위 폴더의 `id`로 `trash.restore`를 실행한다
+  결과  TRH-RST-9.1  상위 폴더, 하위 폴더, 두 미디어의 `trashed_at`이 모두 `null`이다
+        TRH-RST-9.2  반환값이 `kind: "folder"`와 상위 폴더의 `id` 한 개이다
 ```
 
 ## 4. 영구 삭제 (`delete`)
@@ -142,6 +148,7 @@ TRH-DEL-1  글을 영구 삭제하면 그 글의 모든 데이터와 다른 글�
   결과  TRH-DEL-1.1  `<collection>`, `<collection>_data`, `<collection>_rels` 테이블에 삭제된 글의 행이 없다
         TRH-DEL-1.2  `media_uses` 테이블에 삭제된 글의 사용처 행이 없다
         TRH-DEL-1.3  다른 활성 글의 단건 참조 열이 `null`로 비워지고 `<collection>_rels`에서 삭제된 글을 가리키던 다건 참조 행이 사라진다
+        TRH-DEL-1.4  반환값이 배열이 아닌 `{ kind: "entry", id: 삭제된 글 id }` 한 개이다
 
 TRH-DEL-2  미디어를 영구 삭제하면 DB와 다른 글의 미디어 참조에서 완전히 정리되고 파일은 임시 파일 목록에 올라간다
   전제  `storage`가 설정되어 있고, 활성 글이 단건·다건 미디어 필드로 가리키던 미디어가 휴지통에 있다

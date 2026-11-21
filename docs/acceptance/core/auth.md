@@ -59,6 +59,11 @@ ADM-UPD-3  새 이메일 형식이 맞지 않거나 새 비밀번호가 비어 �
   결과  ADM-UPD-3.1  `BAD_REQUEST` 오류를 던진다
         ADM-UPD-3.2  `admin` 테이블의 이메일과 `password_hash`가 바뀌지 않는다
         ADM-UPD-3.3  `session` 테이블의 기존 세션 행이 그대로 남아 있다
+
+ADM-UPD-4  관리자 계정이 없으면 관리자 정보를 바꿀 수 없다
+  전제  `admin` 테이블이 비어 있다
+  행동  유효한 현재 비밀번호, 새 이메일, 새 비밀번호로 `admin.update`를 실행한다
+  결과  ADM-UPD-4.1  `UNAUTHORIZED` 오류를 던진다
 ```
 
 ## 3. 세션 발급 (`session.create`)
