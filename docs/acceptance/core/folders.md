@@ -26,25 +26,25 @@ FLD-CRT-2  미디어 범위의 하위 폴더를 지정한 ID로 만든다
         FLD-CRT-2.2  반환값의 `parent_id`가 루트 폴더의 `id`이다
         FLD-CRT-2.3  `folders` 테이블에서 해당 `id` 행의 `parent_id`가 루트 폴더의 `id`이다
 
-FLD-CRT-3  스키마에 없는 컬렉션 범위이면 `BAD_REQUEST`로 거절한다
+FLD-CRT-3  스키마에 없는 컬렉션 범위로는 폴더를 만들 수 없다
   전제  스키마에 컬렉션이 하나 있고 `folders`가 비어 있다
   행동  `"media"`도 아니고 스키마의 `collections`에도 없는 `scope`와 `name`으로 `folders.create`를 실행한다
   결과  FLD-CRT-3.1  `BAD_REQUEST` 오류를 던진다
         FLD-CRT-3.2  `folders` 테이블은 비어 있다
 
-FLD-CRT-4  휴지통에 있는 폴더를 부모로 지정하면 `BAD_REQUEST`로 거절한다
+FLD-CRT-4  휴지통에 있는 폴더 아래에는 새 폴더를 만들 수 없다
   전제  스키마에 컬렉션이 하나 있고 해당 `scope`에서 휴지통에 들어가 있는(`trashed_at` 설정) 폴더가 하나 있다
   행동  해당 컬렉션 `scope`, `name`, 휴지통 폴더의 `id`인 `parent_id`로 `folders.create`를 실행한다
   결과  FLD-CRT-4.1  `BAD_REQUEST` 오류를 던진다
         FLD-CRT-4.2  `folders` 테이블의 행은 원래 하나 그대로이다
 
-FLD-CRT-5  존재하지 않는 폴더를 부모로 지정하면 `BAD_REQUEST`로 거절한다
+FLD-CRT-5  존재하지 않는 폴더 아래에는 새 폴더를 만들 수 없다
   전제  스키마에 컬렉션이 하나 있고 해당 `scope`에 활성 폴더가 하나 있다
   행동  해당 컬렉션 `scope`, `name`, 존재하지 않는 UUID인 `parent_id`로 `folders.create`를 실행한다
   결과  FLD-CRT-5.1  `BAD_REQUEST` 오류를 던진다
         FLD-CRT-5.2  `folders` 테이블의 행은 원래 하나 그대로이다
 
-FLD-CRT-6  같은 위치에 같은 이름의 활성 폴더가 이미 있으면 `CONFLICT`로 거절한다
+FLD-CRT-6  같은 위치에 같은 이름의 활성 폴더가 이미 있으면 폴더를 만들 수 없다
   전제  컬렉션 `scope`에 활성 루트 폴더가 하나 있다
   행동  같은 `scope`와 같은 `name`으로 루트 `folders.create`를 실행한다
   결과  FLD-CRT-6.1  `CONFLICT` 오류를 던진다
@@ -85,31 +85,31 @@ FLD-UPD-3  부모를 비우면 루트 폴더로 이동한다
   결과  FLD-UPD-3.1  반환값의 `parent_id`가 `null`이다
         FLD-UPD-3.2  `folders` 테이블에서 하위 폴더의 `parent_id`가 `null`이다
 
-FLD-UPD-4  자기 자신 아래로 이동하려 하면 `BAD_REQUEST`로 거절한다
+FLD-UPD-4  폴더를 자기 자신 아래로 옮길 수 없다
   전제  루트 폴더가 하나 있다
   행동  루트 폴더의 `parent_id`를 자기 자신의 `id`로 바꾸는 `folders.update`를 실행한다
   결과  FLD-UPD-4.1  `BAD_REQUEST` 오류를 던진다
         FLD-UPD-4.2  `folders` 테이블에서 루트 폴더의 `parent_id`가 `null` 그대로이다
 
-FLD-UPD-5  자손 폴더 아래로 이동하려 하면 `BAD_REQUEST`로 거절한다
+FLD-UPD-5  폴더를 자기 하위 폴더 아래로 옮길 수 없다
   전제  루트 폴더, 그 하위 폴더, 그 하위 폴더의 하위 폴더(손자 폴더)가 차례로 있다
   행동  루트 폴더의 `parent_id`를 손자 폴더의 `id`로 바꾸는 `folders.update`를 실행한다
   결과  FLD-UPD-5.1  `BAD_REQUEST` 오류를 던진다
         FLD-UPD-5.2  `folders` 테이블에서 루트 폴더의 `parent_id`가 `null` 그대로이다
 
-FLD-UPD-6  다른 범위의 폴더 아래로 이동하려 하면 `BAD_REQUEST`로 거절한다
+FLD-UPD-6  폴더를 다른 범위의 폴더 아래로 옮길 수 없다
   전제  컬렉션 `scope`의 활성 폴더 하나와 `"media"` `scope`의 폴더 하나가 있다
   행동  컬렉션 폴더의 `parent_id`를 `"media"` 폴더의 `id`로 바꾸는 `folders.update`를 실행한다
   결과  FLD-UPD-6.1  `BAD_REQUEST` 오류를 던진다
         FLD-UPD-6.2  `folders` 테이블에서 컬렉션 폴더의 `parent_id`가 `null` 그대로이다
 
-FLD-UPD-7  휴지통에 있는 폴더는 `NOT_FOUND`로 수정을 거절한다
+FLD-UPD-7  휴지통에 있는 폴더는 수정할 수 없다
   전제  같은 `scope`에 활성 폴더 하나와 휴지통에 들어가 있는(`trashed_at` 설정) 폴더 하나가 있다
   행동  휴지통 폴더의 `id`와 새 `name`으로 `folders.update`를 실행한다
   결과  FLD-UPD-7.1  `NOT_FOUND` 오류를 던진다
         FLD-UPD-7.2  `folders` 테이블에서 해당 폴더의 `name`이 원래 `name` 그대로이다
 
-FLD-UPD-8  이동·이름 변경 결과 같은 위치에 같은 이름의 활성 폴더가 이미 있으면 `CONFLICT`로 거절한다
+FLD-UPD-8  옮기거나 이름을 바꾼 위치에 같은 이름의 활성 폴더가 이미 있으면 수정할 수 없다
   전제  같은 `scope`의 루트 폴더 아래에 하위 폴더가 하나 있고, 루트에 그 하위 폴더와 같은 `name`의 다른 루트 폴더가 있다
   행동  하위 폴더의 `parent_id`를 `null`로 바꾸는 `folders.update`를 실행한다
   결과  FLD-UPD-8.1  `CONFLICT` 오류를 던진다

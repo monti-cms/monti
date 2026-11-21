@@ -18,7 +18,7 @@ ENG-OP-2  쓰기 작업을 직접 호출하면 트랜잭션 안에서 실행하�
         ENG-OP-2.3  `run`의 결과가 반환된다
         ENG-OP-2.4  커밋된 뒤 `onEvent` 구독자가 키 경로(`operation`)와 `{ operation, input, output }`으로 호출된다
 
-ENG-OP-3  입력이 스키마에 맞지 않으면 `BAD_REQUEST`로 거절하고 실행하지 않는다
+ENG-OP-3  입력이 스키마에 맞지 않으면 실행하지 않고 거절한다
   전제  입력 스키마가 있는 쓰기 Operation과 `onEvent` 구독자가 등록되어 있다
   행동  스키마에 맞지 않는 입력으로 Operation을 호출한다
   결과  ENG-OP-3.1  `code`가 `"BAD_REQUEST"`인 `MontiError`가 던져진다
@@ -76,14 +76,14 @@ ENG-TX-3  `dryRun` 콜백은 쓰기만 노출하고 실행 뒤 롤백하며 이�
         ENG-TX-3.3  추가했던 행이 롤백되어 DB에 남아 있지 않는다
         ENG-TX-3.4  `onEvent` 구독자가 호출되지 않는다
 
-ENG-TX-4  쓰기 중 DB 고유 제약 위반이 나면 `CONFLICT`로 변환하고 롤백한다
+ENG-TX-4  쓰기 중 DB 고유 제약 위반이 나면 충돌 오류로 바꾸고 롤백한다
   전제  한 번의 실행 안에서 행 하나를 추가한 뒤 같은 기본 키로 다시 추가하는 쓰기 Operation과 `onEvent` 구독자가 등록되어 있다
   행동  해당 쓰기 Operation을 직접 호출하고, 같은 Operation을 `dryRun` 콜백 안에서도 호출한다
   결과  ENG-TX-4.1  두 호출 모두 `code`가 `"CONFLICT"`인 `MontiError`가 던져진다
         ENG-TX-4.2  먼저 추가했던 행이 롤백되어 DB에 남아 있지 않는다
         ENG-TX-4.3  `onEvent` 구독자가 호출되지 않는다
 
-ENG-TX-5  `transaction`이나 `dryRun` 콜백 안에서 DB 고유 제약 위반으로 `CONFLICT`가 난 뒤 콜백이 그 오류를 무시하고 끝까지 가도 `transaction`과 `dryRun`은 `CONFLICT`로 실패한다
+ENG-TX-5  콜백 안에서 DB 고유 제약 위반이 난 뒤 콜백이 그 오류를 무시하고 끝까지 가도 트랜잭션과 드라이런은 실패한다
   전제  ENG-TX-4와 같이 같은 기본 키를 두 번 넣어 `CONFLICT`가 나는 쓰기 Operation과 `onEvent` 구독자가 등록되어 있다
   행동  `monti.transaction`과 `monti.dryRun`에 각각 콜백을 넘기고, 콜백 안에서 그 쓰기 Operation을 호출하되 던져진 오류를 받아 무시한 채 콜백을 끝까지 실행한다
   결과  ENG-TX-5.1  `transaction`과 `dryRun` 모두 `code`가 `"CONFLICT"`인 `MontiError`로 실패하고 성공 값을 돌려주지 않는다

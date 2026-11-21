@@ -35,26 +35,26 @@ TPL-CRT-4  본문 블록 트리의 미디어 참조를 대소문자 무시하고
   행동  최상위 블록이 첫 번째 미디어를 `attrs.mediaId`로, `quote`의 `children` 안 블록 하나가 두 번째 미디어를 `attrs.mediaId`로, 다른 `children` 블록이 대문자 표기의 두 번째 미디어와 세 번째 미디어를 `attrs.mediaIds`로 참조하는 `content`로 `templates.create`를 실행한다
   결과  TPL-CRT-4.1  `media_uses`에 `source_kind`가 `"template"`, `source_id`가 반환된 `id`, `field_path`가 `"content"`인 행이 세 미디어당 하나씩 정확히 세 개 생긴다
 
-TPL-CRT-5  스키마에 없는 컬렉션이면 `BAD_REQUEST`로 거절한다
+TPL-CRT-5  스키마에 없는 컬렉션에는 템플릿을 만들 수 없다
   전제  스키마에 컬렉션이 하나 있고 `templates`가 비어 있다
   행동  스키마의 `collections`에 없는 `collection`과 유효한 `name`·`content`로 `templates.create`를 실행한다
   결과  TPL-CRT-5.1  `BAD_REQUEST` 오류를 던진다
         TPL-CRT-5.2  `templates` 테이블이 비어 있다
 
-TPL-CRT-6  같은 컬렉션에 같은 이름이 이미 있으면 `CONFLICT`로 거절한다
+TPL-CRT-6  같은 컬렉션에 같은 이름의 템플릿이 이미 있으면 만들 수 없다
   전제  스키마에 컬렉션이 하나 있고 해당 컬렉션에 템플릿이 하나 있다
   행동  같은 `collection`, 같은 `name`, 유효한 `content`로 `templates.create`를 실행한다
   결과  TPL-CRT-6.1  `CONFLICT` 오류를 던진다
         TPL-CRT-6.2  `templates` 테이블의 행은 원래 하나 그대로이다
 
-TPL-CRT-7  본문 검증에 실패하면 문제 목록을 담아 `BAD_REQUEST`로 거절한다
+TPL-CRT-7  본문 형식이 맞지 않으면 문제 목록을 담아 템플릿 생성을 거절한다
   전제  스키마에 컬렉션이 하나 있고 `config.blocks`에 사용자 정의 블록이 하나 등록되어 있으며 `templates`가 비어 있다
   행동  그 사용자 정의 블록의 `id`가 비어 있고 두 번째 블록의 `type`이 미등록 블록인 `content`로 `templates.create`를 실행한다
   결과  TPL-CRT-7.1  `BAD_REQUEST` 오류를 던진다
         TPL-CRT-7.2  오류의 `details`가 같은 `content`와 `config`에 대한 `validateDoc`의 반환값과 같다
         TPL-CRT-7.3  `templates` 테이블이 비어 있다
 
-TPL-CRT-8  본문이 휴지통에 있는 미디어를 참조하면 `BAD_REQUEST`로 거절한다
+TPL-CRT-8  본문이 휴지통에 있는 미디어를 참조하면 템플릿을 만들 수 없다
   전제  스키마에 컬렉션이 하나 있고 휴지통에 들어가 있는(`trashed_at` 설정) 미디어가 하나 있으며 `templates`와 `media_uses`가 비어 있다
   행동  해당 미디어를 `attrs.mediaId`로 참조하는 유효한 `content`로 `templates.create`를 실행한다
   결과  TPL-CRT-8.1  `BAD_REQUEST` 오류를 던진다
@@ -80,7 +80,7 @@ TPL-READ-3  지정한 ID의 템플릿 1건을 돌려준다
   행동  첫 번째 템플릿의 `id`로 `templates.get`을 실행한다
   결과  TPL-READ-3.1  반환값의 `id`, `collection`, `name`, `content`가 첫 번째 템플릿과 같다
 
-TPL-READ-4  존재하지 않는 템플릿은 `NOT_FOUND`로 조회를 거절한다
+TPL-READ-4  존재하지 않는 템플릿은 조회할 수 없다
   전제  템플릿이 하나 있다
   행동  존재하지 않는 UUID `id`로 `templates.get`을 실행한다
   결과  TPL-READ-4.1  `NOT_FOUND` 오류를 던진다
@@ -105,27 +105,27 @@ TPL-UPD-2  본문을 바꾸면 본문을 갱신하고 해당 템플릿의 미디
         TPL-UPD-2.4  `media_uses`에서 다른 템플릿의 기존 참조는 그대로 남아 있다
         TPL-UPD-2.5  `media_uses`에서 `entry`의 기존 참조는 그대로 남아 있다
 
-TPL-UPD-3  같은 컬렉션의 다른 템플릿과 이름이 겹치면 `CONFLICT`로 거절한다
+TPL-UPD-3  같은 컬렉션의 다른 템플릿과 이름이 겹치면 이름을 바꿀 수 없다
   전제  같은 컬렉션에 템플릿이 두 개 있다
   행동  두 번째 템플릿의 `id`와 첫 번째 템플릿의 `name`으로 `templates.update`를 실행한다
   결과  TPL-UPD-3.1  `CONFLICT` 오류를 던진다
         TPL-UPD-3.2  `templates` 테이블에서 두 번째 템플릿의 `name`이 원래 그대로이다
 
-TPL-UPD-4  본문 검증에 실패하면 문제 목록을 담아 `BAD_REQUEST`로 거절한다
+TPL-UPD-4  본문 형식이 맞지 않으면 문제 목록을 담아 템플릿 수정을 거절한다
   전제  스키마에 컬렉션이 하나 있고 `config.blocks`에 사용자 정의 블록이 하나 등록되어 있으며 템플릿이 하나 있다
   행동  해당 `id`와, 그 사용자 정의 블록의 `id`가 비어 있고 두 번째 블록의 `type`이 미등록 블록인 `content`로 `templates.update`를 실행한다
   결과  TPL-UPD-4.1  `BAD_REQUEST` 오류를 던진다
         TPL-UPD-4.2  오류의 `details`가 같은 `content`와 `config`에 대한 `validateDoc`의 반환값과 같다
         TPL-UPD-4.3  `templates` 테이블에서 해당 행의 `content`가 원래 그대로이다
 
-TPL-UPD-5  본문이 없는 미디어를 참조하면 `BAD_REQUEST`로 거절하고 기존 상태를 유지한다
+TPL-UPD-5  본문이 존재하지 않는 미디어를 참조하면 템플릿을 수정할 수 없다
   전제  미디어를 참조하고 `media_uses` 행이 있는 템플릿이 하나 있다
   행동  해당 `id`와 존재하지 않는 UUID를 `attrs.mediaId`로 참조하는 유효한 `content`로 `templates.update`를 실행한다
   결과  TPL-UPD-5.1  `BAD_REQUEST` 오류를 던진다
         TPL-UPD-5.2  `templates` 테이블에서 해당 행의 `content`가 원래 그대로이다
         TPL-UPD-5.3  `media_uses`에 해당 템플릿의 기존 참조가 그대로 남아 있다
 
-TPL-UPD-6  존재하지 않는 템플릿은 `NOT_FOUND`로 수정을 거절한다
+TPL-UPD-6  존재하지 않는 템플릿은 수정할 수 없다
   전제  템플릿이 하나 있다
   행동  존재하지 않는 UUID `id`와 새 `name`으로 `templates.update`를 실행한다
   결과  TPL-UPD-6.1  `NOT_FOUND` 오류를 던진다
@@ -142,7 +142,7 @@ TPL-DEL-1  해당 템플릿과 그 템플릿의 미디어 사용처만 지운다
         TPL-DEL-1.3  `media_uses`에서 다른 템플릿의 참조는 그대로 남아 있다
         TPL-DEL-1.4  `media_uses`에서 `entry`의 참조는 그대로 남아 있다
 
-TPL-DEL-2  존재하지 않는 템플릿은 `NOT_FOUND`로 삭제를 거절한다
+TPL-DEL-2  존재하지 않는 템플릿은 지울 수 없다
   전제  템플릿이 하나 있다
   행동  존재하지 않는 UUID `id`로 `templates.delete`를 실행한다
   결과  TPL-DEL-2.1  `NOT_FOUND` 오류를 던진다

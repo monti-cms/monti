@@ -23,7 +23,7 @@ MED-UPL-1  새 키로 업로드 티켓을 발급하고 임시 파일 목록에 2
         MED-UPL-1.4  `loose_files`에 해당 `key`의 행이 생긴다
         MED-UPL-1.5  실행 시각과 해당 행의 `remove_after` 차이가 24시간이다
 
-MED-UPL-2  스토리지가 설정되지 않은 엔진에서는 `BAD_REQUEST`로 업로드를 거절한다
+MED-UPL-2  스토리지가 설정되지 않은 엔진에서는 업로드를 시작할 수 없다
   전제  `storage` 없이 엔진이 생성되어 있고 `loose_files`가 비어 있다
   행동  `mime_type`과 `size`로 `media.startUpload`를 실행한다
   결과  MED-UPL-2.1  `BAD_REQUEST` 오류를 던진다
@@ -48,19 +48,19 @@ MED-CRT-2  지정한 ID로 미디어를 등록한다
   결과  MED-CRT-2.1  반환값의 `id`가 전달한 `__preset_id`이다
         MED-CRT-2.2  `media` 테이블에 해당 `id`의 행이 하나 생긴다
 
-MED-CRT-3  스토리지에 없는 키로 등록하려 하면 `BAD_REQUEST`로 거절한다
+MED-CRT-3  스토리지에 파일이 없는 키로는 미디어를 등록할 수 없다
   전제  `storage`가 설정되어 있고 해당 `key`의 파일이 없으며 `media`가 비어 있다
   행동  없는 `key`로 `media.create`를 실행한다
   결과  MED-CRT-3.1  `BAD_REQUEST` 오류를 던진다
         MED-CRT-3.2  `media` 테이블이 비어 있다
 
-MED-CRT-4  이미 등록된 키(휴지통 포함)로 등록하려 하면 `CONFLICT`로 거절한다
+MED-CRT-4  이미 등록된 키로는 미디어를 다시 등록할 수 없다
   전제  `storage`에 파일이 있고, 같은 `key`를 가진 휴지통(`trashed_at` 설정) `media` 행이 하나 있다
   행동  해당 `key`로 `media.create`를 실행한다
   결과  MED-CRT-4.1  `CONFLICT` 오류를 던진다
         MED-CRT-4.2  `media` 테이블의 행은 원래 하나 그대로이다
 
-MED-CRT-5  미디어 범위가 아닌 폴더에 등록하려 하면 `BAD_REQUEST`로 거절한다
+MED-CRT-5  미디어 범위가 아닌 폴더에는 미디어를 등록할 수 없다
   전제  `storage`에 파일이 있고, 컬렉션 `scope`의 폴더가 하나 있으며 `media`가 비어 있다
   행동  해당 컬렉션 폴더의 `id`를 `folder_id`로 주어 `media.create`를 실행한다
   결과  MED-CRT-5.1  `BAD_REQUEST` 오류를 던진다
@@ -92,7 +92,7 @@ MED-READ-4  활성 미디어 1건을 URL과 함께 돌려준다
   결과  MED-READ-4.1  반환값의 `id`가 해당 미디어의 `id`이다
         MED-READ-4.2  반환값의 `url`이 `storage.url(key)`이다
 
-MED-READ-5  휴지통에 있는 미디어는 `NOT_FOUND`로 조회를 거절한다
+MED-READ-5  휴지통에 있는 미디어는 조회할 수 없다
   전제  휴지통에 들어가 있는(`trashed_at` 설정) 미디어가 하나 있다
   행동  해당 미디어의 `id`로 `media.get`을 실행한다
   결과  MED-READ-5.1  `NOT_FOUND` 오류를 던진다
@@ -125,7 +125,7 @@ MED-UPD-3  다건 수정은 지정한 미디어들을 한 폴더로 일괄 이�
   결과  MED-UPD-3.1  반환 목록이 요청한 두 미디어의 `{ id, folder_id: 새 folder_id }`로 이루어진다
         MED-UPD-3.2  `media` 테이블에서 두 행 모두 `folder_id`가 새 `folder_id`이다
 
-MED-UPD-4  다건 수정 대상 중 하나라도 휴지통에 있으면 `NOT_FOUND`로 전체 롤백한다
+MED-UPD-4  다건 수정 대상 중 하나라도 휴지통에 있으면 전체 이동을 취소한다
   전제  폴더에 속하지 않은 활성 미디어 하나, 휴지통에 들어가 있는(`trashed_at` 설정) 미디어 하나, `"media"` `scope`의 폴더가 하나 있다
   행동  두 미디어의 `ids`와 해당 `folder_id`로 `media.update`를 실행한다
   결과  MED-UPD-4.1  `NOT_FOUND` 오류를 던진다

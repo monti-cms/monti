@@ -22,7 +22,7 @@ KEY-CRT-1  키를 암호화해 저장하고 끝 4자리를 돌려준다
         KEY-CRT-1.4  `api_keys`에 해당 `id`의 행이 하나 생긴다
         KEY-CRT-1.5  `api_keys`에 저장된 `secret`은 평문 `secret`과 다르다
 
-KEY-CRT-2  같은 이름의 키가 이미 있으면 `CONFLICT`로 거절한다
+KEY-CRT-2  같은 이름의 키가 이미 있으면 새 키를 만들 수 없다
   전제  키가 하나 저장되어 있다
   행동  기존 키와 같은 `name`으로 `keys.create`를 실행한다
   결과  KEY-CRT-2.1  `CONFLICT` 오류를 던진다
@@ -58,13 +58,13 @@ KEY-UPD-2  비밀값 없이 이름만 주면 이름만 바꾸고 기존 키는 �
         KEY-UPD-2.3  `api_keys`의 `name`이 새 `name`이다
         KEY-UPD-2.4  해당 `id`로 `keys.check`를 실행하면 연결 확인 함수가 기존 원문 `secret`으로 호출된다
 
-KEY-UPD-3  다른 키와 이름이 겹치면 `CONFLICT`로 거절한다
+KEY-UPD-3  다른 키와 이름이 겹치면 이름을 바꿀 수 없다
   전제  서로 다른 이름의 키 두 개가 저장되어 있다
   행동  두 번째 키의 `id`와 첫 번째 키의 `name`으로 `keys.update`를 실행한다
   결과  KEY-UPD-3.1  `CONFLICT` 오류를 던진다
         KEY-UPD-3.2  두 번째 키의 `name`은 바뀌지 않는다
 
-KEY-UPD-4  존재하지 않는 키는 `NOT_FOUND`로 거절한다
+KEY-UPD-4  존재하지 않는 키는 수정할 수 없다
   전제  `api_keys`가 비어 있다
   행동  존재하지 않는 `id`와 새 `name`으로 `keys.update`를 실행한다
   결과  KEY-UPD-4.1  `NOT_FOUND` 오류를 던진다
@@ -78,7 +78,7 @@ KEY-DEL-1  지정한 키만 지운다
   행동  첫 번째 키의 `id`로 `keys.delete`를 실행한다
   결과  KEY-DEL-1.1  `api_keys`에 두 번째 키 하나만 남아 있다
 
-KEY-DEL-2  존재하지 않는 키는 `NOT_FOUND`로 거절한다
+KEY-DEL-2  존재하지 않는 키는 지울 수 없다
   전제  `api_keys`가 비어 있다
   행동  존재하지 않는 `id`로 `keys.delete`를 실행한다
   결과  KEY-DEL-2.1  `NOT_FOUND` 오류를 던진다
@@ -99,17 +99,17 @@ KEY-CHK-2  저장된 키 ID로 실행하면 비밀값을 복호화해 연결 확
   결과  KEY-CHK-2.1  플러그인의 연결 확인 함수가 복호화된 원문 `secret`으로 호출된다
         KEY-CHK-2.2  `{ ok: true }`를 돌려준다
 
-KEY-CHK-3  연결 확인 함수가 거절하면 `BAD_REQUEST`로 거절한다
+KEY-CHK-3  연결 확인 함수가 실패하면 연결 확인을 거절한다
   전제  연결 확인 함수가 거절하는 플러그인이 등록되어 있다
   행동  등록된 `service`와 `secret`으로 `keys.check`를 실행한다
   결과  KEY-CHK-3.1  `BAD_REQUEST` 오류를 던진다
 
-KEY-CHK-4  등록되지 않은 서비스이면 `NOT_FOUND`로 거절한다
+KEY-CHK-4  등록되지 않은 서비스의 키는 연결을 확인할 수 없다
   전제  등록된 `keyServices`가 없다
   행동  등록되지 않은 `service`와 `secret`으로 `keys.check`를 실행한다
   결과  KEY-CHK-4.1  `NOT_FOUND` 오류를 던진다
 
-KEY-CHK-5  존재하지 않는 키 ID이면 `NOT_FOUND`로 거절한다
+KEY-CHK-5  존재하지 않는 키 ID로는 연결을 확인할 수 없다
   전제  `api_keys`가 비어 있다
   행동  존재하지 않는 `id`로 `keys.check`를 실행한다
   결과  KEY-CHK-5.1  `NOT_FOUND` 오류를 던진다
