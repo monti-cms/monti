@@ -11,7 +11,7 @@
   - `body`: `collection.body`가 `true`일 때만 허용하며 `validateDoc(body, ctx.config)` 실패 시 문제 목록 전체를 `details`에 담아 `BAD_REQUEST`로 거절하고, 본문 블록 트리가 존재하지 않는 미디어를 참조하거나 새로 넣는 미디어가 휴지통에 있으면 `BAD_REQUEST`로 거절한다. 단, `entries.update`에서 고치는 언어 작업본의 본문에 이미 들어 있던 미디어 ID는 블록 위치와 관계없이 그 미디어가 휴지통에 있어도 그대로 유지할 수 있다.
 - `media_uses` 색인: `source_kind`를 `"entry"`, `source_id`를 `<collection>.id`로 하여 그 글의 모든 언어 작업본 참조를 합쳐 본문은 `"body"`, 최상위 `media` 필드는 `"<필드키>"`, `conditional` 하위 `media` 필드는 `"<조건필드키>.<분기>.<하위필드키>"` 경로에 한 번씩 기록한다.
 - `entries.get` · `entries.list`: `status?: "published" | "draft"`(기본값 `"published"`)로 발행본 또는 작업본을 돌려주며 휴지통 글은 제외한다. `get`은 `{ id, locale?, status? }` 또는 `{ collection, locale, slug, status? }`로, `list`는 `collection`·`locale`·`folder_id`·`relation`·`status`로 거른다. 없는 글이나 언어는 `NOT_FOUND`다(2절).
-- `entries.update`: 단건은 한 언어 작업본의 `slug`·`fields`·`body`(필드·본문 교체)와 글 전체의 `folder_id`를 바꾸고, 다건(`{ ids, folder_id }`)은 폴더 일괄 이동만 한다. `fields`나 `body`를 바꿀 때만 `media_uses`를 모든 언어 기준으로 다시 계산하고, 발행본은 건드리지 않는다(3절).
+- `entries.update`: 단건은 한 언어 작업본의 `slug`·`fields`·`body`와 글 전체의 `folder_id` 중 전달된 항목만 바꾸고 생략한 항목은 유지한다(`fields`를 주면 `fields` 객체 전체를 교체하고 생략한 `body`는 유지, `body`만 주면 `body`만 바꾸고 `fields`는 유지). 다건(`{ ids, folder_id }`)은 폴더 일괄 이동만 한다. `fields`나 `body`를 바꿀 때만 `media_uses`를 모든 언어 기준으로 다시 계산하고, 발행본은 건드리지 않는다(3절).
 - `entries.publish`: 활성 글의 한 언어 작업본을 발행본(`status = 'published'`)으로 저장한다(`published_at`은 생략하면 최초 발행은 지금, 재발행은 기존 시각). 발행할 때 작업본의 `slug`와 필수(`required: true`) 필드가 채워져 있는지, 그리고 작업본의 모든 참조 필드(`required` 여부와 무관한 `media`·`relation`, 조건부 하위 포함)와 본문(`body`)이 가리키는 대상이 모두 활성 상태(휴지통이 아님)인지 검사하며, 슬러그나 필수값이 비어 있거나 휴지통 대상을 참조하면 `BAD_REQUEST`, 같은 슬러그의 다른 활성 글 발행본이 있으면 `CONFLICT`로 거절한다(4절).
 - `entries.unpublish`: 한 언어의 발행본(`status = 'published'`)만 지우고 작업본을 돌려준다. 이미 미발행이어도 성공한다(5절).
 - `entries.duplicate`: 원문 언어 작업본만 복제해 새 미발행 글을 만들며 `__preset_id`를 받는다. `slug`를 생략하면 원본 `slug`가 있을 때는 겹치지 않는 `-copy`, `-copy-2`…를 붙이고 원본 `slug`가 `null`이면 `null`로 두며, 원문 작업본이 휴지통 대상을 참조하면 `BAD_REQUEST`로 거절한다(6절).
@@ -316,6 +316,12 @@ ENT-UPD-15  단건 수정에서 슬러그를 빈 문자열로 바꿀 수 없다
   행동  해당 글의 `id`와 빈 문자열 `slug: ""`로 `entries.update`를 실행한다
   결과  ENT-UPD-15.1  `BAD_REQUEST` 오류를 던진다
         ENT-UPD-15.2  `<collection>_data` 테이블에서 해당 작업본 행의 `slug`가 원래 그대로이다
+
+ENT-UPD-16  단건 수정에서 필드만 바꾸면 본문이 유지되고 본문만 바꾸면 필드가 유지된다
+  전제  `body: true`이고 `text` 필드를 가진 컬렉션에 필드 값과 본문이 모두 저장된 활성 글이 하나 있다
+  행동  해당 글의 `id`와 새 `fields`만으로 `entries.update`를 실행하고, 이어서 새 `body`만으로 `entries.update`를 실행한다
+  결과  ENT-UPD-16.1  첫 번째 수정 결과의 `fields`가 새 값이고 `body`가 원래 본문 그대로이다
+        ENT-UPD-16.2  두 번째 수정 결과의 `body`가 새 본문이고 `fields`가 첫 번째 수정에서 바뀐 값 그대로이다
 ```
 
 ## 4. 발행 (`publish`)
@@ -386,6 +392,12 @@ ENT-PUB-11  참조 필드나 본문이 가리키던 대상이 휴지통에 들�
   행동  해당 글의 `id`로 `entries.publish`를 실행한다
   결과  ENT-PUB-11.1  세 경우 모두 `BAD_REQUEST` 오류를 던진다
         ENT-PUB-11.2  `<collection>_data` 테이블에 `status = 'published'` 행이 없다
+
+ENT-PUB-13  조건부 필드에 스키마에서 사라진 분기가 저장되어 있으면 발행할 수 없다
+  전제  `conditional` 필드의 분기를 선택해 저장한 미발행 글이 있고, 그 뒤 스키마에서 그 분기가 제거되었다
+  행동  해당 글의 `id`로 `entries.publish`를 실행한다
+  결과  ENT-PUB-13.1  `BAD_REQUEST` 오류를 던진다
+        ENT-PUB-13.2  `<collection>_data` 테이블에 `status = 'published'` 행이 없다
 ```
 
 ## 5. 발행 취소 (`unpublish`)

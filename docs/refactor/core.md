@@ -81,13 +81,14 @@ sequenceDiagram
 ### 3.3 이벤트 (`onEvent`)
 
 - 쓰기가 커밋된 직후 `{ operation, input, output }`을 구독자에게 통지한다. 읽기와 `dryRun`은 통지하지 않는다.
+- 비밀번호·세션 토큰·외부 API 키 원문이 구독자에게 새어 나가지 않도록 `admin`·`session`·`keys` 리소스의 쓰기는 `onEvent`로 통지하지 않는다.
 - core는 통지만 발행하고 구독자 완료를 기다리지 않는다. 한 구독자의 실패가 커밋 결과나 다른 구독자의 통지에 영향을 주지 않게 격리해 호출한다.
 
 ### 3.4 오류 (`MontiError`)
 
 - 오류는 `MontiError` 하나로 통일하며 코드는 `BAD_REQUEST`, `UNAUTHORIZED`, `FORBIDDEN`, `NOT_FOUND`, `CONFLICT` 다섯 가지다.
 - 입력 검사 실패는 `BAD_REQUEST`다.
-- 쓰기 중 발생하는 PostgreSQL 고유 제약 위반(`23505`, 중복 `id`·중복 `slug` 등)은 엔진이 `CONFLICT`로 변환한다. DB 고유 제약 위반은 트랜잭션 자체를 중단시키므로 콜백이 잡아도 해당 `transaction`·`dryRun`은 끝에서 그 `CONFLICT`로 실패한다.
+- 쓰기 중 발생하는 PostgreSQL 고유 제약 위반(`23505`, 중복 `id` 등)은 엔진이 `CONFLICT`로 변환한다. DB 고유 제약 위반은 트랜잭션 자체를 중단시키므로 콜백이 잡아도 해당 `transaction`·`dryRun`은 끝에서 그 `CONFLICT`로 실패한다.
 
 ### 3.5 주요 타입 계약
 
@@ -300,7 +301,7 @@ erDiagram
 
 ### 6.1 8종 필드의 DB 매핑 규칙
 
-- **예약어 차단**: 고정 테이블 이름(`templates`, `folders`, `media`, `media_uses`, `loose_files`, `admin`, `session`, `api_keys`, `migrations`)과 `_data`, `_rels`로 끝나는 이름은 컬렉션 키로 쓸 수 없다. 데이터 테이블의 고정 열 이름(`entry_id`, `locale`, `status`, `slug`, `published_at`, `translation_seen`, `body`)은 필드(하위 필드 포함) 이름으로 쓸 수 없다.
+- **예약어·식별자·관계 대상 차단**: 고정 테이블 이름(`templates`, `folders`, `media`, `media_uses`, `loose_files`, `admin`, `session`, `api_keys`, `migrations`)과 `_data`, `_rels`로 끝나는 이름은 컬렉션 키로 쓸 수 없다. 데이터 테이블의 고정 열 이름(`entry_id`, `locale`, `status`, `slug`, `published_at`, `translation_seen`, `body`)은 필드(하위 필드 포함) 이름으로 쓸 수 없다. 만들어질 테이블·열 이름(`<collection>_data`, `<collection>_rels`, `<field>__<option>__<subfield>`, `<to>_id`)은 PostgreSQL 식별자 한도(UTF-8 63바이트)를 넘을 수 없고, 모든 `relation` 필드(조건부 하위 포함)의 `to`는 같은 스키마의 `collections`에 존재하는 키여야 한다.
 - **단일 값 필드 (`<collection>_data` 컬럼)**
   - `text` → `text`
   - `number` → `double precision`

@@ -2,9 +2,9 @@
 
 [`docs/refactor/core.md`](../../refactor/core.md) 5절(`Plugin.keyServices`), 6절(`api_keys`), 7절(`keys` 리소스)의 인수 조건이다.
 
-- `keys.create`: `service`, `name`, `secret`을 받아 암호화 비밀값(`secret`)으로 `secret`을 암호화해 `api_keys`에 저장하고, 원문 `secret` 없이 `id`, `service`, `name`, `last4`(끝 4자리)를 돌려준다. 엔진에 암호화 비밀값(`secret`)이 설정되어 있지 않으면 `BAD_REQUEST`, 같은 `name`이 이미 있으면 `CONFLICT`로 거절한다.
+- `keys.create`: `service`, `name`, `secret`(모두 빈 문자열 불가)을 받아 암호화 비밀값(`secret`)으로 `secret`을 암호화해 `api_keys`에 저장하고, 원문 `secret` 없이 `id`, `service`, `name`, `last4`(끝 4자리)를 돌려준다. 엔진에 암호화 비밀값(`secret`)이 설정되어 있지 않거나 필수 문자열이 비어 있으면 `BAD_REQUEST`, 같은 `name`이 이미 있으면 `CONFLICT`로 거절한다.
 - `keys.list`: 저장된 키들의 `id`, `service`, `name`, `last4` 목록을 돌려준다.
-- `keys.update`: `id`와 `name`, 선택 `secret`을 받아 이름을 바꾸고, `secret`이 함께 주어지면 암호화 비밀값으로 암호문과 `last4`도 바꾼다. `secret`을 바꾸는데 엔진에 암호화 비밀값이 없으면 `BAD_REQUEST`, 다른 키와 `name`이 겹치면 `CONFLICT`, 없는 `id`이면 `NOT_FOUND`로 거절한다.
+- `keys.update`: `id`와 `name`(빈 문자열 불가), 선택 `secret`(전달 시 빈 문자열 불가)을 받아 이름을 바꾸고, `secret`이 함께 주어지면 암호화 비밀값으로 암호문과 `last4`도 바꾼다. `name`이나 `secret`이 빈 문자열이거나 `secret`을 바꾸는데 엔진에 암호화 비밀값이 없으면 `BAD_REQUEST`, 다른 키와 `name`이 겹치면 `CONFLICT`, 없는 `id`이면 `NOT_FOUND`로 거절한다.
 - `keys.delete`: `id`로 해당 키를 삭제한다. 없는 `id`이면 `NOT_FOUND`로 거절한다.
 - `keys.check`: 새로 입력한 `{ service, secret }` 또는 저장된 키의 `{ id }`(암호화 비밀값으로 저장된 `secret`을 복호화해 사용)로 플러그인 `keyServices`의 연결 확인 함수를 실행하고 `{ ok: true }`를 돌려준다. 저장된 키를 쓰는데 엔진에 암호화 비밀값이 없거나 연결 확인이 거절하면 `BAD_REQUEST`, 등록되지 않은 `service`이거나 없는 `id`이면 `NOT_FOUND`로 거절한다.
 
@@ -33,6 +33,12 @@ KEY-CRT-3  암호화 비밀값이 없으면 키를 저장할 수 없다
   행동  `service`, `name`, `secret`으로 `keys.create`를 실행한다
   결과  KEY-CRT-3.1  `BAD_REQUEST` 오류를 던진다
         KEY-CRT-3.2  `api_keys`가 비어 있다
+
+KEY-CRT-4  서비스·이름·비밀값 중 하나라도 빈 문자열이면 키를 저장할 수 없다
+  전제  `api_keys`가 비어 있다
+  행동  `service`, `name`, `secret` 중 하나를 빈 문자열(`""`)로 넣어 `keys.create`를 실행한다
+  결과  KEY-CRT-4.1  `BAD_REQUEST` 오류를 던진다
+        KEY-CRT-4.2  `api_keys`가 비어 있다
 ```
 
 ## 2. 목록 (`list`)
@@ -80,6 +86,12 @@ KEY-UPD-5  암호화 비밀값이 없으면 저장된 키의 비밀값을 바꿀
   행동  저장된 키의 `id`, 새 `name`, 새 `secret`으로 `keys.update`를 실행한다
   결과  KEY-UPD-5.1  `BAD_REQUEST` 오류를 던진다
         KEY-UPD-5.2  `api_keys`에서 해당 키의 `name`, `secret`, `last4`가 원래 그대로이다
+
+KEY-UPD-6  이름이나 비밀값을 빈 문자열로 바꿀 수 없다
+  전제  키가 하나 저장되어 있다
+  행동  저장된 키의 `id`와 빈 `name: ""` 또는 빈 `secret: ""`로 `keys.update`를 실행한다
+  결과  KEY-UPD-6.1  `BAD_REQUEST` 오류를 던진다
+        KEY-UPD-6.2  `api_keys`에서 해당 키의 `name`, `secret`, `last4`가 원래 그대로이다
 ```
 
 ## 4. 삭제 (`delete`)

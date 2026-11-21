@@ -47,4 +47,9 @@ START-7  운영 서버로 시작하면 등록된 마이그레이션만 실행하
   전제  비어 있는 DB와 `posts` 컬렉션이 정의된 스키마, `config.dev: false` 설정이 있다
   행동  `startMonti`를 실행한다
   결과  START-7.1  DB에 `migrations` 테이블은 있고 `posts`와 `posts_data` 테이블은 없다
+
+START-8  관리자·세션·키 리소스의 쓰기는 이벤트 구독자에게 통지하지 않는다
+  전제  `startMonti`로 시작해 `onEvent` 구독자가 등록되어 있고 암호화 비밀값(`secret`)이 설정되어 있다
+  행동  `admin.create`, `session.create`, `keys.create`를 실행한다
+  결과  START-8.1  `onEvent` 구독자가 한 번도 호출되지 않는다
 ```

@@ -3,9 +3,9 @@
 [`docs/refactor/core.md`](../../refactor/core.md) 3.5절(`ReadContext`, `WriteContext`, `MontiConfig`), 4절(컨텍스트와 설정), 6.1~6.2절(컬렉션 테이블과 8종 필드 매핑, 스키마 변경), 7절(`schema`, `config` 리소스), 8절(`state.ts`, `schema-file.ts`, `config-file.ts`)의 인수 조건이다.
 
 - `schema.get`: 현재 스키마(`ctx.schema`)를 돌려준다.
-- `schema.update`: 개발 서버(`config.dev: true`)에서만 스키마를 바꾸고, 같은 트랜잭션 안에서 컬렉션별 테이블(`<collection>`, `<collection>_data`, `<collection>_rels`)과 필드 열을 DB에 맞춘 뒤 커밋 직후 공유 상태와 스키마 파일에 반영한다. 정의된 8종 필드(`text`·`number`·`boolean`·`date`·`select`·`media`·`relation`·`conditional`) 외의 `type`이거나 예약어 컬렉션 키(`templates`, `folders`, `media`, `media_uses`, `loose_files`, `admin`, `session`, `api_keys`, `migrations`, 또는 `_data`·`_rels`로 끝나는 이름)이면 `BAD_REQUEST`, 개발 서버가 아니면 `FORBIDDEN`으로 거절하며, 롤백·`dryRun`이면 DB 테이블과 공유 상태·파일을 바꾸지 않는다.
+- `schema.update`: 개발 서버(`config.dev: true`)에서만 스키마를 바꾸고, 같은 트랜잭션 안에서 컬렉션별 테이블(`<collection>`, `<collection>_data`, `<collection>_rels`)과 필드 열을 DB에 맞춘 뒤 커밋 직후 공유 상태와 스키마 파일에 반영한다. 정의된 8종 필드(`text`·`number`·`boolean`·`date`·`select`·`media`·`relation`·`conditional`) 외의 `type`이거나, 예약어 컬렉션 키·고정 열 이름 필드이거나, 만들어질 테이블·열 이름이 UTF-8 63바이트를 넘거나, `relation` 필드의 `to`가 스키마의 컬렉션에 없으면 `BAD_REQUEST`, 개발 서버가 아니면 `FORBIDDEN`으로 거절하며, 롤백·`dryRun`이면 DB 테이블과 공유 상태·파일을 바꾸지 않는다.
 - `config.get`: 현재 사이트 설정(`ctx.config`)을 돌려준다.
-- `config.update`: 개발 서버에서만 사이트 `name`을 바꾸고 커밋 뒤에 공유 상태와 설정 파일에 반영한다. 개발 서버가 아니면 `FORBIDDEN`으로 거절하며, 롤백·`dryRun`이면 공유 상태와 파일을 바꾸지 않는다.
+- `config.update`: 개발 서버에서만 사이트 `name`(빈 문자열이면 `BAD_REQUEST`)을 바꾸고 커밋 뒤에 공유 상태와 설정 파일에 반영한다. 개발 서버가 아니면 `FORBIDDEN`으로 거절하며, 롤백·`dryRun`이면 공유 상태와 파일을 바꾸지 않는다.
 
 ---
 
@@ -109,6 +109,18 @@ SCH-UPD-14  데이터 테이블의 고정 열 이름은 컬렉션의 필드 이�
   행동  고정 열 이름(`status` 또는 `slug`)을 필드 키로 가진 컬렉션 스키마로 `schema.update`를 실행한다
   결과  SCH-UPD-14.1  `BAD_REQUEST` 오류를 던진다
         SCH-UPD-14.2  `schema.get`을 실행하면 원래 스키마 그대로이다
+
+SCH-UPD-15  만들어질 테이블이나 열 이름이 63바이트를 넘는 스키마는 저장할 수 없다
+  전제  `config.dev`가 `true`이고 초기 스키마 파일이 있다
+  행동  조건부 하위 필드 열 이름(`<field>__<option>__<subfield>`)이 UTF-8 63바이트를 넘는 컬렉션 스키마로 `schema.update`를 실행한다
+  결과  SCH-UPD-15.1  `BAD_REQUEST` 오류를 던진다
+        SCH-UPD-15.2  `schema.get`을 실행하면 원래 스키마 그대로이다
+
+SCH-UPD-16  관계 필드가 스키마에 없는 컬렉션을 가리키면 스키마를 저장할 수 없다
+  전제  `config.dev`가 `true`이고 초기 스키마 파일이 있다
+  행동  스키마의 `collections`에 없는 이름(예: `"folders"` 또는 존재하지 않는 키)을 `to`로 가진 `relation` 필드가 포함된 스키마로 `schema.update`를 실행한다
+  결과  SCH-UPD-16.1  `BAD_REQUEST` 오류를 던진다
+        SCH-UPD-16.2  `schema.get`을 실행하면 원래 스키마 그대로이다
 ```
 
 ## 3. 설정 조회 (`config.get`)
@@ -149,4 +161,15 @@ CFG-UPD-4  드라이런으로 실행하면 설정과 설정 파일은 바뀌지 
   행동  `dryRun` 안에서 새 `name`으로 `config.update`를 실행한다
   결과  CFG-UPD-4.1  `dryRun`이 끝난 뒤 `config.get`을 실행하면 원래 설정 그대로이다
         CFG-UPD-4.2  설정 파일의 내용은 원래 그대로이다
+
+CFG-UPD-5  큰따옴표가 들어간 사이트 이름으로 바꾼 뒤 다시 이름을 바꿔도 설정 파일이 깨지지 않는다
+  전제  `config.dev`가 `true`이고 초기 설정 파일이 있다
+  행동  큰따옴표(`"`)가 포함된 `name`으로 `config.update`를 실행한 뒤 다시 일반 `name`으로 `config.update`를 실행한다
+  결과  CFG-UPD-5.1  설정 파일의 `name`이 마지막에 전달한 `name`으로 깔끔하게 기록되고 이전 이름의 조각이 남지 않는다
+
+CFG-UPD-6  사이트 이름을 빈 문자열로 바꿀 수 없다
+  전제  `config.dev`가 `true`이고 초기 설정 파일이 있다
+  행동  빈 문자열 `name: ""`로 `config.update`를 실행한다
+  결과  CFG-UPD-6.1  `BAD_REQUEST` 오류를 던진다
+        CFG-UPD-6.2  `config.get`을 실행하면 원래 설정 그대로이다
 ```

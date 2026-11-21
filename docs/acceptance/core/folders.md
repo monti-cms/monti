@@ -126,4 +126,9 @@ FLD-UPD-9  폴더의 이름을 빈 문자열로 바꿀 수 없다
   행동  해당 폴더의 `id`와 빈 문자열 `name: ""`로 `folders.update`를 실행한다
   결과  FLD-UPD-9.1  `BAD_REQUEST` 오류를 던진다
         FLD-UPD-9.2  `folders` 테이블에서 해당 폴더의 `name`이 원래 그대로이다
+
+FLD-UPD-10  바꿀 항목 없이 폴더 수정을 호출하면 기존 폴더를 그대로 돌려준다
+  전제  활성 폴더가 하나 있다
+  행동  해당 폴더의 `id`만으로 `folders.update`를 실행한다
+  결과  FLD-UPD-10.1  반환값의 `id`, `scope`, `name`, `parent_id`가 기존 폴더 그대로이다
 ```
