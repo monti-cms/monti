@@ -3,16 +3,17 @@ import { z } from "zod";
 import { MontiError } from "../../engine/errors";
 import { defineRead, defineWrite } from "../../engine/operation";
 import type { ReadContext, WriteContext } from "../../engine/types";
+import type { Doc } from "../../rich-text/types";
 import { docOf } from "../_shared/doc";
 import { uuidInput } from "../_shared/input";
 import { removeMediaUses, replaceMediaUses } from "../media/uses";
 
-/** What the template actions return of a template: its row. */
+/** 템플릿 동작이 돌려주는 템플릿: 그 행. */
 interface Template {
 	id: string;
 	collection: string;
 	name: string;
-	content: Record<string, unknown>;
+	content: Doc;
 }
 
 const SHOWN = ["id", "collection", "name", "content"] as const;

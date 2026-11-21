@@ -2,12 +2,12 @@ import { MontiError } from "../../engine/errors";
 import type { CollectionSchema, ReadContext, WriteContext } from "../../engine/types";
 import { docOf } from "../_shared/doc";
 import { isActiveFolder } from "../folders/folders";
-import { referencesIn, rejectInactive } from "./active";
+import { bodyReferences, referencesIn, rejectInactive } from "./active";
 import { fieldsSchema } from "./fields";
 import { tablesOf } from "./tables";
 import type { EntryData, Status } from "./types";
 
-/** 쓰기가 받는 `data`. `fields`를 생략하면 필드가 없다. */
+/** 쓰기가 받는 필드 값과 본문. `fields`를 생략하면 필드가 없다. */
 export interface DataInput {
 	fields?: Record<string, unknown>;
 	body?: unknown;
@@ -52,13 +52,13 @@ function checkBody(ctx: ReadContext, collection: CollectionSchema, body: unknown
 
 /**
  * 저장할 `{ fields, body? }`. 스키마에 없는 키, 필드 타입·제약에 어긋난 값, 살아 있지 않은 미디어나 관계 대상을
- * 가리키는 필드, 쓰지 않는 본문, 형식이 틀린 본문을 거절한다.
+ * 가리키는 필드, 쓰지 않는 본문, 형식이 틀린 본문, 살아 있지 않은 미디어를 참조하는 본문을 거절한다.
  */
 export async function checkData(ctx: WriteContext, collection: CollectionSchema, data: DataInput): Promise<EntryData> {
 	const parsed = fieldsSchema(collection.fields).safeParse(data.fields ?? {});
 	if (!parsed.success) throw new MontiError("BAD_REQUEST", "필드가 컬렉션과 맞지 않는다", parsed.error.issues);
 	const fields = parsed.data as Record<string, unknown>;
 	const body = checkBody(ctx, collection, data.body);
-	await rejectInactive(ctx, referencesIn(collection, fields));
+	await rejectInactive(ctx, bodyReferences(body, referencesIn(collection, fields)));
 	return body === undefined ? { fields } : { fields, body };
 }

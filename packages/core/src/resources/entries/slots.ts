@@ -12,9 +12,8 @@ export interface Slot {
 	option?: string;
 	sub?: string;
 	column: string;
+	/** `_rels.path`이자 `media_uses.field_path`. */
 	path: string;
-	/** `media_uses.field_path`. */
-	usePath: string;
 }
 
 type ConditionalField = Extract<FieldSchema, { type: "conditional" }>;
@@ -34,7 +33,6 @@ function branchSlots(key: string, field: ConditionalField): Slot[] {
 			sub,
 			column: `${key}__${option}__${sub}`,
 			path: `${key}.${option}.${sub}`,
-			usePath: `fields.${key}.fields.${sub}`,
 		})),
 	);
 }
@@ -42,9 +40,7 @@ function branchSlots(key: string, field: ConditionalField): Slot[] {
 /** 컬렉션의 모든 값 필드 자리. 조건부 필드는 분기마다 하위 필드 자리로 펼친다. */
 export function slotsOf(collection: CollectionSchema): Slot[] {
 	return Object.entries(collection.fields).flatMap(([key, field]) =>
-		field.type === "conditional"
-			? branchSlots(key, field)
-			: [{ field, key, column: key, path: key, usePath: `fields.${key}` }],
+		field.type === "conditional" ? branchSlots(key, field) : [{ field, key, column: key, path: key }],
 	);
 }
 

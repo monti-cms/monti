@@ -1,7 +1,8 @@
 import type { MediaUsesTable } from "../../db/types";
 import { MontiError } from "../../engine/errors";
 import type { CollectionSchema, WriteContext } from "../../engine/types";
-import type { Block, Doc } from "../../rich-text/types";
+import type { Doc } from "../../rich-text/types";
+import { mediaIdsOf } from "../_shared/doc";
 import { decodeData, everyTarget } from "../entries/decode";
 import { copyQuery, storedOf } from "../entries/read";
 import { valuesOf } from "../entries/slots";
@@ -14,17 +15,6 @@ interface UseSource {
 
 /** `field_path`마다 참조하는 미디어 `id`들. 소문자로, 경로마다 한 번씩. */
 type UsesByPath = Map<string, Set<string>>;
-
-/** 블록과 그 자식들이 `attrs.mediaId`나 `attrs.mediaIds`로 참조하는 모든 미디어 `id`. 소문자로, 한 번씩. */
-function mediaIdsOf(blocks: readonly Block[], ids = new Set<string>()): Set<string> {
-	for (const block of blocks) {
-		const { mediaId, mediaIds } = block.attrs ?? {};
-		if (typeof mediaId === "string") ids.add(mediaId.toLowerCase());
-		if (Array.isArray(mediaIds)) for (const id of mediaIds) if (typeof id === "string") ids.add(id.toLowerCase());
-		mediaIdsOf(block.children ?? [], ids);
-	}
-	return ids;
-}
 
 /** 사용처가 참조하는 모든 미디어 `id`. 한 번씩. */
 function idsOf(uses: UsesByPath): string[] {
@@ -89,7 +79,7 @@ async function draftUses(ctx: WriteContext, name: string, collection: Collection
 	for (const stored of await storedOf(ctx, name, rows)) {
 		const data = decodeData(collection, stored, everyTarget);
 		for (const { slot, value } of valuesOf(collection, data.fields)) {
-			if (slot.field.type === "media") addUses(uses, slot.usePath, [value].flat() as string[]);
+			if (slot.field.type === "media") addUses(uses, slot.path, [value].flat() as string[]);
 		}
 		if (data.body !== undefined) addUses(uses, "body", mediaIdsOf(data.body.blocks));
 	}
@@ -98,7 +88,7 @@ async function draftUses(ctx: WriteContext, name: string, collection: Collection
 
 /**
  * 글의 `media_uses` 행을 그 글의 모든 언어 작업본이 참조하는 존재하는 미디어(휴지통 포함)의 합집합으로 바꾼다. 본문은
- * `"body"`, 최상위 미디어 필드는 `"fields.<key>"`, 조건부 하위 미디어 필드는 `"fields.<key>.fields.<sub>"` 경로다.
+ * `"body"`, 최상위 미디어 필드는 `"<key>"`, 조건부 하위 미디어 필드는 `"<key>.<option>.<sub>"` 경로다(`_rels.path`와 같다).
  */
 export async function recountEntryMediaUses(
 	ctx: WriteContext,

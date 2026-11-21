@@ -72,24 +72,24 @@ interface DataSeed {
 	blocks?: Block[];
 }
 
-/** 글의 `data`: 주어진 필드와, `blocks`를 주었을 때만 본문. */
+/** 글의 필드 값과 본문: 주어진 필드와, `blocks`를 주었을 때만 본문. */
 function dataOf(seed: DataSeed) {
 	return { fields: seed.fields ?? {}, ...(seed.blocks === undefined ? {} : { body: { blocks: seed.blocks } }) };
 }
 
 /** `entries.create`로 `ko` 원문 작업본을 가진 활성 글을 만든다. */
 async function createEntry(seed: DataSeed = {}, collection = POSTS) {
-	return montiOf().entries.create({ collection, locale: "ko", slug: `entry-${randomUUID()}`, data: dataOf(seed) });
+	return montiOf().entries.create({ collection, locale: "ko", slug: `entry-${randomUUID()}`, ...dataOf(seed) });
 }
 
 /** `entries.addLocale`로 번역 언어 작업본을 더한다. */
 async function addLocale(id: string, locale: string, seed: DataSeed = {}) {
-	return montiOf().entries.addLocale({ id, locale, slug: `entry-${randomUUID()}`, data: dataOf(seed) });
+	return montiOf().entries.addLocale({ id, locale, slug: `entry-${randomUUID()}`, ...dataOf(seed) });
 }
 
-/** `entries.update`로 `locale`(생략하면 원문 언어) 작업본의 `data`를 통째로 바꾼다. */
+/** `entries.update`로 `locale`(생략하면 원문 언어) 작업본의 필드와 본문을 통째로 바꾼다. */
 async function changeData(id: string, seed: DataSeed, locale?: string) {
-	return montiOf().entries.update({ id, locale, data: dataOf(seed) });
+	return montiOf().entries.update({ id, locale, ...dataOf(seed) });
 }
 
 /** 컬렉션 테이블에서 글의 `trashed_at`을 설정해 휴지통으로 옮긴다. */

@@ -1,6 +1,7 @@
 import type { QueryExecutorProvider } from "kysely";
+import { fixedDataColumns } from "../../engine/schema-file";
 import type { Schema } from "../../engine/types";
-import { createCollectionTables, dropCollectionTables, fixedDataColumns, fixedRelsColumns } from "./collection-tables";
+import { createCollectionTables, dropCollectionTables, fixedRelsColumns } from "./collection-tables";
 import { dataColumns, relsColumns } from "./columns";
 import { collectionsInDatabase } from "./database-catalog";
 import { syncColumns } from "./sync-columns";

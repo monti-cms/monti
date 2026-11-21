@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -95,8 +96,8 @@ async function referencedTable(table: string, column: string): Promise<string | 
 
 async function dataTypeOf(table: string, column: string): Promise<string | undefined> {
 	const { rows } = await sql<{ data_type: string }>`
-		select data_type from information_schema.columns
-		where table_schema = 'public' and table_name = ${table} and column_name = ${column}
+		select format_type(a.atttypid, a.atttypmod) as data_type from pg_attribute a
+		where a.attrelid = ${table}::regclass and a.attname = ${column} and not a.attisdropped
 	`.execute(db);
 	return rows[0]?.data_type;
 }
@@ -266,13 +267,58 @@ it("SCH-UPD-6 컬렉션에 필드를 새로 넣으면 열이 추가되고 기존
 	expect(columns).not.toContain("old_field");
 });
 
-it("SCH-UPD-7 필드의 종류를 바꾸면 데이터 테이블의 열도 새 종류로 바뀐다", async () => {
-	const monti = await montiOf(true, withCollections({ posts: { fields: { code: { type: "number" } } } }));
+it("SCH-UPD-7 필드의 종류를 바꾸면 데이터 테이블의 열도 새 종류로 바뀌고 변환 가능한 값은 유지되며 호환되지 않는 값은 비워진다", async () => {
+	const category = { type: "select" as const, options: ["news", "tech"] };
+	const monti = await montiOf(
+		true,
+		withCollections({
+			posts: {
+				fields: {
+					code: { type: "number" },
+					flag: { type: "boolean" },
+					category,
+					score: { type: "text" },
+					note: { type: "text" },
+				},
+			},
+		}),
+	);
+	const id = randomUUID();
+	await sql`insert into posts (id, source_locale) values (${id}, 'ko')`.execute(db);
+	await sql`insert into posts_data (entry_id, locale, status, code, flag, category, score, note)
+		values (${id}, 'ko', 'draft', 42, true, 'news', '3.5', 'hello')`.execute(db);
 
-	await monti.schema.update(withCollections({ posts: { fields: { code: { type: "text" } } } }));
+	await monti.schema.update(
+		withCollections({
+			posts: {
+				fields: {
+					code: { type: "text" },
+					flag: { type: "number" },
+					category: { ...category, many: true },
+					score: { type: "number" },
+					note: { type: "number" },
+				},
+			},
+		}),
+	);
+	const { rows } = await sql<Record<string, unknown>>`select code, flag, category, score, note from posts_data`.execute(
+		db,
+	);
 
 	// SCH-UPD-7.1
-	expect(await dataTypeOf("posts_data", "code")).toBe("text");
+	expect({ type: await dataTypeOf("posts_data", "code"), value: rows[0]?.code }).toEqual({ type: "text", value: "42" });
+	// SCH-UPD-7.2
+	expect({ type: await dataTypeOf("posts_data", "flag"), value: rows[0]?.flag }).toEqual({
+		type: "double precision",
+		value: null,
+	});
+	// SCH-UPD-7.3
+	expect({ type: await dataTypeOf("posts_data", "category"), value: rows[0]?.category }).toEqual({
+		type: "text[]",
+		value: ["news"],
+	});
+	// SCH-UPD-7.4
+	expect({ score: rows[0]?.score, note: rows[0]?.note }).toEqual({ score: 3.5, note: null });
 });
 
 it("SCH-UPD-8 스키마에서 컬렉션을 지우면 그 컬렉션의 테이블들이 모두 삭제된다", async () => {
@@ -353,5 +399,19 @@ it("SCH-UPD-13 코어 기본 테이블 이름이나 `_data`·`_rels`로 끝나�
 	// SCH-UPD-13.1
 	expect(codes).toEqual(["BAD_REQUEST", "BAD_REQUEST"]);
 	// SCH-UPD-13.2
+	expect(await monti.schema.get({})).toEqual(original);
+});
+
+it("SCH-UPD-14 데이터 테이블의 고정 열 이름은 컬렉션의 필드 이름으로 쓸 수 없다", async () => {
+	const monti = await montiOf(true);
+
+	const codes = [
+		await codeOf(monti.schema.update(withCollections({ posts: { fields: { status: { type: "text" } } } }))),
+		await codeOf(monti.schema.update(withCollections({ posts: { fields: { slug: { type: "text" } } } }))),
+	];
+
+	// SCH-UPD-14.1
+	expect(codes).toEqual(["BAD_REQUEST", "BAD_REQUEST"]);
+	// SCH-UPD-14.2
 	expect(await monti.schema.get({})).toEqual(original);
 });

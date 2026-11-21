@@ -79,8 +79,9 @@ async function seedMedia(trashed = false): Promise<string> {
 			id,
 			folder_id: null,
 			key,
+			filename: "image.png",
 			mime_type: "image/png",
-			metadata: JSON.stringify({}),
+			size: 1024,
 			trashed_at: trashed ? new Date() : null,
 		})
 		.execute();
@@ -384,13 +385,23 @@ it("TPL-UPD-4 rejects templates.update with BAD_REQUEST carrying every problem o
 	expect((await templateRow(template.id)).content).toEqual(template.content);
 });
 
-it("TPL-UPD-5 rejects templates.update with BAD_REQUEST for a body referencing a media id not in the database", async () => {
+it("TPL-UPD-5 본문이 존재하지 않거나 휴지통에 있는 미디어를 참조하면 템플릿을 수정할 수 없다", async () => {
 	const { template, use } = await seedTemplateUsing("Review");
+	const trashed = await seedMedia(true);
+
+	const codes: (string | null)[] = [];
+	for (const mediaId of [randomUUID(), trashed]) {
+		const error = await montiOf()
+			.templates.update({ id: template.id, content: imageDoc(mediaId) })
+			.then(
+				() => null,
+				(caught: { code: string }) => caught,
+			);
+		codes.push(error?.code ?? null);
+	}
 
 	// TPL-UPD-5.1
-	await expect(montiOf().templates.update({ id: template.id, content: imageDoc(randomUUID()) })).rejects.toMatchObject({
-		code: "BAD_REQUEST",
-	});
+	expect(codes).toEqual(["BAD_REQUEST", "BAD_REQUEST"]);
 	// TPL-UPD-5.2
 	expect((await templateRow(template.id)).content).toEqual(template.content);
 	// TPL-UPD-5.3

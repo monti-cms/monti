@@ -5,7 +5,7 @@ import { uuidInput } from "../_shared/input";
 import { recountEntryMediaUses } from "../media/uses";
 import { collectionOf } from "./collection";
 import { saveCopy } from "./copies";
-import { dataInput, folderInput, slugInput } from "./inputs";
+import { dataShape, folderInput, slugInput } from "./inputs";
 import { findEntry } from "./read";
 import { tablesOf } from "./tables";
 import type { CopyKey, Entry, EntryData } from "./types";
@@ -16,14 +16,14 @@ const updateOneInput = z.object({
 	locale: z.string().optional(),
 	slug: slugInput.optional(),
 	folder_id: folderInput.optional(),
-	data: dataInput.optional(),
+	...dataShape,
 });
 
 const moveInput = z.object({ ids: z.array(uuidInput).nonempty(), folder_id: folderInput });
 
 export const updateInput = z.union([updateOneInput, moveInput]);
 
-/** 작업본의 슬러그를 바꾸고, `data`가 있으면 작업본을 통째로 교체한다. */
+/** 작업본의 슬러그를 바꾸고, 필드·본문(`data`)이 있으면 작업본을 통째로 교체한다. */
 async function writeDraft(
 	ctx: WriteContext,
 	name: string,
@@ -42,14 +42,15 @@ async function writeDraft(
 }
 
 /**
- * 활성 글의 `locale`(생략하면 원문 언어) 작업본의 슬러그와 `data`, 글 전체의 폴더를 바꾼다. `data`를 바꾸면 통째로
- * 교체하고 모든 언어 기준으로 미디어 사용처를 다시 센다. 발행본은 건드리지 않는다.
+ * 활성 글의 `locale`(생략하면 원문 언어) 작업본의 슬러그와 필드·본문, 글 전체의 폴더를 바꾼다. `fields`나 `body`를
+ * 주면 작업본의 필드와 본문을 통째로 교체하고 모든 언어 기준으로 미디어 사용처를 다시 센다. 발행본은 건드리지 않는다.
  */
 async function updateOne(input: z.infer<typeof updateOneInput>, ctx: WriteContext): Promise<Entry> {
 	const existing = await findEntry(ctx, { id: input.id, locale: input.locale }, "draft");
 	const { id, locale, collection: name } = existing;
 	const collection = collectionOf(ctx, name);
-	const data = input.data === undefined ? undefined : await checkData(ctx, collection, input.data);
+	const replaces = input.fields !== undefined || input.body !== undefined;
+	const data = replaces ? await checkData(ctx, collection, input) : undefined;
 	if (typeof input.folder_id === "string") await rejectFolder(ctx, input.folder_id, name);
 	const slug = input.slug === undefined ? existing.slug : input.slug;
 	await rejectTakenSlug(ctx, name, { id, locale, slug }, "draft");

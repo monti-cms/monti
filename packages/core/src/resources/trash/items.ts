@@ -70,7 +70,7 @@ function mediaRows(ctx: ReadContext) {
 	return ctx.db
 		.selectFrom("media")
 		.leftJoin("folders as parent", "parent.id", "media.folder_id")
-		.select([kindOf("media"), "media.id", scopeOf("media"), "media.key as name", "media.trashed_at"])
+		.select([kindOf("media"), "media.id", scopeOf("media"), "media.filename as name", "media.trashed_at"])
 		.select(together("media"))
 		.$castTo<ItemRow>();
 }

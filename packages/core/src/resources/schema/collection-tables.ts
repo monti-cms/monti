@@ -1,9 +1,6 @@
 import { type QueryExecutorProvider, sql } from "kysely";
 import { collectionMarker } from "./database-catalog";
 
-/** 스키마와 상관없이 늘 있는 `<collection>_data` 열. */
-export const fixedDataColumns = ["entry_id", "locale", "status", "slug", "published_at", "translation_seen"] as const;
-
 /** 스키마와 상관없이 늘 있는 `<collection>_rels` 열. */
 export const fixedRelsColumns = ["entry_id", "locale", "status", "path", "position"] as const;
 

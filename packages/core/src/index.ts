@@ -58,19 +58,21 @@ export { removeLooseFiles } from "./resources/media/loose-files";
 export type { Block, BlockDefinition, Doc, DocIssue, MarkDefinition, ValidateDocOptions } from "./rich-text/types";
 export { validateDoc } from "./rich-text/validate-doc";
 
-/** 앱이 `startMonti`에 넘기는 것: DB와, 두 파일에서 불러온 스키마와 설정. */
+/** 앱이 `startMonti`에 넘기는 것: DB와, 두 파일에서 불러온 스키마와 설정, 선택 암호화 비밀값. */
 export interface StartOptions extends MontiState {
 	db: Kysely<Database>;
+	/** `keys` 리소스가 저장하는 키를 암호화하는 비밀값. 설정(`config`)에 두지 않고 `keys` 리소스에만 넘긴다. */
+	secret?: string;
 }
 
-/** core의 리소스 트리. `keys.check`는 플러그인이 등록한 키 서비스를 쓴다. */
-function coreResources(plugins: Plugin[]) {
-	const keys = createKeys(keyServicesOf(plugins));
+/** core의 리소스 트리. `keys`는 플러그인이 등록한 키 서비스와 암호화 비밀값을 쓴다. */
+function coreResources(plugins: Plugin[], secret: string | undefined) {
+	const keys = createKeys(keyServicesOf(plugins), secret);
 	return { entries, translationStatus, templates, folders, media, trash, schema, config, keys, session, admin };
 }
 
 /**
- * core를 시작한다: 스키마를 검사하고, core 리소스와 `config.plugins`로 엔진을 조립한 뒤, core 마이그레이션과 각 플러그인의
+ * core를 시작한다: 스키마를 검사하고, core 리소스와 `config.plugins`(`keys`에는 암호화 비밀값 `secret`)로 엔진을 조립한 뒤, core 마이그레이션과 각 플러그인의
  * 마이그레이션을 `config.plugins` 순서로 실행한다. 개발 서버(`config.dev: true`)이면 스키마의 컬렉션 테이블을 DB에
  * 맞춘다. 스키마가 올바르다고 확인되기 전에는 DB를 건드리지 않는다.
  */
@@ -78,7 +80,7 @@ export async function startMonti(options: StartOptions): Promise<Monti<ReturnTyp
 	const { db, schemaFile, configFile } = options;
 	const plugins = options.config.plugins ?? [];
 	const state = { schema: validSchema(options.schema), config: options.config, schemaFile, configFile };
-	const monti = createMonti(db, coreResources(plugins), plugins, state);
+	const monti = createMonti(db, coreResources(plugins, options.secret), plugins, state);
 	await migrateAll(db, plugins);
 	if (options.config.dev === true) await db.transaction().execute((tx) => syncSchemaTables(tx, state.schema));
 	return monti;

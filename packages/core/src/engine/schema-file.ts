@@ -26,11 +26,33 @@ const conditionalField = z.object({
 	options: z.record(z.string(), z.object({ fields: z.record(z.string(), valueField) })),
 });
 
+/** 스키마와 상관없이 늘 있는 `<collection>_data` 열. */
+export const fixedDataColumns = ["entry_id", "locale", "status", "slug", "published_at", "translation_seen"] as const;
+
+/** 필드(하위 필드 포함) 이름으로 쓸 수 없는 이름: 데이터 테이블의 고정 열과 본문 열 `body`. */
+const reservedFieldKeys: readonly string[] = [...fixedDataColumns, "body"];
+
+const fields = z.record(z.string(), z.discriminatedUnion("type", [...valueField.options, conditionalField]));
+
+/** 필드 키와 조건부 필드의 하위 필드 키 모두. */
+function fieldKeysOf(collectionFields: z.infer<typeof fields>): string[] {
+	return Object.entries(collectionFields).flatMap(([key, field]) =>
+		field.type === "conditional"
+			? [key, ...Object.values(field.options).flatMap((option) => Object.keys(option.fields))]
+			: [key],
+	);
+}
+
 const collection = z.object({
 	body: z.boolean().optional(),
 	label: z.string().optional(),
 	description: z.string().optional(),
-	fields: z.record(z.string(), z.discriminatedUnion("type", [...valueField.options, conditionalField])),
+	fields: fields.refine(
+		(collectionFields) => !fieldKeysOf(collectionFields).some((key) => reservedFieldKeys.includes(key)),
+		{
+			message: "데이터 테이블의 고정 열 이름은 필드 이름으로 쓸 수 없습니다",
+		},
+	),
 });
 
 /** 코어 고정 테이블 이름. 컬렉션 테이블 이름과 겹치면 안 된다. */

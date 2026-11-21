@@ -1,5 +1,7 @@
 import { MontiError } from "../../engine/errors";
 import type { CollectionSchema, ReadContext } from "../../engine/types";
+import type { Doc } from "../../rich-text/types";
+import { mediaIdsOf } from "../_shared/doc";
 import type { IsActive } from "./decode";
 import { targetOf, valuesOf } from "./slots";
 import { tablesOf } from "./tables";
@@ -26,6 +28,11 @@ export function referencesIn(
 		if (table !== undefined) addReferences(refs, table, [value].flat() as string[]);
 	}
 	return refs;
+}
+
+/** 본문 블록 트리 전체가 참조하는 미디어. 본문이 없으면 더하지 않는다. */
+export function bodyReferences(body: Doc | undefined, refs: References = new Map()): References {
+	return body === undefined ? refs : addReferences(refs, "media", mediaIdsOf(body.blocks));
 }
 
 /** `refs` 가운데 휴지통에 없는 행이 있는 대상들. */

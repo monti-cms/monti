@@ -1,4 +1,5 @@
 import { type QueryExecutorProvider, sql } from "kysely";
+import { castExpression } from "./column-cast";
 import type { ColumnSpec } from "./columns";
 import { columnsInDatabase, type DatabaseColumn } from "./database-catalog";
 
@@ -17,11 +18,12 @@ async function dropColumn(db: QueryExecutorProvider, table: string, name: string
 	await sql`alter table ${sql.id(table)} drop column ${sql.id(name)}`.execute(db);
 }
 
-/** 글자를 거쳐 바꾼다: 직접 변환이 없는 종류 쌍(참거짓→숫자 등)도 바꿀 수 있다. */
-async function changeType(db: QueryExecutorProvider, table: string, column: ColumnSpec): Promise<void> {
-	const name = sql.id(column.name);
-	const type = sql.raw(column.type);
-	await sql`alter table ${sql.id(table)} alter column ${name} type ${type} using ${name}::text::${type}`.execute(db);
+/** 열의 종류를 바꾼다. 기존 값은 `castExpression`의 규칙대로 옮기거나 비운다. */
+async function changeType(db: QueryExecutorProvider, table: string, from: string, column: ColumnSpec): Promise<void> {
+	const using = sql.raw(castExpression(column.name, from, column.type));
+	await sql`alter table ${sql.id(table)} alter column ${sql.id(column.name)} type ${sql.raw(column.type)} using ${using}`.execute(
+		db,
+	);
 }
 
 /** 열 하나를 바라는 모양으로 맞춘다. 참조 대상이 바뀌면 외래 키째 열을 다시 만든다. */
@@ -36,7 +38,7 @@ async function syncColumn(
 		await dropColumn(db, table, wanted.name);
 		return addColumn(db, table, wanted);
 	}
-	if (current.type !== wanted.type) await changeType(db, table, wanted);
+	if (current.type !== wanted.type) await changeType(db, table, current.type, wanted);
 }
 
 /** 테이블의 열을 `wanted`에 맞춘다: 없으면 추가, 남으면 삭제, 종류가 다르면 변경. `fixed` 열은 건드리지 않는다. */

@@ -28,6 +28,13 @@ afterEach(async () => {
 	await testDb.drop();
 });
 
+async function codeOf(run: Promise<unknown>): Promise<string | null> {
+	return run.then(
+		() => null,
+		(error: { code: string }) => error.code,
+	);
+}
+
 const owner = { email: "owner@example.com", password: "correct horse battery staple" };
 
 it("ADM-CRT-1 관리자가 없을 때 첫 관리자와 세션을 만든다", async () => {
@@ -55,6 +62,18 @@ it("ADM-CRT-2 관리자가 이미 있으면 새 관리자를 만들 수 없다",
 	});
 	// ADM-CRT-2.2
 	expect(await db.selectFrom("admin").select("email").execute()).toEqual([{ email: owner.email }]);
+});
+
+it("ADM-CRT-3 이메일 형식이 맞지 않거나 비밀번호가 비어 있으면 관리자를 만들 수 없다", async () => {
+	const codes = [
+		await codeOf(monti.admin.create({ ...owner, email: "not-an-email" })),
+		await codeOf(monti.admin.create({ ...owner, password: "" })),
+	];
+
+	// ADM-CRT-3.1
+	expect(codes).toEqual(["BAD_REQUEST", "BAD_REQUEST"]);
+	// ADM-CRT-3.2
+	expect(await db.selectFrom("admin").select("id").execute()).toEqual([]);
 });
 
 const changed = { email: "new@example.com", password: "a new password" };
@@ -91,4 +110,24 @@ it("ADM-UPD-2 현재 비밀번호가 틀리면 관리자 정보를 바꿀 수 �
 	expect(after.email).toBe(owner.email);
 	// ADM-UPD-2.3
 	expect(after.password_hash).toBe(before.password_hash);
+});
+
+it("ADM-UPD-3 새 이메일 형식이 맞지 않거나 새 비밀번호가 비어 있으면 관리자 정보를 바꿀 수 없다", async () => {
+	await monti.admin.create(owner);
+	const before = {
+		admin: await db.selectFrom("admin").select(["email", "password_hash"]).execute(),
+		session: await db.selectFrom("session").selectAll().execute(),
+	};
+
+	const codes = [
+		await codeOf(monti.admin.update({ currentPassword: owner.password, ...changed, email: "not-an-email" })),
+		await codeOf(monti.admin.update({ currentPassword: owner.password, ...changed, password: "" })),
+	];
+
+	// ADM-UPD-3.1
+	expect(codes).toEqual(["BAD_REQUEST", "BAD_REQUEST"]);
+	// ADM-UPD-3.2
+	expect(await db.selectFrom("admin").select(["email", "password_hash"]).execute()).toEqual(before.admin);
+	// ADM-UPD-3.3
+	expect(await db.selectFrom("session").selectAll().execute()).toEqual(before.session);
 });

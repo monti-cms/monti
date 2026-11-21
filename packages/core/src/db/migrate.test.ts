@@ -122,7 +122,7 @@ it("DB-SCH-1 첫 마이그레이션이 8개 고정 도메인 테이블을 만든
 	expect(await columnsOf(testDb.db, "folders")).toEqual(["id", "scope", "parent_id", "name", "trashed_at"].sort());
 	// DB-SCH-1.3
 	expect(await columnsOf(testDb.db, "media")).toEqual(
-		["id", "folder_id", "key", "mime_type", "metadata", "trashed_at"].sort(),
+		["id", "folder_id", "key", "filename", "mime_type", "size", "width", "height", "trashed_at"].sort(),
 	);
 	// DB-SCH-1.4
 	expect(await columnsOf(testDb.db, "media_uses")).toEqual(

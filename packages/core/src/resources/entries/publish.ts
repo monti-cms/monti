@@ -2,6 +2,7 @@ import { z } from "zod";
 import { MontiError } from "../../engine/errors";
 import type { FieldSchema, WriteContext } from "../../engine/types";
 import { timestampInput, uuidInput } from "../_shared/input";
+import { bodyReferences, rejectInactive } from "./active";
 import { collectionOf } from "./collection";
 import { saveCopy } from "./copies";
 import { decodeData, everyTarget } from "./decode";
@@ -36,11 +37,15 @@ function emptyRequired(fields: Record<string, FieldSchema>, values: Record<strin
 	});
 }
 
-/** 슬러그나 필수 필드가 비어 있으면 거절한다. 휴지통에 있는 참조 대상은 읽을 때 이미 빈칸이 되었다. */
-function rejectUnfilled(ctx: WriteContext, entry: Entry): void {
+/**
+ * 슬러그나 필수 필드가 비어 있거나 본문이 살아 있지 않은 미디어를 참조하면 거절한다. 휴지통에 있는 필드의 참조 대상은
+ * 읽을 때 이미 빈칸이 되었다.
+ */
+async function rejectUnfilled(ctx: WriteContext, entry: Entry): Promise<void> {
 	if (entry.slug === null) throw new MontiError("BAD_REQUEST", "슬러그가 비어 있어 발행할 수 없다");
-	const empty = emptyRequired(collectionOf(ctx, entry.collection).fields, entry.data.fields);
+	const empty = emptyRequired(collectionOf(ctx, entry.collection).fields, entry.fields);
 	if (empty.length > 0) throw new MontiError("BAD_REQUEST", `필수 필드가 비어 있다: ${empty.join(", ")}`);
+	await rejectInactive(ctx, bodyReferences(entry.body));
 }
 
 /**
@@ -51,7 +56,7 @@ export async function publishEntry(input: z.infer<typeof publishInput>, ctx: Wri
 	const entry = await findEntry(ctx, { id: input.id, locale: input.locale }, "draft");
 	const { id, locale, collection: name, slug } = entry;
 	const collection = collectionOf(ctx, name);
-	rejectUnfilled(ctx, entry);
+	await rejectUnfilled(ctx, entry);
 	await rejectTakenSlug(ctx, name, { id, locale, slug }, "published");
 	const rows = await copyQuery(ctx, name, "draft").where("e.id", "=", id).where("d.locale", "=", locale).execute();
 	const rawData = decodeData(collection, (await storedOf(ctx, name, rows))[0], everyTarget);

@@ -30,8 +30,11 @@ async function createMedia(db: Kysely<unknown>): Promise<void> {
 		.addColumn("id", "uuid", (column) => column.primaryKey())
 		.addColumn("folder_id", "uuid", (column) => column.references("folders.id"))
 		.addColumn("key", "text", (column) => column.notNull())
+		.addColumn("filename", "text", (column) => column.notNull())
 		.addColumn("mime_type", "text", (column) => column.notNull())
-		.addColumn("metadata", "jsonb", (column) => column.notNull())
+		.addColumn("size", "integer", (column) => column.notNull())
+		.addColumn("width", "integer")
+		.addColumn("height", "integer")
 		.addColumn("trashed_at", "timestamptz")
 		.execute();
 }

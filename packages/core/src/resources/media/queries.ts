@@ -8,12 +8,15 @@ export interface MediaItem {
 	id: string;
 	folder_id: string | null;
 	key: string;
+	filename: string;
 	mime_type: string;
-	metadata: Record<string, unknown>;
+	size: number;
+	width: number | null;
+	height: number | null;
 	url: string;
 }
 
-export const SHOWN = ["id", "folder_id", "key", "mime_type", "metadata"] as const;
+export const SHOWN = ["id", "folder_id", "key", "filename", "mime_type", "size", "width", "height"] as const;
 
 /** How long a file nothing uses waits in `loose_files` before it is removed. */
 const LOOSE_FOR_MS = 24 * 60 * 60 * 1000;

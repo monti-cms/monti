@@ -104,6 +104,19 @@ const BROKEN = {
 	],
 };
 
+/** 이미지 블록 하나가 `mediaId`를 참조하는 본문. */
+function imageDoc(mediaId: string) {
+	return { blocks: [{ id: "i1", type: "image", attrs: { mediaId } }] };
+}
+
+/** 실행이 거절되면 그 오류 코드, 성공하면 null. */
+async function codeOf(run: Promise<unknown>): Promise<string | null> {
+	return run.then(
+		() => null,
+		(error: { code: string }) => error.code,
+	);
+}
+
 function montiOf() {
 	return createMonti(db, { entries }, [], {
 		schema: SCHEMA,
@@ -133,8 +146,9 @@ async function seedMedia(trashed = false): Promise<string> {
 			id,
 			folder_id: null,
 			key: randomUUID(),
+			filename: "image.png",
 			mime_type: "image/png",
-			metadata: JSON.stringify({}),
+			size: 1024,
 			trashed_at: trashed ? new Date() : null,
 		})
 		.execute();
@@ -254,7 +268,7 @@ async function seedUse(use: UseSeed): Promise<UseSeed> {
 
 /** 글의 `cover` 필드가 `media_id`를 참조하는 `media_uses` 행. */
 function coverUse(source_id: string, media_id: string): UseSeed {
-	return { media_id, source_kind: "entry", source_id, field_path: "fields.cover" };
+	return { media_id, source_kind: "entry", source_id, field_path: "cover" };
 }
 
 /** `cover`가 `mediaId`를 참조하는 `posts` 글과 그 `media_uses` 행. */
@@ -357,7 +371,7 @@ it("ENT-CRT-1 필수 정보만으로 빈 초안 작업본을 만들면 슬러그
 		source_locale: "ko",
 		folder_id: null,
 		slug: null,
-		data: { fields: {} },
+		fields: {},
 		published_at: null,
 	});
 	// ENT-CRT-1.2
@@ -397,14 +411,16 @@ it("ENT-CRT-3 단일 값 필드와 본문, 폴더를 담아 작업본을 저장�
 		locale: "ko",
 		slug: "hello",
 		folder_id: folder,
-		data: { fields, body: PLAIN },
+		fields,
+		body: PLAIN,
 	});
 
 	// ENT-CRT-3.1
-	expect({ folder_id: output.folder_id, slug: output.slug, data: output.data }).toEqual({
+	expect({ folder_id: output.folder_id, slug: output.slug, fields: output.fields, body: output.body }).toEqual({
 		folder_id: folder,
 		slug: "hello",
-		data: { fields, body: PLAIN },
+		fields,
+		body: PLAIN,
 	});
 	// ENT-CRT-3.2
 	expect(await entryRow(POSTS, output.id)).toMatchObject({ id: output.id, folder_id: folder });
@@ -439,10 +455,10 @@ it("ENT-CRT-4 단건·다건 미디어와 관계 및 조건부 필드를 데이�
 		layout: { option: "hero", fields: { image, caption: "Cap", link: link.id, photos: [photo] } },
 	};
 
-	const output = await montiOf().entries.create({ collection: POSTS, locale: "ko", data: { fields } });
+	const output = await montiOf().entries.create({ collection: POSTS, locale: "ko", fields });
 
 	// ENT-CRT-4.1
-	expect(output.data.fields).toEqual(fields);
+	expect(output.fields).toEqual(fields);
 	// ENT-CRT-4.2
 	expect(await dataRow(POSTS, output.id, "ko", "draft")).toMatchObject({
 		cover,
@@ -482,20 +498,18 @@ it("ENT-CRT-5 본문·최상위 미디어·조건부 하위 미디어의 참조�
 	const output = await montiOf().entries.create({
 		collection: POSTS,
 		locale: "ko",
-		data: {
-			fields: {
-				gallery: [first, first.toUpperCase()],
-				layout: { option: "hero", fields: { image: second } },
-			},
-			body,
+		fields: {
+			gallery: [first, first.toUpperCase()],
+			layout: { option: "hero", fields: { image: second } },
 		},
+		body,
 	});
 
 	const expected: UseSeed[] = [
 		{ media_id: first, field_path: "body" },
 		{ media_id: third, field_path: "body" },
-		{ media_id: first, field_path: "fields.gallery" },
-		{ media_id: second, field_path: "fields.layout.fields.image" },
+		{ media_id: first, field_path: "gallery" },
+		{ media_id: second, field_path: "layout.hero.image" },
 	].map((use) => ({ ...use, source_kind: "entry" as const, source_id: output.id }));
 	const sorted = (rows: UseSeed[]) =>
 		[...rows].sort((a, b) => `${a.field_path}${a.media_id}`.localeCompare(`${b.field_path}${b.media_id}`));
@@ -533,7 +547,7 @@ it("ENT-CRT-8 다른 범위의 폴더에는 글을 넣을 수 없다", async () 
 it("ENT-CRT-9 스키마에 정의되지 않은 필드가 들어 있으면 글을 만들 수 없다", async () => {
 	// ENT-CRT-9.1
 	await expect(
-		montiOf().entries.create({ collection: POSTS, locale: "ko", data: { fields: { unknown: "x" } } }),
+		montiOf().entries.create({ collection: POSTS, locale: "ko", fields: { unknown: "x" } }),
 	).rejects.toMatchObject({ code: "BAD_REQUEST" });
 	// ENT-CRT-9.2
 	expect(await entryRows(POSTS)).toEqual([]);
@@ -545,7 +559,7 @@ it("ENT-CRT-10 필드의 타입이나 길이 제한에 어긋난 값이면 글�
 		montiOf().entries.create({
 			collection: POSTS,
 			locale: "ko",
-			data: { fields: { views: "3", title: "x".repeat(21) } },
+			fields: { views: "3", title: "x".repeat(21) },
 		}),
 	).rejects.toMatchObject({ code: "BAD_REQUEST" });
 	// ENT-CRT-10.2
@@ -558,7 +572,7 @@ it("ENT-CRT-11 조건부 필드에서 선택한 분기에 없는 하위 필드�
 		montiOf().entries.create({
 			collection: POSTS,
 			locale: "ko",
-			data: { fields: { layout: { option: "hero", fields: { note: "x" } } } },
+			fields: { layout: { option: "hero", fields: { note: "x" } } },
 		}),
 	).rejects.toMatchObject({ code: "BAD_REQUEST" });
 	// ENT-CRT-11.2
@@ -568,7 +582,7 @@ it("ENT-CRT-11 조건부 필드에서 선택한 분기에 없는 하위 필드�
 it("ENT-CRT-12 본문을 쓰지 않는 컬렉션에는 본문을 넣을 수 없다", async () => {
 	// ENT-CRT-12.1
 	await expect(
-		montiOf().entries.create({ collection: TOPICS, locale: "ko", data: { fields: {}, body: PLAIN } }),
+		montiOf().entries.create({ collection: TOPICS, locale: "ko", fields: {}, body: PLAIN }),
 	).rejects.toMatchObject({ code: "BAD_REQUEST" });
 	// ENT-CRT-12.2
 	expect(await entryRows(TOPICS)).toEqual([]);
@@ -576,7 +590,7 @@ it("ENT-CRT-12 본문을 쓰지 않는 컬렉션에는 본문을 넣을 수 없�
 
 it("ENT-CRT-13 본문 형식이 맞지 않으면 문제 목록을 담아 글 생성을 거절한다", async () => {
 	const error = await montiOf()
-		.entries.create({ collection: POSTS, locale: "ko", data: { fields: {}, body: BROKEN } })
+		.entries.create({ collection: POSTS, locale: "ko", fields: {}, body: BROKEN })
 		.catch((caught: unknown) => caught);
 
 	// ENT-CRT-13.1
@@ -587,13 +601,16 @@ it("ENT-CRT-13 본문 형식이 맞지 않으면 문제 목록을 담아 글 생
 	expect(await entryRows(POSTS)).toEqual([]);
 });
 
-it("ENT-CRT-14 휴지통에 있는 미디어는 새로 연결할 수 없다", async () => {
+it("ENT-CRT-14 필드나 본문이 휴지통에 있는 미디어를 참조하면 글을 만들 수 없다", async () => {
 	const trashed = await seedMedia(true);
 
+	const codes = [
+		await codeOf(montiOf().entries.create({ collection: POSTS, locale: "ko", fields: { cover: trashed } })),
+		await codeOf(montiOf().entries.create({ collection: POSTS, locale: "ko", body: imageDoc(trashed) })),
+	];
+
 	// ENT-CRT-14.1
-	await expect(
-		montiOf().entries.create({ collection: POSTS, locale: "ko", data: { fields: { cover: trashed } } }),
-	).rejects.toMatchObject({ code: "BAD_REQUEST" });
+	expect(codes).toEqual(["BAD_REQUEST", "BAD_REQUEST"]);
 	// ENT-CRT-14.2
 	expect(await entryRows(POSTS)).toEqual([]);
 	// ENT-CRT-14.3
@@ -605,7 +622,7 @@ it("ENT-CRT-15 관계 필드에 대상 컬렉션이 아닌 다른 컬렉션의 �
 
 	// ENT-CRT-15.1
 	await expect(
-		montiOf().entries.create({ collection: POSTS, locale: "ko", data: { fields: { topic: page.id } } }),
+		montiOf().entries.create({ collection: POSTS, locale: "ko", fields: { topic: page.id } }),
 	).rejects.toMatchObject({ code: "BAD_REQUEST" });
 	// ENT-CRT-15.2
 	expect(await entryRows(POSTS)).toEqual([]);
@@ -649,7 +666,7 @@ it("ENT-READ-1 기본 단건 조회는 발행된 글의 원문 언어 발행본�
 	// ENT-READ-1.2
 	expect(output).toMatchObject({
 		slug: published.slug,
-		data: { fields: { title: "Live" } },
+		fields: { title: "Live" },
 		published_at: PUBLISHED_AT,
 	});
 });
@@ -664,7 +681,7 @@ it("ENT-READ-2 컬렉션·언어·발행 슬러그로 발행본을 단건 조회
 	expect(output).toMatchObject({
 		id: entry.id,
 		slug: published.slug,
-		data: { fields: { title: "Live" } },
+		fields: { title: "Live" },
 		published_at: PUBLISHED_AT,
 	});
 });
@@ -675,7 +692,7 @@ it("ENT-READ-3 초안 상태로 단건 조회하면 발행본이 있더라도 �
 	const output = await montiOf().entries.get({ id: entry.id, status: "draft" });
 
 	// ENT-READ-3.1
-	expect(output).toMatchObject({ slug: entry.slug, data: { fields: { title: "Draft" } } });
+	expect(output).toMatchObject({ slug: entry.slug, fields: { title: "Draft" } });
 	// ENT-READ-3.2
 	expect(output.published_at).toEqual(PUBLISHED_AT);
 });
@@ -710,9 +727,9 @@ it("ENT-READ-6 조건 없이 목록을 조회하면 활성 글의 발행된 원�
 	// ENT-READ-6.1
 	expect(idsAndLocales(output)).toEqual([{ id: both.id, locale: "ko" }]);
 	// ENT-READ-6.2
-	expect({ slug: output[0].slug, data: output[0].data, published_at: output[0].published_at }).toEqual({
+	expect({ slug: output[0].slug, fields: output[0].fields, published_at: output[0].published_at }).toEqual({
 		slug: published.slug,
-		data: { fields: { title: "Live" } },
+		fields: { title: "Live" },
 		published_at: PUBLISHED_AT,
 	});
 });
@@ -726,10 +743,10 @@ it("ENT-READ-7 초안 상태로 목록을 조회하면 모든 활성 글의 원�
 	const byId = new Map(output.map((entry) => [entry.id, entry]));
 
 	// ENT-READ-7.1
-	expect(output.map(({ id, data }) => ({ id, data })).sort((a, b) => a.id.localeCompare(b.id))).toEqual(
+	expect(output.map(({ id, fields }) => ({ id, fields })).sort((a, b) => a.id.localeCompare(b.id))).toEqual(
 		[
-			{ id: publishedEntry.id, data: { fields: { title: "Draft" } } },
-			{ id: unpublished.id, data: { fields: { title: "Only draft" } } },
+			{ id: publishedEntry.id, fields: { title: "Draft" } },
+			{ id: unpublished.id, fields: { title: "Only draft" } },
 		].sort((a, b) => a.id.localeCompare(b.id)),
 	);
 	// ENT-READ-7.2
@@ -796,7 +813,7 @@ it("ENT-READ-11 비원문 언어를 지정해 단건 조회하면 해당 언어�
 	// ENT-READ-11.2
 	expect(output).toMatchObject({
 		slug: en.slug,
-		data: { fields: { title: "En live" } },
+		fields: { title: "En live" },
 		published_at: en.published_at,
 	});
 });
@@ -840,7 +857,7 @@ it("ENT-READ-14 참조된 글이나 미디어가 휴지통에 들어가 있으�
 	const output = await montiOf().entries.get({ id: entry.id, status: "draft" });
 
 	// ENT-READ-14.1
-	expect(output.data.fields).toEqual({ related: [second.id] });
+	expect(output.fields).toEqual({ related: [second.id] });
 });
 
 // ---- 3. 수정 ----
@@ -857,7 +874,7 @@ it("ENT-UPD-1 단건 수정에서 데이터 없이 슬러그와 폴더만 주면
 	expect(output).toMatchObject({
 		slug: "renamed",
 		folder_id: folder,
-		data: { fields: { title: "Draft", cover: media } },
+		fields: { title: "Draft", cover: media },
 		published_at: PUBLISHED_AT,
 	});
 	// ENT-UPD-1.2
@@ -887,12 +904,12 @@ it("ENT-UPD-2 단건 수정에서 데이터를 바꾸면 작업본 데이터를 
 		source_id: target.entry.id,
 		field_path: "content",
 	});
-	const data = { fields: { cover: second } };
+	const fields = { cover: second };
 
-	const output = (await montiOf().entries.update({ id: target.entry.id, data })) as Entry;
+	const output = (await montiOf().entries.update({ id: target.entry.id, fields })) as Entry;
 
 	// ENT-UPD-2.1
-	expect(output).toMatchObject({ data, slug: target.entry.slug, folder_id: folder });
+	expect(output).toMatchObject({ fields, slug: target.entry.slug, folder_id: folder });
 	// ENT-UPD-2.2
 	expect(await dataRow(POSTS, target.entry.id, "ko", "draft")).toMatchObject({ cover: second, title: null });
 	// ENT-UPD-2.3
@@ -914,15 +931,19 @@ it("ENT-UPD-3 단건 수정에서 폴더를 비우면 글을 루트로 이동한
 	expect((await entryRow(POSTS, entry.id)).folder_id).toBeNull();
 });
 
-it("ENT-UPD-4 단건 수정에서 존재하지 않는 미디어를 참조하면 수정을 거절하고 기존 상태를 유지한다", async () => {
+it("ENT-UPD-4 단건 수정에서 필드나 본문이 존재하지 않거나 휴지통에 있는 미디어를 참조하면 수정을 거절하고 기존 상태를 유지한다", async () => {
 	const media = await seedMedia();
+	const trashed = await seedMedia(true);
 	const { entry, use } = await seedEntryUsing(media);
 	const before = await dataRow(POSTS, entry.id, "ko", "draft");
 
+	const codes = [
+		await codeOf(montiOf().entries.update({ id: entry.id, fields: { cover: randomUUID() } })),
+		await codeOf(montiOf().entries.update({ id: entry.id, body: imageDoc(trashed) })),
+	];
+
 	// ENT-UPD-4.1
-	await expect(
-		montiOf().entries.update({ id: entry.id, data: { fields: { cover: randomUUID() } } }),
-	).rejects.toMatchObject({ code: "BAD_REQUEST" });
+	expect(codes).toEqual(["BAD_REQUEST", "BAD_REQUEST"]);
 	// ENT-UPD-4.2
 	expect(await dataRow(POSTS, entry.id, "ko", "draft")).toEqual(before);
 	// ENT-UPD-4.3
@@ -935,9 +956,9 @@ it("ENT-UPD-5 단건 수정에서 휴지통에 있는 글을 관계 필드에 �
 	const before = await dataRow(POSTS, entry.id, "ko", "draft");
 
 	// ENT-UPD-5.1
-	await expect(
-		montiOf().entries.update({ id: entry.id, data: { fields: { topic: trashed.id } } }),
-	).rejects.toMatchObject({ code: "BAD_REQUEST" });
+	await expect(montiOf().entries.update({ id: entry.id, fields: { topic: trashed.id } })).rejects.toMatchObject({
+		code: "BAD_REQUEST",
+	});
 	// ENT-UPD-5.2
 	expect(await dataRow(POSTS, entry.id, "ko", "draft")).toEqual(before);
 });
@@ -1017,18 +1038,18 @@ it("ENT-UPD-11 비원문 언어를 지정해 수정하면 그 언어의 작업�
 	await seedCopy(POSTS, entry.id, "en", "draft", { columns: { title: "En" } });
 	const ko = await dataRow(POSTS, entry.id, "ko", "draft");
 	const folder = await seedFolder();
-	const data = { fields: { title: "New en" } };
+	const fields = { title: "New en" };
 
 	const output = (await montiOf().entries.update({
 		id: entry.id,
 		locale: "en",
 		slug: "new-en",
 		folder_id: folder,
-		data,
+		fields,
 	})) as Entry;
 
 	// ENT-UPD-11.1
-	expect(output).toMatchObject({ locale: "en", source_locale: "ko", slug: "new-en", folder_id: folder, data });
+	expect(output).toMatchObject({ locale: "en", source_locale: "ko", slug: "new-en", folder_id: folder, fields });
 	// ENT-UPD-11.2
 	expect({
 		en: await dataRow(POSTS, entry.id, "en", "draft"),
@@ -1044,7 +1065,7 @@ it("ENT-UPD-12 한 언어의 데이터를 바꿔도 같은 글의 다른 언어�
 	await seedCopy(POSTS, entry.id, "en", "draft", { columns: { cover: second } });
 	await seedUse(coverUse(entry.id, second));
 
-	await montiOf().entries.update({ id: entry.id, locale: "en", data: { fields: { cover: third } } });
+	await montiOf().entries.update({ id: entry.id, locale: "en", fields: { cover: third } });
 
 	// ENT-UPD-12.1
 	expect((await useRows("entry", entry.id)).map((use) => use.media_id).sort()).toEqual(sortedIds([first, third]));
@@ -1077,9 +1098,9 @@ it("ENT-PUB-1 슬러그와 필수 필드가 채워진 작업본으로 발행본�
 	// ENT-PUB-1.1
 	expect({
 		slug: output.slug,
-		data: output.data,
+		fields: output.fields,
 		inRange: output.published_at !== null && output.published_at >= before && output.published_at <= after,
-	}).toEqual({ slug: "note", data: { fields: FILLED_NOTE }, inRange: true });
+	}).toEqual({ slug: "note", fields: FILLED_NOTE, inRange: true });
 	// ENT-PUB-1.2
 	expect(await dataRow(NOTES, entry.id, "ko", "published")).toMatchObject({
 		slug: "note",
@@ -1097,7 +1118,7 @@ it("ENT-PUB-2 이미 발행된 글을 다시 발행하면 기존 발행 시각�
 	// ENT-PUB-2.1
 	expect(output).toMatchObject({
 		slug: "new",
-		data: { fields: { ...FILLED_NOTE, title: "New" } },
+		fields: { ...FILLED_NOTE, title: "New" },
 		published_at: PUBLISHED_AT,
 	});
 	// ENT-PUB-2.2
@@ -1178,7 +1199,7 @@ it("ENT-PUB-9 비원문 언어를 지정해 발행하면 그 언어의 발행본
 	const output = await montiOf().entries.publish({ id: entry.id, locale: "en" });
 
 	// ENT-PUB-9.1
-	expect(output).toMatchObject({ locale: "en", source_locale: "ko", slug: "en-note", data: { fields: en } });
+	expect(output).toMatchObject({ locale: "en", source_locale: "ko", slug: "en-note", fields: en });
 	// ENT-PUB-9.2
 	expect((await dataRows(NOTES, entry.id)).filter((row) => row.status === "published")).toMatchObject([
 		{ locale: "en" },
@@ -1196,15 +1217,26 @@ it("ENT-PUB-10 글에 없는 언어를 지정하면 발행할 수 없다", async
 	expect((await dataRows(NOTES, entry.id)).filter((row) => row.status === "published")).toEqual([]);
 });
 
-it("ENT-PUB-11 필수 참조 필드가 가리키던 글이나 미디어가 휴지통에 들어가 있으면 빈칸으로 취급되어 발행할 수 없다", async () => {
+it("ENT-PUB-11 필수 참조 필드나 본문이 가리키던 대상이 휴지통에 들어가 있으면 발행할 수 없다", async () => {
 	const topic = await seedEntry({ collection: TOPICS });
-	const entry = await seedEntry({ collection: CARDS, slug: "card", columns: { topic: topic.id } });
+	const card = await seedEntry({ collection: CARDS, slug: "card", columns: { topic: topic.id } });
+	const media = await seedMedia();
+	const post = await seedEntry({ slug: "post", columns: { title: "제목", body: JSON.stringify(imageDoc(media)) } });
 	await trashEntry(TOPICS, topic.id);
+	await trashMedia(media);
+
+	const codes = [
+		await codeOf(montiOf().entries.publish({ id: card.id })),
+		await codeOf(montiOf().entries.publish({ id: post.id })),
+	];
 
 	// ENT-PUB-11.1
-	await expect(montiOf().entries.publish({ id: entry.id })).rejects.toMatchObject({ code: "BAD_REQUEST" });
+	expect(codes).toEqual(["BAD_REQUEST", "BAD_REQUEST"]);
 	// ENT-PUB-11.2
-	expect(await dataRow(CARDS, entry.id, "ko", "published")).toBeUndefined();
+	expect([await dataRow(CARDS, card.id, "ko", "published"), await dataRow(POSTS, post.id, "ko", "published")]).toEqual([
+		undefined,
+		undefined,
+	]);
 });
 
 it("ENT-PUB-12 선택 참조 필드가 가리키던 대상이 휴지통에 들어가 있으면 빈칸으로 취급되어 정상 발행된다", async () => {
@@ -1216,7 +1248,7 @@ it("ENT-PUB-12 선택 참조 필드가 가리키던 대상이 휴지통에 들�
 	const output = await montiOf().entries.publish({ id: entry.id });
 
 	// ENT-PUB-12.1
-	expect({ fields: output.data.fields, published: output.published_at instanceof Date }).toEqual({
+	expect({ fields: output.fields, published: output.published_at instanceof Date }).toEqual({
 		fields: { topic: topic.id },
 		published: true,
 	});
@@ -1237,7 +1269,7 @@ it("ENT-UNPUB-1 발행을 취소하면 발행본만 지우고 작업본과 미�
 	// ENT-UNPUB-1.1
 	expect(output).toMatchObject({
 		slug: entry.slug,
-		data: { fields: { title: "Draft", cover: media } },
+		fields: { title: "Draft", cover: media },
 		published_at: null,
 	});
 	// ENT-UNPUB-1.2
@@ -1257,7 +1289,7 @@ it("ENT-UNPUB-2 이미 미발행 상태인 글도 오류 없이 발행 취소된
 	expect(output).toMatchObject({
 		id: entry.id,
 		slug: entry.slug,
-		data: { fields: { title: "Draft" } },
+		fields: { title: "Draft" },
 		published_at: null,
 	});
 });
@@ -1324,7 +1356,7 @@ it("ENT-DUP-1 글의 원문 언어 작업본과 미디어 사용처를 새 슬�
 		source_locale: "ko",
 		folder_id: folder,
 		slug: "copy",
-		data: { fields: { title: "Draft", cover: first } },
+		fields: { title: "Draft", cover: first },
 		published_at: null,
 	});
 	// ENT-DUP-1.2
@@ -1552,7 +1584,7 @@ it("ENT-LOC-1 활성 글에 비원문 언어를 추가할 때 슬러그를 생�
 		source_locale: "ko",
 		folder_id: folder,
 		slug: "open-notice",
-		data: { fields: {} },
+		fields: {},
 		published_at: null,
 	});
 	// ENT-LOC-1.2
@@ -1565,12 +1597,12 @@ it("ENT-LOC-2 데이터를 담아 언어를 추가하면 글 전체 언어 기�
 	const first = await seedMedia();
 	const second = await seedMedia();
 	const { entry } = await seedEntryUsing(first);
-	const data = { fields: { cover: second } };
+	const fields = { cover: second };
 
-	const output = await montiOf().entries.addLocale({ id: entry.id, locale: "en", data });
+	const output = await montiOf().entries.addLocale({ id: entry.id, locale: "en", fields });
 
 	// ENT-LOC-2.1
-	expect(output.data).toEqual(data);
+	expect(output.fields).toEqual(fields);
 	// ENT-LOC-2.2
 	expect(await useRows("entry", entry.id)).toEqual(
 		[coverUse(entry.id, first), coverUse(entry.id, second)].sort((a, b) => a.media_id.localeCompare(b.media_id)),
@@ -1630,7 +1662,7 @@ it("ENT-LOC-7 필드의 타입이나 제약에 어긋난 데이터로는 언어�
 
 	// ENT-LOC-7.1
 	await expect(
-		montiOf().entries.addLocale({ id: entry.id, locale: "en", data: { fields: { views: "3" } } }),
+		montiOf().entries.addLocale({ id: entry.id, locale: "en", fields: { views: "3" } }),
 	).rejects.toMatchObject({ code: "BAD_REQUEST" });
 	// ENT-LOC-7.2
 	expect(await dataRow(POSTS, entry.id, "en", "draft")).toBeUndefined();
@@ -1659,7 +1691,7 @@ it("ENT-RLOC-1 비원문 언어를 즉시 삭제하면 발행본도 함께 지�
 	await seedCopy(POSTS, entry.id, "en", "draft", { rels: en });
 	await seedCopy(POSTS, entry.id, "en", "published", { rels: en });
 	for (const media_id of [first, second])
-		await seedUse({ media_id, source_kind: "entry", source_id: entry.id, field_path: "fields.gallery" });
+		await seedUse({ media_id, source_kind: "entry", source_id: entry.id, field_path: "gallery" });
 	const kept = {
 		entry: await entryRow(POSTS, entry.id),
 		ko: (await dataRows(POSTS, entry.id)).filter((row) => row.locale === "ko"),
@@ -1760,7 +1792,7 @@ it("ENT-SRC-1 기준 언어를 다른 언어로 바꾸면 원문 언어가 바�
 		collection: POSTS,
 		folder_id: null,
 		slug: en.slug,
-		data: { fields: { title: "En" } },
+		fields: { title: "En" },
 		published_at: enPublished.published_at,
 		locale: "en",
 		source_locale: "en",
@@ -1791,7 +1823,7 @@ it("ENT-SRC-2 이미 원문 언어인 언어를 다시 지정하면 번역 추�
 		collection: POSTS,
 		folder_id: null,
 		slug: entry.slug,
-		data: { fields: { title: "Ko" } },
+		fields: { title: "Ko" },
 		published_at: null,
 		locale: "ko",
 		source_locale: "ko",

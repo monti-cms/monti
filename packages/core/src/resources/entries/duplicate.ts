@@ -44,7 +44,8 @@ export async function duplicateEntry(input: z.infer<typeof duplicateInput>, ctx:
 			locale: source.locale,
 			slug: input.slug === undefined ? await copySlug(ctx, source) : input.slug,
 			folder_id: source.folder_id,
-			data: source.data,
+			fields: source.fields,
+			body: source.body,
 		},
 		ctx,
 	);

@@ -179,3 +179,14 @@ it("START-6 개발 서버로 시작하면 스키마에 정의된 컬렉션 테�
 		data: true,
 	});
 });
+
+it("START-7 운영 서버로 시작하면 코어 마이그레이션만 실행하고 컬렉션 테이블은 자동으로 만들지 않는다", async () => {
+	await start([], schema, { dev: false });
+
+	// START-7.1
+	expect({
+		migrations: await tableExists(testDb.db, "migrations"),
+		posts: await tableExists(testDb.db, "posts"),
+		data: await tableExists(testDb.db, "posts_data"),
+	}).toEqual({ migrations: true, posts: false, data: false });
+});

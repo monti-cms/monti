@@ -7,10 +7,11 @@ export const slugInput = z
 	.regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/)
 	.nullable();
 
-export const dataInput = z.object({
+/** 쓰기가 받는 필드 값과 본문: 입력 객체에 그대로 펼쳐 넣는다. */
+export const dataShape = {
 	fields: z.record(z.string(), z.unknown()).optional(),
 	body: z.unknown().optional(),
-});
+};
 
 /** 폴더: `null`이면 루트다. */
 export const folderInput = uuidInput.nullable();

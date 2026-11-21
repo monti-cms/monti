@@ -1,4 +1,5 @@
 import type { ColumnType, JSONColumnType, Kysely } from "kysely";
+import type { Doc } from "../rich-text/types";
 
 /** `timestamptz` 열: `Date`로 읽고 `Date`나 ISO 문자열로 쓴다. */
 type Timestamp = ColumnType<Date, Date | string, Date | string>;
@@ -9,14 +10,15 @@ type NullableTimestamp = ColumnType<Date | null, Date | string | null | undefine
 /** null을 허용하는 `uuid` 열: `string | null`로 읽고, 넣을 때는 생략할 수 있다. */
 type NullableUuid = ColumnType<string | null, string | null | undefined, string | null>;
 
-/** JSON 객체를 담는 `jsonb` 열: JSON 텍스트로 쓴다. */
-type JsonObject = JSONColumnType<Record<string, unknown>>;
+/** null을 허용하는 열: 값이나 null로 읽고, 넣을 때는 생략할 수 있다. */
+type Nullable<T> = ColumnType<T | null, T | null | undefined, T | null>;
 
 export interface TemplatesTable {
 	id: string;
 	collection: string;
 	name: string;
-	content: JsonObject;
+	/** 리치 텍스트 본문을 담는 `jsonb` 열: JSON 텍스트로 쓴다. */
+	content: JSONColumnType<Doc>;
 }
 
 /** `scope`는 컬렉션 키이거나 `media`다. */
@@ -32,8 +34,11 @@ export interface MediaTable {
 	id: string;
 	folder_id: NullableUuid;
 	key: string;
+	filename: string;
 	mime_type: string;
-	metadata: JsonObject;
+	size: number;
+	width: Nullable<number>;
+	height: Nullable<number>;
 	trashed_at: NullableTimestamp;
 }
 

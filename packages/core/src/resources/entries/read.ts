@@ -45,7 +45,7 @@ export async function storedOf(ctx: ReadContext, name: string, rows: Row[]): Pro
 	}));
 }
 
-/** 저장된 행들의 `data`. 휴지통에 있는 참조 대상은 빈칸으로 거른다. */
+/** 저장된 행들의 필드 값과 본문. 휴지통에 있는 참조 대상은 빈칸으로 거른다. */
 async function dataOf(ctx: ReadContext, collection: CollectionSchema, stored: Stored[]): Promise<EntryData[]> {
 	const refs: References = new Map();
 	for (const one of stored) referencesIn(collection, decodeData(collection, one, everyTarget).fields, refs);
@@ -64,7 +64,7 @@ export async function entriesOf(ctx: ReadContext, name: string, rows: Row[]): Pr
 		source_locale: String(row.source_locale),
 		folder_id: row.folder_id as string | null,
 		slug: row.slug as string | null,
-		data: data[index],
+		...data[index],
 		published_at: row.live_at as Date | null,
 	}));
 }

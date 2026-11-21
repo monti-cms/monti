@@ -5,7 +5,7 @@ import { uuidInput } from "../_shared/input";
 import { recountEntryMediaUses } from "../media/uses";
 import { collectionOf, rejectLocale } from "./collection";
 import { saveCopy } from "./copies";
-import { dataInput, type entryLocaleInput, slugInput } from "./inputs";
+import { dataShape, type entryLocaleInput, slugInput } from "./inputs";
 import { findEntry } from "./read";
 import { tablesOf } from "./tables";
 import type { Entry } from "./types";
@@ -15,7 +15,7 @@ export const addLocaleInput = z.object({
 	id: uuidInput,
 	locale: z.string(),
 	slug: slugInput.optional(),
-	data: dataInput.optional(),
+	...dataShape,
 });
 
 /** 글에 이미 그 언어 작업본이 있으면 거절한다. */
@@ -38,7 +38,7 @@ export async function addLocale(input: z.infer<typeof addLocaleInput>, ctx: Writ
 	const source = await findEntry(ctx, { id: input.id }, "draft");
 	const { id, collection: name } = source;
 	const collection = collectionOf(ctx, name);
-	const data = await checkData(ctx, collection, input.data ?? {});
+	const data = await checkData(ctx, collection, input);
 	await rejectExistingLocale(ctx, source, input.locale);
 	const slug = input.slug === undefined ? source.slug : input.slug;
 	await rejectTakenSlug(ctx, name, { id, locale: input.locale, slug }, "draft");

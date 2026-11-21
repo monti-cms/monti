@@ -19,7 +19,7 @@ export interface BlockSeen {
 	seen_value: Block;
 }
 
-/** 활성 글의 번역 언어 작업본 하나와 그 글의 원문 작업본 `data`. */
+/** 활성 글의 번역 언어 작업본 하나와 그 글의 원문 작업본의 필드 값·본문. */
 export interface TranslationRow {
 	id: string;
 	collection: string;
@@ -69,8 +69,8 @@ export async function translationRowsIn(
 		locale: entry.locale,
 		source_locale: entry.source_locale,
 		// 활성 글에는 늘 원문 작업본이 있다.
-		source: (sources.get(entry.id) as Entry).data,
-		data: entry.data,
+		source: sources.get(entry.id) as Entry,
+		data: entry,
 		translation_seen: rows[index].translation_seen as Partial<SeenRecord>,
 	}));
 }

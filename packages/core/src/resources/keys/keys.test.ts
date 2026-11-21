@@ -12,8 +12,14 @@ import { createKeys } from "./keys";
 let testDb: TestDatabase;
 let db: Kysely<Database>;
 
-function montiOf(plugins: Plugin[]) {
-	return createMonti(db, { keys: createKeys(keyServicesOf(plugins)) }, plugins);
+function montiOf(plugins: Plugin[], withSecret = true) {
+	const secret = withSecret ? "test monti secret" : undefined;
+	return createMonti(db, { keys: createKeys(keyServicesOf(plugins), secret) }, plugins, {
+		schema: { locales: ["ko"], collections: {} },
+		config: { name: "Monti Blog", dev: false },
+		schemaFile: "unused-schema-file",
+		configFile: "unused-config-file",
+	});
 }
 
 const passing = vi.fn<(secret: string) => Promise<void>>();
@@ -79,6 +85,15 @@ it("KEY-CRT-2 rejects keys.create with CONFLICT for a name already taken", async
 	await expect(monti.keys.create({ ...storageKey, name: mailKey.name })).rejects.toMatchObject({ code: "CONFLICT" });
 	// KEY-CRT-2.2
 	expect(await keyRows()).toHaveLength(1);
+});
+
+it("KEY-CRT-3 암호화 비밀값이 없으면 키를 저장할 수 없다", async () => {
+	const monti = montiOf([], false);
+
+	// KEY-CRT-3.1
+	await expect(monti.keys.create(mailKey)).rejects.toMatchObject({ code: "BAD_REQUEST" });
+	// KEY-CRT-3.2
+	expect(await keyRows()).toEqual([]);
 });
 
 it("KEY-LST-1 lists only the id, service, name and last4 of the stored keys", async () => {
@@ -152,6 +167,19 @@ it("KEY-UPD-4 rejects keys.update with NOT_FOUND for an id that does not exist",
 	await expect(monti.keys.update({ id: "no-such-key", name: "Mail" })).rejects.toMatchObject({ code: "NOT_FOUND" });
 });
 
+it("KEY-UPD-5 암호화 비밀값이 없으면 저장된 키의 비밀값을 바꿀 수 없다", async () => {
+	const stored = await montiOf([]).keys.create(mailKey);
+	const before = await keyRows();
+	const monti = montiOf([], false);
+
+	// KEY-UPD-5.1
+	await expect(
+		monti.keys.update({ id: stored.id, name: "Mail renamed", secret: "new-secret-9999" }),
+	).rejects.toMatchObject({ code: "BAD_REQUEST" });
+	// KEY-UPD-5.2
+	expect(await keyRows()).toEqual(before);
+});
+
 it("KEY-DEL-1 deletes only the key of the given id", async () => {
 	const monti = montiOf([]);
 	const first = await monti.keys.create(mailKey);
@@ -216,4 +244,12 @@ it("KEY-CHK-5 rejects keys.check with NOT_FOUND for an id that does not exist", 
 
 	// KEY-CHK-5.1
 	await expect(monti.keys.check({ id: "no-such-key" })).rejects.toMatchObject({ code: "NOT_FOUND" });
+});
+
+it("KEY-CHK-6 암호화 비밀값이 없으면 저장된 키 ID로 연결을 확인할 수 없다", async () => {
+	const stored = await montiOf([mailPlugin]).keys.create(mailKey);
+	const monti = montiOf([mailPlugin], false);
+
+	// KEY-CHK-6.1
+	await expect(monti.keys.check({ id: stored.id })).rejects.toMatchObject({ code: "BAD_REQUEST" });
 });

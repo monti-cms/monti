@@ -47,7 +47,9 @@ async function seedFolder(scope: string, parent_id: string | null = null): Promi
 interface MediaSeed {
 	folder_id?: string | null;
 	key?: string;
-	metadata?: Record<string, unknown>;
+	filename?: string;
+	width?: number | null;
+	height?: number | null;
 	trashed?: boolean;
 }
 
@@ -57,8 +59,11 @@ async function seedMedia(seed: MediaSeed = {}) {
 		id: randomUUID(),
 		folder_id: seed.folder_id ?? null,
 		key: seed.key ?? randomUUID(),
+		filename: seed.filename ?? "image.png",
 		mime_type: "image/png",
-		metadata: JSON.stringify(seed.metadata ?? {}),
+		size: 1024,
+		width: seed.width ?? null,
+		height: seed.height ?? null,
 		trashed_at: seed.trashed === true ? new Date() : null,
 	};
 	await db.insertInto("media").values(row).execute();
@@ -118,7 +123,7 @@ it("MED-UPL-2 rejects media.startUpload with BAD_REQUEST on an engine without st
 	expect(await looseKeys()).toEqual([]);
 });
 
-it("MED-CRT-1 registers an uploaded file and removes only its key from loose_files", async () => {
+it("MED-CRT-1 스토리지 파일을 확인해 미디어로 등록하고 임시 목록에서 해당 키만 지운다", async () => {
 	const key = randomUUID();
 	const other = randomUUID();
 	storage.seed(key, { mime: "image/webp", size: 2048 });
@@ -131,20 +136,43 @@ it("MED-CRT-1 registers an uploaded file and removes only its key from loose_fil
 	// MED-CRT-1.1
 	expect({
 		key: output.key,
+		filename: output.filename,
 		mime_type: output.mime_type,
+		size: output.size,
 		folder_id: output.folder_id,
-		metadata: output.metadata,
-	}).toEqual({ key, mime_type: "image/webp", folder_id: null, metadata: {} });
+		width: output.width,
+		height: output.height,
+	}).toEqual({
+		key,
+		filename: key,
+		mime_type: "image/webp",
+		size: 2048,
+		folder_id: null,
+		width: null,
+		height: null,
+	});
 	// MED-CRT-1.2
 	expect(output.url).toBe(`memory://${key}`);
 	// MED-CRT-1.3
 	expect({
 		id: row.id,
 		key: row.key,
+		filename: row.filename,
 		mime_type: row.mime_type,
+		size: row.size,
 		folder_id: row.folder_id,
-		metadata: row.metadata,
-	}).toEqual({ id: output.id, key, mime_type: "image/webp", folder_id: null, metadata: {} });
+		width: row.width,
+		height: row.height,
+	}).toEqual({
+		id: output.id,
+		key,
+		filename: key,
+		mime_type: "image/webp",
+		size: 2048,
+		folder_id: null,
+		width: null,
+		height: null,
+	});
 	// MED-CRT-1.4
 	expect(await looseFile(key)).toBeUndefined();
 	// MED-CRT-1.5
@@ -221,8 +249,13 @@ it("MED-READ-3 lists every media not trashed, with its url, when called without 
 	});
 });
 
-it("MED-READ-4 gets one media not trashed, with its url", async () => {
+it("MED-READ-4 활성 미디어 1건을 URL 및 사용처 목록과 함께 돌려준다", async () => {
 	const row = await seedMedia();
+	const use = { source_kind: "entry" as const, source_id: randomUUID(), field_path: "title" };
+	await db
+		.insertInto("media_uses")
+		.values({ media_id: row.id, ...use })
+		.execute();
 
 	const output = await montiOf().media.get({ id: row.id });
 
@@ -230,6 +263,8 @@ it("MED-READ-4 gets one media not trashed, with its url", async () => {
 	expect(output.id).toBe(row.id);
 	// MED-READ-4.2
 	expect(output.url).toBe(`memory://${row.key}`);
+	// MED-READ-4.3
+	expect(output.uses).toEqual([use]);
 });
 
 it("MED-READ-5 rejects media.get with NOT_FOUND for a trashed media", async () => {
@@ -239,24 +274,25 @@ it("MED-READ-5 rejects media.get with NOT_FOUND for a trashed media", async () =
 	await expect(montiOf().media.get({ id: row.id })).rejects.toMatchObject({ code: "NOT_FOUND" });
 });
 
-it("MED-UPD-1 replaces the metadata wholesale and keeps the omitted folder_id and key", async () => {
+it("MED-UPD-1 단건 수정에서 파일 정보만 주면 지정한 열을 바꾸고 폴더와 파일 키는 유지한다", async () => {
 	const folder = await seedFolder("media");
-	const row = await seedMedia({ folder_id: folder, metadata: { alt: "Old" } });
+	const row = await seedMedia({ folder_id: folder, filename: "old.png", width: 100, height: 50 });
+	const fresh = { filename: "new.png", width: 640, height: 480 };
 
-	const output = await montiOf().media.update({ id: row.id, metadata: { caption: "New" } });
+	const output = await montiOf().media.update({ id: row.id, ...fresh });
 	const stored = await mediaRow(row.id);
 
 	// MED-UPD-1.1
-	expect(Array.isArray(output) ? undefined : output.metadata).toEqual({ caption: "New" });
+	expect(output).toMatchObject(fresh);
 	// MED-UPD-1.2
 	expect(output).toMatchObject({ folder_id: folder });
 	// MED-UPD-1.3
 	expect(output).toMatchObject({ key: row.key });
 	// MED-UPD-1.4
-	expect(stored.metadata).toEqual({ caption: "New" });
+	expect({ filename: stored.filename, width: stored.width, height: stored.height }).toEqual(fresh);
 });
 
-it("MED-UPD-2 replaces the file, updating mime_type and url, and puts the old key in loose_files", async () => {
+it("MED-UPD-2 단건 수정에서 새 파일 키로 교체하면 MIME·용량·URL을 갱신하고 이전 키를 임시 목록에 넣는다", async () => {
 	const row = await seedMedia();
 	const key = randomUUID();
 	storage.seed(key, { mime: "image/jpeg", size: 30 });
@@ -268,11 +304,15 @@ it("MED-UPD-2 replaces the file, updating mime_type and url, and puts the old ke
 	const old = await looseFile(row.key);
 
 	// MED-UPD-2.1
-	expect(output).toMatchObject({ key, mime_type: "image/jpeg" });
+	expect(output).toMatchObject({ key, mime_type: "image/jpeg", size: 30 });
 	// MED-UPD-2.2
 	expect(output).toMatchObject({ url: `memory://${key}` });
 	// MED-UPD-2.3
-	expect({ key: stored.key, mime_type: stored.mime_type }).toEqual({ key, mime_type: "image/jpeg" });
+	expect({ key: stored.key, mime_type: stored.mime_type, size: stored.size }).toEqual({
+		key,
+		mime_type: "image/jpeg",
+		size: 30,
+	});
 	// MED-UPD-2.4
 	expect(await looseFile(key)).toBeUndefined();
 	// MED-UPD-2.5

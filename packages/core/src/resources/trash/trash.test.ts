@@ -84,7 +84,8 @@ async function createEntry(seed: EntrySeed = {}) {
 		locale: "ko",
 		slug: seed.slug ?? `entry-${randomUUID()}`,
 		folder_id: seed.folder_id,
-		data: { fields: seed.fields ?? { title: "제목" }, ...body },
+		fields: seed.fields ?? { title: "제목" },
+		...body,
 	});
 }
 
@@ -102,10 +103,10 @@ async function createFolder(scope: string, parent_id: string | null = null, name
 }
 
 /** 메모리 저장소에 파일을 올리고 `media.create`로 등록한다. */
-async function createMedia(folder_id: string | null = null) {
+async function createMedia(folder_id: string | null = null, filename?: string) {
 	const key = randomUUID();
 	storage.seed(key, { mime: "image/png", size: 1024 });
-	return montiOf().media.create({ key, folder_id });
+	return montiOf().media.create({ key, folder_id, filename });
 }
 
 async function moveToTrash(id: string) {
@@ -281,7 +282,7 @@ it("TRH-MOVE-6 이미 휴지통에 있는 항목은 다시 휴지통에 보낼 �
 it("TRH-READ-1 휴지통의 글·폴더·미디어만 최근에 버린 것부터 돌려준다", async () => {
 	const entry = await createEntry();
 	const folder = await createFolder(POSTS, null, "Trashed");
-	const item = await createMedia();
+	const item = await createMedia(null, "photo.png");
 	await createEntry();
 	await trashEarlier(POSTS, entry.id, 3);
 	await trashEarlier("folders", folder.id, 2);
@@ -298,7 +299,7 @@ it("TRH-READ-1 휴지통의 글·폴더·미디어만 최근에 버린 것부터
 		[
 			{ kind: "entry", id: entry.id, name: entry.slug, trashed_at: (await entryRow(entry.id))?.trashed_at },
 			{ kind: "folder", id: folder.id, name: "Trashed", trashed_at: (await folderRow(folder.id))?.trashed_at },
-			{ kind: "media", id: item.id, name: item.key, trashed_at: (await mediaRow(item.id))?.trashed_at },
+			{ kind: "media", id: item.id, name: "photo.png", trashed_at: (await mediaRow(item.id))?.trashed_at },
 		].sort(byId),
 	);
 });
