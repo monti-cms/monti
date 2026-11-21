@@ -39,7 +39,7 @@ DB-SCH-1  첫 마이그레이션이 8개 고정 도메인 테이블을 만든다
   행동  `core`의 첫 마이그레이션(`0001-initial`)을 실행한다
   결과  DB-SCH-1.1  `templates` 테이블에 `id`, `collection`, `name`, `content` 열이 있다
         DB-SCH-1.2  `folders` 테이블에 `id`, `scope`, `parent_id`, `name`, `trashed_at` 열이 있다
-        DB-SCH-1.3  `media` 테이블에 `id`, `folder_id`, `key`, `mime_type`, `metadata`, `trashed_at` 열이 있다
+        DB-SCH-1.3  `media` 테이블에 `id`, `folder_id`, `key`, `filename`, `mime_type`, `size`, `alt`, `width`, `height`, `trashed_at` 열이 있다
         DB-SCH-1.4  `media_uses` 테이블에 `media_id`, `source_kind`, `source_id`, `field_path` 열이 있다
         DB-SCH-1.5  `loose_files` 테이블에 `key`, `remove_after` 열이 있다
         DB-SCH-1.6  `admin` 테이블에 `id`, `email`, `password_hash` 열이 있다

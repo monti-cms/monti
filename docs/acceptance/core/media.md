@@ -4,9 +4,9 @@
 
 - `storage`가 설정되지 않은 엔진에서는 `media` 리소스 전체를 `BAD_REQUEST`로 거절한다.
 - `media.startUpload`: 새 UUID `key`로 `storage.ticket`을 발급하고 `loose_files`에 24시간 뒤 만료로 기록한다.
-- `media.create`: 선택 `__preset_id`(UUID)를 받고 `storage.stat`으로 파일 존재와 `mime_type`을 확인해 `media`에 등록한 뒤 `loose_files`에서 해당 `key`를 지운다. 스토리지에 없는 `key`나 `"media"` 범위가 아닌 폴더면 `BAD_REQUEST`, 이미 등록된 `key`(휴지통 포함)면 `CONFLICT`로 거절한다.
-- `media.list`·`media.get`: 활성 미디어만 `url`과 함께 돌려준다. `list`의 `folder_id`는 생략=전체, `null`=루트, UUID=해당 폴더 직속이며, `get`은 없거나 휴지통에 있으면 `NOT_FOUND`로 거절한다.
-- `media.update`: 단건(`id`)은 `metadata` 전체 교체·폴더 이동·파일 교체(`key` 변경 시 이전 `key`를 `loose_files`에 24시간 대기로 추가)를, 다건(`ids`)은 폴더 일괄 이동(`folder_id`)만 처리하며 대상 중 하나라도 휴지통에 있으면 `NOT_FOUND`로 전체 롤백한다.
+- `media.create`: `key`와 선택 `__preset_id`(UUID), `folder_id`, `filename`(생략 시 `key`), `alt`, `width`, `height`(생략 시 `null`)를 받고 `storage.stat`으로 파일 존재와 `mime_type`(`mime`)·`size`를 확인해 `media`에 등록한 뒤 `loose_files`에서 해당 `key`를 지운다. 스토리지에 없는 `key`나 `"media"` 범위가 아닌 폴더면 `BAD_REQUEST`, 이미 등록된 `key`(휴지통 포함)면 `CONFLICT`로 거절한다.
+- `media.list`·`media.get`: 활성 미디어만 `url`과 함께 돌려준다. `list`의 `folder_id`는 생략=전체, `null`=루트, UUID=해당 폴더 직속이며, `get`은 사용처 목록(`uses`)을 함께 돌려주고 없거나 휴지통에 있으면 `NOT_FOUND`로 거절한다.
+- `media.update`: 단건(`id`)은 `filename`·`alt`·`width`·`height` 수정·폴더 이동·파일 교체(`key` 변경 시 새 파일의 `mime_type`·`size`로 갱신하고 이전 `key`를 `loose_files`에 24시간 대기로 추가)를, 다건(`ids`)은 폴더 일괄 이동(`folder_id`)만 처리하며 대상 중 하나라도 휴지통에 있으면 `NOT_FOUND`로 전체 롤백한다.
 - `removeLooseFiles({ db, storage })`: `resources/media/`의 함수로 `trash`나 `media`의 Operation이 아니며, 삭제 대기 시각(`remove_after`)이 지난 `loose_files` 행의 `key`만 `storage.remove`로 지워 목록에서 빼고 지우지 못한 `key`는 목록에 남긴 채 나머지를 계속 지운다. Operation이 아니라서 `transaction`·`dryRun` 콜백 안에서는 부를 수 없다.
 
 ---
@@ -36,9 +36,9 @@ MED-UPL-2  스토리지가 설정되지 않은 엔진에서는 업로드를 시�
 MED-CRT-1  스토리지 파일을 확인해 미디어로 등록하고 임시 목록에서 해당 키만 지운다
   전제  `storage`에 파일이 올라가 있고, 그 `key`와 다른 `key` 하나가 `loose_files`에 들어 있다
   행동  올라간 `key`로 `media.create`를 실행한다
-  결과  MED-CRT-1.1  반환값의 `key`, `mime_type`(`storage.stat`의 `mime`), `folder_id`(`null`), `metadata`(`{}`)가 일치한다
+  결과  MED-CRT-1.1  반환값의 `key`, `filename`(`key`), `mime_type`(`storage.stat`의 `mime`), `size`(`storage.stat`의 `size`), `folder_id`(`null`), `alt`(`null`), `width`(`null`), `height`(`null`)가 일치한다
         MED-CRT-1.2  반환값의 `url`이 `storage.url(key)`이다
-        MED-CRT-1.3  `media` 테이블에 해당 `id`, `key`, `mime_type`, `folder_id`, `metadata`를 가진 행이 저장된다
+        MED-CRT-1.3  `media` 테이블에 해당 `id`, `key`, `filename`, `mime_type`, `size`, `folder_id`, `alt`, `width`, `height`를 가진 행이 저장된다
         MED-CRT-1.4  `loose_files`에서 등록한 `key`는 삭제된다
         MED-CRT-1.5  `loose_files`에 원래 있던 다른 `key`는 남아 있다
 
@@ -102,20 +102,20 @@ MED-READ-5  휴지통에 있는 미디어는 조회할 수 없다
 ## 4. 수정 (`update`)
 
 ```
-MED-UPD-1  단건 수정에서 메타데이터만 주면 통째로 교체하고 폴더와 파일 키는 유지한다
-  전제  폴더에 속하고 `metadata`가 들어 있는 미디어가 하나 있다
-  행동  `id`와 기존 키가 없는 새 `metadata`만으로 `media.update`를 실행한다
-  결과  MED-UPD-1.1  반환값의 `metadata`가 기존 키 없이 새 값이다
+MED-UPD-1  단건 수정에서 파일 정보만 주면 지정한 열을 바꾸고 폴더와 파일 키는 유지한다
+  전제  폴더에 속하고 `filename`, `alt`, `width`, `height`가 들어 있는 미디어가 하나 있다
+  행동  `id`와 새 `filename`, `alt`, `width`, `height`만으로 `media.update`를 실행한다
+  결과  MED-UPD-1.1  반환값의 `filename`, `alt`, `width`, `height`가 새 값이다
         MED-UPD-1.2  반환값의 `folder_id`가 원래 그대로이다
         MED-UPD-1.3  반환값의 `key`가 원래 그대로이다
-        MED-UPD-1.4  `media` 테이블에서 해당 행의 `metadata`가 새 값이다
+        MED-UPD-1.4  `media` 테이블에서 해당 행의 `filename`, `alt`, `width`, `height`가 새 값이다
 
-MED-UPD-2  단건 수정에서 새 파일 키로 교체하면 MIME·URL을 갱신하고 이전 키를 임시 목록에 넣는다
-  전제  `storage`에 다른 `mime`의 새 `key`가 올라가 있고 `loose_files`에 들어 있으며, 기존 미디어가 하나 있다
+MED-UPD-2  단건 수정에서 새 파일 키로 교체하면 MIME·용량·URL을 갱신하고 이전 키를 임시 목록에 넣는다
+  전제  `storage`에 다른 `mime`과 `size`의 새 `key`가 올라가 있고 `loose_files`에 들어 있으며, 기존 미디어가 하나 있다
   행동  `id`와 새 `key`로 `media.update`를 실행한다
-  결과  MED-UPD-2.1  반환값의 `key`와 `mime_type`(새 파일의 `storage.stat` `mime`)이 갱신된다
+  결과  MED-UPD-2.1  반환값의 `key`, `mime_type`, `size`(새 파일의 `storage.stat` `mime`·`size`)가 갱신된다
         MED-UPD-2.2  반환값의 `url`이 새 `key`의 `storage.url`이다
-        MED-UPD-2.3  `media` 테이블에서 해당 행의 `key`와 `mime_type`이 새 값으로 바뀐다
+        MED-UPD-2.3  `media` 테이블에서 해당 행의 `key`, `mime_type`, `size`가 새 값으로 바뀐다
         MED-UPD-2.4  `loose_files`에서 새 `key`는 삭제된다
         MED-UPD-2.5  `loose_files`에 이전 `key`의 행이 생긴다
         MED-UPD-2.6  실행 시각과 이전 `key` 행의 `remove_after` 차이가 24시간이다
