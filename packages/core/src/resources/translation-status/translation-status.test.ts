@@ -22,14 +22,19 @@ let tables: Kysely<Record<string, Row>>;
 const POSTS = "posts";
 const NOTES = "notes";
 const PAGES = "pages";
+const CARDS = "cards";
 
-/** `posts`는 본문과 글자 필드 둘, `notes`는 본문 없이 같은 필드 둘, `pages`는 본문과 글자 필드 하나를 가진다. */
+/**
+ * `posts`는 본문과 글자 필드 둘, `notes`는 본문 없이 같은 필드 둘, `pages`는 본문과 글자 필드 하나, `cards`는 미디어
+ * 필드 하나를 가진다.
+ */
 const SCHEMA: Schema = {
 	locales: ["ko", "en", "ja"],
 	collections: {
 		[POSTS]: { body: true, fields: { title: { type: "text" }, summary: { type: "text" } } },
 		[NOTES]: { fields: { title: { type: "text" }, summary: { type: "text" } } },
 		[PAGES]: { body: true, fields: { title: { type: "text" } } },
+		[CARDS]: { fields: { cover: { type: "media" } } },
 	},
 };
 
@@ -95,6 +100,21 @@ async function changeData(id: string, seed: DataSeed, locale?: string) {
 /** 컬렉션 테이블에서 글의 `trashed_at`을 설정해 휴지통으로 옮긴다. */
 async function trash(id: string, collection = POSTS) {
 	await tables.updateTable(collection).set({ trashed_at: new Date() }).where("id", "=", id).execute();
+}
+
+/** `media` 테이블에 활성 미디어 하나를 넣고 그 `id`를 돌려준다. */
+async function seedMedia(): Promise<string> {
+	const id = randomUUID();
+	await db
+		.insertInto("media")
+		.values({ id, folder_id: null, key: randomUUID(), filename: "image.png", mime_type: "image/png", size: 1024 })
+		.execute();
+	return id;
+}
+
+/** 미디어의 `trashed_at`을 설정해 휴지통으로 옮긴다. */
+async function trashMedia(id: string) {
+	await db.updateTable("media").set({ trashed_at: new Date() }).where("id", "=", id).execute();
 }
 
 /** `<collection>_data` 테이블에 저장된 그대로의 작업본(`status = 'draft'`) 행 하나. */
@@ -288,6 +308,19 @@ it("TST-READ-12 컬렉션과 언어를 지정하면 둘 다 일치하는 줄만 
 
 	// TST-READ-12.1
 	expect(output.map((row) => [row.id, row.collection, row.locale])).toEqual([[post.id, POSTS, "en"]]);
+});
+
+it("TST-READ-13 확인한 원문 필드가 가리키는 대상이 휴지통에 들어가도 확인 완료 상태가 유지된다", async () => {
+	const media = await seedMedia();
+	const entry = await createEntry({ fields: { cover: media } }, CARDS);
+	await addLocale(entry.id, "en");
+	await montiOf().translationStatus.update({ id: entry.id, locale: "en", fields: { cover: true } });
+	await trashMedia(media);
+
+	const output = await montiOf().translationStatus.get({ id: entry.id, locale: "en" });
+
+	// TST-READ-13.1
+	expect(output.fields.cover).toEqual({ status: "seen", seen_value: media });
 });
 
 // ---- 갱신 (update) ----

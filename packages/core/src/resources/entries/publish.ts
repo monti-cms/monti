@@ -2,11 +2,10 @@ import { z } from "zod";
 import { MontiError } from "../../engine/errors";
 import type { FieldSchema, WriteContext } from "../../engine/types";
 import { timestampInput, uuidInput } from "../_shared/input";
-import { bodyReferences, rejectInactive } from "./active";
+import { referencesOf, rejectInactive } from "./active";
 import { collectionOf } from "./collection";
 import { saveCopy } from "./copies";
-import { decodeData, everyTarget } from "./decode";
-import { copyQuery, findEntry, storedOf } from "./read";
+import { findEntry } from "./read";
 import type { ConditionalValue } from "./slots";
 import { tablesOf } from "./tables";
 import type { Entry } from "./types";
@@ -38,14 +37,15 @@ function emptyRequired(fields: Record<string, FieldSchema>, values: Record<strin
 }
 
 /**
- * 슬러그나 필수 필드가 비어 있거나 본문이 살아 있지 않은 미디어를 참조하면 거절한다. 휴지통에 있는 필드의 참조 대상은
- * 읽을 때 이미 빈칸이 되었다.
+ * 슬러그나 필수 필드가 비어 있거나, 필드(필수 여부와 관계없이)나 본문이 없는 대상이나 휴지통에 있는 대상을 참조하면
+ * 거절한다. 작업본은 휴지통에 있는 참조도 거르지 않고 읽으므로 여기서 모두 검사한다.
  */
 async function rejectUnfilled(ctx: WriteContext, entry: Entry): Promise<void> {
 	if (entry.slug === null) throw new MontiError("BAD_REQUEST", "슬러그가 비어 있어 발행할 수 없다");
-	const empty = emptyRequired(collectionOf(ctx, entry.collection).fields, entry.fields);
+	const collection = collectionOf(ctx, entry.collection);
+	const empty = emptyRequired(collection.fields, entry.fields);
 	if (empty.length > 0) throw new MontiError("BAD_REQUEST", `필수 필드가 비어 있다: ${empty.join(", ")}`);
-	await rejectInactive(ctx, bodyReferences(entry.body));
+	await rejectInactive(ctx, referencesOf(collection, entry));
 }
 
 /**
@@ -55,14 +55,11 @@ async function rejectUnfilled(ctx: WriteContext, entry: Entry): Promise<void> {
 export async function publishEntry(input: z.infer<typeof publishInput>, ctx: WriteContext): Promise<Entry> {
 	const entry = await findEntry(ctx, { id: input.id, locale: input.locale }, "draft");
 	const { id, locale, collection: name, slug } = entry;
-	const collection = collectionOf(ctx, name);
 	await rejectUnfilled(ctx, entry);
 	await rejectTakenSlug(ctx, name, { id, locale, slug }, "published");
-	const rows = await copyQuery(ctx, name, "draft").where("e.id", "=", id).where("d.locale", "=", locale).execute();
-	const rawData = decodeData(collection, (await storedOf(ctx, name, rows))[0], everyTarget);
 	const published_at = input.published_at ?? entry.published_at ?? new Date();
 	const key = { entry_id: id, locale, status: "published" as const };
-	await saveCopy(ctx, name, collection, key, { slug, data: rawData, published_at });
+	await saveCopy(ctx, name, collectionOf(ctx, name), key, { slug, data: entry, published_at });
 	return findEntry(ctx, { id, locale }, "published");
 }
 

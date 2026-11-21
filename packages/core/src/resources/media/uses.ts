@@ -1,8 +1,8 @@
 import type { MediaUsesTable } from "../../db/types";
-import { MontiError } from "../../engine/errors";
 import type { CollectionSchema, WriteContext } from "../../engine/types";
 import type { Doc } from "../../rich-text/types";
 import { mediaIdsOf } from "../_shared/doc";
+import { bodyReferences, rejectInactive } from "../entries/active";
 import { decodeData, everyTarget } from "../entries/decode";
 import { copyQuery, storedOf } from "../entries/read";
 import { valuesOf } from "../entries/slots";
@@ -19,19 +19,6 @@ type UsesByPath = Map<string, Set<string>>;
 /** 사용처가 참조하는 모든 미디어 `id`. 한 번씩. */
 function idsOf(uses: UsesByPath): string[] {
 	return [...new Set([...uses.values()].flatMap((pathIds) => [...pathIds]))];
-}
-
-/** `media`에 없거나 휴지통에 있는 미디어를 참조하면 거절한다. */
-async function rejectInactive(ctx: WriteContext, ids: readonly string[]): Promise<void> {
-	// `in ()`는 SQL이 아니다: 미디어가 없으면 검사할 것도 없다.
-	if (ids.length === 0) return;
-	const active = await ctx.db
-		.selectFrom("media")
-		.select("id")
-		.where("id", "in", ids)
-		.where("trashed_at", "is", null)
-		.execute();
-	if (active.length !== ids.length) throw new MontiError("BAD_REQUEST", "활성 상태가 아닌 미디어를 참조한다");
 }
 
 /** 사용처의 `media_uses` 행을 지운다. */
@@ -53,16 +40,19 @@ async function writeUses(ctx: WriteContext, source: UseSource, uses: UsesByPath)
 	if (rows.length > 0) await ctx.db.insertInto("media_uses").values(rows).execute();
 }
 
-/** 사용처의 `media_uses` 행을 `doc`이 `field_path`에서 참조하는 미디어로 바꾼다. 활성이 아닌 미디어는 거절한다. */
+/**
+ * 사용처의 `media_uses` 행을 `doc`이 `field_path`에서 참조하는 미디어로 바꾼다. 없는 미디어와 휴지통에 있는 미디어는
+ * 거절하되, `kept`(고치기 전의 본문)에 이미 있던 미디어는 휴지통에 있어도 받는다.
+ */
 export async function replaceMediaUses(
 	ctx: WriteContext,
 	source: UseSource,
 	field_path: string,
 	doc: Doc,
+	kept?: Doc,
 ): Promise<void> {
-	const uses: UsesByPath = new Map([[field_path, mediaIdsOf(doc.blocks)]]);
-	await rejectInactive(ctx, idsOf(uses));
-	await writeUses(ctx, source, uses);
+	await rejectInactive(ctx, bodyReferences(field_path, doc), bodyReferences(field_path, kept));
+	await writeUses(ctx, source, new Map([[field_path, mediaIdsOf(doc.blocks)]]));
 }
 
 /** `ids`를 `uses`의 `field_path` 칸에 소문자로 더한다. */

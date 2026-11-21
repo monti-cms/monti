@@ -1,6 +1,6 @@
 import { MontiError } from "../../engine/errors";
 import type { CollectionSchema, ReadContext } from "../../engine/types";
-import { activeIds, isIn, type References, referencesIn } from "./active";
+import { foundOf, isIn, type References, referencesIn } from "./active";
 import { collectionOf } from "./collection";
 import { decodeData, everyTarget, type Stored } from "./decode";
 import { type Row, tablesOf } from "./tables";
@@ -45,12 +45,18 @@ export async function storedOf(ctx: ReadContext, name: string, rows: Row[]): Pro
 	}));
 }
 
-/** 저장된 행들의 필드 값과 본문. 휴지통에 있는 참조 대상은 빈칸으로 거른다. */
+/**
+ * 저장된 행들의 필드 값과 본문. 발행본은 휴지통에 있는 참조 대상을 필드에서 빈칸으로 거르고, 작업본은 편집기가 그 참조를
+ * 보고 그대로 둘 수 있도록 저장된 참조를 거르지 않는다.
+ */
 async function dataOf(ctx: ReadContext, collection: CollectionSchema, stored: Stored[]): Promise<EntryData[]> {
+	const published = (one: Stored) => one.row.status === "published";
 	const refs: References = new Map();
-	for (const one of stored) referencesIn(collection, decodeData(collection, one, everyTarget).fields, refs);
-	const isActive = isIn(await activeIds(ctx, refs));
-	return stored.map((one) => decodeData(collection, one, isActive));
+	for (const one of stored.filter(published)) {
+		referencesIn(collection, decodeData(collection, one, everyTarget).fields, refs);
+	}
+	const isActive = isIn(await foundOf(ctx, refs));
+	return stored.map((one) => decodeData(collection, one, published(one) ? isActive : everyTarget));
 }
 
 /** `copyQuery`가 읽은 행들을 돌려줄 글 모양으로 바꾼다. */

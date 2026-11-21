@@ -354,6 +354,15 @@ it("MED-UPD-4 rolls the bulk move back with NOT_FOUND when one of the ids is tra
 	expect((await mediaRow(active.id)).folder_id).toBeNull();
 });
 
+it("MED-UPD-5 단건 수정에서 파일 이름을 빈 문자열로 바꿀 수 없다", async () => {
+	const row = await seedMedia({ filename: "image.png" });
+
+	// MED-UPD-5.1
+	await expect(montiOf().media.update({ id: row.id, filename: "" })).rejects.toMatchObject({ code: "BAD_REQUEST" });
+	// MED-UPD-5.2
+	expect((await mediaRow(row.id)).filename).toBe("image.png");
+});
+
 it("MED-CRT-2 registers the media with the given __preset_id", async () => {
 	const id = randomUUID();
 	const key = randomUUID();

@@ -70,15 +70,20 @@ async function getTemplate(input: z.infer<typeof idInput>, ctx: ReadContext): Pr
 	return row;
 }
 
-const updateInput = z.object({ id: uuidInput, name: z.string().optional(), content: z.unknown().optional() });
+/** 고칠 때는 이름을 비울 수 없다. */
+const updateInput = z.object({ id: uuidInput, name: z.string().min(1).optional(), content: z.unknown().optional() });
 
-/** Renames a template or replaces its body; a new body replaces its `media_uses`, an omitted one keeps them. */
+/**
+ * 템플릿의 이름을 바꾸거나 본문을 교체한다. 새 본문은 `media_uses`를 갈아 끼우고, 기존 본문에 이미 있던 미디어는
+ * 휴지통에 있어도 그대로 둘 수 있다. 본문을 생략하면 `media_uses`를 그대로 둔다.
+ */
 async function updateTemplate(input: z.infer<typeof updateInput>, ctx: WriteContext): Promise<Template> {
 	const existing = await getTemplate(input, ctx);
 	const doc = input.content === undefined ? undefined : docOf(input.content, ctx);
 	const name = input.name ?? existing.name;
 	await rejectTaken(ctx, { ...existing, name });
-	if (doc !== undefined) await replaceMediaUses(ctx, { source_kind: "template", source_id: input.id }, "content", doc);
+	const source = { source_kind: "template" as const, source_id: input.id };
+	if (doc !== undefined) await replaceMediaUses(ctx, source, "content", doc, existing.content);
 	return ctx.db
 		.updateTable("templates")
 		.set({ name, content: doc === undefined ? undefined : JSON.stringify(doc) })

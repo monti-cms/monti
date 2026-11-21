@@ -10,7 +10,7 @@ export interface Stored {
 	rels: Row[];
 }
 
-/** 참조 대상 `id`가 `table`에서 살아 있는지. 휴지통 대상은 조회 결과에서 빈칸이 된다. */
+/** 참조 대상 `id`가 `table`에서 살아 있는지. 휴지통 대상은 발행본 조회 결과에서 빈칸이 된다. */
 export type IsActive = (table: string, id: string) => boolean;
 
 /** 거르지 않고 모든 참조를 살려 두는 판정. */

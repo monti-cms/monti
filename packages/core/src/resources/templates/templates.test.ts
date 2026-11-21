@@ -88,6 +88,11 @@ async function seedMedia(trashed = false): Promise<string> {
 	return id;
 }
 
+/** 미디어의 `trashed_at`을 설정해 휴지통으로 옮긴다. */
+async function trashMedia(id: string): Promise<void> {
+	await db.updateTable("media").set({ trashed_at: new Date() }).where("id", "=", id).execute();
+}
+
 interface TemplateSeed {
 	collection?: string;
 	name?: string;
@@ -385,7 +390,7 @@ it("TPL-UPD-4 rejects templates.update with BAD_REQUEST carrying every problem o
 	expect((await templateRow(template.id)).content).toEqual(template.content);
 });
 
-it("TPL-UPD-5 본문이 존재하지 않거나 휴지통에 있는 미디어를 참조하면 템플릿을 수정할 수 없다", async () => {
+it("TPL-UPD-5 본문에 존재하지 않거나 기존에 없던 휴지통 미디어를 새로 넣어 템플릿을 수정할 수 없다", async () => {
 	const { template, use } = await seedTemplateUsing("Review");
 	const trashed = await seedMedia(true);
 
@@ -415,6 +420,44 @@ it("TPL-UPD-6 rejects templates.update with NOT_FOUND for an id no template has"
 	await expect(montiOf().templates.update({ id: randomUUID(), name: "Renamed" })).rejects.toMatchObject({
 		code: "NOT_FOUND",
 	});
+});
+
+it("TPL-UPD-7 이미 템플릿 본문에 들어 있던 미디어가 휴지통에 들어가도 그 미디어를 그대로 유지한 채 다른 문단을 수정할 수 있다", async () => {
+	const media = await seedMedia();
+	/** 문단 하나와 그 미디어를 참조하는 이미지 블록 하나로 된 본문. */
+	const contentWith = (text: string) => ({
+		blocks: [
+			{ id: "p1", type: "paragraph", content: [{ type: "text", text }] },
+			{ id: "i1", type: "image", attrs: { mediaId: media } },
+		],
+	});
+	const template = await seedTemplate({ content: contentWith("Hello") });
+	const use = await seedUse({
+		media_id: media,
+		source_kind: "template",
+		source_id: template.id,
+		field_path: "content",
+	});
+	await trashMedia(media);
+	const content = contentWith("Bye");
+
+	const output = await montiOf().templates.update({ id: template.id, content });
+
+	// TPL-UPD-7.1
+	expect(output.content).toEqual(content);
+	// TPL-UPD-7.2
+	expect(await useRows("template", template.id)).toEqual([use]);
+});
+
+it("TPL-UPD-8 템플릿의 이름을 빈 문자열로 바꿀 수 없다", async () => {
+	const template = await seedTemplate({ name: "Review" });
+
+	// TPL-UPD-8.1
+	await expect(montiOf().templates.update({ id: template.id, name: "" })).rejects.toMatchObject({
+		code: "BAD_REQUEST",
+	});
+	// TPL-UPD-8.2
+	expect((await templateRow(template.id)).name).toBe("Review");
 });
 
 it("TPL-DEL-1 deletes the template and only its media_uses", async () => {

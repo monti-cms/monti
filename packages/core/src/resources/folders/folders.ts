@@ -87,9 +87,10 @@ async function rejectTaken(ctx: WriteContext, folder: Folder): Promise<void> {
 	if (taken !== undefined) throw new MontiError("CONFLICT", "An active folder here already has this name");
 }
 
+/** 고칠 때는 이름을 비울 수 없다. */
 const updateInput = z.object({
 	id: uuidInput,
-	name: z.string().optional(),
+	name: z.string().min(1).optional(),
 	parent_id: uuidInput.nullable().optional(),
 });
 

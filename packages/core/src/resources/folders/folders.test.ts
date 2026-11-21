@@ -239,7 +239,7 @@ it("FLD-CRT-6 rejects folders.create with CONFLICT for an active folder of the s
 	expect((await folderRows()).map((row) => row.id)).toEqual([existing]);
 });
 
-it("FLD-UPD-8 rejects folders.update with CONFLICT when the move meets an active folder of the same name", async () => {
+it("FLD-UPD-8 옮긴 위치에 같은 이름의 활성 폴더가 이미 있으면 수정할 수 없다", async () => {
 	const root = await seedFolder({ name: "Root" });
 	const child = await seedFolder({ name: "Drafts", parent_id: root });
 	await seedFolder({ name: "Drafts" });
@@ -250,4 +250,13 @@ it("FLD-UPD-8 rejects folders.update with CONFLICT when the move meets an active
 	});
 	// FLD-UPD-8.2
 	expect((await folderRow(child)).parent_id).toBe(root);
+});
+
+it("FLD-UPD-9 폴더의 이름을 빈 문자열로 바꿀 수 없다", async () => {
+	const folder = await seedFolder({ name: "Drafts" });
+
+	// FLD-UPD-9.1
+	await expect(montiOf().folders.update({ id: folder, name: "" })).rejects.toMatchObject({ code: "BAD_REQUEST" });
+	// FLD-UPD-9.2
+	expect((await folderRow(folder)).name).toBe("Drafts");
 });

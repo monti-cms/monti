@@ -2,7 +2,7 @@ import { MontiError } from "../../engine/errors";
 import type { CollectionSchema, ReadContext, WriteContext } from "../../engine/types";
 import { docOf } from "../_shared/doc";
 import { isActiveFolder } from "../folders/folders";
-import { bodyReferences, referencesIn, rejectInactive } from "./active";
+import { referencesOf, rejectInactive } from "./active";
 import { fieldsSchema } from "./fields";
 import { tablesOf } from "./tables";
 import type { EntryData, Status } from "./types";
@@ -51,14 +51,22 @@ function checkBody(ctx: ReadContext, collection: CollectionSchema, body: unknown
 }
 
 /**
- * 저장할 `{ fields, body? }`. 스키마에 없는 키, 필드 타입·제약에 어긋난 값, 살아 있지 않은 미디어나 관계 대상을
- * 가리키는 필드, 쓰지 않는 본문, 형식이 틀린 본문, 살아 있지 않은 미디어를 참조하는 본문을 거절한다.
+ * 저장할 `{ fields, body? }`. 스키마에 없는 키, 필드 타입·제약에 어긋난 값, 쓰지 않는 본문, 형식이 틀린 본문, 없는
+ * 대상이나 휴지통에 있는 대상을 참조하는 필드·본문을 거절한다. `existing`(고치는 작업본)의 같은 경로에 이미 있던 참조는
+ * 대상이 휴지통에 있어도 그대로 둘 수 있다.
  */
-export async function checkData(ctx: WriteContext, collection: CollectionSchema, data: DataInput): Promise<EntryData> {
+export async function checkData(
+	ctx: WriteContext,
+	collection: CollectionSchema,
+	data: DataInput,
+	existing?: EntryData,
+): Promise<EntryData> {
 	const parsed = fieldsSchema(collection.fields).safeParse(data.fields ?? {});
 	if (!parsed.success) throw new MontiError("BAD_REQUEST", "필드가 컬렉션과 맞지 않는다", parsed.error.issues);
 	const fields = parsed.data as Record<string, unknown>;
 	const body = checkBody(ctx, collection, data.body);
-	await rejectInactive(ctx, bodyReferences(body, referencesIn(collection, fields)));
-	return body === undefined ? { fields } : { fields, body };
+	const checked = body === undefined ? { fields } : { fields, body };
+	const kept = existing === undefined ? undefined : referencesOf(collection, existing);
+	await rejectInactive(ctx, referencesOf(collection, checked), kept);
+	return checked;
 }

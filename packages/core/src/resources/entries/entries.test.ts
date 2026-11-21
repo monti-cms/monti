@@ -843,7 +843,26 @@ it("ENT-READ-13 언어를 생략해 목록을 조회하면 번역 언어가 있�
 	);
 });
 
-it("ENT-READ-14 참조된 글이나 미디어가 휴지통에 들어가 있으면 조회 응답에서는 빈칸으로 걸러 돌려준다", async () => {
+it("ENT-READ-14 발행본 조회에서는 휴지통에 들어간 미디어나 글을 가리키는 참조가 빠진다", async () => {
+	const media = await seedMedia();
+	const first = await seedEntry({ collection: TOPICS });
+	const second = await seedEntry({ collection: TOPICS });
+	const references = {
+		columns: { cover: media },
+		rels: [{ path: "related", column: "topics_id", ids: [first.id, second.id] }],
+	};
+	const entry = await seedEntry(references);
+	await seedCopy(POSTS, entry.id, "ko", "published", references);
+	await trashMedia(media);
+	await trashEntry(TOPICS, first.id);
+
+	const output = await montiOf().entries.get({ id: entry.id });
+
+	// ENT-READ-14.1
+	expect(output.fields).toStrictEqual({ related: [second.id] });
+});
+
+it("ENT-READ-15 초안 조회에서는 휴지통에 들어간 미디어나 글을 가리키는 참조도 그대로 보인다", async () => {
 	const media = await seedMedia();
 	const first = await seedEntry({ collection: TOPICS });
 	const second = await seedEntry({ collection: TOPICS });
@@ -856,13 +875,13 @@ it("ENT-READ-14 참조된 글이나 미디어가 휴지통에 들어가 있으�
 
 	const output = await montiOf().entries.get({ id: entry.id, status: "draft" });
 
-	// ENT-READ-14.1
-	expect(output.fields).toEqual({ related: [second.id] });
+	// ENT-READ-15.1
+	expect(output.fields).toEqual({ cover: media, related: [first.id, second.id] });
 });
 
 // ---- 3. 수정 ----
 
-it("ENT-UPD-1 단건 수정에서 데이터 없이 슬러그와 폴더만 주면 지정한 항목만 바꾸고 데이터·미디어 사용처·발행본은 유지한다", async () => {
+it("ENT-UPD-1 단건 수정에서 필드·본문 없이 슬러그와 폴더만 주면 지정한 항목만 바꾸고 필드·본문·미디어 사용처·발행본은 유지한다", async () => {
 	const media = await seedMedia();
 	const folder = await seedFolder();
 	const { entry, use } = await seedEntryUsing(media, { columns: { title: "Draft" } });
@@ -892,7 +911,7 @@ it("ENT-UPD-1 단건 수정에서 데이터 없이 슬러그와 폴더만 주면
 	});
 });
 
-it("ENT-UPD-2 단건 수정에서 데이터를 바꾸면 작업본 데이터를 통째로 교체하고 해당 글의 미디어 사용처만 갱신한다", async () => {
+it("ENT-UPD-2 단건 수정에서 필드나 본문을 바꾸면 작업본을 교체하고 해당 글의 미디어 사용처만 갱신한다", async () => {
 	const first = await seedMedia();
 	const second = await seedMedia();
 	const folder = await seedFolder();
@@ -931,7 +950,7 @@ it("ENT-UPD-3 단건 수정에서 폴더를 비우면 글을 루트로 이동한
 	expect((await entryRow(POSTS, entry.id)).folder_id).toBeNull();
 });
 
-it("ENT-UPD-4 단건 수정에서 필드나 본문이 존재하지 않거나 휴지통에 있는 미디어를 참조하면 수정을 거절하고 기존 상태를 유지한다", async () => {
+it("ENT-UPD-4 단건 수정에서 존재하지 않거나 기존에 없던 휴지통 미디어를 필드나 본문에 새로 넣으면 수정을 거절하고 기존 상태를 유지한다", async () => {
 	const media = await seedMedia();
 	const trashed = await seedMedia(true);
 	const { entry, use } = await seedEntryUsing(media);
@@ -950,7 +969,7 @@ it("ENT-UPD-4 단건 수정에서 필드나 본문이 존재하지 않거나 휴
 	expect(await useRows("entry", entry.id)).toEqual([use]);
 });
 
-it("ENT-UPD-5 단건 수정에서 휴지통에 있는 글을 관계 필드에 연결하려 하면 거절한다", async () => {
+it("ENT-UPD-5 단건 수정에서 기존에 없던 휴지통 글을 관계 필드에 새로 연결하려 하면 거절한다", async () => {
 	const entry = await seedEntry();
 	const trashed = await seedEntry({ collection: TOPICS, trashed: true });
 	const before = await dataRow(POSTS, entry.id, "ko", "draft");
@@ -1081,6 +1100,50 @@ it("ENT-UPD-13 글에 없는 언어를 지정하면 수정할 수 없다", async
 	});
 	// ENT-UPD-13.2
 	expect(await dataRow(POSTS, entry.id, "ko", "draft")).toEqual(before);
+});
+
+it("ENT-UPD-14 작업본에 이미 있던 참조는 대상이 휴지통에 들어가도 그대로 둔 채 다른 항목을 고쳐 저장할 수 있다", async () => {
+	const media = await seedMedia();
+	const topic = await seedEntry({ collection: TOPICS });
+	/** 문단 하나와 그 미디어를 참조하는 이미지 블록 하나로 된 본문. */
+	const bodyWith = (text: string) => ({
+		blocks: [
+			{ id: "p1", type: "paragraph", content: [{ type: "text", text }] },
+			{ id: "i1", type: "image", attrs: { mediaId: media } },
+		],
+	});
+	const entry = await seedEntry({
+		columns: { title: "Old", cover: media, body: JSON.stringify(bodyWith("Old")) },
+		rels: [{ path: "related", column: "topics_id", ids: [topic.id] }],
+	});
+	const uses = [
+		await seedUse({ media_id: media, source_kind: "entry", source_id: entry.id, field_path: "body" }),
+		await seedUse(coverUse(entry.id, media)),
+	];
+	await trashMedia(media);
+	await trashEntry(TOPICS, topic.id);
+	const fields = { title: "New", cover: media, related: [topic.id] };
+
+	const output = (await montiOf().entries.update({ id: entry.id, fields, body: bodyWith("New") })) as Entry;
+
+	// ENT-UPD-14.1
+	expect({ fields: output.fields, body: output.body }).toEqual({ fields, body: bodyWith("New") });
+	// ENT-UPD-14.2
+	expect(await useRows("entry", entry.id)).toEqual(uses);
+	// ENT-UPD-14.3
+	expect({
+		cover: (await dataRow(POSTS, entry.id, "ko", "draft"))?.cover,
+		related: (await relsRows(POSTS, entry.id, "topics_id")).map((rel) => rel.id),
+	}).toEqual({ cover: media, related: [topic.id] });
+});
+
+it("ENT-UPD-15 단건 수정에서 슬러그를 빈 문자열로 바꿀 수 없다", async () => {
+	const entry = await seedEntry({ slug: "hello" });
+
+	// ENT-UPD-15.1
+	await expect(montiOf().entries.update({ id: entry.id, slug: "" })).rejects.toMatchObject({ code: "BAD_REQUEST" });
+	// ENT-UPD-15.2
+	expect((await dataRow(POSTS, entry.id, "ko", "draft"))?.slug).toBe("hello");
 });
 
 // ---- 4. 발행 ----
@@ -1217,43 +1280,30 @@ it("ENT-PUB-10 글에 없는 언어를 지정하면 발행할 수 없다", async
 	expect((await dataRows(NOTES, entry.id)).filter((row) => row.status === "published")).toEqual([]);
 });
 
-it("ENT-PUB-11 필수 참조 필드나 본문이 가리키던 대상이 휴지통에 들어가 있으면 발행할 수 없다", async () => {
+it("ENT-PUB-11 참조 필드나 본문이 가리키던 대상이 휴지통에 들어가 있으면 필수 여부와 관계없이 발행할 수 없다", async () => {
 	const topic = await seedEntry({ collection: TOPICS });
-	const card = await seedEntry({ collection: CARDS, slug: "card", columns: { topic: topic.id } });
-	const media = await seedMedia();
-	const post = await seedEntry({ slug: "post", columns: { title: "제목", body: JSON.stringify(imageDoc(media)) } });
-	await trashEntry(TOPICS, topic.id);
-	await trashMedia(media);
+	const lostTopic = await seedEntry({ collection: TOPICS });
+	const cover = await seedMedia();
+	const image = await seedMedia();
+	const optional = await seedEntry({ collection: CARDS, slug: "optional", columns: { topic: topic.id, cover } });
+	const required = await seedEntry({ collection: CARDS, slug: "required", columns: { topic: lostTopic.id } });
+	const post = await seedEntry({ slug: "post", columns: { title: "제목", body: JSON.stringify(imageDoc(image)) } });
+	await trashMedia(cover);
+	await trashEntry(TOPICS, lostTopic.id);
+	await trashMedia(image);
 
 	const codes = [
-		await codeOf(montiOf().entries.publish({ id: card.id })),
+		await codeOf(montiOf().entries.publish({ id: optional.id })),
+		await codeOf(montiOf().entries.publish({ id: required.id })),
 		await codeOf(montiOf().entries.publish({ id: post.id })),
 	];
 
 	// ENT-PUB-11.1
-	expect(codes).toEqual(["BAD_REQUEST", "BAD_REQUEST"]);
+	expect(codes).toEqual(["BAD_REQUEST", "BAD_REQUEST", "BAD_REQUEST"]);
 	// ENT-PUB-11.2
-	expect([await dataRow(CARDS, card.id, "ko", "published"), await dataRow(POSTS, post.id, "ko", "published")]).toEqual([
-		undefined,
-		undefined,
-	]);
-});
-
-it("ENT-PUB-12 선택 참조 필드가 가리키던 대상이 휴지통에 들어가 있으면 빈칸으로 취급되어 정상 발행된다", async () => {
-	const topic = await seedEntry({ collection: TOPICS });
-	const media = await seedMedia();
-	const entry = await seedEntry({ collection: CARDS, slug: "card", columns: { topic: topic.id, cover: media } });
-	await trashMedia(media);
-
-	const output = await montiOf().entries.publish({ id: entry.id });
-
-	// ENT-PUB-12.1
-	expect({ fields: output.fields, published: output.published_at instanceof Date }).toEqual({
-		fields: { topic: topic.id },
-		published: true,
-	});
-	// ENT-PUB-12.2
-	expect(await dataRow(CARDS, entry.id, "ko", "published")).toMatchObject({ slug: "card", topic: topic.id });
+	expect([...(await dataRows(CARDS)), ...(await dataRows(POSTS))].filter((row) => row.status === "published")).toEqual(
+		[],
+	);
 });
 
 // ---- 5. 발행 취소 ----
@@ -1427,6 +1477,29 @@ it("ENT-DUP-6 휴지통에 있는 글은 복제할 수 없다", async () => {
 	expect(rowIds(await entryRows(POSTS))).toEqual([entry.id]);
 });
 
+it("ENT-DUP-7 원문 작업본의 필드나 본문이 휴지통에 있는 대상을 참조하고 있으면 복제할 수 없다", async () => {
+	const cover = await seedMedia();
+	const topic = await seedEntry({ collection: TOPICS });
+	const image = await seedMedia();
+	const withMedia = await seedEntry({ columns: { cover } });
+	const withRelation = await seedEntry({ columns: { topic: topic.id } });
+	const withBody = await seedEntry({ columns: { body: JSON.stringify(imageDoc(image)) } });
+	await trashMedia(cover);
+	await trashEntry(TOPICS, topic.id);
+	await trashMedia(image);
+
+	const codes = [
+		await codeOf(montiOf().entries.duplicate({ id: withMedia.id })),
+		await codeOf(montiOf().entries.duplicate({ id: withRelation.id })),
+		await codeOf(montiOf().entries.duplicate({ id: withBody.id })),
+	];
+
+	// ENT-DUP-7.1
+	expect(codes).toEqual(["BAD_REQUEST", "BAD_REQUEST", "BAD_REQUEST"]);
+	// ENT-DUP-7.2
+	expect(rowIds(await entryRows(POSTS))).toEqual(sortedIds([withMedia.id, withRelation.id, withBody.id]));
+});
+
 // ---- 7. 참조 교체 ----
 
 /** 같은 `topics` 컬렉션의 옛 글과 새 글. */
@@ -1593,7 +1666,7 @@ it("ENT-LOC-1 활성 글에 비원문 언어를 추가할 때 슬러그를 생�
 	expect(await dataRow(NOTES, entry.id, "en", "published")).toBeUndefined();
 });
 
-it("ENT-LOC-2 데이터를 담아 언어를 추가하면 글 전체 언어 기준으로 미디어 사용처를 갱신한다", async () => {
+it("ENT-LOC-2 필드나 본문을 담아 언어를 추가하면 글 전체 언어 기준으로 미디어 사용처를 갱신한다", async () => {
 	const first = await seedMedia();
 	const second = await seedMedia();
 	const { entry } = await seedEntryUsing(first);
@@ -1657,7 +1730,7 @@ it("ENT-LOC-6 슬러그 형식이 맞지 않으면 언어를 추가할 수 없�
 	expect(await dataRow(POSTS, entry.id, "en", "draft")).toBeUndefined();
 });
 
-it("ENT-LOC-7 필드의 타입이나 제약에 어긋난 데이터로는 언어를 추가할 수 없다", async () => {
+it("ENT-LOC-7 필드의 타입이나 제약에 어긋난 값으로는 언어를 추가할 수 없다", async () => {
 	const entry = await seedEntry();
 
 	// ENT-LOC-7.1
@@ -1676,6 +1749,18 @@ it("ENT-LOC-8 휴지통에 있는 글에는 언어를 추가할 수 없다", asy
 		code: "NOT_FOUND",
 	});
 	// ENT-LOC-8.2
+	expect(await dataRow(POSTS, entry.id, "en", "draft")).toBeUndefined();
+});
+
+it("ENT-LOC-9 휴지통에 있는 대상을 참조해 언어를 추가할 수 없다", async () => {
+	const entry = await seedEntry();
+	const trashed = await seedMedia(true);
+
+	// ENT-LOC-9.1
+	await expect(
+		montiOf().entries.addLocale({ id: entry.id, locale: "en", fields: { cover: trashed } }),
+	).rejects.toMatchObject({ code: "BAD_REQUEST" });
+	// ENT-LOC-9.2
 	expect(await dataRow(POSTS, entry.id, "en", "draft")).toBeUndefined();
 });
 
