@@ -3,7 +3,7 @@
 [`docs/refactor/core.md`](../../refactor/core.md) 2절(core가 하는 일), 5절(플러그인과 마이그레이션), 6.2절(스키마 변경과 마이그레이션), 8절(`index.ts`)의 인수 조건이다.
 
 - `monti` 객체는 `startMonti`가 돌려주는 것이다. `monti.entries.get(…)`처럼 Operation을 부르고, `monti.spec()`, `monti.transaction(…)`, `monti.dryRun(…)`을 가진다.
-- `startMonti({ db, schema, config, schemaFile, configFile })`: 스키마를 검사하고, `config.plugins`와 함께 엔진을 조립한 뒤, 코어 마이그레이션 다음에 플러그인 마이그레이션을 실행하고, 개발 서버(`config.dev: true`)이면 스키마의 컬렉션 테이블을 DB에 맞춰 `monti` 객체를 돌려준다. 스키마와 설정은 부르는 쪽이 파일에서 불러 넘긴다.
+- `startMonti({ db, schema, config, secret?, schemaFile, configFile })`: 스키마를 검사하고, `config.plugins`(및 선택 암호화 비밀값 `secret`)와 함께 엔진을 조립한 뒤, 코어 마이그레이션 다음에 플러그인 마이그레이션을 실행하고, 개발 서버(`config.dev: true`)이면 스키마의 컬렉션 테이블을 DB에 맞춰 `monti` 객체를 돌려준다. 스키마와 설정은 부르는 쪽이 파일에서 불러 넘긴다.
 
 ---
 
@@ -42,4 +42,9 @@ START-6  개발 서버로 시작하면 스키마에 정의된 컬렉션 테이�
   전제  비어 있는 DB와 `posts` 컬렉션이 정의된 스키마, `config.dev: true` 설정이 있다
   행동  `startMonti`를 실행한다
   결과  START-6.1  DB에 `posts`와 `posts_data` 테이블이 만들어져 있다
+
+START-7  운영 서버로 시작하면 코어 마이그레이션만 실행하고 컬렉션 테이블은 자동으로 만들지 않는다
+  전제  비어 있는 DB와 `posts` 컬렉션이 정의된 스키마, `config.dev: false` 설정이 있다
+  행동  `startMonti`를 실행한다
+  결과  START-7.1  DB에 `migrations` 테이블은 있고 `posts`와 `posts_data` 테이블은 없다
 ```

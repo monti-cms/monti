@@ -57,11 +57,13 @@ SCH-UPD-6  컬렉션에 필드를 새로 넣으면 열이 추가되고 기존 �
   결과  SCH-UPD-6.1  `posts_data` 테이블에 `new_field` 열이 있다
         SCH-UPD-6.2  `posts_data` 테이블에 `old_field` 열이 없다
 
-SCH-UPD-7  필드의 종류를 바꾸면 데이터 테이블의 열도 새 종류로 바뀌고 호환되지 않는 기존 값은 비워진다
-  전제  `config.dev`가 `true`이고 숫자 종류의 `code` 필드와 참거짓 종류의 `flag` 필드에 값이 저장된 글이 있는 `posts` 컬렉션이 적용되어 있다
-  행동  `code` 필드를 글자(`text`)로, `flag` 필드를 숫자(`number`)로 바꾼 스키마로 `schema.update`를 실행한다
+SCH-UPD-7  필드의 종류를 바꾸면 데이터 테이블의 열도 새 종류로 바뀌고 변환 가능한 값은 유지되며 호환되지 않는 값은 비워진다
+  전제  `config.dev`가 `true`이고 숫자 종류의 `code` 필드, 참거짓 종류의 `flag` 필드, 단건 `select` 종류의 `category` 필드, 글자 종류의 `score`와 `note` 필드(`score`는 숫자 모양 문자열, `note`는 일반 문자열)에 값이 저장된 글이 있는 `posts` 컬렉션이 적용되어 있다
+  행동  `code`를 글자(`text`)로, `flag`를 숫자(`number`)로, `category`를 다건(`many: true`) `select`로, `score`와 `note`를 숫자(`number`)로 바꾼 스키마로 `schema.update`를 실행한다
   결과  SCH-UPD-7.1  `posts_data` 테이블에서 `code` 열의 데이터 타입이 `text`이고 기존 숫자 값이 문자열로 유지된다
         SCH-UPD-7.2  `posts_data` 테이블에서 `flag` 열의 데이터 타입이 `double precision`이고 변환할 수 없는 기존 값은 `null`로 비워진다
+        SCH-UPD-7.3  `posts_data` 테이블에서 `category` 열의 데이터 타입이 `text[]`이고 기존 단건 선택 값이 1개짜리 배열로 유지된다
+        SCH-UPD-7.4  `posts_data` 테이블에서 `score` 열은 숫자로 변환된 값이 저장되고 `note` 열은 `null`로 비워진다
 
 SCH-UPD-8  스키마에서 컬렉션을 지우면 그 컬렉션의 테이블들이 모두 삭제된다
   전제  `config.dev`가 `true`이고 `posts` 컬렉션이 적용되어 `posts`, `posts_data`, `posts_rels` 테이블이 있다

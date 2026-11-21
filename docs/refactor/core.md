@@ -155,7 +155,6 @@ export interface StorageAdapter {
 export interface MontiConfig {
   name: string;
   dev?: boolean;
-  secret?: string;
   storage?: StorageAdapter;
   blocks?: BlockDefinition[];
   marks?: MarkDefinition[];
@@ -168,7 +167,7 @@ export interface MontiConfig {
 - **개발 서버 판정**: `config.dev === true`일 때만 개발 서버다. 코어는 환경 변수를 직접 읽지 않는다.
 - **스키마·설정 수정**: `schema.update`와 `config.update`는 개발 서버에서만 허용되며 운영 서버에서는 `FORBIDDEN`이다. 트랜잭션 안의 사본을 바꾸고 커밋 직후 공유 상태와 코드 파일(`monti.schema.ts`, `monti.config.ts`)에 반영한다. 롤백이나 `dryRun`이면 버린다.
 - **저장소(`storage`)**: 선택 설정이다. `storage`가 없을 때 `media` 리소스를 호출하면 `BAD_REQUEST`로 거절한다.
-- **암호화 비밀값(`secret`)**: `keys` 리소스가 외부 API 키를 암호화할 때 쓴다. 설정에 없으면 키 생성·수정·확인만 거절하고 나머지 코어는 정상 동작한다.
+- **암호화 비밀값(`secret`)**: `MontiConfig`(`ctx.config`)에 두지 않고 `startMonti({ ..., secret })` 시작 옵션으로만 받아 `keys` 리소스 클로저에 격리해 전달한다. `secret`이 없으면 키 생성(`keys.create`), 새 비밀값이 포함된 키 수정(`keys.update`), 저장된 키 ID로 실행하는 연결 확인(`keys.check({ id })`)만 `BAD_REQUEST`로 거절하고 나머지 코어는 정상 동작한다.
 
 ## 5. 플러그인
 
@@ -319,7 +318,7 @@ erDiagram
 
 ### 6.2 스키마 변경과 마이그레이션
 
-- **개발 서버 (`config.dev === true`)**: 엔진 시작 시와 `schema.update` 실행 시 현재 스키마와 DB의 컬렉션 테이블 구조를 비교해 같은 트랜잭션 안에서 테이블·컬럼·외래 키를 즉시 맞춘다(`CREATE` / `ALTER` / `DROP`). 열의 타입을 바꿀 때 단건 `select` → 다건 `select`(`text[]`)는 기존 값을 1개짜리 배열로 감싸고, 호환되지 않거나 변환할 수 없는 값은 `NULL`로 비워 변환한다(이 열 타입 변환 SQL 규칙은 순수 함수로 분리해 마이그레이션 CLI와 공유한다).
+- **개발 서버 (`config.dev === true`)**: 엔진 시작 시와 `schema.update` 실행 시 현재 스키마와 DB의 컬렉션 테이블 구조를 비교해 같은 트랜잭션 안에서 테이블·컬럼·외래 키를 즉시 맞춘다(`CREATE` / `ALTER` / `DROP`). 열의 타입을 바꿀 때 `number`·`boolean`·`date` → `text`는 기존 값을 문자열로 유지하고, `text` → `number`는 숫자 형태의 값만 숫자로 바꾸고 나머지는 `NULL`로 비우며, 단건 `select` → 다건 `select`(`text[]`)는 기존 값을 1개짜리 배열로 감싸고, 호환되지 않거나 변환할 수 없는 값은 `NULL`로 비워 변환한다(이 열 타입 변환 SQL 규칙은 순수 함수로 분리해 마이그레이션 CLI와 공유한다).
 - **운영 서버 (`config.dev !== true`)**: 서버가 임의로 테이블을 추측해 바꾸지 않고 등록된 마이그레이션 단계만 순서대로 실행한다. 배포 전 마이그레이션 파일 생성은 CLI가 맡는다.
 
 ### 6.3 초안(`draft`)과 발행본(`published`), `slug`와 필수값(`required`)
@@ -333,7 +332,7 @@ erDiagram
 ### 6.4 참조, 휴지통, 영구 삭제
 
 - **휴지통 이동 (`trash.move`)**: 글·미디어·폴더는 `trashed_at`에 시각을 기록해 휴지통으로 보낸다. 폴더를 휴지통에 보내면 그 안의 활성 하위 폴더·글·미디어가 같은 `trashed_at`을 받고, 휴지통 목록에서는 그 폴더 한 줄로 묶어 보여 준다.
-- **휴지통 항목을 가리키는 참조**: 참조된 글이나 미디어가 휴지통에 들어가도 나중에 복원할 수 있도록 DB의 참조 값은 그대로 남겨 둔다. 대신 **`core`가 글을 조회(`entries.get`·`list`)하거나 발행 필수값(`required`)을 검사할 때는 휴지통에 있는 참조 대상을 빈칸(`null`, 다중 참조는 목록에서 제외)으로 취급**한다. 이미 휴지통에 있는 항목은 새로 참조에 넣을 수 없다.
+- **휴지통 항목을 가리키는 참조**: 참조된 글이나 미디어가 휴지통에 들어가도 나중에 복원할 수 있도록 DB의 참조 값은 그대로 남겨 둔다. 대신 **`core`가 글을 조회(`entries.get`·`list`)하거나 발행 필수값(`required`)을 검사할 때는 휴지통에 있는 참조 대상을 빈칸(`null`, 다중 참조는 목록에서 제외)으로 취급**한다. 글을 저장(`create`·`update`·`addLocale`)하거나 발행(`publish`)할 때 필드나 본문(`body`)이 없거나 휴지통에 있는 대상(미디어·글)을 참조하면 `BAD_REQUEST`로 거절한다.
 - **휴지통 복원 (`trash.restore`)**:
   - 글을 되살리면 모든 언어의 발행본(`status = 'published'`)을 지워 초안 상태로 되살린다.
   - 원래 상위 폴더가 휴지통에 있으면 같은 이름의 활성 폴더를 원래 위치에 새로 만들어(이미 있으면 그 폴더를 써서) 그 안에 되살린다.
@@ -343,7 +342,7 @@ erDiagram
 ### 6.5 번역 상태와 미디어 사용처 색인
 
 - **번역 상태 (`translation_seen`)**: 번역 언어 초안(`status = 'draft'`)의 `translation_seen` 컬럼에 번역자가 확인한 원문 값과 본문 블록 연결·번역 제외 여부를 기록한다. 읽을 때 현재 원문 값과 비교해 `unseen`(미확인)·`seen`(최신)·`outdated`(원문 변경됨)를 계산해 돌려준다.
-- **미디어 사용처 (`media_uses`)**: 글이나 템플릿을 저장할 때 같은 트랜잭션 안에서 미디어 필드와 본문(`body`)의 미디어 참조를 모아 갱신한다. 글의 사용처는 모든 언어 초안의 참조 합집합을 `source_id = <collection>.id`로 기록하며, `media.get`이 해당 미디어의 `uses`(`{ source_kind, source_id, field_path }[]`)를 함께 돌려준다.
+- **미디어 사용처 (`media_uses`)**: 글이나 템플릿을 저장할 때 같은 트랜잭션 안에서 미디어 필드와 본문(`body`)의 미디어 참조를 모아 갱신한다. 글의 사용처는 모든 언어 초안의 참조 합집합을 `source_id = <collection>.id`로 기록하되, 경로(`field_path`)는 최상위 미디어 필드가 `"<field>"`, 조건부 하위 미디어 필드가 `"<field>.<option>.<subfield>"`, 글 본문이 `"body"`, 템플릿 본문이 `"content"`이며, `media.get`이 해당 미디어의 `uses`(`{ source_kind, source_id, field_path }[]`)를 함께 돌려준다.
 
 ## 7. 리소스
 
@@ -371,17 +370,17 @@ erDiagram
 packages/core/src/
 ├── index.ts                    [함수] 엔진·리소스·플러그인 조립, 공개 export
 │
-├── db/                         층 0: 아무것도 import하지 않는다
+├── rich-text/                  층 0: 아무것도 import하지 않는다
+│   ├── types.ts                [타입] Doc, Block, BlockDefinition, MarkDefinition
+│   └── validate-doc.ts         [함수] 본문 검사(오류를 던지지 않고 문제 목록 반환)
+│
+├── db/                         층 1: rich-text만 import할 수 있다
 │   ├── types.ts                [타입] Database, 고정 테이블 8개의 행 타입, Migration
 │   ├── migrate.ts              [함수] migrations 테이블로 마이그레이션 단계를 순서대로 실행
 │   └── migrations/
 │       └── 0001-initial.ts     [함수] 고정 도메인 테이블 첫 마이그레이션
 │
-├── rich-text/                  층 0: 아무것도 import하지 않는다
-│   ├── types.ts                [타입] Doc, Block, BlockDefinition, MarkDefinition
-│   └── validate-doc.ts         [함수] 본문 검사(오류를 던지지 않고 문제 목록 반환)
-│
-├── engine/                     층 1: db, rich-text만 import한다
+├── engine/                     층 2: db, rich-text만 import한다
 │   ├── types.ts                [타입] 컨텍스트, Operation, Plugin, MontiConfig, Schema, StorageAdapter 등
 │   ├── errors.ts               [함수] MontiError
 │   ├── operation.ts            [함수] defineRead, defineWrite
@@ -393,7 +392,7 @@ packages/core/src/
 │   ├── plugins.ts              [함수] 플러그인 Operation·마이그레이션·키 서비스 수집
 │   └── spec.ts                 [함수] Operation 명세 생성
 │
-├── resources/                  층 2: db, rich-text, engine, 다른 리소스(순환 금지)
+├── resources/                  층 3: db, rich-text, engine, 다른 리소스(순환 금지)
 │   ├── _shared/                공통 입력·본문 오류 변환 도우미
 │   ├── entries/  translation-status/  templates/  folders/  trash/
 │   ├── media/                  uses.ts(본문·필드 미디어 사용처 갱신) 포함
@@ -404,7 +403,7 @@ packages/core/src/
 ```
 
 **코드 규칙**
-1. **단방향 층 구조**: `db/`·`rich-text/` → `engine/` → `resources/` → `index.ts`.
+1. **단방향 층 구조**: `rich-text/` → `db/` → `engine/` → `resources/` → `index.ts`.
 2. **타입 분리**: `db/`·`rich-text/`·`engine/`에는 타입만 담긴 `types.ts`를 하나씩 둔다.
 3. **용어 통일**: `schema`는 사용자 스키마(`monti.schema.ts`)만 가리키고, DB 쪽은 `database`라 부른다.
 4. **크기 제한**: 파일 하나에 역할 하나만 두고, 함수 본문은 빈 줄 제외 30줄 이하로 유지한다(린트 강제).
@@ -424,14 +423,14 @@ packages/core/src/
 
 | 날짜 | 결정 |
 |---|---|
-| 2026-11-18 | 스키마(`monti.schema.ts`)와 설정(`monti.config.ts`)은 파일을 분리하고, 폴더 단방향 의존·함수 30줄 제한·TypeScript 6·Stryker 돌연변이 테스트를 적용한다. |
+| 2026-11-18 | 스키마(`monti.schema.ts`)와 설정(`monti.config.ts`)은 파일을 분리하고, 폴더 단방향 의존(`rich-text/` → `db/` → `engine/` → `resources/` → `index.ts`)·함수 30줄 제한·TypeScript 6·Stryker 돌연변이 테스트를 적용한다. |
 | 2026-11-19 | 모든 입력이 선택인 Operation은 인자 생략 호출을 허용한다. `storage`가 없으면 `media` 리소스 전체를 `BAD_REQUEST`로 거절한다. |
-| 2026-11-20 | 컬렉션은 `{ body?, label?, description?, fields }` 한 모양이고 필드는 8종(`text`·`number`·`boolean`·`date`·`select`·`media`·`relation`·`conditional`)이다. 글 입출력은 `{ fields, body? }` 모양을 쓴다. |
-| 2026-11-21 | 내보내기·가져오기는 core 밖에서 맡는다. `keys` 암호화 비밀값은 `config.secret`에서 받는다. |
+| 2026-11-20 | 컬렉션은 `{ body?, label?, description?, fields }` 한 모양이고 필드는 8종(`text`·`number`·`boolean`·`date`·`select`·`media`·`relation`·`conditional`)이다. 글 입출력은 `data` 중간 껍데기 없이 `{ id, collection, locale, source_locale, folder_id, slug, fields, body?, published_at }`으로 평탄화하고, `media_uses.field_path`도 `_rels.path`(`"<field>"`, `"<field>.<option>.<subfield>"`, `"body"`, `"content"`)와 통일한다. |
+| 2026-11-21 | 내보내기·가져오기는 core 밖에서 맡는다. `keys` 암호화 비밀값(`secret`)은 `MontiConfig`(`ctx.config`)에 두지 않고 `startMonti` 옵션으로만 받아 `keys` 리소스 내부에 격리한다. |
 | 2026-11-22 | 글은 단일 JSON 테이블 대신 컬렉션별 테이블(`<collection>`, `<collection>_data`, `<collection>_rels`)에 저장한다. 초안과 발행본은 `<collection>_data`의 `status`(`'draft'` \| `'published'`)로 구분하고 조회는 `status`(기본값 `'published'`)로 선택한다. |
 | 2026-11-22 | 스키마 변경은 Kysely 위에 직접 구현해 개발 서버(`dev: true`)에서는 시작 시와 `schema.update` 시 DB 테이블을 즉시 맞추고, 운영 서버에서는 마이그레이션 파일만 실행한다. |
 | 2026-11-22 | `slug`도 초안(`draft`)에서는 비워 둘 수 있고(`null`) 발행(`publish`)할 때 `required` 필드와 함께 검사한다. `addLocale`은 원문 언어의 `slug`를 기본으로 복사한다. |
-| 2026-11-22 | 영구 삭제 시 참조 정리는 DB 외래 키(`ON DELETE SET NULL` / `CASCADE`)가 맡는다. 휴지통 항목 참조는 복원을 위해 DB에 남기되, `core`가 조회 응답과 발행 필수값 검사에서 빈칸(`null`)으로 취급한다. |
+| 2026-11-22 | 영구 삭제 시 참조 정리는 DB 외래 키(`ON DELETE SET NULL` / `CASCADE`)가 맡는다. 휴지통 항목 참조는 복원을 위해 DB에 남기되, `core`가 조회 응답과 발행 필수값 검사에서 빈칸(`null`)으로 취급하며, 필드나 본문(`body`)이 휴지통·없는 대상을 참조한 상태로는 저장(`create`·`update`·`addLocale`)하거나 발행(`publish`)할 수 없다(`BAD_REQUEST`). |
 
 ## 11. 정하지 않은 것
 

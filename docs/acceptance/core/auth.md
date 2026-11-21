@@ -3,7 +3,7 @@
 [`docs/refactor/core.md`](../../refactor/core.md) 6절(`admin`, `session`)과 7절(`admin`, `session` 리소스)의 인수 조건이다.
 
 - `admin.create`: 관리자가 없을 때 첫 관리자와 세션을 만든다. 이메일 형식이 아니거나 비밀번호가 비어 있으면 `BAD_REQUEST`, 이미 관리자가 있으면 `CONFLICT`로 거절한다.
-- `admin.update`: 현재 비밀번호를 확인한 뒤 이메일과 비밀번호를 바꾸고 기존 세션을 모두 지운다. 이메일 형식이 아니거나 새 비밀번호가 비어 있으면 `BAD_REQUEST`, 현재 비밀번호가 틀리면 `UNAUTHORIZED`로 거절한다.
+- `admin.update`: 현재 비밀번호를 확인한 뒤 이메일과 비밀번호를 바꾸고 기존 세션을 모두 지운다. 이메일 형식이 아니거나 새 비밀번호가 비어 있으면 `BAD_REQUEST`, 관리자 계정이 없거나 현재 비밀번호가 틀리면 `UNAUTHORIZED`로 거절한다.
 - `session.create`: 이메일과 비밀번호가 맞으면 세션을 발급하고, 원문 토큰 대신 `token_hash`와 미래 시각의 `expires_at`을 저장한다. 이메일이나 비밀번호가 틀리면 `UNAUTHORIZED`로 거절한다.
 - `session.get`: 유효한 토큰이면 관리자의 `id`와 `email`을 돌려주고, 만료되었거나 없는 토큰이면 `{ admin: null }`을 돌려준다.
 - `session.delete`: 해당 토큰의 세션 행만 삭제한다.
@@ -52,6 +52,13 @@ ADM-UPD-2  현재 비밀번호가 틀리면 관리자 정보를 바꿀 수 없�
   결과  ADM-UPD-2.1  `UNAUTHORIZED` 오류를 던진다
         ADM-UPD-2.2  `admin` 테이블의 이메일이 바뀌지 않는다
         ADM-UPD-2.3  `admin` 테이블의 `password_hash`가 바뀌지 않는다
+
+ADM-UPD-3  새 이메일 형식이 맞지 않거나 새 비밀번호가 비어 있으면 관리자 정보를 바꿀 수 없다
+  전제  관리자가 하나 있고 발급된 세션이 하나 있다
+  행동  맞는 현재 비밀번호와 이메일 형식이 아닌 문자열 또는 빈 새 비밀번호로 `admin.update`를 실행한다
+  결과  ADM-UPD-3.1  `BAD_REQUEST` 오류를 던진다
+        ADM-UPD-3.2  `admin` 테이블의 이메일과 `password_hash`가 바뀌지 않는다
+        ADM-UPD-3.3  `session` 테이블의 기존 세션 행이 그대로 남아 있다
 ```
 
 ## 3. 세션 발급 (`session.create`)
