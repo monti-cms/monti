@@ -1,9 +1,9 @@
 import { readFile, writeFile } from "node:fs/promises";
 
-/** The site's name in `monti.config.ts`: the first `name` property, a double-quoted string. */
-const SITE_NAME = /name: "[^"]*"/;
+/** `monti.config.ts`의 사이트 이름: 첫 `name` 속성의 큰따옴표 문자열. 이름 안의 `\"` 같은 이스케이프까지 한 문자열로 본다. */
+const SITE_NAME = /name: "(?:[^"\\]|\\.)*"/;
 
-/** Rewrites the site's name in `monti.config.ts` and leaves the rest of the file as it is. */
+/** `monti.config.ts`의 사이트 이름만 바꾸고 파일의 나머지는 그대로 둔다. */
 export async function writeConfigName(file: string, name: string): Promise<void> {
 	const text = await readFile(file, "utf8");
 	await writeFile(

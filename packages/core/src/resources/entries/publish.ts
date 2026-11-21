@@ -24,7 +24,7 @@ function isEmpty(value: unknown): boolean {
 	return value === undefined || value === "" || (Array.isArray(value) && value.length === 0);
 }
 
-/** `values`가 비워 둔 필수 필드의 경로. 선택한 분기의 필수 하위 필드도 본다. */
+/** `values`가 비워 둔 필수 필드의 경로. 선택한 분기의 필수 하위 필드도 보며, 고른 분기가 스키마에서 사라졌으면 거절한다. */
 function emptyRequired(fields: Record<string, FieldSchema>, values: Record<string, unknown>, prefix = "fields") {
 	return Object.entries(fields).flatMap(([key, field]): string[] => {
 		const value = values[key];
@@ -32,13 +32,17 @@ function emptyRequired(fields: Record<string, FieldSchema>, values: Record<strin
 		if (isEmpty(value)) return field.required ? [path] : [];
 		if (field.type !== "conditional") return [];
 		const chosen = value as ConditionalValue;
+		if (!Object.hasOwn(field.options, chosen.option)) {
+			throw new MontiError("BAD_REQUEST", `"${path}" 필드에서 고른 분기가 스키마에 없다: ${chosen.option}`);
+		}
 		return emptyRequired(field.options[chosen.option].fields, chosen.fields, `${path}.fields`);
 	});
 }
 
 /**
- * 슬러그나 필수 필드가 비어 있거나, 필드(필수 여부와 관계없이)나 본문이 없는 대상이나 휴지통에 있는 대상을 참조하면
- * 거절한다. 작업본은 휴지통에 있는 참조도 거르지 않고 읽으므로 여기서 모두 검사한다.
+ * 슬러그나 필수 필드가 비어 있거나, 조건부 필드에서 고른 분기가 스키마에 없거나, 필드(필수 여부와 관계없이)나 본문이
+ * 없는 대상이나 휴지통에 있는 대상을 참조하면 거절한다. 작업본은 휴지통에 있는 참조도 거르지 않고 읽으므로 여기서 모두
+ * 검사한다.
  */
 async function rejectUnfilled(ctx: WriteContext, entry: Entry): Promise<void> {
 	if (entry.slug === null) throw new MontiError("BAD_REQUEST", "슬러그가 비어 있어 발행할 수 없다");

@@ -19,7 +19,7 @@ async function listKeys(_input: unknown, ctx: ReadContext): Promise<StoredKey[]>
 	return ctx.db.selectFrom("api_keys").select(SHOWN).execute();
 }
 
-const createInput = z.object({ service: z.string(), name: z.string(), secret: z.string() });
+const createInput = z.object({ service: z.string().min(1), name: z.string().min(1), secret: z.string().min(1) });
 
 /** `keys.create`: 키의 비밀값을 엔진의 암호화 비밀값(`masterSecret`)으로 암호화해 저장한다. */
 function createWith(masterSecret: string | undefined) {
@@ -34,7 +34,7 @@ function createWith(masterSecret: string | undefined) {
 	};
 }
 
-const updateInput = z.object({ id: z.string(), name: z.string(), secret: z.string().optional() });
+const updateInput = z.object({ id: z.string(), name: z.string().min(1), secret: z.string().min(1).optional() });
 
 /** `keys.update`: 이름을 바꾸고, 비밀값이 주어지면 암호화한 비밀값과 `last4`도 바꾼다. */
 function updateWith(masterSecret: string | undefined) {

@@ -267,3 +267,13 @@ it("FLD-UPD-9 폴더의 이름을 빈 문자열로 바꿀 수 없다", async () 
 	// FLD-UPD-9.2
 	expect((await folderRow(folder)).name).toBe("Drafts");
 });
+
+it("FLD-UPD-10 바꿀 항목 없이 폴더 수정을 호출하면 기존 폴더를 그대로 돌려준다", async () => {
+	const parent = await seedFolder({ name: "Root" });
+	const folder = await seedFolder({ name: "Drafts", parent_id: parent });
+
+	const output = await montiOf().folders.update({ id: folder });
+
+	// FLD-UPD-10.1
+	expect(output).toEqual({ id: folder, scope: POSTS, name: "Drafts", parent_id: parent });
+});

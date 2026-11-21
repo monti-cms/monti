@@ -415,3 +415,38 @@ it("SCH-UPD-14 데이터 테이블의 고정 열 이름은 컬렉션의 필드 �
 	// SCH-UPD-14.2
 	expect(await monti.schema.get({})).toEqual(original);
 });
+
+it("SCH-UPD-15 만들어질 테이블이나 열 이름이 63바이트를 넘는 스키마는 저장할 수 없다", async () => {
+	const monti = await montiOf(true);
+	// 하위 필드 열 이름 `배치__강조__설명설명…`은 24자지만 UTF-8로 64바이트다.
+	const [field, option, subfield] = ["배치", "강조", "설명".repeat(8)];
+	const long = withCollections({
+		posts: {
+			fields: { [field]: { type: "conditional", options: { [option]: { fields: { [subfield]: { type: "text" } } } } } },
+		},
+	});
+
+	// SCH-UPD-15.1
+	await expect(monti.schema.update(long)).rejects.toMatchObject({ code: "BAD_REQUEST" });
+	// SCH-UPD-15.2
+	expect(await monti.schema.get({})).toEqual(original);
+});
+
+it("SCH-UPD-16 관계 필드가 스키마에 없는 컬렉션을 가리키면 스키마를 저장할 수 없다", async () => {
+	const monti = await montiOf(true);
+	const toFolders = withCollections({ posts: { fields: { folder: { type: "relation", to: "folders" } } } });
+	const toMissing = withCollections({
+		posts: {
+			fields: {
+				layout: { type: "conditional", options: { hero: { fields: { author: { type: "relation", to: "authors" } } } } },
+			},
+		},
+	});
+
+	const codes = [await codeOf(monti.schema.update(toFolders)), await codeOf(monti.schema.update(toMissing))];
+
+	// SCH-UPD-16.1
+	expect(codes).toEqual(["BAD_REQUEST", "BAD_REQUEST"]);
+	// SCH-UPD-16.2
+	expect(await monti.schema.get({})).toEqual(original);
+});

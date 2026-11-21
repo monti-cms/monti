@@ -59,6 +59,14 @@ function byName(a: { name: string }, b: { name: string }): number {
 	return a.name < b.name ? -1 : 1;
 }
 
+/** 실행이 거절되면 그 오류 코드, 성공하면 null. */
+async function codeOf(run: Promise<unknown>): Promise<string | null> {
+	return run.then(
+		() => null,
+		(error: { code: string }) => error.code,
+	);
+}
+
 it("KEY-CRT-1 encrypts and stores a key and returns its last four characters", async () => {
 	const monti = montiOf([]);
 
@@ -93,6 +101,21 @@ it("KEY-CRT-3 암호화 비밀값이 없으면 키를 저장할 수 없다", asy
 	// KEY-CRT-3.1
 	await expect(monti.keys.create(mailKey)).rejects.toMatchObject({ code: "BAD_REQUEST" });
 	// KEY-CRT-3.2
+	expect(await keyRows()).toEqual([]);
+});
+
+it("KEY-CRT-4 서비스·이름·비밀값 중 하나라도 빈 문자열이면 키를 저장할 수 없다", async () => {
+	const monti = montiOf([]);
+
+	const codes = [
+		await codeOf(monti.keys.create({ ...mailKey, service: "" })),
+		await codeOf(monti.keys.create({ ...mailKey, name: "" })),
+		await codeOf(monti.keys.create({ ...mailKey, secret: "" })),
+	];
+
+	// KEY-CRT-4.1
+	expect(codes).toEqual(["BAD_REQUEST", "BAD_REQUEST", "BAD_REQUEST"]);
+	// KEY-CRT-4.2
 	expect(await keyRows()).toEqual([]);
 });
 
@@ -177,6 +200,22 @@ it("KEY-UPD-5 암호화 비밀값이 없으면 저장된 키의 비밀값을 바
 		monti.keys.update({ id: stored.id, name: "Mail renamed", secret: "new-secret-9999" }),
 	).rejects.toMatchObject({ code: "BAD_REQUEST" });
 	// KEY-UPD-5.2
+	expect(await keyRows()).toEqual(before);
+});
+
+it("KEY-UPD-6 이름이나 비밀값을 빈 문자열로 바꿀 수 없다", async () => {
+	const monti = montiOf([]);
+	const { id } = await monti.keys.create(mailKey);
+	const before = await keyRows();
+
+	const codes = [
+		await codeOf(monti.keys.update({ id, name: "" })),
+		await codeOf(monti.keys.update({ id, name: mailKey.name, secret: "" })),
+	];
+
+	// KEY-UPD-6.1
+	expect(codes).toEqual(["BAD_REQUEST", "BAD_REQUEST"]);
+	// KEY-UPD-6.2
 	expect(await keyRows()).toEqual(before);
 });
 

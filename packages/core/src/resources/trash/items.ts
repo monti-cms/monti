@@ -65,7 +65,7 @@ function folderRows(ctx: ReadContext) {
 		.$castTo<ItemRow>();
 }
 
-/** 미디어들: `key`가 이름이다. */
+/** 미디어들: `filename`이 이름이다. */
 function mediaRows(ctx: ReadContext) {
 	return ctx.db
 		.selectFrom("media")

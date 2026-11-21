@@ -162,12 +162,23 @@ function bind(operation: Operation, path: string, runner: Runner): (input: unkno
 	};
 }
 
-/** A read runs on the runner's database; a write runs in the runner's transaction and hands its event to the runner. */
+/** 비밀번호·세션 토큰·외부 API 키 원문이 오가는 리소스: 이 리소스들의 쓰기는 구독자에게 통지하지 않는다. */
+const SILENT_RESOURCES = ["admin", "session", "keys"];
+
+/** `path`의 Operation이 통지하지 않는 리소스에 속하는지. */
+function isSilent(path: string): boolean {
+	return SILENT_RESOURCES.includes(path.split(".")[0]);
+}
+
+/**
+ * 읽기는 러너의 DB에서 실행한다. 쓰기는 러너의 트랜잭션에서 실행하고 그 이벤트를 러너에 넘기되, `admin`·`session`·`keys`
+ * 리소스의 쓰기는 이벤트를 넘기지 않는다.
+ */
 async function execute(operation: Operation, path: string, raw: unknown, runner: Runner): Promise<unknown> {
 	const input = parseInput(operation, raw);
 	if (operation.kind === "read") return operation.run(input, runner.context());
 	const output = await runner.write((ctx) => operation.run(input, ctx)).catch((error) => asConflict(error, runner));
-	runner.emit({ operation: path, input, output });
+	if (!isSilent(path)) runner.emit({ operation: path, input, output });
 	return output;
 }
 

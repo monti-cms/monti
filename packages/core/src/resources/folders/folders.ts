@@ -93,7 +93,10 @@ const updateInput = z.object({
 	parent_id: uuidInput.nullable().optional(),
 });
 
-/** Renames an active folder or moves it; a null `parent_id` moves it to the root, an omitted one keeps its parent. */
+/**
+ * 활성 폴더의 이름을 바꾸거나 옮긴다. `parent_id`가 null이면 루트로 옮기고, 생략한 항목은 그대로 둔다. 바뀐 뒤의 이름과
+ * 부모를 늘 함께 저장하므로 바꿀 항목이 없으면 기존 폴더를 그대로 돌려준다.
+ */
 async function updateFolder(input: z.infer<typeof updateInput>, ctx: WriteContext): Promise<Folder> {
 	const target = await ctx.db
 		.selectFrom("folders")
@@ -101,16 +104,17 @@ async function updateFolder(input: z.infer<typeof updateInput>, ctx: WriteContex
 		.where("id", "=", input.id)
 		.where("trashed_at", "is", null)
 		.executeTakeFirst();
-	if (target === undefined) throw new MontiError("NOT_FOUND", "No active folder has this id");
+	if (target === undefined) throw new MontiError("NOT_FOUND", "이 `id`의 활성 폴더가 없다");
 	if (typeof input.parent_id === "string") {
 		await rejectParent(ctx, input.parent_id, target.scope);
 		await rejectCycle(ctx, input.id, input.parent_id);
 	}
 	const parentId = input.parent_id === undefined ? target.parent_id : input.parent_id;
-	await rejectTaken(ctx, { ...target, name: input.name ?? target.name, parent_id: parentId });
+	const next = { ...target, name: input.name ?? target.name, parent_id: parentId };
+	await rejectTaken(ctx, next);
 	return ctx.db
 		.updateTable("folders")
-		.set({ name: input.name, parent_id: input.parent_id })
+		.set({ name: next.name, parent_id: next.parent_id })
 		.where("id", "=", input.id)
 		.returning(SHOWN)
 		.executeTakeFirstOrThrow();

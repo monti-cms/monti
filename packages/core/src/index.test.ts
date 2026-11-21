@@ -190,3 +190,24 @@ it("START-7 운영 서버로 시작하면 등록된 마이그레이션만 실행
 		data: await tableExists(testDb.db, "posts_data"),
 	}).toEqual({ migrations: true, posts: false, data: false });
 });
+
+it("START-8 관리자·세션·키 리소스의 쓰기는 이벤트 구독자에게 통지하지 않는다", async () => {
+	const monti = await startMonti({
+		db,
+		schema,
+		config: { name: "Monti Blog" },
+		schemaFile,
+		configFile,
+		secret: "test monti secret",
+	});
+	const listener = vi.fn();
+	monti.onEvent(listener);
+	const account = { email: "admin@example.com", password: "admin-password" };
+
+	await monti.admin.create(account);
+	await monti.session.create(account);
+	await monti.keys.create({ service: "mail", name: "Mail", secret: "mail-secret-1234" });
+
+	// START-8.1
+	expect(listener).not.toHaveBeenCalled();
+});

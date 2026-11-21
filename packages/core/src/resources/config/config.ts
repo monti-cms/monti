@@ -2,7 +2,7 @@ import { z } from "zod";
 import { defineRead, defineWrite } from "../../engine/operation";
 import type { MontiConfig, ReadContext, WriteContext } from "../../engine/types";
 
-const nameInput = z.object({ name: z.string() });
+const nameInput = z.object({ name: z.string().min(1) });
 
 async function getConfig(_input: unknown, ctx: ReadContext): Promise<MontiConfig> {
 	return ctx.config;

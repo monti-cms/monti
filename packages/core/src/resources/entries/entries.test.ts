@@ -117,9 +117,9 @@ async function codeOf(run: Promise<unknown>): Promise<string | null> {
 	);
 }
 
-function montiOf() {
+function montiOf(schema: Schema = SCHEMA) {
 	return createMonti(db, { entries }, [], {
-		schema: SCHEMA,
+		schema,
 		config: CONFIG,
 		schemaFile: "unused-schema-file",
 		configFile: "unused-config-file",
@@ -1146,6 +1146,20 @@ it("ENT-UPD-15 단건 수정에서 슬러그를 빈 문자열로 바꿀 수 없�
 	expect((await dataRow(POSTS, entry.id, "ko", "draft"))?.slug).toBe("hello");
 });
 
+it("ENT-UPD-16 단건 수정에서 필드만 바꾸면 본문이 유지되고 본문만 바꾸면 필드가 유지된다", async () => {
+	const entry = await seedEntry({ columns: { title: "Old", body: JSON.stringify(PLAIN) } });
+	const fields = { title: "New" };
+	const body = { blocks: [{ id: "p2", type: "paragraph", content: [{ type: "text", text: "Bye" }] }] };
+
+	const first = (await montiOf().entries.update({ id: entry.id, fields })) as Entry;
+	const second = (await montiOf().entries.update({ id: entry.id, body })) as Entry;
+
+	// ENT-UPD-16.1
+	expect({ fields: first.fields, body: first.body }).toEqual({ fields, body: PLAIN });
+	// ENT-UPD-16.2
+	expect({ fields: second.fields, body: second.body }).toEqual({ fields, body });
+});
+
 // ---- 4. 발행 ----
 
 /** 필수 필드를 모두 채운 `notes` 작업본. */
@@ -1304,6 +1318,41 @@ it("ENT-PUB-11 참조 필드나 본문이 가리키던 대상이 휴지통에 �
 	expect([...(await dataRows(CARDS)), ...(await dataRows(POSTS))].filter((row) => row.status === "published")).toEqual(
 		[],
 	);
+});
+
+/** `notes`의 조건부 필드 `kind`에서 `plain` 분기만 지운 스키마. */
+const WITHOUT_PLAIN: Schema = {
+	...SCHEMA,
+	collections: {
+		...SCHEMA.collections,
+		[NOTES]: {
+			fields: {
+				...SCHEMA.collections[NOTES].fields,
+				kind: {
+					type: "conditional",
+					options: {
+						link: { fields: { url: { type: "text", required: true }, topic: { type: "relation", to: TOPICS } } },
+					},
+				},
+			},
+		},
+	},
+};
+
+it("ENT-PUB-13 조건부 필드에 스키마에서 사라진 분기가 저장되어 있으면 발행할 수 없다", async () => {
+	const entry = await seedEntry({
+		collection: NOTES,
+		slug: "note",
+		columns: { ...FILLED_NOTE, kind: "plain", kind__plain__note: "메모" },
+	});
+	await syncSchemaTables(testDb.db, WITHOUT_PLAIN);
+
+	// ENT-PUB-13.1
+	await expect(montiOf(WITHOUT_PLAIN).entries.publish({ id: entry.id })).rejects.toMatchObject({
+		code: "BAD_REQUEST",
+	});
+	// ENT-PUB-13.2
+	expect(await dataRow(NOTES, entry.id, "ko", "published")).toBeUndefined();
 });
 
 // ---- 5. 발행 취소 ----

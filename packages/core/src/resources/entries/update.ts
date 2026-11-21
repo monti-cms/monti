@@ -9,7 +9,7 @@ import { dataShape, folderInput, slugInput } from "./inputs";
 import { findEntry } from "./read";
 import { tablesOf } from "./tables";
 import type { CopyKey, Entry, EntryData } from "./types";
-import { checkData, rejectFolder, rejectTakenSlug } from "./validate";
+import { checkData, type DataInput, rejectFolder, rejectTakenSlug } from "./validate";
 
 const updateOneInput = z.object({
 	id: uuidInput,
@@ -41,17 +41,26 @@ async function writeDraft(
 		.execute();
 }
 
+/** 저장할 `fields`·`body`: 둘 중 생략한 쪽은 작업본의 것을 그대로 둔다. */
+function patchOf(input: DataInput, existing: EntryData): DataInput {
+	return {
+		fields: input.fields === undefined ? existing.fields : input.fields,
+		body: input.body === undefined ? existing.body : input.body,
+	};
+}
+
 /**
- * 활성 글의 `locale`(생략하면 원문 언어) 작업본의 슬러그와 필드·본문, 글 전체의 폴더를 바꾼다. `fields`나 `body`를
- * 주면 작업본의 필드와 본문을 통째로 교체하고 모든 언어 기준으로 미디어 사용처를 다시 센다. 그 작업본의 같은 경로에 이미
- * 있던 참조는 대상이 휴지통에 있어도 그대로 둘 수 있다. 발행본은 건드리지 않는다.
+ * 활성 글의 `locale`(생략하면 원문 언어) 작업본의 슬러그와 필드·본문, 글 전체의 폴더를 바꾼다. `fields`를 주면 필드
+ * 값 전체를, `body`를 주면 본문을 교체하고 생략한 쪽은 그대로 두며, 둘 중 하나라도 주면 모든 언어 기준으로 미디어
+ * 사용처를 다시 센다. 그 작업본의 같은 경로에 이미 있던 참조는 대상이 휴지통에 있어도 그대로 둘 수 있다. 발행본은
+ * 건드리지 않는다.
  */
 async function updateOne(input: z.infer<typeof updateOneInput>, ctx: WriteContext): Promise<Entry> {
 	const existing = await findEntry(ctx, { id: input.id, locale: input.locale }, "draft");
 	const { id, locale, collection: name } = existing;
 	const collection = collectionOf(ctx, name);
 	const replaces = input.fields !== undefined || input.body !== undefined;
-	const data = replaces ? await checkData(ctx, collection, input, existing) : undefined;
+	const data = replaces ? await checkData(ctx, collection, patchOf(input, existing), existing) : undefined;
 	if (typeof input.folder_id === "string") await rejectFolder(ctx, input.folder_id, name);
 	const slug = input.slug === undefined ? existing.slug : input.slug;
 	await rejectTakenSlug(ctx, name, { id, locale, slug }, "draft");

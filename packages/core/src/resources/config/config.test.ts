@@ -122,3 +122,22 @@ it("CFG-UPD-4 드라이런으로 실행하면 설정과 설정 파일은 바뀌�
 	// CFG-UPD-4.2
 	expect(await readFile(configFile, "utf8")).toBe(originalText);
 });
+
+it("CFG-UPD-5 큰따옴표가 들어간 사이트 이름으로 바꾼 뒤 다시 이름을 바꿔도 설정 파일이 깨지지 않는다", async () => {
+	const monti = montiOf(true);
+
+	await monti.config.update({ name: 'Monti "Quoted" Blog' });
+	await monti.config.update({ name: newName });
+
+	// CFG-UPD-5.1
+	expect(await readFile(configFile, "utf8")).toBe(originalText.replace('"Monti Blog"', JSON.stringify(newName)));
+});
+
+it("CFG-UPD-6 사이트 이름을 빈 문자열로 바꿀 수 없다", async () => {
+	const monti = montiOf(true);
+
+	// CFG-UPD-6.1
+	await expect(monti.config.update({ name: "" })).rejects.toMatchObject({ code: "BAD_REQUEST" });
+	// CFG-UPD-6.2
+	expect(await monti.config.get({})).toEqual({ name: "Monti Blog", dev: true });
+});
