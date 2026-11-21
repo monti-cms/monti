@@ -30,9 +30,9 @@ afterEach(async () => {
 
 const owner = { email: "owner@example.com", password: "correct horse battery staple" };
 
-it("ADM-CRT-1 creates the first admin and a session when there is no admin", async () => {
+it("ADM-CRT-1 관리자가 없을 때 첫 관리자와 세션을 만든다", async () => {
 	const output = await monti.admin.create(owner);
-	const rows = await db.selectFrom("monti_admin").selectAll().where("email", "=", owner.email).execute();
+	const rows = await db.selectFrom("admin").selectAll().where("email", "=", owner.email).execute();
 
 	// ADM-CRT-1.1
 	expect(output).toMatchObject({ id: rows[0]?.id, email: owner.email });
@@ -46,7 +46,7 @@ it("ADM-CRT-1 creates the first admin and a session when there is no admin", asy
 	expect(await monti.session.get({ token: output.token })).toEqual({ admin: { id: output.id, email: owner.email } });
 });
 
-it("ADM-CRT-2 rejects admin.create with CONFLICT when an admin already exists", async () => {
+it("ADM-CRT-2 관리자가 이미 있으면 새 관리자를 만들 수 없다", async () => {
 	await monti.admin.create(owner);
 
 	// ADM-CRT-2.1
@@ -54,17 +54,17 @@ it("ADM-CRT-2 rejects admin.create with CONFLICT when an admin already exists", 
 		code: "CONFLICT",
 	});
 	// ADM-CRT-2.2
-	expect(await db.selectFrom("monti_admin").select("email").execute()).toEqual([{ email: owner.email }]);
+	expect(await db.selectFrom("admin").select("email").execute()).toEqual([{ email: owner.email }]);
 });
 
 const changed = { email: "new@example.com", password: "a new password" };
 
-it("ADM-UPD-1 changes the email and password and deletes every session when the current password is right", async () => {
+it("ADM-UPD-1 현재 비밀번호가 맞으면 이메일과 비밀번호를 바꾸고 기존 세션을 모두 지운다", async () => {
 	await monti.admin.create(owner);
 	await monti.session.create(owner);
 
 	const output = await monti.admin.update({ currentPassword: owner.password, ...changed });
-	const sessions = await db.selectFrom("monti_session").selectAll().execute();
+	const sessions = await db.selectFrom("session").selectAll().execute();
 
 	// ADM-UPD-1.1
 	expect(output.email).toBe(changed.email);
@@ -78,15 +78,15 @@ it("ADM-UPD-1 changes the email and password and deletes every session when the 
 	});
 });
 
-it("ADM-UPD-2 rejects admin.update with UNAUTHORIZED when the current password is wrong", async () => {
+it("ADM-UPD-2 현재 비밀번호가 틀리면 관리자 정보를 바꿀 수 없다", async () => {
 	await monti.admin.create(owner);
-	const before = await db.selectFrom("monti_admin").selectAll().executeTakeFirstOrThrow();
+	const before = await db.selectFrom("admin").selectAll().executeTakeFirstOrThrow();
 
 	// ADM-UPD-2.1
 	await expect(monti.admin.update({ currentPassword: "wrong password", ...changed })).rejects.toMatchObject({
 		code: "UNAUTHORIZED",
 	});
-	const after = await db.selectFrom("monti_admin").selectAll().executeTakeFirstOrThrow();
+	const after = await db.selectFrom("admin").selectAll().executeTakeFirstOrThrow();
 	// ADM-UPD-2.2
 	expect(after.email).toBe(owner.email);
 	// ADM-UPD-2.3

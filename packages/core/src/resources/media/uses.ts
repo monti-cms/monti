@@ -1,33 +1,21 @@
 import type { MediaUsesTable } from "../../db/types";
 import { MontiError } from "../../engine/errors";
-import type { CollectionSchema, FieldSchema, ValueFieldSchema, WriteContext } from "../../engine/types";
+import type { CollectionSchema, WriteContext } from "../../engine/types";
 import type { Block, Doc } from "../../rich-text/types";
-import { uuidInput } from "../_shared/input";
-import { fieldOf, isKnownOption } from "../entries/fields";
+import { decodeData, everyTarget } from "../entries/decode";
+import { copyQuery, storedOf } from "../entries/read";
+import { valuesOf } from "../entries/slots";
 
-/** The entry or template whose `media_uses` rows are written. */
+/** `media_uses` 행을 쓰는 글이나 템플릿. */
 interface UseSource {
 	source_kind: MediaUsesTable["source_kind"];
 	source_id: string;
 }
 
-/** The media ids each `field_path` references, lowercased and each once per path. */
+/** `field_path`마다 참조하는 미디어 `id`들. 소문자로, 경로마다 한 번씩. */
 type UsesByPath = Map<string, Set<string>>;
 
-/** An entry's `data`: field values by key and the rich-text body. */
-export interface EntryData {
-	fields: Record<string, unknown>;
-	body?: Doc;
-}
-
-/** One value field an entry's data sets, top-level or a conditional's sub-field, with its `field_path`. */
-interface EntryFieldValue {
-	path: string;
-	field: ValueFieldSchema;
-	value: unknown;
-}
-
-/** Every media id the blocks and their children reference in `attrs.mediaId` or `attrs.mediaIds`, lowercased and each once. */
+/** 블록과 그 자식들이 `attrs.mediaId`나 `attrs.mediaIds`로 참조하는 모든 미디어 `id`. 소문자로, 한 번씩. */
 function mediaIdsOf(blocks: readonly Block[], ids = new Set<string>()): Set<string> {
 	for (const block of blocks) {
 		const { mediaId, mediaIds } = block.attrs ?? {};
@@ -38,35 +26,14 @@ function mediaIdsOf(blocks: readonly Block[], ids = new Set<string>()): Set<stri
 	return ids;
 }
 
-/**
- * The value fields that `values` set: a top-level one at `fields.<key>`, a conditional's sub-field at
- * `fields.<key>.fields.<sub>` under its chosen option. A key or an option the schema no longer has is skipped, as stored
- * data may keep one after the schema changed.
- */
-export function entryFieldValues(
-	fields: Record<string, FieldSchema>,
-	values: Record<string, unknown>,
-	prefix = "fields",
-): EntryFieldValue[] {
-	return Object.entries(values).flatMap(([key, value]) => {
-		// An explicit `undefined` is a field left out, as `JSON.stringify` stores it.
-		const field = fieldOf(fields, key);
-		if (value === undefined || field === undefined) return [];
-		const path = `${prefix}.${key}`;
-		if (field.type !== "conditional") return [{ path, field, value }];
-		if (!isKnownOption(field, value)) return [];
-		return entryFieldValues(field.options[value.option].fields, value.fields, `${path}.fields`);
-	});
-}
-
-/** Every media id the uses reference, each once. */
+/** 사용처가 참조하는 모든 미디어 `id`. 한 번씩. */
 function idsOf(uses: UsesByPath): string[] {
 	return [...new Set([...uses.values()].flatMap((pathIds) => [...pathIds]))];
 }
 
-/** Rejects ids that are not active media items: missing from `media` or trashed. */
+/** `media`에 없거나 휴지통에 있는 미디어를 참조하면 거절한다. */
 async function rejectInactive(ctx: WriteContext, ids: readonly string[]): Promise<void> {
-	// `in ()` is not SQL: data with no media checks nothing.
+	// `in ()`는 SQL이 아니다: 미디어가 없으면 검사할 것도 없다.
 	if (ids.length === 0) return;
 	const active = await ctx.db
 		.selectFrom("media")
@@ -74,10 +41,10 @@ async function rejectInactive(ctx: WriteContext, ids: readonly string[]): Promis
 		.where("id", "in", ids)
 		.where("trashed_at", "is", null)
 		.execute();
-	if (active.length !== ids.length) throw new MontiError("BAD_REQUEST", "The data references media that is not active");
+	if (active.length !== ids.length) throw new MontiError("BAD_REQUEST", "활성 상태가 아닌 미디어를 참조한다");
 }
 
-/** Deletes the source's `media_uses` rows. */
+/** 사용처의 `media_uses` 행을 지운다. */
 export async function removeMediaUses(ctx: WriteContext, source: UseSource): Promise<void> {
 	await ctx.db
 		.deleteFrom("media_uses")
@@ -86,17 +53,17 @@ export async function removeMediaUses(ctx: WriteContext, source: UseSource): Pro
 		.execute();
 }
 
-/** Replaces the source's `media_uses` rows with `uses`. */
+/** 사용처의 `media_uses` 행을 `uses`로 바꾼다. */
 async function writeUses(ctx: WriteContext, source: UseSource, uses: UsesByPath): Promise<void> {
 	await removeMediaUses(ctx, source);
 	const rows = [...uses].flatMap(([field_path, pathIds]) =>
 		[...pathIds].map((media_id) => ({ media_id, ...source, field_path })),
 	);
-	// An empty `values` is not SQL: no media leaves no rows.
+	// 빈 `values`는 SQL이 아니다: 미디어가 없으면 행도 없다.
 	if (rows.length > 0) await ctx.db.insertInto("media_uses").values(rows).execute();
 }
 
-/** Replaces the source's `media_uses` rows with the media `doc` references at `field_path`; rejects inactive media. */
+/** 사용처의 `media_uses` 행을 `doc`이 `field_path`에서 참조하는 미디어로 바꾼다. 활성이 아닌 미디어는 거절한다. */
 export async function replaceMediaUses(
 	ctx: WriteContext,
 	source: UseSource,
@@ -108,76 +75,43 @@ export async function replaceMediaUses(
 	await writeUses(ctx, source, uses);
 }
 
-/** Adds the strings among `ids` to the ones `uses` has at `field_path`, lowercased; stored data may keep other values. */
-function addUses(uses: UsesByPath, field_path: string, ids: Iterable<unknown>): void {
+/** `ids`를 `uses`의 `field_path` 칸에 소문자로 더한다. */
+function addUses(uses: UsesByPath, field_path: string, ids: Iterable<string>): void {
 	const pathIds = uses.get(field_path) ?? new Set<string>();
-	for (const id of ids) if (typeof id === "string") pathIds.add(id.toLowerCase());
+	for (const id of ids) pathIds.add(id.toLowerCase());
 	uses.set(field_path, pathIds);
 }
 
-/** Adds the media entry `data` references in its media fields and its body to `uses`, by `field_path`; keys the schema no longer has are skipped. */
-function addEntryUses(uses: UsesByPath, collection: CollectionSchema, data: EntryData): UsesByPath {
-	for (const { path, field, value } of entryFieldValues(collection.fields, data.fields)) {
-		if (field.type === "media") addUses(uses, path, [value].flat());
+/** 컬렉션 `name`의 활성 글 `entryId`가 모든 언어 작업본의 미디어 필드와 본문에서 참조하는 미디어, 경로별로. */
+async function draftUses(ctx: WriteContext, name: string, collection: CollectionSchema, entryId: string) {
+	const rows = await copyQuery(ctx, name, "draft").where("e.id", "=", entryId).execute();
+	const uses: UsesByPath = new Map();
+	for (const stored of await storedOf(ctx, name, rows)) {
+		const data = decodeData(collection, stored, everyTarget);
+		for (const { slot, value } of valuesOf(collection, data.fields)) {
+			if (slot.field.type === "media") addUses(uses, slot.usePath, [value].flat() as string[]);
+		}
+		if (data.body !== undefined) addUses(uses, "body", mediaIdsOf(data.body.blocks));
 	}
-	if (data.body !== undefined) addUses(uses, "body", mediaIdsOf(data.body.blocks));
 	return uses;
 }
 
-/** Rejects checked entry `data` whose media fields or body reference media that is not active. */
-export async function rejectInactiveEntryMedia(
-	ctx: WriteContext,
-	collection: CollectionSchema,
-	data: EntryData,
-): Promise<void> {
-	await rejectInactive(ctx, idsOf(addEntryUses(new Map(), collection, data)));
-}
-
 /**
- * Replaces an entry's `media_uses` rows with the union of what every one of its locales' working copies references,
- * after rejecting inactive media in `data`, the working copy being written. Call it once that copy is stored.
- */
-export async function replaceEntryMediaUses(
-	ctx: WriteContext,
-	entryId: string,
-	collection: CollectionSchema,
-	data: EntryData,
-): Promise<void> {
-	await rejectInactiveEntryMedia(ctx, collection, data);
-	await recountEntryMediaUses(ctx, entryId, collection);
-}
-
-/** The ids among `ids` that have a `media` row, trashed or not; ids that are not UUIDs have none. */
-async function existingMediaIds(ctx: WriteContext, ids: readonly string[]): Promise<Set<string>> {
-	const uuids = ids.filter((id) => uuidInput.safeParse(id).success);
-	// `in ()` is not SQL: no UUIDs find nothing.
-	if (uuids.length === 0) return new Set();
-	const rows = await ctx.db.selectFrom("media").select("id").where("id", "in", uuids).execute();
-	return new Set(rows.map((row) => row.id));
-}
-
-/** `uses` without the media that has no `media` row, as stored data may keep the id of media deleted for good. */
-async function existingUses(ctx: WriteContext, uses: UsesByPath): Promise<UsesByPath> {
-	const existing = await existingMediaIds(ctx, idsOf(uses));
-	return new Map([...uses].map(([path, pathIds]) => [path, new Set([...pathIds].filter((id) => existing.has(id)))]));
-}
-
-/**
- * Replaces an entry's `media_uses` rows with the union of what every one of its locales' working copies references,
- * skipping the media that no longer exists.
+ * 글의 `media_uses` 행을 그 글의 모든 언어 작업본이 참조하는 존재하는 미디어(휴지통 포함)의 합집합으로 바꾼다. 본문은
+ * `"body"`, 최상위 미디어 필드는 `"fields.<key>"`, 조건부 하위 미디어 필드는 `"fields.<key>.fields.<sub>"` 경로다.
  */
 export async function recountEntryMediaUses(
 	ctx: WriteContext,
-	entryId: string,
+	name: string,
 	collection: CollectionSchema,
+	entryId: string,
 ): Promise<void> {
-	const locales = await ctx.db
-		.selectFrom("entry_locales")
-		.select("data")
-		.where("entry_id", "=", entryId)
-		.$castTo<{ data: EntryData }>()
-		.execute();
-	const uses: UsesByPath = new Map();
-	for (const row of locales) addEntryUses(uses, collection, row.data);
-	await writeUses(ctx, { source_kind: "entry", source_id: entryId }, await existingUses(ctx, uses));
+	const uses = await draftUses(ctx, name, collection, entryId);
+	const ids = idsOf(uses);
+	const existing =
+		ids.length === 0
+			? new Set<string>()
+			: new Set((await ctx.db.selectFrom("media").select("id").where("id", "in", ids).execute()).map((r) => r.id));
+	for (const pathIds of uses.values()) for (const id of pathIds) if (!existing.has(id)) pathIds.delete(id);
+	await writeUses(ctx, { source_kind: "entry", source_id: entryId }, uses);
 }

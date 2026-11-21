@@ -2,102 +2,63 @@ import { MontiError } from "../../engine/errors";
 import type { CollectionSchema, ReadContext, WriteContext } from "../../engine/types";
 import { docOf } from "../_shared/doc";
 import { isActiveFolder } from "../folders/folders";
-import { type EntryData, entryFieldValues } from "../media/uses";
-import { fieldsSchema, type UnknownKeys } from "./fields";
+import { referencesIn, rejectInactive } from "./active";
+import { fieldsSchema } from "./fields";
+import { tablesOf } from "./tables";
+import type { EntryData, Status } from "./types";
 
-/** The `data` a write is given; `fields` left out means none. */
-interface DataInput {
+/** 쓰기가 받는 `data`. `fields`를 생략하면 필드가 없다. */
+export interface DataInput {
 	fields?: Record<string, unknown>;
 	body?: unknown;
 }
 
-/** What identifies an entry's slug: unique among the active entries of its collection and locale. */
+/** 슬러그의 주인: 같은 컬렉션·언어·상태의 활성 글끼리 겹칠 수 없다. `id`는 그 글 자신이라 빼고 본다. */
 interface SlugOwner {
 	id: string;
-	collection: string;
 	locale: string;
-	slug: string;
+	slug: string | null;
 }
 
-/** The schema of a collection; rejects a name the schema does not have. */
-export function collectionOf(ctx: ReadContext, name: string): CollectionSchema {
-	if (!Object.hasOwn(ctx.schema.collections, name)) {
-		throw new MontiError("BAD_REQUEST", `No collection is named "${name}"`);
-	}
-	return ctx.schema.collections[name];
-}
-
-export function rejectLocale(ctx: ReadContext, locale: string): void {
-	if (!ctx.schema.locales.includes(locale)) throw new MontiError("BAD_REQUEST", `No locale is named "${locale}"`);
-}
-
-/** Rejects a folder that is not an active folder of the entry's collection. */
-export async function rejectFolder(ctx: WriteContext, folderId: string, collection: string): Promise<void> {
-	if (!(await isActiveFolder(ctx, folderId, collection))) {
-		throw new MontiError("BAD_REQUEST", "The folder is not an active folder of this collection");
+/** 컬렉션 `name`의 활성 폴더가 아니면 거절한다. */
+export async function rejectFolder(ctx: ReadContext, folderId: string, name: string): Promise<void> {
+	if (!(await isActiveFolder(ctx, folderId, name))) {
+		throw new MontiError("BAD_REQUEST", "이 컬렉션의 활성 폴더가 아니다");
 	}
 }
 
-/** Rejects a slug another active entry of the same collection has in the same locale; `id` is the entry itself, left out. */
-export async function rejectTakenSlug(ctx: WriteContext, entry: SlugOwner): Promise<void> {
-	const taken = await ctx.db
-		.selectFrom("entry_locales")
-		.innerJoin("entries", "entries.id", "entry_locales.entry_id")
-		.select("entries.id")
-		.where("entries.id", "<>", entry.id)
-		.where("entries.collection", "=", entry.collection)
-		.where("entries.trashed_at", "is", null)
-		.where("entry_locales.locale", "=", entry.locale)
-		.where("entry_locales.slug", "=", entry.slug)
+/** 같은 컬렉션·언어·`status`의 다른 활성 글이 같은 슬러그를 쓰면 거절한다. 빈 슬러그(`null`)는 겹치지 않는다. */
+export async function rejectTakenSlug(ctx: ReadContext, name: string, owner: SlugOwner, status: Status) {
+	if (owner.slug === null) return;
+	const taken = await tablesOf(ctx.db)
+		.selectFrom(`${name}_data as d`)
+		.innerJoin(`${name} as e`, "e.id", "d.entry_id")
+		.select("d.entry_id")
+		.where("d.entry_id", "<>", owner.id)
+		.where("e.trashed_at", "is", null)
+		.where("d.locale", "=", owner.locale)
+		.where("d.status", "=", status)
+		.where("d.slug", "=", owner.slug)
 		.executeTakeFirst();
-	if (taken !== undefined)
-		throw new MontiError("CONFLICT", "An active entry of this collection and locale has this slug");
+	if (taken !== undefined) throw new MontiError("CONFLICT", "같은 컬렉션과 언어의 다른 글이 이 슬러그를 쓴다");
 }
 
-/** Rejects relation ids that are not active entries of the collection each field points to. */
-async function rejectRelations(ctx: WriteContext, collection: CollectionSchema, fields: Record<string, unknown>) {
-	const targets = new Map<string, Set<string>>();
-	for (const { field, value } of entryFieldValues(collection.fields, fields)) {
-		if (field.type !== "relation") continue;
-		const ids = targets.get(field.to) ?? new Set();
-		for (const id of [value].flat() as string[]) ids.add(id);
-		targets.set(field.to, ids);
-	}
-	for (const [to, ids] of targets) await rejectInactiveTargets(ctx, to, [...ids]);
-}
-
-async function rejectInactiveTargets(ctx: WriteContext, collection: string, ids: string[]): Promise<void> {
-	// `in ()` is not SQL: an empty `many` list points to nothing.
-	if (ids.length === 0) return;
-	const found = await ctx.db
-		.selectFrom("entries")
-		.select("id")
-		.where("id", "in", ids)
-		.where("collection", "=", collection)
-		.where("trashed_at", "is", null)
-		.execute();
-	if (found.length !== ids.length) {
-		throw new MontiError("BAD_REQUEST", `A relation points to an entry that is not an active ${collection} entry`);
-	}
+/** 본문이 있으면 컬렉션이 본문을 쓰는지와 본문 형식을 검사한다. */
+function checkBody(ctx: ReadContext, collection: CollectionSchema, body: unknown) {
+	if (body === undefined) return undefined;
+	if (collection.body !== true) throw new MontiError("BAD_REQUEST", "이 컬렉션은 본문을 쓰지 않는다");
+	return docOf(body, ctx);
 }
 
 /**
- * The data as stored, `{ fields, body? }`; rejects fields, a body or relations the collection does not accept. Keys the
- * schema does not define are rejected, or with `unknownKeys: "drop"` left out of what it returns.
+ * 저장할 `{ fields, body? }`. 스키마에 없는 키, 필드 타입·제약에 어긋난 값, 살아 있지 않은 미디어나 관계 대상을
+ * 가리키는 필드, 쓰지 않는 본문, 형식이 틀린 본문을 거절한다.
  */
-export async function checkData(
-	ctx: WriteContext,
-	collection: CollectionSchema,
-	data: DataInput,
-	unknownKeys: UnknownKeys = "reject",
-): Promise<EntryData> {
-	const parsed = fieldsSchema(collection.fields, unknownKeys).safeParse(data.fields ?? {});
-	if (!parsed.success) {
-		throw new MontiError("BAD_REQUEST", "The fields do not match the collection", parsed.error.issues);
-	}
+export async function checkData(ctx: WriteContext, collection: CollectionSchema, data: DataInput): Promise<EntryData> {
+	const parsed = fieldsSchema(collection.fields).safeParse(data.fields ?? {});
+	if (!parsed.success) throw new MontiError("BAD_REQUEST", "필드가 컬렉션과 맞지 않는다", parsed.error.issues);
 	const fields = parsed.data as Record<string, unknown>;
-	await rejectRelations(ctx, collection, fields);
-	if (data.body === undefined) return { fields };
-	if (collection.body !== true) throw new MontiError("BAD_REQUEST", "This collection has no body");
-	return { fields, body: docOf(data.body, ctx) };
+	const body = checkBody(ctx, collection, data.body);
+	await rejectInactive(ctx, referencesIn(collection, fields));
+	return body === undefined ? { fields } : { fields, body };
 }

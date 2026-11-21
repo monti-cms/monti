@@ -34,10 +34,10 @@ afterEach(async () => {
 });
 
 async function sessionRows() {
-	return db.selectFrom("monti_session").selectAll().execute();
+	return db.selectFrom("session").selectAll().execute();
 }
 
-it("SES-CRT-1 issues a session for the right email and password", async () => {
+it("SES-CRT-1 이메일과 비밀번호가 맞으면 세션을 발급한다", async () => {
 	const before = (await sessionRows()).map((row) => row.token_hash);
 
 	const output = await monti.session.create(owner);
@@ -51,31 +51,31 @@ it("SES-CRT-1 issues a session for the right email and password", async () => {
 	expect(added[0]?.expires_at.getTime()).toBeGreaterThan(Date.now());
 });
 
-it("SES-CRT-2 rejects session.create with UNAUTHORIZED for a wrong password", async () => {
+it("SES-CRT-2 비밀번호가 틀리면 로그인할 수 없다", async () => {
 	// SES-CRT-2.1
 	await expect(monti.session.create({ email: owner.email, password: "wrong password" })).rejects.toMatchObject({
 		code: "UNAUTHORIZED",
 	});
 });
 
-it("SES-CRT-3 rejects session.create with UNAUTHORIZED for an unknown email", async () => {
+it("SES-CRT-3 등록되지 않은 이메일로는 로그인할 수 없다", async () => {
 	// SES-CRT-3.1
 	await expect(monti.session.create({ email: "nobody@example.com", password: owner.password })).rejects.toMatchObject({
 		code: "UNAUTHORIZED",
 	});
 });
 
-it("SES-GET-1 returns the admin for a live token", async () => {
+it("SES-GET-1 유효한 토큰이면 관리자를 돌려준다", async () => {
 	const { token } = await monti.session.create(owner);
 
 	// SES-GET-1.1
 	expect(await monti.session.get({ token })).toEqual({ admin: { id: adminId, email: owner.email } });
 });
 
-it("SES-GET-2 returns no admin for an expired token", async () => {
+it("SES-GET-2 만료된 토큰이면 빈 결과를 돌려준다", async () => {
 	const expired = await monti.session.create(owner);
 	await db
-		.updateTable("monti_session")
+		.updateTable("session")
 		.set({ expires_at: new Date(Date.now() - 1000) })
 		.where("token_hash", "=", hashToken(expired.token))
 		.execute();
@@ -84,12 +84,12 @@ it("SES-GET-2 returns no admin for an expired token", async () => {
 	expect(await monti.session.get({ token: expired.token })).toEqual({ admin: null });
 });
 
-it("SES-GET-3 returns no admin for a token that does not exist", async () => {
+it("SES-GET-3 존재하지 않는 토큰이면 빈 결과를 돌려준다", async () => {
 	// SES-GET-3.1
 	expect(await monti.session.get({ token: "no-such-token" })).toEqual({ admin: null });
 });
 
-it("SES-DEL-1 deletes only the session of the given token", async () => {
+it("SES-DEL-1 해당 토큰의 세션만 지운다", async () => {
 	const first = await monti.session.create(owner);
 	const second = await monti.session.create(owner);
 

@@ -7,6 +7,7 @@ function pathsOf(doc: unknown, options?: Parameters<typeof validateDoc>[1]): str
 	return validateDoc(doc, options).map((issue) => issue.path);
 }
 
+/** `root` 자신과 그 하위 경로만 남긴다. */
 function under(paths: string[], root: string): string[] {
 	return paths.filter((path) => path === root || path.startsWith(`${root}.`) || path.startsWith(`${root}[`));
 }
@@ -15,148 +16,175 @@ function text(value: string, marks?: unknown[]): Record<string, unknown> {
 	return marks ? { type: "text", text: value, marks } : { type: "text", text: value };
 }
 
-it("RT-DOC-1 returns no issues for a valid document", () => {
-	const marks: Mark[] = [
-		{ type: "bold" },
-		{ type: "italic" },
-		{ type: "underline" },
-		{ type: "strike" },
-		{ type: "code" },
-		{ type: "link", href: "https://example.com" },
-		{ type: "sup" },
-		{ type: "sub" },
-	];
-	const inlines: Inline[] = [
-		{ type: "text", text: "안녕하세요", marks },
-		{ type: "hardBreak" },
-		{ type: "footnoteRef", id: "fn-1" },
-	];
-	const listItem = (id: string, children: Block[] = []): Block => ({
+/** 문단 하나와 `children`을 담은 목록 항목. */
+function listItem(id: string, children: Block[] = []): Block {
+	return {
 		id,
 		type: "listItem",
 		children: [{ id: `${id}-p`, type: "paragraph", content: [{ type: "text", text: "항목" }] }, ...children],
-	});
-	const blocks: Block[] = [
-		{ id: "b1", type: "paragraph", content: inlines },
-		{ id: "b2", type: "heading", attrs: { level: 2 }, content: [] },
-		{ id: "b3", type: "codeBlock", attrs: { language: "ts" }, content: [{ type: "text", text: "let a = 1;" }] },
-		{ id: "b4", type: "footnote", attrs: { id: "fn-1" } },
-		{
-			id: "b5",
-			type: "bulletList",
-			children: [listItem("b5-1", [{ id: "b5-n", type: "bulletList", children: [listItem("b5-n-1")] }])],
-		},
-		{ id: "b6", type: "orderedList", children: [listItem("b6-1")] },
-		{ id: "b7", type: "checklist", children: [] },
-		{ id: "b8", type: "quote" },
-		{ id: "b9", type: "divider" },
-		{ id: "b10", type: "image", attrs: { mediaId: "6d1f3b2a-8c4e-4f7a-9b2d-3e5f7a9c1b20" } },
-		{ id: "b11", type: "file", attrs: { mediaId: "c3a5e7f9-2b4d-4e6f-8a1c-5d7e9f1b3c42" } },
-		{ id: "b12", type: "table", attrs: { rows: [["a", "b"]] } },
-		{ id: "b13", type: "listItem", children: [] },
-	];
-	const doc: Doc = { blocks };
+	};
+}
+
+const BUILT_IN_MARKS: Mark[] = [
+	{ type: "bold" },
+	{ type: "italic" },
+	{ type: "underline" },
+	{ type: "strike" },
+	{ type: "code" },
+	{ type: "link", href: "https://example.com" },
+	{ type: "sup" },
+	{ type: "sub" },
+];
+
+const INLINES: Inline[] = [
+	{ type: "text", text: "안녕하세요", marks: BUILT_IN_MARKS },
+	{ type: "hardBreak" },
+	{ type: "footnoteRef", id: "fn-1" },
+];
+
+const VALID_BLOCKS: Block[] = [
+	{ id: "b1", type: "paragraph", content: INLINES },
+	{ id: "b2", type: "heading", attrs: { level: 2 }, content: [] },
+	{ id: "b3", type: "codeBlock", attrs: { language: "ts" }, content: [{ type: "text", text: "let a = 1;" }] },
+	{ id: "b4", type: "footnote", attrs: { id: "fn-1" } },
+	{
+		id: "b5",
+		type: "bulletList",
+		children: [listItem("b5-1", [{ id: "b5-n", type: "bulletList", children: [listItem("b5-n-1")] }])],
+	},
+	{ id: "b6", type: "orderedList", children: [listItem("b6-1")] },
+	{ id: "b7", type: "checklist", children: [] },
+	{ id: "b8", type: "quote" },
+	{ id: "b9", type: "divider" },
+	{ id: "b10", type: "image", attrs: { mediaId: "6d1f3b2a-8c4e-4f7a-9b2d-3e5f7a9c1b20" } },
+	{ id: "b11", type: "file", attrs: { mediaId: "c3a5e7f9-2b4d-4e6f-8a1c-5d7e9f1b3c42" } },
+	{ id: "b12", type: "table", attrs: { rows: [["a", "b"]] } },
+	{ id: "b13", type: "listItem", children: [] },
+];
+
+const UUID_A = "4f2c8e7a-1b3d-4c5e-8f9a-0b1c2d3e4f50";
+const UUID_B = "9a8b7c6d-5e4f-4a3b-9c2d-1e0f9a8b7c6d";
+
+it("RT-DOC-1 유효한 본문 문서는 빈 문제 목록을 돌려준다", () => {
+	const doc: Doc = { blocks: VALID_BLOCKS };
 	// RT-DOC-1.1
 	expect(validateDoc(doc)).toEqual([]);
 });
 
-it("RT-DOC-2 returns an issue instead of throwing when the top-level structure is wrong", () => {
+it("RT-DOC-2 문서의 블록 목록이 배열이 아니면 예외를 던지지 않고 문제를 돌려준다", () => {
 	const paths = pathsOf({ blocks: {} });
 	// RT-DOC-2.1
 	expect(paths).toContain("blocks");
 });
 
-it("RT-DOC-3 returns an issue at every broken required property or shape of a block", () => {
-	const paths = pathsOf({
-		blocks: [
-			null,
-			{ type: "paragraph" },
-			{ id: "b2" },
-			{ id: "b3", type: "paragraph", attrs: "big" },
-			{ id: "b4", type: "paragraph", content: "text" },
-			{ id: "b5", type: "quote", children: {} },
-		],
-	});
+it("RT-DOC-3 블록이 객체가 아니면 해당 블록 경로의 문제를 돌려준다", () => {
+	const paths = pathsOf({ blocks: [null] });
 	// RT-DOC-3.1
 	expect(paths).toContain("blocks[0]");
-	// RT-DOC-3.2
-	expect(paths).toContain("blocks[1].id");
-	// RT-DOC-3.3
-	expect(paths).toContain("blocks[2].type");
-	// RT-DOC-3.4
-	expect(paths).toContain("blocks[3].attrs");
-	// RT-DOC-3.5
-	expect(paths).toContain("blocks[4].content");
-	// RT-DOC-3.6
-	expect(paths).toContain("blocks[5].children");
 });
 
-it("RT-DOC-4 reports the later block when two blocks share an id", () => {
+it("RT-DOC-4 블록에 식별자나 종류가 빠졌으면 해당 속성 경로의 문제를 돌려준다", () => {
+	const paths = pathsOf({ blocks: [{ type: "paragraph" }, { id: "b1" }] });
+	// RT-DOC-4.1
+	expect(paths).toContain("blocks[0].id");
+	// RT-DOC-4.2
+	expect(paths).toContain("blocks[1].type");
+});
+
+it("RT-DOC-5 블록의 속성·인라인 목록·하위 블록 목록 형식이 잘못되었으면 해당 경로의 문제를 돌려준다", () => {
+	const paths = pathsOf({
+		blocks: [
+			{ id: "b0", type: "paragraph", attrs: "big" },
+			{ id: "b1", type: "paragraph", content: "text" },
+			{ id: "b2", type: "quote", children: {} },
+		],
+	});
+	// RT-DOC-5.1
+	expect(paths).toContain("blocks[0].attrs");
+	// RT-DOC-5.2
+	expect(paths).toContain("blocks[1].content");
+	// RT-DOC-5.3
+	expect(paths).toContain("blocks[2].children");
+});
+
+it("RT-DOC-6 같은 ID를 가진 블록이 중복되면 나중에 나온 블록을 문제로 돌려준다", () => {
 	const paths = pathsOf({
 		blocks: [
 			{ id: "same", type: "paragraph" },
 			{ id: "quote", type: "quote", children: [{ id: "same", type: "paragraph" }] },
 		],
 	});
-	// RT-DOC-4.1
+	// RT-DOC-6.1
 	expect(paths).toContain("blocks[1].children[0].id");
-	// RT-DOC-4.2
+	// RT-DOC-6.2
 	expect(paths).not.toContain("blocks[0].id");
 });
 
-it("RT-DOC-5 reports a block type that is not registered", () => {
+it("RT-DOC-7 등록되지 않은 종류의 블록은 문제를 돌려준다", () => {
 	const paths = pathsOf({ blocks: [{ id: "b0", type: "carousel" }] });
-	// RT-DOC-5.1
+	// RT-DOC-7.1
 	expect(paths).toContain("blocks[0].type");
 });
 
-it("RT-BLK-1 keeps and overrides built-in blocks with registered definitions and checks attrs with their schema", () => {
+it("RT-BLK-1 추가로 등록한 사용자 정의 블록의 속성을 스키마로 검사한다", () => {
 	const blocks: BlockDefinition[] = [
 		{ type: "callout", holds: "blocks", attrs: z.object({ tone: z.enum(["info", "warning"]) }) },
-		{ type: "codeBlock", holds: "text", attrs: z.object({ language: z.string() }) },
 	];
 	const paths = pathsOf(
 		{
 			blocks: [
-				{ id: "b0", type: "paragraph", content: [{ type: "text", text: "본문" }] },
-				{ id: "b1", type: "callout", attrs: { tone: "info" }, children: [{ id: "b1-0", type: "paragraph" }] },
-				{ id: "b2", type: "callout", attrs: { tone: "loud" } },
-				{ id: "b3", type: "codeBlock", attrs: { language: 3 } },
+				{ id: "b0", type: "callout", attrs: { tone: "info" }, children: [{ id: "b0-0", type: "paragraph" }] },
+				{ id: "b1", type: "callout", attrs: { tone: "loud" } },
 			],
 		},
 		{ blocks },
 	);
 	// RT-BLK-1.1
-	expect(paths).toContain("blocks[2].attrs");
+	expect(paths).toContain("blocks[1].attrs");
 	// RT-BLK-1.2
-	expect(paths).toContain("blocks[3].attrs");
-	// RT-BLK-1.3
 	expect(under(paths, "blocks[0]")).toEqual([]);
-	// RT-BLK-1.4
-	expect(under(paths, "blocks[1]")).toEqual([]);
 });
 
-it("RT-BLK-2 reports content or children that the block's holds does not allow", () => {
-	const paragraph = { id: "p", type: "paragraph" };
-	const inline = { type: "text", text: "글" };
-	const paths = pathsOf({
-		blocks: [
-			{ id: "b0", type: "paragraph", children: [paragraph] },
-			{ id: "b1", type: "quote", content: [inline] },
-			{ id: "b2", type: "divider", content: [inline], children: [{ ...paragraph, id: "p2" }] },
-		],
-	});
+it("RT-BLK-2 내장 블록과 같은 이름으로 블록을 등록하면 내장 블록의 속성 검사를 덮어쓴다", () => {
+	const blocks: BlockDefinition[] = [{ type: "codeBlock", holds: "text", attrs: z.object({ language: z.string() }) }];
+	const paths = pathsOf(
+		{
+			blocks: [
+				{ id: "b0", type: "paragraph", content: [{ type: "text", text: "본문" }] },
+				{ id: "b1", type: "codeBlock", attrs: { language: 3 } },
+			],
+		},
+		{ blocks },
+	);
 	// RT-BLK-2.1
-	expect(paths).toContain("blocks[0].children");
+	expect(paths).toContain("blocks[1].attrs");
 	// RT-BLK-2.2
-	expect(paths).toContain("blocks[1].content");
-	// RT-BLK-2.3
-	expect(paths).toContain("blocks[2].content");
-	// RT-BLK-2.4
-	expect(paths).toContain("blocks[2].children");
+	expect(under(paths, "blocks[0]")).toEqual([]);
 });
 
-it("RT-BLK-3 reports a child block that is not in the allowed children", () => {
+it("RT-BLK-3 글자만 담는 블록에 하위 블록이 들어 있으면 문제를 돌려준다", () => {
+	const paths = pathsOf({ blocks: [{ id: "b0", type: "paragraph", children: [{ id: "p", type: "paragraph" }] }] });
+	// RT-BLK-3.1
+	expect(paths).toContain("blocks[0].children");
+});
+
+it("RT-BLK-4 하위 블록만 담는 블록에 인라인 글자가 들어 있으면 문제를 돌려준다", () => {
+	const paths = pathsOf({ blocks: [{ id: "b0", type: "quote", content: [text("글")] }] });
+	// RT-BLK-4.1
+	expect(paths).toContain("blocks[0].content");
+});
+
+it("RT-BLK-5 내용을 담지 않는 블록에 글자나 하위 블록이 들어 있으면 문제를 돌려준다", () => {
+	const paths = pathsOf({
+		blocks: [{ id: "b0", type: "divider", content: [text("글")], children: [{ id: "p", type: "paragraph" }] }],
+	});
+	// RT-BLK-5.1
+	expect(paths).toContain("blocks[0].content");
+	// RT-BLK-5.2
+	expect(paths).toContain("blocks[0].children");
+});
+
+it("RT-BLK-6 허용된 자식 목록에 없는 하위 블록이 들어 있으면 문제를 돌려준다", () => {
 	const blocks: BlockDefinition[] = [
 		{ type: "tabs", holds: "blocks", children: ["tab"] },
 		{ type: "tab", holds: "blocks" },
@@ -164,109 +192,98 @@ it("RT-BLK-3 reports a child block that is not in the allowed children", () => {
 	const paths = pathsOf(
 		{
 			blocks: [
-				{ id: "b0", type: "bulletList", children: [{ id: "b0-0", type: "paragraph" }] },
 				{
-					id: "b1",
+					id: "b0",
 					type: "tabs",
 					children: [
-						{ id: "b1-0", type: "tab", children: [{ id: "b1-0-0", type: "paragraph" }] },
-						{ id: "b1-1", type: "paragraph" },
+						{ id: "b0-0", type: "tab", children: [{ id: "b0-0-0", type: "paragraph" }] },
+						{ id: "b0-1", type: "paragraph" },
 					],
 				},
 			],
 		},
 		{ blocks },
 	);
-	// RT-BLK-3.1
-	expect(paths).toContain("blocks[0].children[0]");
-	// RT-BLK-3.2
-	expect(paths).toContain("blocks[1].children[1]");
-	// RT-BLK-3.3
-	expect(under(paths, "blocks[1].children[0]")).toEqual([]);
+	// RT-BLK-6.1
+	expect(paths).toContain("blocks[0].children[1]");
+	// RT-BLK-6.2
+	expect(under(paths, "blocks[0].children[0]")).toEqual([]);
 });
 
-it("RT-INL-1 reports a broken inline node or an unregistered mark", () => {
-	const paths = pathsOf({
-		blocks: [
-			{
-				id: "b0",
-				type: "paragraph",
-				content: [
-					{ type: "emoji", name: "smile" },
-					{ type: "text", text: 42 },
-					text("이름 없는 마크", [{ href: "https://example.com" }]),
-					text("모르는 마크", [{ type: "glow" }]),
-				],
-			},
-		],
-	});
+it("RT-INL-1 등록되지 않은 종류의 인라인 노드는 문제를 돌려준다", () => {
+	const paths = pathsOf({ blocks: [{ id: "b0", type: "paragraph", content: [{ type: "emoji", name: "smile" }] }] });
 	// RT-INL-1.1
 	expect(paths).toContain("blocks[0].content[0].type");
-	// RT-INL-1.2
-	expect(paths).toContain("blocks[0].content[1].text");
-	// RT-INL-1.3
-	expect(paths).toContain("blocks[0].content[2].marks[0].type");
-	// RT-INL-1.4
-	expect(paths).toContain("blocks[0].content[3].marks[0].type");
 });
 
-it("RT-INL-2 keeps and overrides built-in marks with registered definitions and checks the flat attributes without type", () => {
+it("RT-INL-2 글자 노드의 텍스트가 문자열이 아니면 문제를 돌려준다", () => {
+	const paths = pathsOf({ blocks: [{ id: "b0", type: "paragraph", content: [{ type: "text", text: 42 }] }] });
+	// RT-INL-2.1
+	expect(paths).toContain("blocks[0].content[0].text");
+});
+
+it("RT-INL-3 마크에 종류가 없거나 등록되지 않은 마크이면 문제를 돌려준다", () => {
+	const content = [text("이름 없는 마크", [{ href: "https://example.com" }]), text("모르는 마크", [{ type: "glow" }])];
+	const paths = pathsOf({ blocks: [{ id: "b0", type: "paragraph", content }] });
+	// RT-INL-3.1
+	expect(paths).toContain("blocks[0].content[0].marks[0].type");
+	// RT-INL-3.2
+	expect(paths).toContain("blocks[0].content[1].marks[0].type");
+});
+
+it("RT-INL-4 추가로 등록한 사용자 정의 마크의 속성을 스키마로 검사한다", () => {
 	const marks: MarkDefinition[] = [
 		{ type: "highlight", attrs: z.strictObject({ color: z.enum(["yellow", "green"]) }) },
-		{ type: "link", attrs: z.strictObject({ href: z.url() }) },
 	];
-	const paths = pathsOf(
-		{
-			blocks: [
-				{
-					id: "b0",
-					type: "paragraph",
-					content: [
-						text("굵게", [{ type: "bold" }]),
-						text("형광", [{ type: "highlight", color: "yellow" }]),
-						text("잘못된 형광", [{ type: "highlight", color: "purple" }]),
-						text("잘못된 링크", [{ type: "link", href: "not a url" }]),
-					],
-				},
-			],
-		},
-		{ marks },
-	);
-	// RT-INL-2.1
-	expect(paths).toContain("blocks[0].content[2].marks[0]");
-	// RT-INL-2.2
-	expect(paths).toContain("blocks[0].content[3].marks[0]");
-	// RT-INL-2.3
+	const content = [
+		text("형광", [{ type: "highlight", color: "yellow" }]),
+		text("잘못된 형광", [{ type: "highlight", color: "purple" }]),
+	];
+	const paths = pathsOf({ blocks: [{ id: "b0", type: "paragraph", content }] }, { marks });
+	// RT-INL-4.1
+	expect(paths).toContain("blocks[0].content[1].marks[0]");
+	// RT-INL-4.2
 	expect(under(paths, "blocks[0].content[0]")).toEqual([]);
-	// RT-INL-2.4
-	expect(under(paths, "blocks[0].content[1]")).toEqual([]);
 });
 
-it("RT-MED-1 checks the reserved attrs.mediaId and attrs.mediaIds as UUIDs when they are given", () => {
+it("RT-INL-5 내장 마크와 같은 이름으로 마크를 등록하면 내장 마크의 속성 검사를 덮어쓴다", () => {
+	const marks: MarkDefinition[] = [{ type: "link", attrs: z.strictObject({ href: z.url() }) }];
+	const content = [text("굵게", [{ type: "bold" }]), text("잘못된 링크", [{ type: "link", href: "not a url" }])];
+	const paths = pathsOf({ blocks: [{ id: "b0", type: "paragraph", content }] }, { marks });
+	// RT-INL-5.1
+	expect(paths).toContain("blocks[0].content[1].marks[0]");
+	// RT-INL-5.2
+	expect(under(paths, "blocks[0].content[0]")).toEqual([]);
+});
+
+it("RT-MED-1 블록의 단건 미디어 예약 속성이 유효한 UUID가 아니면 문제를 돌려준다", () => {
 	const paths = pathsOf({
 		blocks: [
-			{ id: "b0", type: "image", attrs: { mediaId: "0b9b5f0e-3c1a-4a52-9d8e-6f1f0d6c2a11" } },
-			{
-				id: "b1",
-				type: "file",
-				attrs: { mediaIds: ["4f2c8e7a-1b3d-4c5e-8f9a-0b1c2d3e4f50", "9a8b7c6d-5e4f-4a3b-9c2d-1e0f9a8b7c6d"] },
-			},
-			{ id: "b2", type: "image", attrs: { mediaId: "not-a-uuid" } },
-			{ id: "b3", type: "image", attrs: { mediaId: null } },
-			{ id: "b4", type: "file", attrs: { mediaIds: ["4f2c8e7a-1b3d-4c5e-8f9a-0b1c2d3e4f50", "nope"] } },
-			{ id: "b5", type: "file", attrs: { mediaIds: "4f2c8e7a-1b3d-4c5e-8f9a-0b1c2d3e4f50" } },
+			{ id: "b0", type: "image", attrs: { mediaId: UUID_A } },
+			{ id: "b1", type: "image", attrs: { mediaId: "not-a-uuid" } },
+			{ id: "b2", type: "image", attrs: { mediaId: null } },
 		],
 	});
 	// RT-MED-1.1
-	expect(paths).toContain("blocks[2].attrs.mediaId");
+	expect(paths).toContain("blocks[1].attrs.mediaId");
 	// RT-MED-1.2
-	expect(paths).toContain("blocks[3].attrs.mediaId");
+	expect(paths).toContain("blocks[2].attrs.mediaId");
 	// RT-MED-1.3
-	expect(paths).toContain("blocks[4].attrs.mediaIds");
-	// RT-MED-1.4
-	expect(paths).toContain("blocks[5].attrs.mediaIds");
-	// RT-MED-1.5
 	expect(under(paths, "blocks[0]")).toEqual([]);
-	// RT-MED-1.5
-	expect(under(paths, "blocks[1]")).toEqual([]);
+});
+
+it("RT-MED-2 블록의 다건 미디어 예약 속성이 유효한 UUID 배열이 아니면 문제를 돌려준다", () => {
+	const paths = pathsOf({
+		blocks: [
+			{ id: "b0", type: "file", attrs: { mediaIds: [UUID_A, UUID_B] } },
+			{ id: "b1", type: "file", attrs: { mediaIds: [UUID_A, "nope"] } },
+			{ id: "b2", type: "file", attrs: { mediaIds: UUID_A } },
+		],
+	});
+	// RT-MED-2.1
+	expect(paths).toContain("blocks[1].attrs.mediaIds");
+	// RT-MED-2.2
+	expect(paths).toContain("blocks[2].attrs.mediaIds");
+	// RT-MED-2.3
+	expect(under(paths, "blocks[0]")).toEqual([]);
 });

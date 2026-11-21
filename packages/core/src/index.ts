@@ -15,25 +15,23 @@ import { folders } from "./resources/folders/folders";
 import { createKeys } from "./resources/keys/keys";
 import { media } from "./resources/media/media";
 import { schema } from "./resources/schema/schema";
+import { syncSchemaTables } from "./resources/schema/sync-tables";
 import { session } from "./resources/session/session";
 import { templates } from "./resources/templates/templates";
 import { translationStatus } from "./resources/translation-status/translation-status";
 import { trash } from "./resources/trash/trash";
 
-// The public entry: what the apps (`next`, `cli`), the plugins and the packages that handle the body use.
+// 공개 출구: 앱(`next`, `cli`), 플러그인, 본문을 다루는 패키지가 쓰는 것.
 export type {
+	AdminTable,
 	ApiKeysTable,
 	Database,
-	EntriesTable,
-	EntryLocalesTable,
-	EntryPublishedTable,
 	FoldersTable,
 	LooseFilesTable,
 	MediaTable,
 	MediaUsesTable,
 	Migration,
-	MontiAdminTable,
-	MontiSessionTable,
+	SessionTable,
 	TemplatesTable,
 } from "./db/types";
 export { MontiError } from "./engine/errors";
@@ -60,21 +58,21 @@ export { removeLooseFiles } from "./resources/media/loose-files";
 export type { Block, BlockDefinition, Doc, DocIssue, MarkDefinition, ValidateDocOptions } from "./rich-text/types";
 export { validateDoc } from "./rich-text/validate-doc";
 
-/** What the app hands `startMonti`: the database, and the schema and config it loaded from the two files. */
+/** 앱이 `startMonti`에 넘기는 것: DB와, 두 파일에서 불러온 스키마와 설정. */
 export interface StartOptions extends MontiState {
 	db: Kysely<Database>;
 }
 
-/** The core's resource tree; `keys.check` uses the key services the plugins register. */
+/** core의 리소스 트리. `keys.check`는 플러그인이 등록한 키 서비스를 쓴다. */
 function coreResources(plugins: Plugin[]) {
 	const keys = createKeys(keyServicesOf(plugins));
 	return { entries, translationStatus, templates, folders, media, trash, schema, config, keys, session, admin };
 }
 
 /**
- * Starts the core: checks the schema, assembles the engine with the core resources and `config.plugins`, then runs the
- * core migrations and each plugin's in `config.plugins` order. Nothing touches the database before the schema and the
- * plugin paths are found valid.
+ * core를 시작한다: 스키마를 검사하고, core 리소스와 `config.plugins`로 엔진을 조립한 뒤, core 마이그레이션과 각 플러그인의
+ * 마이그레이션을 `config.plugins` 순서로 실행한다. 개발 서버(`config.dev: true`)이면 스키마의 컬렉션 테이블을 DB에
+ * 맞춘다. 스키마가 올바르다고 확인되기 전에는 DB를 건드리지 않는다.
  */
 export async function startMonti(options: StartOptions): Promise<Monti<ReturnType<typeof coreResources>>> {
 	const { db, schemaFile, configFile } = options;
@@ -82,18 +80,23 @@ export async function startMonti(options: StartOptions): Promise<Monti<ReturnTyp
 	const state = { schema: validSchema(options.schema), config: options.config, schemaFile, configFile };
 	const monti = createMonti(db, coreResources(plugins), plugins, state);
 	await migrateAll(db, plugins);
+	if (options.config.dev === true) await db.transaction().execute((tx) => syncSchemaTables(tx, state.schema));
 	return monti;
 }
 
 function validSchema(value: Schema): Schema {
 	const result = schemaShape.safeParse(value);
 	if (!result.success) {
-		throw new MontiError("BAD_REQUEST", `The schema is invalid: ${z.prettifyError(result.error)}`, result.error.issues);
+		throw new MontiError(
+			"BAD_REQUEST",
+			`스키마가 올바르지 않다: ${z.prettifyError(result.error)}`,
+			result.error.issues,
+		);
 	}
 	return result.data;
 }
 
-/** The core's steps under `"core"`, then each plugin's under its `name`. */
+/** core의 단계를 `"core"` 범위로, 그다음 각 플러그인의 단계를 그 `name` 범위로 실행한다. */
 async function migrateAll(db: Kysely<Database>, plugins: Plugin[]): Promise<void> {
 	await migrate(db, "core", [initial]);
 	for (const plugin of plugins) {

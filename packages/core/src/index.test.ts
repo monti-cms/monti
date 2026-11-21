@@ -7,9 +7,8 @@ import { z } from "zod";
 import { createTestDatabase, recordedMigrations, type TestDatabase, tableExists } from "./__test__/database";
 import { initial } from "./db/migrations/0001-initial";
 import type { Database } from "./db/types";
-import { MontiError } from "./engine/errors";
 import { defineWrite } from "./engine/operation";
-import type { Monti, Plugin, Schema } from "./engine/types";
+import type { MontiConfig, Plugin, Schema } from "./engine/types";
 import { startMonti } from "./index";
 
 let testDb: TestDatabase;
@@ -20,7 +19,7 @@ let configFile: string;
 
 const schema: Schema = { locales: ["ko"], collections: { posts: { fields: { title: { type: "text" } } } } };
 
-/** A schema with a field whose `type` is none of the 8, as an untyped caller would send it. */
+/** 8종 밖의 `type`을 가진 필드가 있는 스키마: 타입 없이 부르는 쪽이 보내는 그대로. */
 const unknownType: Schema = JSON.parse(
 	JSON.stringify({ locales: ["ko"], collections: { posts: { fields: { title: { type: "richtext" } } } } }),
 );
@@ -40,11 +39,17 @@ afterEach(async () => {
 	await rm(dir, { recursive: true });
 });
 
-function start(plugins: Plugin[], startSchema: Schema = schema) {
-	return startMonti({ db, schema: startSchema, config: { name: "Monti Blog", plugins }, schemaFile, configFile });
+function start(plugins: Plugin[], startSchema: Schema = schema, config: Partial<MontiConfig> = {}) {
+	return startMonti({
+		db,
+		schema: startSchema,
+		config: { name: "Monti Blog", plugins, ...config },
+		schemaFile,
+		configFile,
+	});
 }
 
-/** A plugin table that points at a core table: it can only be created after the core migration. */
+/** 코어 테이블을 가리키는 플러그인 테이블: 코어 마이그레이션 뒤에만 만들 수 있다. */
 async function createPhotos(pluginDb: Kysely<unknown>): Promise<void> {
 	await pluginDb.schema
 		.createTable("albums_photos")
@@ -57,7 +62,7 @@ async function tagRun(input: { name: string }): Promise<{ tag: string }> {
 	return { tag: input.name };
 }
 
-it("START-1 runs the core migrations first, then the plugin's", async () => {
+it("START-1 시작하면 코어와 플러그인의 마이그레이션을 코어 먼저 실행한다", async () => {
 	const plugin: Plugin = { name: "albums", migrations: [{ name: "photos", up: createPhotos }] };
 
 	await start([plugin]);
@@ -71,13 +76,15 @@ it("START-1 runs the core migrations first, then the plugin's", async () => {
 	expect(await tableExists(testDb.db, "albums_photos")).toBe(true);
 });
 
-it("START-2 runs core resources and plugin operations through the monti object", async () => {
+it("START-2 `monti` 객체로 코어 리소스와 플러그인 Operation을 모두 실행할 수 있다", async () => {
 	const tag = defineWrite({ input: z.object({ name: z.string() }), run: tagRun });
 	const plugin: Plugin = { name: "albums", operations: { albums: { tag } } };
 
 	const monti = await start([plugin]);
 	const folder = await monti.folders.create({ scope: "media", name: "Photos" });
-	const output = await (monti as unknown as Monti<{ albums: { tag: typeof tag } }>).albums.tag({ name: "Summer" });
+	// 플러그인 Operation은 `monti`의 타입에 없으므로 이름으로 꺼낸다.
+	const albums: { tag: (input: { name: string }) => Promise<{ tag: string }> } = Reflect.get(monti, "albums");
+	const output = await albums.tag({ name: "Summer" });
 
 	// START-2.1
 	expect(await db.selectFrom("folders").select(["id", "name"]).execute()).toEqual([{ id: folder.id, name: "Photos" }]);
@@ -85,18 +92,16 @@ it("START-2 runs core resources and plugin operations through the monti object",
 	expect(output).toEqual({ tag: "Summer" });
 });
 
-it("START-3 rejects a schema with an undefined field type with BAD_REQUEST before migrating", async () => {
+it("START-3 스키마에 지원하지 않는 필드 종류가 들어 있으면 마이그레이션 전에 시작을 거절한다", async () => {
 	const started = start([], unknownType);
 
 	// START-3.1
-	await expect(started).rejects.toBeInstanceOf(MontiError);
-	// START-3.1
 	await expect(started).rejects.toMatchObject({ code: "BAD_REQUEST" });
 	// START-3.2
-	expect(await tableExists(testDb.db, "monti_migrations")).toBe(false);
+	expect(await tableExists(testDb.db, "migrations")).toBe(false);
 });
 
-it("START-4 connects a plugin's key services to keys.check", async () => {
+it("START-4 플러그인의 키 서비스가 `keys.check`에 연결된다", async () => {
 	const check = vi.fn<(secret: string) => Promise<void>>().mockResolvedValue(undefined);
 	const plugin: Plugin = { name: "mail", keyServices: [{ service: "mail", check }] };
 
@@ -107,7 +112,7 @@ it("START-4 connects a plugin's key services to keys.check", async () => {
 	expect(check).toHaveBeenCalledExactlyOnceWith("mail-secret-1234");
 });
 
-it("START-5 lists every core operation in the monti object's spec", async () => {
+it("START-5 `monti` 객체의 명세에 코어의 모든 Operation이 들어 있다", async () => {
 	const monti = await start([]);
 
 	const names = monti.spec().map((entry) => entry.name);
@@ -163,4 +168,14 @@ it("START-5 lists every core operation in the monti object's spec", async () => 
 			"admin.update",
 		].sort(),
 	);
+});
+
+it("START-6 개발 서버로 시작하면 스키마에 정의된 컬렉션 테이블을 DB에 준비한다", async () => {
+	await start([], schema, { dev: true });
+
+	// START-6.1
+	expect({ posts: await tableExists(testDb.db, "posts"), data: await tableExists(testDb.db, "posts_data") }).toEqual({
+		posts: true,
+		data: true,
+	});
 });

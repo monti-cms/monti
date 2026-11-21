@@ -8,38 +8,38 @@ import { hashPassword, verifyPassword } from "./password";
 
 const createInput = z.object({ email: z.string(), password: z.string() });
 
-/** Creates the first admin and signs it in; there is only ever one admin. */
+/** 첫 관리자를 만들고 로그인시킨다. 관리자는 언제나 하나뿐이다. */
 async function createAdmin(
 	input: z.infer<typeof createInput>,
 	ctx: WriteContext,
 ): Promise<{ id: string; email: string; token: string }> {
-	const existing = await ctx.db.selectFrom("monti_admin").select("id").executeTakeFirst();
-	if (existing !== undefined) throw new MontiError("CONFLICT", "An admin already exists");
+	const existing = await ctx.db.selectFrom("admin").select("id").executeTakeFirst();
+	if (existing !== undefined) throw new MontiError("CONFLICT", "관리자가 이미 있습니다");
 	const id = randomUUID();
 	const passwordHash = await hashPassword(input.password);
-	await ctx.db.insertInto("monti_admin").values({ id, email: input.email, password_hash: passwordHash }).execute();
+	await ctx.db.insertInto("admin").values({ id, email: input.email, password_hash: passwordHash }).execute();
 	const token = await issueSession(ctx.db, id);
 	return { id, email: input.email, token };
 }
 
 const updateInput = z.object({ currentPassword: z.string(), email: z.string(), password: z.string() });
 
-/** Changes the admin's email and password after checking the current one, and signs every session out. */
+/** 현재 비밀번호를 확인한 뒤 관리자의 이메일과 비밀번호를 바꾸고, 모든 세션을 로그아웃시킨다. */
 async function updateAdmin(
 	input: z.infer<typeof updateInput>,
 	ctx: WriteContext,
 ): Promise<{ id: string; email: string }> {
-	const current = await ctx.db.selectFrom("monti_admin").select(["id", "password_hash"]).executeTakeFirstOrThrow();
+	const current = await ctx.db.selectFrom("admin").select(["id", "password_hash"]).executeTakeFirstOrThrow();
 	if (!(await verifyPassword(input.currentPassword, current.password_hash))) {
-		throw new MontiError("UNAUTHORIZED", "Wrong current password");
+		throw new MontiError("UNAUTHORIZED", "현재 비밀번호가 틀렸습니다");
 	}
 	const passwordHash = await hashPassword(input.password);
 	await ctx.db
-		.updateTable("monti_admin")
+		.updateTable("admin")
 		.set({ email: input.email, password_hash: passwordHash })
 		.where("id", "=", current.id)
 		.execute();
-	await ctx.db.deleteFrom("monti_session").execute();
+	await ctx.db.deleteFrom("session").execute();
 	return { id: current.id, email: input.email };
 }
 

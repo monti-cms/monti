@@ -30,10 +30,10 @@ const BUILT_IN_MARKS: readonly MarkDefinition[] = [
 	"sub",
 ].map((type) => ({ type }));
 
-/** Attributes every block may carry, checked whatever its definition says. */
+/** 모든 블록이 가질 수 있는 예약 속성. 블록 정의와 상관없이 검사한다. */
 const RESERVED_ATTRS: Record<string, z.ZodTypeAny> = { mediaId: z.uuid(), mediaIds: z.array(z.uuid()) };
 
-/** The `holds` a block needs for each key it may carry. */
+/** 블록이 각 키를 가지려면 필요한 `holds`. */
 const HELD_BY: Record<"content" | "children", BlockHolds> = { content: "text", children: "blocks" };
 
 type Value = Record<string, unknown>;
@@ -45,7 +45,7 @@ interface Check {
 	issues: DocIssue[];
 }
 
-/** Checks a rich-text body against the built-in and the given block and mark definitions; returns every problem found and never throws. */
+/** 본문을 내장 블록·마크 정의와 넘겨받은 정의로 검사한다. 찾은 문제를 모두 돌려주고 예외는 던지지 않는다. */
 export function validateDoc(doc: unknown, options: ValidateDocOptions = {}): DocIssue[] {
 	const check: Check = {
 		blocks: blockDefinitions(options),
@@ -54,11 +54,11 @@ export function validateDoc(doc: unknown, options: ValidateDocOptions = {}): Doc
 		issues: [],
 	};
 	if (isRecord(doc)) checkBlockList(check, doc.blocks, "blocks");
-	else report(check, "", "The document must be an object.");
+	else report(check, "", "문서는 객체여야 합니다.");
 	return check.issues;
 }
 
-/** The built-in block definitions with the given ones added, by `type`; a given one replaces the built-in of its type. */
+/** 내장 블록 정의에 넘겨받은 정의를 `type`별로 더한다. 같은 `type`이면 넘겨받은 정의가 내장 정의를 대신한다. */
 export function blockDefinitions(options: ValidateDocOptions): Map<string, BlockDefinition> {
 	return byType(BUILT_IN_BLOCKS, options.blocks);
 }
@@ -69,7 +69,7 @@ function byType<T extends { type: string }>(builtIn: readonly T[], added: readon
 
 function checkBlockList(check: Check, value: unknown, path: string, allowed?: readonly string[]): void {
 	if (!Array.isArray(value)) {
-		report(check, path, "Must be an array of blocks.");
+		report(check, path, "블록 배열이어야 합니다.");
 		return;
 	}
 	value.forEach((block, index) => {
@@ -79,38 +79,38 @@ function checkBlockList(check: Check, value: unknown, path: string, allowed?: re
 
 function checkBlock(check: Check, block: unknown, path: string, allowed?: readonly string[]): void {
 	if (!isRecord(block)) {
-		report(check, path, "A block must be an object.");
+		report(check, path, "블록은 객체여야 합니다.");
 		return;
 	}
 	checkId(check, block.id, `${path}.id`);
 	const definition = blockDefinition(check, block.type, `${path}.type`);
 	if (!definition) return;
 	if (allowed && !allowed.includes(definition.type)) {
-		report(check, path, `A "${definition.type}" block is not allowed here.`);
+		report(check, path, `"${definition.type}" 블록은 여기에 둘 수 없습니다.`);
 	}
 	checkAttrs(check, block.attrs, definition.attrs, `${path}.attrs`);
 	checkHeld(check, block, definition, path);
 }
 
 function checkId(check: Check, id: unknown, path: string): void {
-	if (typeof id !== "string" || id === "") report(check, path, "A block needs a string id.");
-	else if (check.ids.has(id)) report(check, path, `The id "${id}" is already used by an earlier block.`);
+	if (typeof id !== "string" || id === "") report(check, path, "블록에는 문자열 id가 있어야 합니다.");
+	else if (check.ids.has(id)) report(check, path, `id "${id}"는 앞선 블록이 이미 쓰고 있습니다.`);
 	else check.ids.add(id);
 }
 
 function blockDefinition(check: Check, type: unknown, path: string): BlockDefinition | undefined {
 	if (typeof type !== "string") {
-		report(check, path, "A block needs a string type.");
+		report(check, path, "블록에는 문자열 type이 있어야 합니다.");
 		return undefined;
 	}
 	const definition = check.blocks.get(type);
-	if (!definition) report(check, path, `Unknown block type "${type}".`);
+	if (!definition) report(check, path, `알 수 없는 블록 type "${type}"입니다.`);
 	return definition;
 }
 
 function checkAttrs(check: Check, attrs: unknown, schema: z.ZodTypeAny | undefined, path: string): void {
 	if (attrs !== undefined && !isRecord(attrs)) {
-		report(check, path, "attrs must be an object.");
+		report(check, path, "attrs는 객체여야 합니다.");
 		return;
 	}
 	if (schema) checkSchema(check, schema, attrs ?? {}, path);
@@ -124,7 +124,7 @@ function checkHeld(check: Check, block: Value, definition: BlockDefinition, path
 		const value = block[key];
 		const at = `${path}.${key}`;
 		if (value === undefined) continue;
-		if (definition.holds !== HELD_BY[key]) report(check, at, `A "${definition.type}" block holds no ${key}.`);
+		if (definition.holds !== HELD_BY[key]) report(check, at, `"${definition.type}" 블록은 ${key}를 담지 않습니다.`);
 		else if (key === "content") checkInlines(check, value, at);
 		else checkBlockList(check, value, at, definition.children);
 	}
@@ -132,7 +132,7 @@ function checkHeld(check: Check, block: Value, definition: BlockDefinition, path
 
 function checkInlines(check: Check, value: unknown, path: string): void {
 	if (!Array.isArray(value)) {
-		report(check, path, "Must be an array of inline nodes.");
+		report(check, path, "인라인 노드 배열이어야 합니다.");
 		return;
 	}
 	value.forEach((node, index) => {
@@ -141,26 +141,28 @@ function checkInlines(check: Check, value: unknown, path: string): void {
 }
 
 function checkInline(check: Check, node: unknown, path: string): void {
-	if (!isRecord(node)) report(check, path, "An inline node must be an object.");
+	if (!isRecord(node)) report(check, path, "인라인 노드는 객체여야 합니다.");
 	else if (node.type === "text") checkText(check, node, path);
 	else if (node.type === "footnoteRef") checkFootnoteRef(check, node, path);
 	else if (node.type !== "hardBreak")
 		report(
 			check,
 			`${path}.type`,
-			typeof node.type === "string" ? `Unknown inline type "${node.type}".` : "An inline node needs a string type.",
+			typeof node.type === "string"
+				? `알 수 없는 인라인 type "${node.type}"입니다.`
+				: "인라인 노드에는 문자열 type이 있어야 합니다.",
 		);
 }
 
 function checkFootnoteRef(check: Check, node: Value, path: string): void {
-	if (typeof node.id !== "string") report(check, `${path}.id`, "A footnote reference needs a string id.");
+	if (typeof node.id !== "string") report(check, `${path}.id`, "각주 참조에는 문자열 id가 있어야 합니다.");
 }
 
 function checkText(check: Check, node: Value, path: string): void {
-	if (typeof node.text !== "string") report(check, `${path}.text`, "text must be a string.");
+	if (typeof node.text !== "string") report(check, `${path}.text`, "text는 문자열이어야 합니다.");
 	if (node.marks === undefined) return;
 	if (!Array.isArray(node.marks)) {
-		report(check, `${path}.marks`, "Must be an array of marks.");
+		report(check, `${path}.marks`, "마크 배열이어야 합니다.");
 		return;
 	}
 	node.marks.forEach((mark, index) => {
@@ -170,7 +172,7 @@ function checkText(check: Check, node: Value, path: string): void {
 
 function checkMark(check: Check, mark: unknown, path: string): void {
 	if (!isRecord(mark)) {
-		report(check, path, "A mark must be an object.");
+		report(check, path, "마크는 객체여야 합니다.");
 		return;
 	}
 	const { type, ...attrs } = mark;
@@ -179,7 +181,7 @@ function checkMark(check: Check, mark: unknown, path: string): void {
 		report(
 			check,
 			`${path}.type`,
-			typeof type === "string" ? `Unknown mark type "${type}".` : "A mark needs a string type.",
+			typeof type === "string" ? `알 수 없는 마크 type "${type}"입니다.` : "마크에는 문자열 type이 있어야 합니다.",
 		);
 	else if (definition.attrs) checkSchema(check, definition.attrs, attrs, path);
 }

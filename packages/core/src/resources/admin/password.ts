@@ -5,7 +5,7 @@ const derive = promisify(scrypt) as (password: string, salt: string, length: num
 
 const KEY_LENGTH = 64;
 
-/** A salted scrypt hash, stored as `salt:key` in hex. */
+/** 소금을 친 scrypt 해시. 16진수 `salt:key`로 저장한다. */
 export async function hashPassword(password: string): Promise<string> {
 	const salt = randomBytes(16).toString("hex");
 	const key = await derive(password, salt, KEY_LENGTH);

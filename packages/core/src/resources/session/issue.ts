@@ -2,19 +2,19 @@ import { createHash, randomBytes } from "node:crypto";
 import type { Transaction } from "kysely";
 import type { Database } from "../../db/types";
 
-/** How long a session lasts: 30 days, in milliseconds. */
+/** 세션 수명: 30일(밀리초). */
 const SESSION_LIFETIME_MS = 2_592_000_000;
 
-/** The session row keeps this hash, never the token itself. */
+/** 세션 행에는 토큰 원문이 아니라 이 해시를 저장한다. */
 export function hashToken(token: string): string {
 	return createHash("sha256").update(token).digest("hex");
 }
 
-/** Stores a new session of the admin and returns its token. */
+/** 관리자의 새 세션을 저장하고 그 토큰을 돌려준다. */
 export async function issueSession(db: Transaction<Database>, adminId: string): Promise<string> {
 	const token = randomBytes(32).toString("base64url");
 	await db
-		.insertInto("monti_session")
+		.insertInto("session")
 		.values({
 			token_hash: hashToken(token),
 			admin_id: adminId,

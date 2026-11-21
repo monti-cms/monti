@@ -1,43 +1,16 @@
 import type { ColumnType, JSONColumnType, Kysely } from "kysely";
 
-/** A `timestamptz` column: read as a `Date`, written as a `Date` or an ISO string. */
+/** `timestamptz` 열: `Date`로 읽고 `Date`나 ISO 문자열로 쓴다. */
 type Timestamp = ColumnType<Date, Date | string, Date | string>;
 
-/** A nullable `timestamptz` column: read as `Date | null`, optional on insert. */
+/** null을 허용하는 `timestamptz` 열: `Date | null`로 읽고, 넣을 때는 생략할 수 있다. */
 type NullableTimestamp = ColumnType<Date | null, Date | string | null | undefined, Date | string | null>;
 
-/** A nullable `uuid` column: read as `string | null`, optional on insert. */
+/** null을 허용하는 `uuid` 열: `string | null`로 읽고, 넣을 때는 생략할 수 있다. */
 type NullableUuid = ColumnType<string | null, string | null | undefined, string | null>;
 
-/** A `jsonb` column holding a JSON object, written as its JSON text. */
+/** JSON 객체를 담는 `jsonb` 열: JSON 텍스트로 쓴다. */
 type JsonObject = JSONColumnType<Record<string, unknown>>;
-
-/** What an entry's locales share: its collection, the locale it was written in, its folder and whether it is trashed. */
-export interface EntriesTable {
-	id: string;
-	collection: string;
-	source_locale: string;
-	folder_id: NullableUuid;
-	trashed_at: NullableTimestamp;
-}
-
-/** The working copy of an entry in one locale. */
-export interface EntryLocalesTable {
-	entry_id: string;
-	locale: string;
-	slug: string;
-	data: JsonObject;
-	translation_seen: JsonObject;
-}
-
-/** The published copy of an entry in one locale, the one the site reads. */
-export interface EntryPublishedTable {
-	entry_id: string;
-	locale: string;
-	slug: string;
-	data: JsonObject;
-	published_at: Timestamp;
-}
 
 export interface TemplatesTable {
 	id: string;
@@ -46,7 +19,7 @@ export interface TemplatesTable {
 	content: JsonObject;
 }
 
-/** `scope` is a collection key or `media`. */
+/** `scope`는 컬렉션 키이거나 `media`다. */
 export interface FoldersTable {
 	id: string;
 	scope: string;
@@ -64,7 +37,7 @@ export interface MediaTable {
 	trashed_at: NullableTimestamp;
 }
 
-/** Where an entry or a template uses a media file. `source_id` is a logical reference, not a foreign key. */
+/** 글이나 템플릿이 미디어 파일을 쓰는 곳. `source_id`는 외래 키가 아닌 논리 참조다. */
 export interface MediaUsesTable {
 	media_id: string;
 	source_kind: "entry" | "template";
@@ -72,25 +45,25 @@ export interface MediaUsesTable {
 	field_path: string;
 }
 
-/** Files in the storage that nothing uses any more, waiting to be removed. */
+/** 아무도 쓰지 않아 지워지기를 기다리는 저장소 파일. */
 export interface LooseFilesTable {
 	key: string;
 	remove_after: Timestamp;
 }
 
-export interface MontiAdminTable {
+export interface AdminTable {
 	id: string;
 	email: string;
 	password_hash: string;
 }
 
-export interface MontiSessionTable {
+export interface SessionTable {
 	token_hash: string;
 	admin_id: string;
 	expires_at: Timestamp;
 }
 
-/** An external service key, kept encrypted in `secret`. */
+/** 외부 서비스 키. `secret`에 암호화해 보관한다. */
 export interface ApiKeysTable {
 	id: string;
 	service: string;
@@ -99,24 +72,21 @@ export interface ApiKeysTable {
 	last4: string;
 }
 
-/** The eleven domain tables of the core. */
+/** core의 고정 도메인 테이블 8개. 컬렉션별 테이블은 스키마에서 만들어진다. */
 export interface Database {
-	entries: EntriesTable;
-	entry_locales: EntryLocalesTable;
-	entry_published: EntryPublishedTable;
 	templates: TemplatesTable;
 	folders: FoldersTable;
 	media: MediaTable;
 	media_uses: MediaUsesTable;
 	loose_files: LooseFilesTable;
-	monti_admin: MontiAdminTable;
-	monti_session: MontiSessionTable;
+	admin: AdminTable;
+	session: SessionTable;
 	api_keys: ApiKeysTable;
 }
 
 /**
- * One step of a database change. The core and every plugin list theirs in an array, run in order, each once.
- * `db` is untyped: a step works on the tables as they were at its time, not as they are now.
+ * DB 변경 한 단계. core와 플러그인은 각자 배열로 나열하고, 배열 순서대로 한 번씩 실행된다.
+ * `db`는 타입이 없다: 한 단계는 지금이 아니라 그 단계를 쓴 시점의 테이블을 다룬다.
  */
 export interface Migration {
 	name: string;

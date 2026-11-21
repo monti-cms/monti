@@ -1,27 +1,32 @@
 import { sql } from "kysely";
 import type { ReadContext } from "../../engine/types";
-import type { TrashRef } from "./items";
+import { tablesOf } from "../entries/tables";
+import type { TrashTarget } from "./items";
 
-/** The ids an action takes along, by table. */
+/** 동작이 함께 다루는 항목들: 글은 모두 `scope` 컬렉션의 글이다. */
 export interface Tree {
+	scope: string;
 	entries: string[];
 	folders: string[];
 	media: string[];
 }
 
-const TABLES = { entry: "entries", folder: "folders", media: "media" } as const;
-
-/** `= any(ids)`: matches one of `ids`, and nothing when there are none. */
+/** `= any(ids)`: `ids` 가운데 하나와 같다. `ids`가 비면 아무것도 고르지 않는다. */
 export function anyOf(ids: string[]) {
 	return sql<string>`any(${ids}::uuid[])`;
 }
 
+/** `scope`가 스키마의 컬렉션이면 그 글 테이블 이름. 컬렉션 테이블 이름은 이 검사를 거친 것만 쓴다. */
+export function entryTable(ctx: ReadContext, scope: string): string | undefined {
+	return Object.hasOwn(ctx.schema.collections, scope) ? scope : undefined;
+}
+
 /**
- * The folder `rootId` and, step by step down, each subfolder whose `trashed_at` is its parent's: the active ones under
- * an active folder, or those that went into the trash with a trashed one.
+ * 폴더 `rootId`와, 한 단계씩 내려가며 `trashed_at`이 부모와 같은 하위 폴더들: 활성 폴더 아래의 활성 폴더, 또는 휴지통
+ * 폴더와 함께 들어간 폴더.
  */
 function folderTree(ctx: ReadContext, rootId: string) {
-	return ctx.db.withRecursive("tree(id, trashed_at)", (db) =>
+	return tablesOf(ctx.db).withRecursive("tree(id, trashed_at)", (db) =>
 		db
 			.selectFrom("folders")
 			.select(["id", "trashed_at"])
@@ -36,31 +41,33 @@ function folderTree(ctx: ReadContext, rootId: string) {
 	);
 }
 
-function idsOf(rows: { id: string }[]): string[] {
-	return rows.map((row) => row.id);
+function idsOf(rows: { id: unknown }[]): string[] {
+	return rows.map((row) => String(row.id));
 }
 
-/** The folder tree of `rootId` with the entries and media directly in its folders that have their folder's `trashed_at`. */
-async function treeOf(ctx: ReadContext, rootId: string): Promise<Tree> {
-	const tree = folderTree(ctx, rootId);
-	const folders = await tree.selectFrom("tree").select("id").execute();
-	const entries = await tree
-		.selectFrom("entries")
-		.innerJoin("tree", "tree.id", "entries.folder_id")
-		.select("entries.id")
-		.whereRef("entries.trashed_at", "is not distinct from", "tree.trashed_at")
+/** 폴더 트리의 폴더에 바로 든 `table`의 행 가운데 그 폴더와 `trashed_at`이 같은 것들. */
+async function itemsIn(tree: ReturnType<typeof folderTree>, table: string): Promise<string[]> {
+	const rows = await tree
+		.selectFrom(`${table} as item`)
+		.innerJoin("tree", "tree.id", "item.folder_id")
+		.select("item.id")
+		.whereRef("item.trashed_at", "is not distinct from", "tree.trashed_at")
 		.execute();
-	const media = await tree
-		.selectFrom("media")
-		.innerJoin("tree", "tree.id", "media.folder_id")
-		.select("media.id")
-		.whereRef("media.trashed_at", "is not distinct from", "tree.trashed_at")
-		.execute();
-	return { folders: idsOf(folders), entries: idsOf(entries), media: idsOf(media) };
+	return idsOf(rows);
 }
 
-/** What an action on `item` takes along: a folder's tree, or the entry or media alone. */
-export async function itemsOf(ctx: ReadContext, item: TrashRef): Promise<Tree> {
-	if (item.kind === "folder") return treeOf(ctx, item.id);
-	return { entries: [], folders: [], media: [], [TABLES[item.kind]]: [item.id] };
+/** 폴더 `target`의 트리와 그 폴더들에 든 같은 `trashed_at`의 글(컬렉션 폴더)과 미디어. */
+async function treeOf(ctx: ReadContext, target: TrashTarget): Promise<Tree> {
+	const tree = folderTree(ctx, target.id);
+	const folders = idsOf(await tree.selectFrom("tree").select("id").execute());
+	const table = entryTable(ctx, target.scope);
+	const entries = table === undefined ? [] : await itemsIn(tree, table);
+	return { scope: target.scope, folders, entries, media: await itemsIn(tree, "media") };
+}
+
+/** `target`에 대한 동작이 함께 다루는 것: 폴더면 그 트리, 글이나 미디어면 그것 하나. */
+export async function itemsOf(ctx: ReadContext, target: TrashTarget): Promise<Tree> {
+	const { kind, id, scope } = target;
+	if (kind === "folder") return treeOf(ctx, target);
+	return { scope, entries: kind === "entry" ? [id] : [], folders: [], media: kind === "media" ? [id] : [] };
 }

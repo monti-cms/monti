@@ -1,7 +1,8 @@
 import { z } from "zod";
 import type { ReadContext } from "../../engine/types";
 import { uuidInput } from "../_shared/input";
-import { translationRows } from "./rows";
+import { collectionOf } from "../entries/collection";
+import { translationRowsIn } from "./rows";
 import { type Status, statusOf, type TranslationStatus } from "./status";
 
 export const listInput = z.object({
@@ -10,7 +11,7 @@ export const listInput = z.object({
 	locale: z.string().optional(),
 });
 
-/** One translation locale of an active entry, with how many of its fields and body blocks are outdated and unseen. */
+/** 활성 글의 번역 언어 하나와, 그 필드·본문 블록 가운데 원문 변경·미확인 상태의 개수. */
 interface StatusCount {
 	id: string;
 	collection: string;
@@ -20,14 +21,16 @@ interface StatusCount {
 	unseen_count: number;
 }
 
-/** A row for each translation locale of the active entries that match every given filter. */
+/** 주어진 조건을 모두 만족하는 활성 글의 번역 언어마다 한 줄. */
 export async function listStatus(input: z.infer<typeof listInput>, ctx: ReadContext): Promise<StatusCount[]> {
-	let query = translationRows(ctx);
-	if (input.id !== undefined) query = query.where("entries.id", "=", input.id);
-	if (input.collection !== undefined) query = query.where("entries.collection", "=", input.collection);
-	if (input.locale !== undefined) query = query.where("translation.locale", "=", input.locale);
-	const rows = await query.execute();
-	return rows.map((row) => countOf(statusOf(ctx, row)));
+	const names = input.collection === undefined ? Object.keys(ctx.schema.collections) : [input.collection];
+	if (input.collection !== undefined) collectionOf(ctx, input.collection);
+	const counts: StatusCount[] = [];
+	for (const name of names) {
+		const rows = await translationRowsIn(ctx, name, input);
+		counts.push(...rows.map((row) => countOf(statusOf(ctx, row))));
+	}
+	return counts;
 }
 
 function countOf(status: TranslationStatus): StatusCount {

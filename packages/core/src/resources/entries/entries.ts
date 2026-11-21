@@ -2,25 +2,28 @@ import { z } from "zod";
 import { defineRead, defineWrite } from "../../engine/operation";
 import type { ReadContext } from "../../engine/types";
 import { uuidInput } from "../_shared/input";
-import { createEntry, createInput, folderInput } from "./create";
+import { createEntry, createInput } from "./create";
 import { duplicateEntry, duplicateInput } from "./duplicate";
-import { addLocale, addLocaleInput, entryLocaleInput, removeLocale, setSourceLocale } from "./locales";
+import { entryLocaleInput, folderInput } from "./inputs";
+import { listEntries } from "./list";
+import { addLocale, addLocaleInput, removeLocale, setSourceLocale } from "./locales";
 import { publishEntry, publishInput, unpublishEntry, unpublishInput } from "./publish";
-import { type Entry, findEntry, listEntries } from "./query";
+import { findEntry } from "./read";
 import { replaceInput, replaceReferences } from "./references";
+import type { Entry } from "./types";
 import { updateEntries, updateInput } from "./update";
 
-const draftInput = z.boolean().optional();
+const statusInput = z.enum(["published", "draft"]).optional();
 
 const getInput = z.union([
-	z.object({ id: uuidInput, locale: z.string().optional(), draft: draftInput }),
-	z.object({ collection: z.string(), locale: z.string(), slug: z.string(), draft: draftInput }),
+	z.object({ id: uuidInput, locale: z.string().optional(), status: statusInput }),
+	z.object({ collection: z.string(), locale: z.string(), slug: z.string(), status: statusInput }),
 ]);
 
-/** An entry in one locale: its published copy, or its working copy with `draft: true`. */
+/** 한 언어의 글: 발행본, `status: "draft"`이면 작업본. */
 async function getEntry(input: z.infer<typeof getInput>, ctx: ReadContext): Promise<Entry> {
-	const { draft, ...key } = input;
-	return findEntry(ctx, key, draft);
+	const { status, ...key } = input;
+	return findEntry(ctx, key, status ?? "published");
 }
 
 const listInput = z.object({
@@ -28,20 +31,14 @@ const listInput = z.object({
 	locale: z.string().optional(),
 	folder_id: folderInput.optional(),
 	relation: z.object({ field: z.string(), id: uuidInput }).optional(),
-	draft: draftInput,
+	status: statusInput,
 });
 
-/** The published copies of the matching entries, or their working copies with `draft: true`. */
-async function listAll(input: z.infer<typeof listInput>, ctx: ReadContext): Promise<Entry[]> {
-	const { draft, ...filter } = input;
-	return listEntries(ctx, filter, draft);
-}
-
-/** The `entries` resource: the working and published copies of every collection's entries, in each locale. */
+/** `entries` 리소스: 모든 컬렉션 글의 언어별 작업본과 발행본. */
 export const entries = {
 	create: defineWrite({ input: createInput, run: createEntry }),
 	get: defineRead({ input: getInput, run: getEntry }),
-	list: defineRead({ input: listInput, run: listAll }),
+	list: defineRead({ input: listInput, run: listEntries }),
 	update: defineWrite({ input: updateInput, run: updateEntries }),
 	publish: defineWrite({ input: publishInput, run: publishEntry }),
 	unpublish: defineWrite({ input: unpublishInput, run: unpublishEntry }),

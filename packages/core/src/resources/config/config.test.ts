@@ -17,8 +17,8 @@ let dir: string;
 let schemaFile: string;
 let configFile: string;
 
-/** A config file with more than the name in it: a comment, other settings and a name of a plugin after the site's. */
-const originalText = `// The site's settings.
+/** 이름 말고도 주석, 다른 설정, 사이트 이름 뒤의 플러그인 이름이 든 설정 파일. */
+const originalText = `// 사이트 설정.
 export default {
 	name: "Monti Blog", dev: true,
 	plugins: [{ name: "monti-plugin-search" }],
@@ -36,7 +36,7 @@ function montiOf(dev: boolean) {
 	});
 }
 
-/** The site name the file holds, imported as the app imports it; each test imports its file once, after the action. */
+/** 앱이 가져오는 방식대로 읽은 설정 파일의 사이트 이름. 테스트마다 행동 뒤에 한 번만 가져온다. */
 async function nameInFile(): Promise<string> {
 	const module: { default: MontiConfig } = await import(configFile);
 	return module.default.name;
@@ -58,14 +58,14 @@ afterEach(async () => {
 	await rm(dir, { recursive: true });
 });
 
-it("CFG-GET-1 returns the current site config from config.get", async () => {
+it("CFG-GET-1 현재 사이트 설정을 돌려준다", async () => {
 	const monti = montiOf(false);
 
 	// CFG-GET-1.1
 	expect(await monti.config.get({})).toEqual({ name: "Monti Blog", dev: false });
 });
 
-it("CFG-UPD-1 renames the site and writes the name to the config file on a dev server", async () => {
+it("CFG-UPD-1 개발 서버에서 사이트 이름을 바꾸고 설정 파일에 기록한다", async () => {
 	const monti = montiOf(true);
 
 	const output = await monti.config.update({ name: newName });
@@ -80,7 +80,7 @@ it("CFG-UPD-1 renames the site and writes the name to the config file on a dev s
 	expect(await readFile(configFile, "utf8")).toBe(originalText.replace('"Monti Blog"', JSON.stringify(newName)));
 });
 
-it("CFG-UPD-2 rejects config.update with FORBIDDEN when not a dev server", async () => {
+it("CFG-UPD-2 개발 서버가 아니면 사이트 설정을 수정할 수 없다", async () => {
 	const monti = montiOf(false);
 
 	// CFG-UPD-2.1
@@ -91,10 +91,10 @@ it("CFG-UPD-2 rejects config.update with FORBIDDEN when not a dev server", async
 	expect(await readFile(configFile, "utf8")).toBe(originalText);
 });
 
-it("CFG-UPD-3 leaves the config and the config file unchanged when the transaction rolls back", async () => {
+it("CFG-UPD-3 트랜잭션이 실패해 롤백되면 설정과 설정 파일은 바뀌지 않는다", async () => {
 	const monti = montiOf(true);
 
-	const rollback = new Error("rollback");
+	const rollback = new Error("롤백");
 	await monti
 		.transaction(async (tx) => {
 			await tx.config.update({ name: newName });
@@ -110,7 +110,7 @@ it("CFG-UPD-3 leaves the config and the config file unchanged when the transacti
 	expect(await readFile(configFile, "utf8")).toBe(originalText);
 });
 
-it("CFG-UPD-4 leaves the config and the config file unchanged after a dryRun", async () => {
+it("CFG-UPD-4 드라이런으로 실행하면 설정과 설정 파일은 바뀌지 않는다", async () => {
 	const monti = montiOf(true);
 
 	await monti.dryRun(async (tx) => {

@@ -2,12 +2,12 @@ import { z } from "zod";
 import type { FieldSchema, ValueFieldSchema } from "../../engine/types";
 import { timestampInput, uuidInput } from "../_shared/input";
 
-/** One value, or a list of them when the field is `many`. */
+/** 값 하나, `many`이면 그 목록. */
 function oneOrMany(schema: z.ZodType, many: boolean | undefined): z.ZodType {
 	return many ? z.array(schema) : schema;
 }
 
-/** What a value field accepts; references are checked against the database separately. */
+/** 값 필드가 받는 값. 참조가 가리키는 대상은 DB에서 따로 검사한다. */
 function valueSchema(field: ValueFieldSchema): z.ZodType {
 	switch (field.type) {
 		case "text":
@@ -26,53 +26,23 @@ function valueSchema(field: ValueFieldSchema): z.ZodType {
 	}
 }
 
-type ConditionalFieldSchema = Extract<FieldSchema, { type: "conditional" }>;
+type ConditionalField = Extract<FieldSchema, { type: "conditional" }>;
 
-/**
- * What a field key the schema does not define does: a write rejects it; publishing stored data drops it, as a field
- * removed from the schema may have left a value behind.
- */
-export type UnknownKeys = "reject" | "drop";
-
-/** `{ option, fields }`: one of the field's options and only that option's sub-fields; the wrapper itself is always strict. */
-function conditionalSchema(field: ConditionalFieldSchema, unknownKeys: UnknownKeys): z.ZodType {
+/** `{ option, fields }`: 분기 하나와 그 분기의 하위 필드만. */
+function conditionalSchema(field: ConditionalField): z.ZodType {
 	const branches = Object.entries(field.options).map(([option, branch]) =>
-		z.strictObject({ option: z.literal(option), fields: fieldsSchema(branch.fields, unknownKeys) }),
+		z.strictObject({ option: z.literal(option), fields: fieldsSchema(branch.fields) }),
 	);
 	return z.union(branches);
 }
 
-/** The values of `fields`: a key the schema does not define is rejected or dropped, and a working copy may leave any field out. */
-export function fieldsSchema(fields: Record<string, FieldSchema>, unknownKeys: UnknownKeys = "reject"): z.ZodType {
+/** `fields`의 값들: 스키마에 없는 키는 거절하고, 작업본은 어느 필드든 비워 둘 수 있다. */
+export function fieldsSchema(fields: Record<string, FieldSchema>): z.ZodType {
 	const shape = Object.fromEntries(
 		Object.entries(fields).map(([key, field]) => [
 			key,
-			(field.type === "conditional" ? conditionalSchema(field, unknownKeys) : valueSchema(field)).optional(),
+			(field.type === "conditional" ? conditionalSchema(field) : valueSchema(field)).optional(),
 		]),
 	);
-	return unknownKeys === "reject" ? z.strictObject(shape) : z.object(shape);
-}
-
-/** A conditional field's stored value: the chosen option and that option's sub-field values. */
-export interface ConditionalValue {
-	option: string;
-	fields: Record<string, unknown>;
-}
-
-/** The field `key` names in `fields`; undefined for a key the schema no longer defines, `constructor` and the like included. */
-export function fieldOf(fields: Record<string, FieldSchema>, key: string): FieldSchema | undefined {
-	return Object.hasOwn(fields, key) ? fields[key] : undefined;
-}
-
-/** Whether a stored conditional value is `{ option, fields }` with an option the field still has. */
-export function isKnownOption(field: ConditionalFieldSchema, value: unknown): value is ConditionalValue {
-	if (typeof value !== "object" || value === null || !("option" in value) || !("fields" in value)) return false;
-	const { option, fields } = value;
-	return (
-		typeof option === "string" &&
-		Object.hasOwn(field.options, option) &&
-		typeof fields === "object" &&
-		fields !== null &&
-		!Array.isArray(fields)
-	);
+	return z.strictObject(shape);
 }

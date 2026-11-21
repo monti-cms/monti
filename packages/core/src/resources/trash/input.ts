@@ -3,7 +3,7 @@ import { timestampInput, uuidInput } from "../_shared/input";
 
 export const idInput = z.object({ id: uuidInput });
 
-/** Exactly one of: one id, several ids, the items trashed before a time, or all of them. */
+/** 다음 가운데 정확히 하나: `id` 하나, 여러 `ids`, 어떤 시각보다 먼저 버린 항목, 또는 전부. */
 export const deleteInput = z.union([
 	z.strictObject({ id: uuidInput }),
 	z.strictObject({ ids: z.array(uuidInput) }),

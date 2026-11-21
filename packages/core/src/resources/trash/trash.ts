@@ -16,8 +16,8 @@ async function listAll(_: unknown, ctx: ReadContext): Promise<TrashItem[]> {
 }
 
 /**
- * The `trash` resource: entries, folders and media with a `trashed_at`. A folder takes what is in it along with the
- * same `trashed_at`, and those items are shown, restored and deleted with it.
+ * `trash` 리소스: `trashed_at`이 있는 글·폴더·미디어. 폴더는 그 안의 항목을 같은 `trashed_at`으로 데려가고, 그 항목들은
+ * 폴더와 함께 보이고 되살아나고 지워진다.
  */
 export const trash = {
 	move: defineWrite({ input: idInput, run: moveItem }),

@@ -9,26 +9,33 @@ import { createMonti } from "../../engine/engine";
 import type { MontiConfig, Schema } from "../../engine/types";
 import type { Block } from "../../rich-text/types";
 import { entries } from "../entries/entries";
+import { syncSchemaTables } from "../schema/sync-tables";
 import { translationStatus } from "./translation-status";
+
+type Row = Record<string, unknown>;
 
 let testDb: TestDatabase;
 let db: Kysely<Database>;
+/** 컬렉션별 테이블을 이름으로 읽고 쓰는 연결. */
+let tables: Kysely<Record<string, Row>>;
 
 const POSTS = "posts";
 const NOTES = "notes";
+const PAGES = "pages";
 
-/** `posts` has a body and two text fields; `notes` has the same fields and no body. */
+/** `posts`는 본문과 글자 필드 둘, `notes`는 본문 없이 같은 필드 둘, `pages`는 본문과 글자 필드 하나를 가진다. */
 const SCHEMA: Schema = {
 	locales: ["ko", "en", "ja"],
 	collections: {
 		[POSTS]: { body: true, fields: { title: { type: "text" }, summary: { type: "text" } } },
 		[NOTES]: { fields: { title: { type: "text" }, summary: { type: "text" } } },
+		[PAGES]: { body: true, fields: { title: { type: "text" } } },
 	},
 };
 
 const CONFIG: MontiConfig = { name: "Monti Blog", dev: false };
 
-/** The source fields most tests start from. */
+/** `posts`·`notes` 원문의 필드 값. */
 const FIELDS = { title: "제목", summary: "요약" };
 
 function montiOf() {
@@ -43,7 +50,9 @@ function montiOf() {
 beforeEach(async () => {
 	testDb = await createTestDatabase();
 	await migrate(testDb.db, "core", [initial]);
+	await syncSchemaTables(testDb.db, SCHEMA);
 	db = testDb.db as Kysely<Database>;
+	tables = testDb.db as Kysely<Record<string, Row>>;
 });
 
 afterEach(async () => {
@@ -63,38 +72,39 @@ interface DataSeed {
 	blocks?: Block[];
 }
 
-/** An entry's `data`: the given fields, and a body only when `blocks` is given. */
+/** 글의 `data`: 주어진 필드와, `blocks`를 주었을 때만 본문. */
 function dataOf(seed: DataSeed) {
 	return { fields: seed.fields ?? {}, ...(seed.blocks === undefined ? {} : { body: { blocks: seed.blocks } }) };
 }
 
-/** Creates an active entry with its `ko` source working copy through `entries.create`. */
+/** `entries.create`로 `ko` 원문 작업본을 가진 활성 글을 만든다. */
 async function createEntry(seed: DataSeed = {}, collection = POSTS) {
 	return montiOf().entries.create({ collection, locale: "ko", slug: `entry-${randomUUID()}`, data: dataOf(seed) });
 }
 
-/** Adds a working copy in a translation locale through `entries.addLocale`. */
+/** `entries.addLocale`로 번역 언어 작업본을 더한다. */
 async function addLocale(id: string, locale: string, seed: DataSeed = {}) {
 	return montiOf().entries.addLocale({ id, locale, slug: `entry-${randomUUID()}`, data: dataOf(seed) });
 }
 
-/** Replaces the data of an entry's working copy in `locale` (its source locale when left out) through `entries.update`. */
+/** `entries.update`로 `locale`(생략하면 원문 언어) 작업본의 `data`를 통째로 바꾼다. */
 async function changeData(id: string, seed: DataSeed, locale?: string) {
 	return montiOf().entries.update({ id, locale, data: dataOf(seed) });
 }
 
-/** Moves an entry to the trash by setting its `trashed_at`. */
-async function trash(id: string) {
-	await db.updateTable("entries").set({ trashed_at: new Date() }).where("id", "=", id).execute();
+/** 컬렉션 테이블에서 글의 `trashed_at`을 설정해 휴지통으로 옮긴다. */
+async function trash(id: string, collection = POSTS) {
+	await tables.updateTable(collection).set({ trashed_at: new Date() }).where("id", "=", id).execute();
 }
 
-/** The `slug`, `data` and `translation_seen` of one working copy as the table holds it. */
-async function localeRow(entryId: string, locale: string) {
-	return db
-		.selectFrom("entry_locales")
-		.select(["slug", "data", "translation_seen"])
+/** `<collection>_data` 테이블에 저장된 그대로의 작업본(`status = 'draft'`) 행 하나. */
+async function draftRow(collection: string, entryId: string, locale: string) {
+	return tables
+		.selectFrom(`${collection}_data`)
+		.selectAll()
 		.where("entry_id", "=", entryId)
 		.where("locale", "=", locale)
+		.where("status", "=", "draft")
 		.executeTakeFirstOrThrow();
 }
 
@@ -102,9 +112,9 @@ function byLocale<T extends { locale: string }>(rows: T[]): T[] {
 	return [...rows].sort((a, b) => (a.locale < b.locale ? -1 : a.locale > b.locale ? 1 : 0));
 }
 
-// ---- get and list ----
+// ---- 조회 (get · list) ----
 
-it("TST-READ-1 reports every field as unseen for a locale nothing has confirmed", async () => {
+it("TST-READ-1 아무것도 확인하지 않은 번역 언어는 필드가 모두 미확인 상태이다", async () => {
 	const entry = await createEntry({ fields: FIELDS }, NOTES);
 	await addLocale(entry.id, "en");
 
@@ -118,7 +128,7 @@ it("TST-READ-1 reports every field as unseen for a locale nothing has confirmed"
 	expect(output.blocks).toEqual([]);
 });
 
-it("TST-READ-2 reports a confirmed field as seen while its source stays and outdated once it changes", async () => {
+it("TST-READ-2 확인한 필드는 원문이 그대로이면 확인 완료, 바뀌었으면 원문 변경 상태이다", async () => {
 	const entry = await createEntry({ fields: FIELDS });
 	await addLocale(entry.id, "en");
 	await montiOf().translationStatus.update({ id: entry.id, locale: "en", fields: { title: true, summary: true } });
@@ -132,7 +142,7 @@ it("TST-READ-2 reports a confirmed field as seen while its source stays and outd
 	expect(output.fields.summary).toEqual({ status: "seen", seen_value: "요약" });
 });
 
-it("TST-READ-3 gives each body block that holds text or nothing a status and none to container blocks", async () => {
+it("TST-READ-3 본문에서는 글자나 내용이 직접 들어 있는 블록마다 상태를 갖고 컨테이너 블록은 상태를 갖지 않는다", async () => {
 	const table: Block = { id: "s-table", type: "table" };
 	const blocks = [paragraph("s1", "첫 문단"), quote("s-quote", [paragraph("s2", "인용 문단")]), table];
 	const entry = await createEntry({ fields: FIELDS, blocks });
@@ -148,7 +158,7 @@ it("TST-READ-3 gives each body block that holds text or nothing a status and non
 	]);
 });
 
-it("TST-READ-4 reports a linked body block as seen while its source stays and outdated once it changes", async () => {
+it("TST-READ-4 연결한 본문 블록은 원문이 그대로이면 확인 완료, 바뀌었으면 원문 변경 상태이다", async () => {
 	const first = paragraph("s1", "첫 문단");
 	const second = paragraph("s2", "둘째 문단");
 	const entry = await createEntry({ fields: FIELDS, blocks: [first, second] });
@@ -168,7 +178,7 @@ it("TST-READ-4 reports a linked body block as seen while its source stays and ou
 	expect(output.blocks[1]).toEqual({ id: "s2", status: "seen", link: "e2", seen_value: second });
 });
 
-it("TST-READ-5 reports a body block excluded from translation as seen while its source stays and outdated once it changes", async () => {
+it("TST-READ-5 번역 제외로 표시한 본문 블록은 원문이 그대로이면 확인 완료, 바뀌었으면 원문 변경 상태이다", async () => {
 	const first = paragraph("s1", "첫 문단");
 	const second = paragraph("s2", "둘째 문단");
 	const entry = await createEntry({ fields: FIELDS, blocks: [first, second] });
@@ -188,7 +198,7 @@ it("TST-READ-5 reports a body block excluded from translation as seen while its 
 	expect(output.blocks[1]).toEqual({ id: "s2", status: "seen", exclude: true, seen_value: second });
 });
 
-it("TST-READ-6 reports a source block as outdated once its linked block is deleted from the translation body", async () => {
+it("TST-READ-6 연결한 번역 블록이 번역 본문에서 지워지면 그 원문 블록은 원문 변경 상태가 된다", async () => {
 	const entry = await createEntry({ fields: FIELDS, blocks: [paragraph("s1", "문단")] });
 	await addLocale(entry.id, "en", { blocks: [paragraph("e1", "Paragraph")] });
 	await montiOf().translationStatus.update({ id: entry.id, locale: "en", blocks: { s1: { link: "e1" } } });
@@ -200,7 +210,7 @@ it("TST-READ-6 reports a source block as outdated once its linked block is delet
 	expect(output.blocks.map((block) => block.status)).toEqual(["outdated"]);
 });
 
-it("TST-READ-7 rejects reading the status of the source locale with BAD_REQUEST", async () => {
+it("TST-READ-7 원문 언어의 번역 상태는 조회할 수 없다", async () => {
 	const entry = await createEntry({ fields: FIELDS });
 	await addLocale(entry.id, "en");
 
@@ -210,7 +220,7 @@ it("TST-READ-7 rejects reading the status of the source locale with BAD_REQUEST"
 	});
 });
 
-it("TST-READ-8 rejects reading the status of a locale the entry does not have with NOT_FOUND", async () => {
+it("TST-READ-8 글에 없는 언어의 번역 상태는 조회할 수 없다", async () => {
 	const entry = await createEntry({ fields: FIELDS });
 
 	// TST-READ-8.1
@@ -219,7 +229,7 @@ it("TST-READ-8 rejects reading the status of a locale the entry does not have wi
 	});
 });
 
-it("TST-READ-9 rejects reading the status of a trashed entry with NOT_FOUND", async () => {
+it("TST-READ-9 휴지통에 있는 글의 번역 상태는 조회할 수 없다", async () => {
 	const entry = await createEntry({ fields: FIELDS });
 	await addLocale(entry.id, "en");
 	await trash(entry.id);
@@ -230,13 +240,13 @@ it("TST-READ-9 rejects reading the status of a trashed entry with NOT_FOUND", as
 	});
 });
 
-it("TST-READ-10 lists one row per translation locale with its outdated and unseen counts", async () => {
-	const entry = await createEntry({ fields: { title: "제목" }, blocks: [paragraph("s1", "문단")] });
+it("TST-READ-10 번역 언어마다 원문이 바뀐 항목과 확인하지 않은 항목의 개수를 한 줄씩 돌려준다", async () => {
+	const entry = await createEntry({ fields: { title: "제목" }, blocks: [paragraph("s1", "문단")] }, PAGES);
 	await addLocale(entry.id, "en", { blocks: [paragraph("e1", "Paragraph")] });
 	await addLocale(entry.id, "ja");
-	const trashed = await createEntry({ fields: FIELDS });
+	const trashed = await createEntry({ fields: { title: "제목" } }, PAGES);
 	await addLocale(trashed.id, "en");
-	await trash(trashed.id);
+	await trash(trashed.id, PAGES);
 	await montiOf().translationStatus.update({
 		id: entry.id,
 		locale: "en",
@@ -245,9 +255,9 @@ it("TST-READ-10 lists one row per translation locale with its outdated and unsee
 	});
 	await changeData(entry.id, { fields: { title: "제목" }, blocks: [paragraph("s1", "바뀐 문단")] });
 
-	const output = await montiOf().translationStatus.list({});
+	const output = await montiOf().translationStatus.list();
 
-	const shared = { id: entry.id, collection: POSTS, source_locale: "ko" };
+	const shared = { id: entry.id, collection: PAGES, source_locale: "ko" };
 	// TST-READ-10.1
 	expect(byLocale(output)).toEqual([
 		{ ...shared, locale: "en", outdated_count: 1, unseen_count: 0 },
@@ -255,52 +265,48 @@ it("TST-READ-10 lists one row per translation locale with its outdated and unsee
 	]);
 });
 
-it("TST-READ-11 lists only the translation locales of the given entry", async () => {
-	const first = await createEntry();
+it("TST-READ-11 글을 지정하면 그 글의 번역 언어 줄만 돌려준다", async () => {
+	const first = await createEntry({ fields: FIELDS });
 	await addLocale(first.id, "en");
-	const other = await createEntry();
+	const other = await createEntry({ fields: FIELDS });
 	await addLocale(other.id, "en");
 
 	const output = await montiOf().translationStatus.list({ id: first.id });
 
 	// TST-READ-11.1
-	expect(output).toEqual([
-		{ id: first.id, collection: POSTS, locale: "en", source_locale: "ko", outdated_count: 0, unseen_count: 0 },
-	]);
+	expect(output.map((row) => [row.id, row.locale])).toEqual([[first.id, "en"]]);
 });
 
-it("TST-READ-12 lists only the rows matching both the given collection and locale", async () => {
-	const post = await createEntry();
+it("TST-READ-12 컬렉션과 언어를 지정하면 둘 다 일치하는 줄만 돌려준다", async () => {
+	const post = await createEntry({ fields: FIELDS });
 	await addLocale(post.id, "en");
 	await addLocale(post.id, "ja");
-	const note = await createEntry({}, NOTES);
+	const note = await createEntry({ fields: FIELDS }, NOTES);
 	await addLocale(note.id, "en");
 
 	const output = await montiOf().translationStatus.list({ collection: POSTS, locale: "en" });
 
 	// TST-READ-12.1
-	expect(output).toEqual([
-		{ id: post.id, collection: POSTS, locale: "en", source_locale: "ko", outdated_count: 0, unseen_count: 0 },
-	]);
+	expect(output.map((row) => [row.id, row.collection, row.locale])).toEqual([[post.id, POSTS, "en"]]);
 });
 
-// ---- update ----
+// ---- 갱신 (update) ----
 
-it("TST-UPD-1 makes an unseen field seen when it is confirmed", async () => {
+it("TST-UPD-1 확인하지 않은 필드를 확인하면 확인 완료 상태가 된다", async () => {
 	const entry = await createEntry({ fields: FIELDS });
 	await addLocale(entry.id, "en", { fields: { title: "Title" } });
-	const before = await localeRow(entry.id, "en");
+	const before = await draftRow(POSTS, entry.id, "en");
 
 	const output = await montiOf().translationStatus.update({ id: entry.id, locale: "en", fields: { title: true } });
 
 	// TST-UPD-1.1
 	expect(output.fields).toEqual({ title: { status: "seen", seen_value: "제목" }, summary: { status: "unseen" } });
-	const { slug, data } = await localeRow(entry.id, "en");
+	const after = await draftRow(POSTS, entry.id, "en");
 	// TST-UPD-1.2
-	expect({ slug, data }).toEqual({ slug: before.slug, data: before.data });
+	expect([after.slug, after.title, after.summary]).toEqual([before.slug, before.title, before.summary]);
 });
 
-it("TST-UPD-2 makes an outdated field seen again when it is confirmed again", async () => {
+it("TST-UPD-2 원문이 바뀐 필드를 다시 확인하면 확인 완료 상태가 된다", async () => {
 	const entry = await createEntry({ fields: FIELDS });
 	await addLocale(entry.id, "en");
 	await montiOf().translationStatus.update({ id: entry.id, locale: "en", fields: { title: true } });
@@ -312,7 +318,7 @@ it("TST-UPD-2 makes an outdated field seen again when it is confirmed again", as
 	expect(output.fields.title).toEqual({ status: "seen", seen_value: "바뀐 제목" });
 });
 
-it("TST-UPD-3 makes only the field whose record is deleted unseen again", async () => {
+it("TST-UPD-3 필드의 기록을 지우면 그 필드만 미확인 상태로 돌아간다", async () => {
 	const entry = await createEntry({ fields: FIELDS });
 	await addLocale(entry.id, "en");
 	await montiOf().translationStatus.update({ id: entry.id, locale: "en", fields: { title: true, summary: true } });
@@ -325,12 +331,12 @@ it("TST-UPD-3 makes only the field whose record is deleted unseen again", async 
 	expect(output.fields.summary?.status).toBe("seen");
 });
 
-it("TST-UPD-4 makes a source block seen when it is linked to a translation block", async () => {
+it("TST-UPD-4 아직 연결하지 않은 원문 블록을 번역 블록과 연결하면 확인 완료 상태가 된다", async () => {
 	const source = paragraph("s1", "인용 문단");
 	const entry = await createEntry({ fields: FIELDS, blocks: [quote("s-quote", [source])] });
 	await addLocale(entry.id, "en", { blocks: [quote("e-quote", [paragraph("e1", "Quoted")])] });
-	const before = await localeRow(entry.id, "en");
-	const sourceBefore = await localeRow(entry.id, "ko");
+	const before = await draftRow(POSTS, entry.id, "en");
+	const sourceBefore = await draftRow(POSTS, entry.id, "ko");
 
 	const output = await montiOf().translationStatus.update({
 		id: entry.id,
@@ -340,14 +346,14 @@ it("TST-UPD-4 makes a source block seen when it is linked to a translation block
 
 	// TST-UPD-4.1
 	expect(output.blocks).toContainEqual({ id: "s1", status: "seen", link: "e1", seen_value: source });
-	const { slug, data } = await localeRow(entry.id, "en");
+	const after = await draftRow(POSTS, entry.id, "en");
 	// TST-UPD-4.2
-	expect({ slug, data }).toEqual({ slug: before.slug, data: before.data });
+	expect([after.slug, after.body]).toEqual([before.slug, before.body]);
 	// TST-UPD-4.3
-	expect((await localeRow(entry.id, "ko")).translation_seen).toEqual(sourceBefore.translation_seen);
+	expect((await draftRow(POSTS, entry.id, "ko")).translation_seen).toEqual(sourceBefore.translation_seen);
 });
 
-it("TST-UPD-5 makes an outdated block seen again when it is linked to the same translation block again", async () => {
+it("TST-UPD-5 원문이 바뀐 블록을 같은 번역 블록과 다시 연결하면 확인 완료 상태가 된다", async () => {
 	const entry = await createEntry({ fields: FIELDS, blocks: [paragraph("s1", "문단")] });
 	await addLocale(entry.id, "en", { blocks: [paragraph("e1", "Paragraph")] });
 	await montiOf().translationStatus.update({ id: entry.id, locale: "en", blocks: { s1: { link: "e1" } } });
@@ -364,7 +370,7 @@ it("TST-UPD-5 makes an outdated block seen again when it is linked to the same t
 	expect(output.blocks).toEqual([{ id: "s1", status: "seen", link: "e1", seen_value: changed }]);
 });
 
-it("TST-UPD-6 makes an unseen block seen when it is excluded from translation", async () => {
+it("TST-UPD-6 아직 확인하지 않은 원문 블록을 번역 제외로 표시하면 확인 완료 상태가 된다", async () => {
 	const source = paragraph("s1", "문단");
 	const entry = await createEntry({ fields: FIELDS, blocks: [source] });
 	await addLocale(entry.id, "en");
@@ -379,7 +385,7 @@ it("TST-UPD-6 makes an unseen block seen when it is excluded from translation", 
 	expect(output.blocks).toEqual([{ id: "s1", status: "seen", exclude: true, seen_value: source }]);
 });
 
-it("TST-UPD-7 makes only the block whose record is deleted unseen again", async () => {
+it("TST-UPD-7 블록의 기록을 지우면 그 블록만 미확인 상태로 돌아간다", async () => {
 	const entry = await createEntry({
 		fields: FIELDS,
 		blocks: [paragraph("s1", "첫 문단"), paragraph("s2", "둘째 문단")],
@@ -399,8 +405,8 @@ it("TST-UPD-7 makes only the block whose record is deleted unseen again", async 
 	expect(output.blocks[1]?.status).toBe("seen");
 });
 
-it("TST-UPD-8 rejects confirming a field the source does not have with BAD_REQUEST", async () => {
-	const entry = await createEntry({ fields: { title: "제목" } });
+it("TST-UPD-8 원문에 없는 필드는 확인 완료로 표시할 수 없다", async () => {
+	const entry = await createEntry({ fields: { title: "제목" } }, PAGES);
 	await addLocale(entry.id, "en");
 
 	// TST-UPD-8.1
@@ -409,7 +415,7 @@ it("TST-UPD-8 rejects confirming a field the source does not have with BAD_REQUE
 	).rejects.toMatchObject({ code: "BAD_REQUEST" });
 });
 
-it("TST-UPD-9 rejects linking a block the source body does not have with BAD_REQUEST", async () => {
+it("TST-UPD-9 원문 본문에 없는 블록은 연결할 수 없다", async () => {
 	const entry = await createEntry({ fields: FIELDS, blocks: [paragraph("s1", "문단")] });
 	await addLocale(entry.id, "en", { blocks: [paragraph("e1", "Paragraph")] });
 
@@ -419,7 +425,7 @@ it("TST-UPD-9 rejects linking a block the source body does not have with BAD_REQ
 	).rejects.toMatchObject({ code: "BAD_REQUEST" });
 });
 
-it("TST-UPD-10 rejects linking a container block with BAD_REQUEST", async () => {
+it("TST-UPD-10 컨테이너 블록은 번역 블록과 연결할 수 없다", async () => {
 	const entry = await createEntry({ fields: FIELDS, blocks: [quote("s-quote", [paragraph("s1", "인용 문단")])] });
 	await addLocale(entry.id, "en", { blocks: [paragraph("e1", "Paragraph")] });
 
@@ -429,7 +435,7 @@ it("TST-UPD-10 rejects linking a container block with BAD_REQUEST", async () => 
 	).rejects.toMatchObject({ code: "BAD_REQUEST" });
 });
 
-it("TST-UPD-11 rejects linking to a block the translation body does not have with BAD_REQUEST", async () => {
+it("TST-UPD-11 번역 본문에 없는 블록과는 연결할 수 없다", async () => {
 	const entry = await createEntry({ fields: FIELDS, blocks: [paragraph("s1", "문단")] });
 	await addLocale(entry.id, "en", { blocks: [paragraph("e1", "Paragraph")] });
 
@@ -439,7 +445,7 @@ it("TST-UPD-11 rejects linking to a block the translation body does not have wit
 	).rejects.toMatchObject({ code: "BAD_REQUEST" });
 });
 
-it("TST-UPD-12 rejects updating the status of the source locale with BAD_REQUEST", async () => {
+it("TST-UPD-12 원문 언어의 번역 상태는 수정할 수 없다", async () => {
 	const entry = await createEntry({ fields: FIELDS });
 	await addLocale(entry.id, "en");
 
@@ -449,7 +455,7 @@ it("TST-UPD-12 rejects updating the status of the source locale with BAD_REQUEST
 	).rejects.toMatchObject({ code: "BAD_REQUEST" });
 });
 
-it("TST-UPD-13 rejects updating the status of a locale the entry does not have with NOT_FOUND", async () => {
+it("TST-UPD-13 글에 없는 언어의 번역 상태는 수정할 수 없다", async () => {
 	const entry = await createEntry({ fields: FIELDS });
 
 	// TST-UPD-13.1
@@ -458,7 +464,7 @@ it("TST-UPD-13 rejects updating the status of a locale the entry does not have w
 	).rejects.toMatchObject({ code: "NOT_FOUND" });
 });
 
-it("TST-UPD-14 rejects updating the status of a trashed entry with NOT_FOUND", async () => {
+it("TST-UPD-14 휴지통에 있는 글의 번역 상태는 수정할 수 없다", async () => {
 	const entry = await createEntry({ fields: FIELDS });
 	await addLocale(entry.id, "en");
 	await trash(entry.id);

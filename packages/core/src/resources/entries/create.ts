@@ -2,51 +2,37 @@ import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import type { WriteContext } from "../../engine/types";
 import { uuidInput } from "../_shared/input";
-import { replaceEntryMediaUses } from "../media/uses";
-import type { Entry } from "./query";
-import { checkData, collectionOf, rejectFolder, rejectLocale, rejectTakenSlug } from "./validate";
-
-export const slugInput = z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/);
-
-export const dataInput = z.object({
-	fields: z.record(z.string(), z.unknown()).optional(),
-	body: z.unknown().optional(),
-});
-
-export const folderInput = uuidInput.nullable();
+import { recountEntryMediaUses } from "../media/uses";
+import { collectionOf, rejectLocale } from "./collection";
+import { saveCopy } from "./copies";
+import { dataInput, folderInput, slugInput } from "./inputs";
+import { findEntry } from "./read";
+import { tablesOf } from "./tables";
+import type { Entry } from "./types";
+import { checkData, rejectFolder, rejectTakenSlug } from "./validate";
 
 export const createInput = z.object({
 	__preset_id: uuidInput.optional(),
 	collection: z.string(),
 	locale: z.string(),
-	slug: slugInput,
+	slug: slugInput.optional(),
 	folder_id: folderInput.optional(),
 	data: dataInput.optional(),
 });
 
-/** Makes a new entry and its working copy in its source locale, `locale`, and indexes the media its data references. */
+/** 새 글과 그 원문 언어(`locale`) 작업본을 만들고, 그 글이 참조하는 미디어를 사용처에 기록한다. */
 export async function createEntry(input: z.infer<typeof createInput>, ctx: WriteContext): Promise<Entry> {
-	const collection = collectionOf(ctx, input.collection);
+	const name = input.collection;
+	const collection = collectionOf(ctx, name);
 	rejectLocale(ctx, input.locale);
 	const data = await checkData(ctx, collection, input.data ?? {});
-	if (typeof input.folder_id === "string") await rejectFolder(ctx, input.folder_id, input.collection);
-	const entry: Entry = {
-		id: input.__preset_id ?? randomUUID(),
-		collection: input.collection,
-		locale: input.locale,
-		source_locale: input.locale,
-		folder_id: input.folder_id ?? null,
-		slug: input.slug,
-		data: { ...data },
-		published_at: null,
-	};
-	await rejectTakenSlug(ctx, entry);
-	const { id, collection: name, source_locale, folder_id, locale, slug } = entry;
-	await ctx.db.insertInto("entries").values({ id, collection: name, source_locale, folder_id }).execute();
-	await ctx.db
-		.insertInto("entry_locales")
-		.values({ entry_id: id, locale, slug, data: JSON.stringify(data), translation_seen: JSON.stringify({}) })
-		.execute();
-	await replaceEntryMediaUses(ctx, id, collection, data);
-	return entry;
+	const folder_id = input.folder_id ?? null;
+	if (folder_id !== null) await rejectFolder(ctx, folder_id, name);
+	const id = input.__preset_id ?? randomUUID();
+	const slug = input.slug ?? null;
+	await rejectTakenSlug(ctx, name, { id, locale: input.locale, slug }, "draft");
+	await tablesOf(ctx.db).insertInto(name).values({ id, source_locale: input.locale, folder_id }).execute();
+	await saveCopy(ctx, name, collection, { entry_id: id, locale: input.locale, status: "draft" }, { slug, data });
+	await recountEntryMediaUses(ctx, name, collection, id);
+	return findEntry(ctx, { id, locale: input.locale }, "draft");
 }

@@ -33,13 +33,37 @@ const collection = z.object({
 	fields: z.record(z.string(), z.discriminatedUnion("type", [...valueField.options, conditionalField])),
 });
 
-/** The shape a user schema must have: its fields are of the 8 defined types. */
+/** 코어 고정 테이블 이름. 컬렉션 테이블 이름과 겹치면 안 된다. */
+const reservedKeys = [
+	"templates",
+	"folders",
+	"media",
+	"media_uses",
+	"loose_files",
+	"admin",
+	"session",
+	"api_keys",
+	"migrations",
+];
+
+/** 고정 테이블 이름도, `_data`·`_rels`로 끝나는 이름도 아닌 컬렉션 키인지. */
+function isCollectionKey(key: string): boolean {
+	return !reservedKeys.includes(key) && !key.endsWith("_data") && !key.endsWith("_rels");
+}
+
+function hasCollectionKeys(collections: Record<string, unknown>): boolean {
+	return Object.keys(collections).every(isCollectionKey);
+}
+
+/** 사용자 스키마가 가져야 할 모양: 필드는 정의된 8종이고, 컬렉션 키는 예약어가 아니다. */
 export const schemaShape: z.ZodType<Schema> = z.object({
 	locales: z.array(z.string()),
-	collections: z.record(z.string(), collection),
+	collections: z.record(z.string(), collection).refine(hasCollectionKeys, {
+		message: "코어 기본 테이블 이름이나 _data·_rels로 끝나는 이름은 컬렉션 이름으로 쓸 수 없습니다",
+	}),
 });
 
-/** Writes the schema to `monti.schema.ts` as the module's default export. */
+/** 스키마를 `monti.schema.ts`에 모듈의 기본 내보내기로 쓴다. */
 export async function writeSchemaFile(file: string, schema: Schema): Promise<void> {
 	await writeFile(file, `export default ${JSON.stringify(schema, null, "\t")};\n`);
 }

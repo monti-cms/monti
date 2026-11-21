@@ -67,10 +67,10 @@ export async function tableExists(db: Kysely<unknown>, table: string): Promise<b
 	return rows[0]?.name != null;
 }
 
-/** The rows of `monti_migrations` as `[scope, name]` pairs, sorted by code unit. */
+/** `migrations` 테이블의 행을 `[scope, name]` 쌍으로, 코드 단위 순으로 정렬해 돌려준다. */
 export async function recordedMigrations(db: Kysely<unknown>): Promise<[string, string][]> {
 	const { rows } = await sql<{ scope: string; name: string }>`
-		select scope, name from monti_migrations
+		select scope, name from migrations
 	`.execute(db);
 	return rows.map((row): [string, string] => [row.scope, row.name]).sort(byCodeUnit);
 }

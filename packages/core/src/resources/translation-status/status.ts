@@ -1,10 +1,11 @@
 import { isDeepStrictEqual } from "node:util";
 import type { ReadContext } from "../../engine/types";
 import type { Block } from "../../rich-text/types";
+import { collectionOf } from "../entries/collection";
 import { type BlockSeen, seenOf, type TranslationRow } from "./rows";
 import { blockIds, bodyUnits } from "./units";
 
-/** `unseen`: nothing confirmed; `seen`: the confirmed value is the source's current one; `outdated`: it is not. */
+/** `unseen`: 기록이 없다. `seen`: 기록한 값이 지금의 원문과 같다. `outdated`: 다르다. */
 export type Status = "unseen" | "seen" | "outdated";
 
 interface FieldStatus {
@@ -20,25 +21,24 @@ interface BlockStatus {
 	seen_value?: Block;
 }
 
-/** What `translationStatus.get` and `update` return of one translation locale. */
+/** `translationStatus.get`과 `update`가 돌려주는 번역 언어 하나의 상태. */
 export interface TranslationStatus {
 	id: string;
 	collection: string;
 	locale: string;
 	source_locale: string;
 	fields: Record<string, FieldStatus>;
-	/** The source body blocks with a status, in reading order. */
+	/** 상태를 갖는 원문 본문 블록들, 읽는 순서로. */
 	blocks: BlockStatus[];
 }
 
-/** The status of every source field and source body block in a translation locale, compared with its record now. */
+/** 번역 언어 작업본에서 컬렉션의 최상위 필드마다, 상태를 갖는 원문 본문 블록마다 기록을 지금의 원문과 비교한 상태. */
 export function statusOf(ctx: ReadContext, row: TranslationRow): TranslationStatus {
 	const seen = seenOf(row);
 	const linkable = blockIds(row.data.body);
-	const fields = Object.fromEntries(
-		Object.entries(row.source_data.fields).map(([key, value]) => [key, fieldStatus(seen.fields, key, value)]),
-	);
-	const blocks = bodyUnits(ctx, row.source_data.body).map((block) => blockStatus(seen.blocks, block, linkable));
+	const keys = Object.keys(collectionOf(ctx, row.collection).fields);
+	const fields = Object.fromEntries(keys.map((key) => [key, fieldStatus(seen.fields, key, row.source.fields[key])]));
+	const blocks = bodyUnits(ctx, row.source.body).map((block) => blockStatus(seen.blocks, block, linkable));
 	const { id, collection, locale, source_locale } = row;
 	return { id, collection, locale, source_locale, fields, blocks };
 }
@@ -46,10 +46,10 @@ export function statusOf(ctx: ReadContext, row: TranslationRow): TranslationStat
 function fieldStatus(seen: Record<string, unknown>, key: string, value: unknown): FieldStatus {
 	if (!Object.hasOwn(seen, key)) return { status: "unseen" };
 	const seen_value = seen[key];
-	return { status: isDeepStrictEqual(seen_value, value) ? "seen" : "outdated", seen_value };
+	return { status: isDeepStrictEqual(seen_value, value ?? null) ? "seen" : "outdated", seen_value };
 }
 
-/** A linked block is also outdated once its translation block is no longer in the translation body. */
+/** 연결한 번역 블록이 번역 본문에서 지워진 블록도 원문 변경 상태이다. */
 function blockStatus(seen: Record<string, BlockSeen>, block: Block, linkable: Set<string>): BlockStatus {
 	if (!Object.hasOwn(seen, block.id)) return { id: block.id, status: "unseen" };
 	const record = seen[block.id];

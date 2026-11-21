@@ -2,79 +2,83 @@ import { z } from "zod";
 import { MontiError } from "../../engine/errors";
 import type { WriteContext } from "../../engine/types";
 import { uuidInput } from "../_shared/input";
-import { recountEntryMediaUses, replaceEntryMediaUses } from "../media/uses";
-import { dataInput, slugInput } from "./create";
-import { type Entry, findEntry } from "./query";
-import { checkData, collectionOf, rejectLocale, rejectTakenSlug } from "./validate";
+import { recountEntryMediaUses } from "../media/uses";
+import { collectionOf, rejectLocale } from "./collection";
+import { saveCopy } from "./copies";
+import { dataInput, type entryLocaleInput, slugInput } from "./inputs";
+import { findEntry } from "./read";
+import { tablesOf } from "./tables";
+import type { Entry } from "./types";
+import { checkData, rejectTakenSlug } from "./validate";
 
 export const addLocaleInput = z.object({
 	id: uuidInput,
 	locale: z.string(),
-	slug: slugInput,
+	slug: slugInput.optional(),
 	data: dataInput.optional(),
 });
 
-/** An entry and one of its locales: the input of `entries.removeLocale` and `entries.setSourceLocale`. */
-export const entryLocaleInput = z.object({ id: uuidInput, locale: z.string() });
-
-/**
- * Adds a working copy in a locale the entry does not have yet to an active entry, and counts the entry's `media_uses`
- * again over all its locales.
- */
-export async function addLocale(input: z.infer<typeof addLocaleInput>, ctx: WriteContext): Promise<Entry> {
-	rejectLocale(ctx, input.locale);
-	const source = await findEntry(ctx, { id: input.id }, true);
-	const collection = collectionOf(ctx, source.collection);
-	const data = await checkData(ctx, collection, input.data ?? {});
-	const entry: Entry = { ...source, locale: input.locale, slug: input.slug, data: { ...data }, published_at: null };
-	await rejectTakenSlug(ctx, entry);
-	const added = await ctx.db
-		.insertInto("entry_locales")
-		.values({
-			entry_id: entry.id,
-			locale: entry.locale,
-			slug: entry.slug,
-			data: JSON.stringify(data),
-			translation_seen: JSON.stringify({}),
-		})
-		.onConflict((conflict) => conflict.columns(["entry_id", "locale"]).doNothing())
-		.returning("locale")
+/** 글에 이미 그 언어 작업본이 있으면 거절한다. */
+async function rejectExistingLocale(ctx: WriteContext, entry: Entry, locale: string): Promise<void> {
+	const existing = await tablesOf(ctx.db)
+		.selectFrom(`${entry.collection}_data`)
+		.select("locale")
+		.where("entry_id", "=", entry.id)
+		.where("locale", "=", locale)
 		.executeTakeFirst();
-	if (added === undefined) throw new MontiError("CONFLICT", "The entry already has this locale");
-	await replaceEntryMediaUses(ctx, entry.id, collection, data);
-	return entry;
+	if (existing !== undefined) throw new MontiError("CONFLICT", "글에 이미 이 언어가 있다");
 }
 
 /**
- * Deletes an active entry's working copy in a locale other than its source locale, and with it the published copy in
- * that locale; the entry's `media_uses` are counted again over the locales left. The locale need not be in the schema.
+ * 활성 글에 아직 없는 언어의 작업본을 더하고 모든 언어 기준으로 미디어 사용처를 다시 센다. 슬러그를 생략하면 원문
+ * 언어 작업본의 슬러그를 쓴다.
+ */
+export async function addLocale(input: z.infer<typeof addLocaleInput>, ctx: WriteContext): Promise<Entry> {
+	rejectLocale(ctx, input.locale);
+	const source = await findEntry(ctx, { id: input.id }, "draft");
+	const { id, collection: name } = source;
+	const collection = collectionOf(ctx, name);
+	const data = await checkData(ctx, collection, input.data ?? {});
+	await rejectExistingLocale(ctx, source, input.locale);
+	const slug = input.slug === undefined ? source.slug : input.slug;
+	await rejectTakenSlug(ctx, name, { id, locale: input.locale, slug }, "draft");
+	await saveCopy(ctx, name, collection, { entry_id: id, locale: input.locale, status: "draft" }, { slug, data });
+	await recountEntryMediaUses(ctx, name, collection, id);
+	return findEntry(ctx, { id, locale: input.locale }, "draft");
+}
+
+/**
+ * 활성 글의 원문이 아닌 언어를 발행본과 함께 바로 지우고 남은 언어 기준으로 미디어 사용처를 다시 센다. 원문 언어는
+ * 지울 수 없다.
  */
 export async function removeLocale(input: z.infer<typeof entryLocaleInput>, ctx: WriteContext) {
-	const entry = await findEntry(ctx, { id: input.id }, true);
-	if (input.locale === entry.source_locale) throw new MontiError("BAD_REQUEST", "The source locale cannot be removed");
-	const removed = await ctx.db
-		.deleteFrom("entry_locales")
+	const entry = await findEntry(ctx, { id: input.id }, "draft");
+	if (input.locale === entry.source_locale) throw new MontiError("BAD_REQUEST", "원문 언어는 지울 수 없다");
+	const removed = await tablesOf(ctx.db)
+		.deleteFrom(`${entry.collection}_data`)
 		.where("entry_id", "=", entry.id)
 		.where("locale", "=", input.locale)
 		.returning("locale")
-		.executeTakeFirst();
-	if (removed === undefined) throw new MontiError("NOT_FOUND", "The entry does not have this locale");
-	await recountEntryMediaUses(ctx, entry.id, collectionOf(ctx, entry.collection));
+		.execute();
+	if (removed.length === 0) throw new MontiError("NOT_FOUND", "글에 이 언어가 없다");
+	await recountEntryMediaUses(ctx, entry.collection, collectionOf(ctx, entry.collection), entry.id);
 	return { id: entry.id, locale: input.locale };
 }
 
 /**
- * Makes one of an active entry's existing locales its source locale and clears the `translation_seen` of all the
- * entry's locales; the entry comes back as it is when that locale is its source locale already.
+ * 활성 글에 이미 있는 언어 하나를 원문 언어로 삼고 모든 언어 작업본의 `translation_seen`을 비운다. 이미 원문 언어면
+ * 그대로 돌려준다.
  */
 export async function setSourceLocale(input: z.infer<typeof entryLocaleInput>, ctx: WriteContext): Promise<Entry> {
-	const entry = await findEntry(ctx, { id: input.id, locale: input.locale }, true);
+	const entry = await findEntry(ctx, { id: input.id, locale: input.locale }, "draft");
 	if (entry.source_locale === input.locale) return entry;
-	await ctx.db.updateTable("entries").set({ source_locale: input.locale }).where("id", "=", entry.id).execute();
-	await ctx.db
-		.updateTable("entry_locales")
+	const db = tablesOf(ctx.db);
+	await db.updateTable(entry.collection).set({ source_locale: input.locale }).where("id", "=", entry.id).execute();
+	await db
+		.updateTable(`${entry.collection}_data`)
 		.set({ translation_seen: JSON.stringify({}) })
 		.where("entry_id", "=", entry.id)
+		.where("status", "=", "draft")
 		.execute();
 	return { ...entry, source_locale: input.locale };
 }
