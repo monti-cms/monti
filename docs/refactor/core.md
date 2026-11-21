@@ -187,7 +187,7 @@ DB는 **고정 도메인 테이블 8개**와 스키마의 컬렉션마다 생성
 | | `<collection>_data` | 글의 언어·상태별 데이터(`(entry_id, locale, status)`, `status`는 `'draft'` \| `'published'`, `slug`, `published_at`, `translation_seen`, `body?`, 각 필드 컬럼) |
 | | `<collection>_rels` | 다중 참조(`many: true`인 `media`·`relation`) 연결 행(`(entry_id, locale, status, path, position)`, 대상 외래 키) |
 | 콘텐츠 (고정) | `templates` | 재사용 본문 템플릿 |
-| 미디어·폴더 | `media` | 파일 정보(`key`, `filename`, `mime_type`, `size`, `alt`, `width`, `height`) |
+| 미디어·폴더 | `media` | 파일 정보(`key`, `filename`, `mime_type`, `size`, `width`, `height`) |
 | | `media_uses` | 글·템플릿의 미디어 사용처 색인 |
 | | `loose_files` | 저장소의 고아 파일 삭제 대기열(`key`, `remove_after`) |
 | | `folders` | 글·미디어용 폴더 트리 |
@@ -261,7 +261,6 @@ erDiagram
     text filename
     text mime_type
     int size
-    text alt
     int width
     int height
     timestamptz trashed_at
