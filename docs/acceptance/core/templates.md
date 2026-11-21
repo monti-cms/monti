@@ -3,9 +3,9 @@
 [`docs/refactor/core.md`](../../refactor/core.md) 3.1절(선택 입력 `__preset_id`), 6절(`templates`, `media_uses`), 7절(`templates` 리소스)의 인수 조건이다.
 
 - `templates.create`: 선택 `__preset_id`(UUID)와 스키마에 존재하는 `collection`을 받아 템플릿을 만든다. 스키마에 없는 `collection`이면 `BAD_REQUEST`, 같은 `collection`에 같은 `name`이 있으면 `CONFLICT`로 거절한다.
-- 본문 검증 및 미디어 색인(`create`, `content`가 주어진 `update`): 본문을 `validateDoc(content, ctx.config)`로 검사하고 실패 시 문제 목록 전체를 `details`에 담아 `BAD_REQUEST`로 거절한다. 블록 트리 전체(`children` 재귀)의 `attrs.mediaId`·`attrs.mediaIds`를 대소문자 무시하고 모아 `media_uses`(`source_kind: "template"`, `field_path: "content"`)에 기록하며, 없거나 휴지통에 있는 미디어를 참조하면 `BAD_REQUEST`로 거절한다.
+- 본문 검증 및 미디어 색인(`create`, `content`가 주어진 `update`): 본문을 `validateDoc(content, ctx.config)`로 검사하고 실패 시 문제 목록 전체를 `details`에 담아 `BAD_REQUEST`로 거절한다. 블록 트리 전체(`children` 재귀)의 `attrs.mediaId`·`attrs.mediaIds`를 대소문자 무시하고 모아 `media_uses`(`source_kind: "template"`, `field_path: "content"`)에 기록하며, 존재하지 않는 미디어를 참조하거나 새로 넣는 미디어가 휴지통에 있으면 `BAD_REQUEST`로 거절한다. 단, `templates.update`에서 기존 템플릿 본문에 이미 들어 있던 미디어 ID를 그대로 유지하는 것은 그 미디어가 휴지통에 있어도 허용한다.
 - `templates.list` · `templates.get`: 전체 또는 특정 `collection`의 템플릿을 조회하며, 없는 `id`는 `NOT_FOUND`로 거절한다.
-- `templates.update` · `templates.delete`: `update`는 `name`·`content`만 바꾸며(`collection` 수정 불가) `name` 중복은 `CONFLICT`, 없는 `id`는 `NOT_FOUND`로 거절한다. `delete`는 해당 템플릿과 그 `media_uses`만 삭제하며 없는 `id`는 `NOT_FOUND`로 거절한다.
+- `templates.update` · `templates.delete`: `update`는 `name`·`content`만 바꾸며(`collection` 수정 불가) 빈 `name`은 `BAD_REQUEST`, `name` 중복은 `CONFLICT`, 없는 `id`는 `NOT_FOUND`로 거절한다. `delete`는 해당 템플릿과 그 `media_uses`만 삭제하며 없는 `id`는 `NOT_FOUND`로 거절한다.
 
 ---
 
@@ -129,6 +129,18 @@ TPL-UPD-6  존재하지 않는 템플릿은 수정할 수 없다
   전제  템플릿이 하나 있다
   행동  존재하지 않는 UUID `id`와 새 `name`으로 `templates.update`를 실행한다
   결과  TPL-UPD-6.1  `NOT_FOUND` 오류를 던진다
+
+TPL-UPD-7  이미 템플릿 본문에 들어 있던 미디어가 휴지통에 들어가도 그 미디어를 그대로 유지한 채 다른 문단을 수정할 수 있다
+  전제  미디어를 참조해 `media_uses` 행이 있는 템플릿이 하나 있고, 그 미디어가 휴지통으로 이동했다(`trashed_at` 설정)
+  행동  해당 템플릿의 `id`와 기존 미디어 참조는 그대로 두고 문단 글자만 바꾼 `content`로 `templates.update`를 실행한다
+  결과  TPL-UPD-7.1  반환값의 `content`가 새 `content`이다
+        TPL-UPD-7.2  `media_uses`에 해당 템플릿의 기존 미디어 참조가 그대로 남아 있다
+
+TPL-UPD-8  템플릿의 이름을 빈 문자열로 바꿀 수 없다
+  전제  템플릿이 하나 있다
+  행동  해당 템플릿의 `id`와 빈 문자열 `name: ""`로 `templates.update`를 실행한다
+  결과  TPL-UPD-8.1  `BAD_REQUEST` 오류를 던진다
+        TPL-UPD-8.2  `templates` 테이블에서 해당 템플릿의 `name`이 원래 그대로이다
 ```
 
 ## 4. 삭제 (`delete`)

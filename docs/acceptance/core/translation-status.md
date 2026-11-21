@@ -4,7 +4,7 @@
 
 - 번역 상태: 번역 언어(원문이 아닌 언어) 작업본(`status = 'draft'`)마다 번역하는 사람이 확인한 원문의 값을 그대로 기록해 두고, 읽을 때 지금의 원문과 비교해 미확인(`unseen`)·확인 완료(`seen`)·원문 변경(`outdated`)으로 알려 주는 기능이다. 기록은 번역 언어 작업본에만 하고 원문 언어 작업본에는 하지 않는다.
 - 상태를 갖는 단위: 컬렉션의 최상위 필드 하나와, 원문 본문에서 글자나 내용을 직접 품는 블록(`holds`가 `text` 또는 `nothing`) 하나(본문 블록)이다. 다른 블록을 품는 컨테이너 블록(`holds`가 `blocks`)은 상태를 갖지 않고, 안에 든 블록이 깊이와 관계없이 각자 가진다.
-- 상태 규칙: 기록이 없으면 `unseen`, 기록한 값이 지금의 원문과 같으면 `seen`, 다르면 `outdated`이다. `seen`은 원문을 확인했고 그 뒤 바뀌지 않았다는 뜻이지 번역 내용을 검사했다는 뜻은 아니다. 연결한 번역 블록이 번역 본문에서 지워진 본문 블록도 `outdated`이고, 번역 제외로 표시한 본문 블록도 같은 규칙을 따른다.
+- 상태 규칙: 기록이 없으면 `unseen`, 기록한 값이 지금의 원문 작업본(`status = 'draft'`) 값과 같으면 `seen`, 다르면 `outdated`이다. 원문 작업본이 참조하는 글이나 미디어가 휴지통에 들어가더라도 원문 작업본의 참조 ID 자체는 바뀌지 않으므로 번역 상태는 `outdated`로 바뀌지 않는다. `seen`은 원문을 확인했고 그 뒤 바뀌지 않았다는 뜻이지 번역 내용을 검사했다는 뜻은 아니다. 연결한 번역 블록이 번역 본문에서 지워진 본문 블록도 `outdated`이고, 번역 제외로 표시한 본문 블록도 같은 규칙을 따른다.
 - `translationStatus.get`: `{ id, locale }`로 번역 언어 작업본 하나의 필드별 상태(`fields`)와 본문 블록별 상태(`blocks`, 읽는 순서)를 `id`, `collection`, `locale`, `source_locale`과 함께 돌려준다. 확인했던 원문 값은 `seen_value`, 연결한 번역 블록은 `link`, 이 언어에서 번역하지 않기로 한 표시는 `exclude`에 담는다. 원문 언어는 `BAD_REQUEST`, 글이 없거나 휴지통이거나 그 언어가 없으면 `NOT_FOUND`다.
 - `translationStatus.list`: 선택 입력 `id`, `collection`, `locale`을 모두 만족하는 활성 글의 번역 언어마다 `{ id, collection, locale, source_locale, outdated_count, unseen_count }`를 한 줄씩 돌려준다. 개수는 필드와 본문 블록을 합쳐 세고, 원문 언어와 휴지통 글은 돌려주지 않으며, 입력을 생략하면 전체이다.
 - `translationStatus.update`: `{ id, locale, fields?, blocks? }`로 번역 상태를 바꾸고 `get`과 같은 모양을 돌려준다. `fields`는 키마다 `true`(지금의 원문 값을 확인함) 또는 `null`(기록을 지움), `blocks`는 원문 블록 `id`마다 `{ link }`(번역 블록과 연결하고 확인함)·`{ exclude: true }`(번역 제외)·`null`(기록을 지움)이며, 요청에 없는 항목과 번역본의 `slug`·필드·`body`는 바꾸지 않는다. 원문 언어이거나 원문에 없는 필드·블록이거나 번역 본문에 없는 블록과 연결하면 `BAD_REQUEST`, 글이 없거나 휴지통이거나 그 언어가 없으면 `NOT_FOUND`다.
@@ -77,6 +77,11 @@ TST-READ-12  컬렉션과 언어를 지정하면 둘 다 일치하는 줄만 돌
   전제  한 컬렉션의 활성 글(`en`, `ja` 번역 언어 작업본)과 다른 컬렉션의 활성 글(`en` 번역 언어 작업본)이 있다
   행동  첫 번째 컬렉션과 `locale: "en"`으로 `translationStatus.list`를 실행한다
   결과  TST-READ-12.1  첫 번째 컬렉션 글의 `en` 줄 하나만 돌려준다
+
+TST-READ-13  확인한 원문 참조 필드의 대상이 휴지통에 들어가도 원문 참조 ID가 바뀌지 않았으면 확인 완료 상태를 유지한다
+  전제  `ko` 원문 작업본이 활성 미디어를 참조하고 `en` 번역 언어에서 `translationStatus.update`로 그 필드를 확인한 뒤, 그 미디어가 휴지통으로 이동했다(`trashed_at` 설정)
+  행동  해당 글의 `id`와 `locale: "en"`으로 `translationStatus.get`을 실행한다
+  결과  TST-READ-13.1  반환값의 `fields`에서 그 필드가 `status: "seen"`이고 `seen_value`가 그 미디어의 `id`이다
 ```
 
 ## 2. 갱신 (`update`)

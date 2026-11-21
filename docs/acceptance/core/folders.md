@@ -114,4 +114,10 @@ FLD-UPD-8  옮기거나 이름을 바꾼 위치에 같은 이름의 활성 폴�
   행동  하위 폴더의 `parent_id`를 `null`로 바꾸는 `folders.update`를 실행한다
   결과  FLD-UPD-8.1  `CONFLICT` 오류를 던진다
         FLD-UPD-8.2  `folders` 테이블에서 하위 폴더의 `parent_id`가 원래 부모 그대로이다
+
+FLD-UPD-9  폴더의 이름을 빈 문자열로 바꿀 수 없다
+  전제  활성 폴더가 하나 있다
+  행동  해당 폴더의 `id`와 빈 문자열 `name: ""`로 `folders.update`를 실행한다
+  결과  FLD-UPD-9.1  `BAD_REQUEST` 오류를 던진다
+        FLD-UPD-9.2  `folders` 테이블에서 해당 폴더의 `name`이 원래 그대로이다
 ```

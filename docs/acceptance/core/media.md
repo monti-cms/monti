@@ -131,6 +131,12 @@ MED-UPD-4  다건 수정 대상 중 하나라도 휴지통에 있으면 전체 �
   행동  두 미디어의 `ids`와 해당 `folder_id`로 `media.update`를 실행한다
   결과  MED-UPD-4.1  `NOT_FOUND` 오류를 던진다
         MED-UPD-4.2  `media` 테이블에서 활성 미디어의 `folder_id`가 `null` 그대로이다
+
+MED-UPD-5  단건 수정에서 파일 이름을 빈 문자열로 바꿀 수 없다
+  전제  활성 미디어가 하나 있다
+  행동  해당 미디어의 `id`와 빈 문자열 `filename: ""`로 `media.update`를 실행한다
+  결과  MED-UPD-5.1  `BAD_REQUEST` 오류를 던진다
+        MED-UPD-5.2  `media` 테이블에서 해당 미디어의 `filename`이 원래 그대로이다
 ```
 
 ## 5. 임시 파일 정리 (`removeLooseFiles`)
