@@ -33,7 +33,7 @@ async function rejectTaken(ctx: WriteContext, template: Omit<Template, "content"
 const createInput = z.object({
 	__preset_id: uuidInput.optional(),
 	collection: z.string(),
-	name: z.string(),
+	name: z.string().min(1),
 	content: z.unknown(),
 });
 
@@ -70,7 +70,6 @@ async function getTemplate(input: z.infer<typeof idInput>, ctx: ReadContext): Pr
 	return row;
 }
 
-/** 고칠 때는 이름을 비울 수 없다. */
 const updateInput = z.object({ id: uuidInput, name: z.string().min(1).optional(), content: z.unknown().optional() });
 
 /**

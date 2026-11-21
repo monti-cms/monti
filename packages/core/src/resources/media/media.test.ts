@@ -208,6 +208,16 @@ it("MED-CRT-5 rejects media.create with BAD_REQUEST for a folder outside the med
 	expect(await mediaRows()).toEqual([]);
 });
 
+it("MED-CRT-6 빈 파일 이름으로는 미디어를 등록할 수 없다", async () => {
+	const key = randomUUID();
+	storage.seed(key, { mime: "image/png", size: 10 });
+
+	// MED-CRT-6.1
+	await expect(montiOf().media.create({ key, filename: "" })).rejects.toMatchObject({ code: "BAD_REQUEST" });
+	// MED-CRT-6.2
+	expect(await mediaRows()).toEqual([]);
+});
+
 it("MED-READ-1 lists only the media directly in the given folder", async () => {
 	const folder = await seedFolder("media");
 	const child = await seedFolder("media", folder);

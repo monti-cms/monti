@@ -239,6 +239,13 @@ it("FLD-CRT-6 rejects folders.create with CONFLICT for an active folder of the s
 	expect((await folderRows()).map((row) => row.id)).toEqual([existing]);
 });
 
+it("FLD-CRT-7 빈 이름으로는 폴더를 만들 수 없다", async () => {
+	// FLD-CRT-7.1
+	await expect(montiOf().folders.create({ scope: POSTS, name: "" })).rejects.toMatchObject({ code: "BAD_REQUEST" });
+	// FLD-CRT-7.2
+	expect(await folderRows()).toEqual([]);
+});
+
 it("FLD-UPD-8 옮긴 위치에 같은 이름의 활성 폴더가 이미 있으면 수정할 수 없다", async () => {
 	const root = await seedFolder({ name: "Root" });
 	const child = await seedFolder({ name: "Drafts", parent_id: root });

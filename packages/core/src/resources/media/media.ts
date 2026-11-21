@@ -19,7 +19,7 @@ import {
 
 /** 사람이 고치는 파일 정보: 표시 이름과 픽셀 크기. */
 const fileInfoInput = {
-	filename: z.string().optional(),
+	filename: z.string().min(1).optional(),
 	width: z.number().int().positive().nullable().optional(),
 	height: z.number().int().positive().nullable().optional(),
 };
@@ -105,8 +105,6 @@ const updateOneInput = z.strictObject({
 	folder_id: uuidInput.nullable().optional(),
 	key: z.string().optional(),
 	...fileInfoInput,
-	// 고칠 때는 표시 이름을 비울 수 없다.
-	filename: z.string().min(1).optional(),
 });
 const updateManyInput = z.strictObject({ ids: z.array(uuidInput).min(1), folder_id: uuidInput.nullable() });
 const updateInput = z.union([updateOneInput, updateManyInput]);

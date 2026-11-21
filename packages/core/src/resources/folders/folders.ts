@@ -29,7 +29,7 @@ async function listFolders(input: z.infer<typeof listInput>, ctx: ReadContext): 
 const createInput = z.object({
 	__preset_id: uuidInput.optional(),
 	scope: z.string(),
-	name: z.string(),
+	name: z.string().min(1),
 	parent_id: uuidInput.nullable().optional(),
 });
 
@@ -87,7 +87,6 @@ async function rejectTaken(ctx: WriteContext, folder: Folder): Promise<void> {
 	if (taken !== undefined) throw new MontiError("CONFLICT", "An active folder here already has this name");
 }
 
-/** 고칠 때는 이름을 비울 수 없다. */
 const updateInput = z.object({
 	id: uuidInput,
 	name: z.string().min(1).optional(),

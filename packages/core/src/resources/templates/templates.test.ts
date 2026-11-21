@@ -292,6 +292,15 @@ it("TPL-CRT-8 rejects templates.create with BAD_REQUEST for a body referencing a
 	expect(await allUseRows()).toEqual([]);
 });
 
+it("TPL-CRT-9 빈 이름으로는 템플릿을 만들 수 없다", async () => {
+	// TPL-CRT-9.1
+	await expect(montiOf().templates.create({ collection: POSTS, name: "", content: PLAIN })).rejects.toMatchObject({
+		code: "BAD_REQUEST",
+	});
+	// TPL-CRT-9.2
+	expect(await templateRows()).toEqual([]);
+});
+
 it("TPL-READ-1 lists the templates of every collection when called without an input", async () => {
 	const post = await seedTemplate({ collection: POSTS });
 	const page = await seedTemplate({ collection: PAGES });
