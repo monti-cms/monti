@@ -38,7 +38,7 @@ monti <command> [options]
 | `monti migrate generate [name] [--dry-run]` | **불필요** | `migrations/_snapshot.json` ↔ 현재 `monti.schema.ts` 비교 후 SQL 마이그레이션 파일 생성 및 스냅샷 갱신 (`--dry-run`이면 파일·스냅샷을 쓰지 않고 SQL만 출력) |
 | `monti migrate status` | 필요(읽기만) | DB를 변경하지 않고 `migrations` 테이블(`source = "project"`)과 `migrations/*.sql`을 대조해 적용됨/미적용 목록 출력 (테이블이 아직 없으면 전부 미적용) |
 | `monti migrate up [--dry-run]` | 필요 | 운영 설정(`config.dev !== true`)에서 내장 마이그레이션과 미적용 `migrations/*.sql`(`source = "project"`)을 실행 (`--dry-run`이면 미적용 내장·프로젝트 마이그레이션 전체를 한 트랜잭션으로 시험 실행 뒤 롤백해 DB를 전혀 변경하지 않음) |
-| `monti clean-files` | 필요 | `removeLooseFiles({ db, storage })` 실행 (`storage` 미설정 시 오류 종료) |
+| `monti clean-files` | 필요 | `removeLooseFiles({ db, storage })` 실행 (`storage` 미설정 또는 일부 파일 삭제 실패 시 오류 종료) |
 
 ## 3. 프로젝트 부팅과 환경 변수
 

@@ -1,5 +1,5 @@
-import type { Selectable } from "kysely";
-import type { MediaTable } from "../../db/types";
+import { type Selectable, sql, type Transaction } from "kysely";
+import type { Database, MediaTable } from "../../db/types";
 import { MontiError } from "../../engine/errors";
 import type { ReadContext, StorageAdapter, WriteContext } from "../../engine/types";
 import { isActiveFolder } from "../folders/folders";
@@ -19,6 +19,9 @@ export interface MediaItem {
 
 export const SHOWN = ["id", "folder_id", "key", "filename", "mime_type", "size", "width", "height"] as const;
 
+/** 미디어 파일 크기의 상한: `media.size` 열인 PostgreSQL `integer`의 최대값. */
+export const MAX_MEDIA_SIZE = 2_147_483_647;
+
 /** How long a file nothing uses waits in `loose_files` before it is removed. */
 const LOOSE_FOR_MS = 24 * 60 * 60 * 1000;
 
@@ -32,17 +35,43 @@ export function itemOf(row: Omit<Selectable<MediaTable>, "trashed_at">, storage:
 	return { ...row, url: storage.url(row.key) };
 }
 
-/** The uploaded file at `key`; rejects a key with no file. */
+/** 올라간 `key`의 파일. 파일이 없거나 크기가 `0` 이상 `MAX_MEDIA_SIZE` 이하의 정수가 아니면 거절한다. */
 export async function statOf(storage: StorageAdapter, key: string): Promise<{ mime: string; size: number }> {
 	const stat = await storage.stat(key);
 	if (stat === null) throw new MontiError("BAD_REQUEST", "No uploaded file has this key");
+	if (!Number.isInteger(stat.size) || stat.size < 0 || stat.size > MAX_MEDIA_SIZE) {
+		throw new MontiError("BAD_REQUEST", "파일 크기가 허용 범위를 벗어났다");
+	}
 	return stat;
 }
 
-/** Rejects a key some media row already has, a trashed one included. */
-export async function rejectTakenKey(ctx: WriteContext, key: string): Promise<void> {
-	const taken = await ctx.db.selectFrom("media").select("id").where("key", "=", key).executeTakeFirst();
-	if (taken !== undefined) throw new MontiError("CONFLICT", "A media item already has this key");
+/** 이 트랜잭션이 끝날 때까지 저장소 키 `key`를 잠근다. 다른 트랜잭션이 잠갔으면 풀릴 때까지 기다린다. */
+export async function lockStorageKey(db: Transaction<Database>, key: string): Promise<void> {
+	await sql`select pg_advisory_xact_lock(hashtextextended(${key}, 0))`.execute(db);
+}
+
+/** 저장소 키 `key`를 기다리지 않고 잠근다. 다른 트랜잭션이 이미 잠갔으면 `false`다. */
+export async function tryLockStorageKey(db: Transaction<Database>, key: string): Promise<boolean> {
+	const { rows } = await sql<{ locked: boolean }>`
+		select pg_try_advisory_xact_lock(hashtextextended(${key}, 0)) as locked
+	`.execute(db);
+	return rows[0]?.locked === true;
+}
+
+/** 휴지통에 없는 미디어 행을 이 트랜잭션이 끝날 때까지 잠가 돌려준다. 없으면 `NOT_FOUND`다. */
+export async function lockActiveMedia(
+	ctx: WriteContext,
+	id: string,
+): Promise<Omit<Selectable<MediaTable>, "trashed_at">> {
+	const row = await ctx.db
+		.selectFrom("media")
+		.select(SHOWN)
+		.where("id", "=", id)
+		.where("trashed_at", "is", null)
+		.forNoKeyUpdate()
+		.executeTakeFirst();
+	if (row === undefined) throw new MontiError("NOT_FOUND", "이 id의 활성 미디어가 없다");
+	return row;
 }
 
 /** `"media"` 범위의 활성 폴더가 아니면 거절한다. */
@@ -65,4 +94,15 @@ export async function addLooseFile(ctx: WriteContext, key: string): Promise<void
 /** Takes `key` out of `loose_files`: something uses its file now. */
 export async function removeLooseFile(ctx: WriteContext, key: string): Promise<void> {
 	await ctx.db.deleteFrom("loose_files").where("key", "=", key).execute();
+}
+
+/** `keys`를 지금 지울 임시 파일로 `loose_files`에 올린다. 이미 있는 키는 지울 시각을 지금으로 맞춘다. */
+export async function queueLooseFilesNow(ctx: WriteContext, keys: string[]): Promise<void> {
+	if (keys.length === 0) return;
+	const rows = [...keys].sort().map((key) => ({ key, remove_after: sql<Date>`now()` }));
+	await ctx.db
+		.insertInto("loose_files")
+		.values(rows)
+		.onConflict((conflict) => conflict.column("key").doUpdateSet({ remove_after: sql<Date>`now()` }))
+		.execute();
 }

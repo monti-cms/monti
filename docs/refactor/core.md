@@ -45,7 +45,7 @@
 | 읽기 `monti.a.b(input)` | 입력 검사 후 `run` 실행. 트랜잭션 없음. |
 | 쓰기 `monti.a.b(input)` | 입력 검사, 트랜잭션 시작, `run`, 커밋, 파일 반영(스키마·설정 변경 시), 이벤트 통지. |
 | `monti.transaction(async (tx) => …)` | 콜백 안의 호출들이 한 트랜잭션을 공유한다. 커밋된 뒤 쌓인 이벤트를 호출 순서대로 통지한다. 실패하면 롤백하고 파일 쓰기와 이벤트는 일어나지 않는다. |
-| `monti.dryRun(async (tx) => …)` | `tx`에는 쓰기만 보인다. 실제와 같이 실행한 뒤 마지막에 무조건 롤백한다. 파일 쓰기와 이벤트는 일어나지 않는다. |
+| `monti.dryRun(async (tx) => …)` | `tx`에는 쓰기만 보인다. 실제와 같이 실행한 뒤 마지막에 무조건 롤백한다. 파일 쓰기와 이벤트는 일어나지 않으며, 롤백할 수 없는 외부 티켓 발급·삭제(`storage.ticket`·`remove`)는 `BAD_REQUEST`로 거절한다. |
 
 ```mermaid
 sequenceDiagram
@@ -257,7 +257,7 @@ erDiagram
   media {
     uuid id PK
     uuid folder_id FK
-    text key
+    text key UK
     text filename
     text mime_type
     int size
@@ -437,6 +437,7 @@ packages/core/src/
 | 2026-11-22 | 스키마 변경은 Kysely 위에 직접 구현해 개발 서버(`dev: true`)에서는 시작 시와 `schema.update` 시 DB 테이블을 즉시 맞추고, 운영 서버에서는 마이그레이션 파일만 실행한다. |
 | 2026-11-22 | `slug`도 초안(`draft`)에서는 비워 둘 수 있고(`null`) 발행(`publish`)할 때 `required` 필드와 함께 검사한다. `addLocale`은 원문 언어의 `slug`를 기본으로 복사한다. |
 | 2026-11-22 | 영구 삭제 시 참조 정리는 DB 외래 키(`ON DELETE SET NULL` / `CASCADE`)가 맡는다. 휴지통 항목 참조는 복원을 위해 DB에 남기되, 발행본(`status: "published"`) 조회에서만 빈칸으로 걸러 돌려주고 초안(`status: "draft"`) 조회에서는 원래 참조 ID를 그대로 돌려준다. 새로 참조를 넣거나(`create`·`addLocale`·`duplicate` 및 `update`의 신규 참조) 발행(`publish`)할 때는 필드나 본문이 휴지통·없는 대상을 가리키면 `BAD_REQUEST`로 거절하되, 초안·템플릿 수정(`update`)에서 이미 들어 있던 휴지통 참조를 그대로 유지한 채 임시저장하는 것은 허용한다. |
+| 2026-11-23 | 미디어 안전성을 위해 `media.key`에 DB 고유 제약을 두고, `media.size` 상한을 PostgreSQL `integer` 최대값(`2_147_483_647`)으로 `startUpload`와 `stat` 검증에 통일 적용한다. `dryRun`에서는 저장소 래퍼로 `storage.ticket`·`remove`를 `BAD_REQUEST`로 차단하며, `media` 등록·교체·영구 삭제·`removeLooseFiles`는 키 단위 트랜잭션 잠금(`pg_advisory_xact_lock`)과 `FOR NO KEY UPDATE` 행 잠금으로 경합을 방지한다. `removeLooseFiles`는 `{ removed, failed }`를 반환한다. |
 
 ## 11. 정하지 않은 것
 

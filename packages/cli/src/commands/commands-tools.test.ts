@@ -297,6 +297,42 @@ it("CLI-TLS-10 `clean-files`는 만료된 임시 파일을 저장소와 DB에서
 	expect({ removedKeys, rows }).toEqual({ removedKeys: ["uploads/expired.png"], rows: [] });
 });
 
+/** 저장소 어댑터의 `remove`가 `uploads/denied.png`에서만 `AccessDenied` 오류를 던지는 `monti.config.ts`. */
+const failingStorageConfig = `async function remove(key: string): Promise<void> {
+	if (key === "uploads/denied.png") throw new Error("AccessDenied");
+}
+
+export default { name: "테스트 사이트", storage: { remove } };
+`;
+
+it("CLI-TLS-16 `clean-files` 중 일부 임시 파일 삭제가 실패하면 지울 수 있었던 파일은 정리하고 오류 종료한다", async () => {
+	const { url, db } = await database();
+	await migrate(db, "@monti-cms/core", coreMigrations);
+	const remove_after = new Date(Date.now() - 60_000);
+	await db
+		.insertInto("loose_files")
+		.values([
+			{ key: "uploads/denied.png", remove_after },
+			{ key: "uploads/expired.png", remove_after },
+		])
+		.execute();
+	await writeProject(cwd, { "monti.config.ts": failingStorageConfig });
+	const { io, stdout, stderr } = testIo(cwd, { env: { DATABASE_URL: url } });
+
+	const code = await runCli(["clean-files"], io);
+
+	const rows = await db.selectFrom("loose_files").select("key").execute();
+	// CLI-TLS-16.1
+	expect({
+		code,
+		failing: stderr().includes("uploads/denied.png"),
+		reason: stderr().includes("AccessDenied"),
+		stdout: stdout(),
+	}).toEqual({ code: 1, failing: true, reason: true, stdout: "" });
+	// CLI-TLS-16.2
+	expect(rows).toEqual([{ key: "uploads/denied.png" }]);
+});
+
 it("CLI-TLS-11 `storage`가 설정되지 않았으면 `clean-files`를 거절한다", async () => {
 	const { url, db } = await database();
 	// 코어 마이그레이션까지 적용한 운영 DB: 거절할 까닭이 저장소 설정 하나뿐이다.

@@ -109,14 +109,22 @@ function callbackRunner(
 	return { context, write, emit, conflict };
 }
 
-/** A callback's value, or the first unique violation one of its writes raised, even when the callback caught it. */
-function settled<T>(value: T, conflicts: MontiError[]): T {
+/**
+ * 콜백의 값, 또는 콜백의 쓰기가 낸 첫 고유 제약 위반. 콜백이 그 오류를 잡고 정상 반환해도, 잡은 뒤 이어간 DB 호출이
+ * 중단된 트랜잭션 오류(`25P02`)로 실패해도 그 `CONFLICT`로 실패한다.
+ */
+async function runSettled<T>(run: () => Promise<T>, conflicts: MontiError[]): Promise<T> {
+	const result = await run().then(
+		(value) => ({ value }),
+		(error: unknown) => ({ error }),
+	);
 	const [first] = conflicts;
 	if (first !== undefined) throw first;
-	return value;
+	if ("error" in result) throw result.error;
+	return result.value;
 }
 
-/** A callback's calls share one transaction; once it commits, the queued events are sent in call order. */
+/** 콜백의 호출들은 한 트랜잭션을 공유한다. 커밋된 뒤 쌓인 이벤트를 호출 순서대로 통지한다. */
 function transactionOf<R extends ResourceTree>(
 	db: Kysely<Database>,
 	state: State,
@@ -128,21 +136,24 @@ function transactionOf<R extends ResourceTree>(
 		const conflicts: MontiError[] = [];
 		const result = await committed(db, state, async (trx, stage) => {
 			const client = buildClient(tree, "", callbackRunner(trx, stage, queue, conflicts), true);
-			return settled(await fn(client as MontiClient<R>), conflicts);
+			return runSettled(() => fn(client as MontiClient<R>), conflicts);
 		});
 		for (const event of queue) emit(event);
 		return result;
 	};
 }
 
-/** A callback of writes only, run as they would run and then rolled back; its queued events and its stage are dropped. */
+/**
+ * 쓰기만 보이는 콜백을 실제와 같이 실행한 뒤 롤백한다. 쌓인 이벤트와 단계는 버린다. 단계의 저장소는 롤백으로 되돌릴 수
+ * 없는 티켓 발급(`ticket`)과 삭제(`remove`)를 `BAD_REQUEST`로 거절한다.
+ */
 function dryRunOf<R extends ResourceTree>(db: Kysely<Database>, state: State, tree: ResourceTree) {
 	return async function dryRun<T>(fn: (tx: MontiWriteClient<R>) => Promise<T>): Promise<T> {
 		const trx = await db.startTransaction().execute();
 		const conflicts: MontiError[] = [];
 		try {
-			const client = buildClient(tree, "", callbackRunner(trx, state.stage(), [], conflicts), false);
-			return settled(await fn(client as MontiWriteClient<R>), conflicts);
+			const client = buildClient(tree, "", callbackRunner(trx, state.stage(true), [], conflicts), false);
+			return await runSettled(() => fn(client as MontiWriteClient<R>), conflicts);
 		} finally {
 			await trx.rollback().execute();
 		}
