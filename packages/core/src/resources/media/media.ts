@@ -3,14 +3,16 @@ import { z } from "zod";
 import type { MediaUsesTable } from "../../db/types";
 import { MontiError } from "../../engine/errors";
 import { defineRead, defineWrite } from "../../engine/operation";
-import type { ReadContext, WriteContext } from "../../engine/types";
+import type { ReadContext, StorageAdapter, WriteContext } from "../../engine/types";
 import { uuidInput } from "../_shared/input";
 import {
 	addLooseFile,
 	itemOf,
+	lockActiveMedia,
+	lockStorageKey,
+	MAX_MEDIA_SIZE,
 	type MediaItem,
 	rejectFolder,
-	rejectTakenKey,
 	removeLooseFile,
 	SHOWN,
 	statOf,
@@ -24,7 +26,7 @@ const fileInfoInput = {
 	height: z.number().int().positive().nullable().optional(),
 };
 
-const startUploadInput = z.object({ mime_type: z.string(), size: z.number().int().nonnegative() });
+const startUploadInput = z.object({ mime_type: z.string(), size: z.number().int().nonnegative().max(MAX_MEDIA_SIZE) });
 
 /** Issues an upload ticket for a new key; the key waits in `loose_files` until `create` registers it. */
 async function startUpload(input: z.infer<typeof startUploadInput>, ctx: WriteContext) {
@@ -42,11 +44,14 @@ const createInput = z.object({
 	...fileInfoInput,
 });
 
-/** 올라간 파일을 미디어로 등록한다. `mime_type`과 `size`는 스토리지의 값이고 `filename`을 생략하면 `key`다. */
+/**
+ * 올라간 파일을 미디어로 등록한다. `mime_type`과 `size`는 스토리지의 값이고 `filename`을 생략하면 `key`다. 키를 잠가
+ * 임시 파일 정리와 겹치지 않게 하고, 같은 키의 중복 등록은 DB 고유 제약이 `CONFLICT`로 거절한다.
+ */
 async function createMedia(input: z.infer<typeof createInput>, ctx: WriteContext): Promise<MediaItem> {
 	const storage = storageOf(ctx);
+	await lockStorageKey(ctx.db, input.key);
 	const stat = await statOf(storage, input.key);
-	await rejectTakenKey(ctx, input.key);
 	if (typeof input.folder_id === "string") await rejectFolder(ctx, input.folder_id);
 	const row = await ctx.db
 		.insertInto("media")
@@ -114,51 +119,53 @@ async function updateMedia(input: z.infer<typeof updateInput>, ctx: WriteContext
 	return "ids" in input ? updateMany(input, ctx) : updateOne(input, ctx);
 }
 
-/** 생략한 필드는 그대로다. 새 `key`는 그 파일의 `mime_type`과 `size`를 가져오고 이전 키는 `loose_files`에서 기다린다. */
+/**
+ * 생략한 필드는 그대로다. 새 `key`는 그 파일의 `mime_type`과 `size`를 가져오고 이전 키는 `loose_files`에서 기다린다.
+ * 새 키를 먼저 잠그고 미디어 행을 잠가, 같은 미디어의 동시 교체는 앞 교체가 끝난 행을 보고 그 키를 임시 목록에 넣는다.
+ */
 async function updateOne(input: z.infer<typeof updateOneInput>, ctx: WriteContext): Promise<MediaItem> {
 	const storage = storageOf(ctx);
 	const { id, key, ...fields } = input;
-	const existing = await getMedia({ id }, ctx);
+	if (key !== undefined) await lockStorageKey(ctx.db, key);
+	const existing = await lockActiveMedia(ctx, id);
 	if (typeof fields.folder_id === "string") await rejectFolder(ctx, fields.folder_id);
-	const file = key !== undefined && key !== existing.key ? await replaceFile(ctx, key, existing.key) : {};
+	const file = key !== undefined && key !== existing.key ? await fileOf(storage, key) : undefined;
 	const changes = { ...fields, ...file };
 	// 바꿀 값이 없으면 열 없는 `set`이 되어 SQL이 아니다. Kysely는 `undefined` 값을 `set`에서 뺀다.
-	if (Object.values(changes).every((value) => value === undefined)) {
-		const { uses, ...item } = existing;
-		return item;
-	}
+	if (Object.values(changes).every((value) => value === undefined)) return itemOf(existing, storage);
 	const row = await ctx.db
 		.updateTable("media")
 		.set(changes)
 		.where("id", "=", id)
 		.returning(SHOWN)
 		.executeTakeFirstOrThrow();
+	// 키 교체는 DB 고유 제약을 통과한 뒤에만 임시 목록에 반영한다.
+	if (file !== undefined) {
+		await removeLooseFile(ctx, file.key);
+		await addLooseFile(ctx, existing.key);
+	}
 	return itemOf(row, storage);
 }
 
-/** Checks the new file and swaps the keys in `loose_files`; returns the columns that change with the file. */
-async function replaceFile(
-	ctx: WriteContext,
-	key: string,
-	oldKey: string,
-): Promise<{ key: string; mime_type: string; size: number }> {
-	const stat = await statOf(storageOf(ctx), key);
-	await rejectTakenKey(ctx, key);
-	await removeLooseFile(ctx, key);
-	await addLooseFile(ctx, oldKey);
+/** 새 파일을 확인하고 파일과 함께 바뀌는 열들을 돌려준다. */
+async function fileOf(storage: StorageAdapter, key: string): Promise<{ key: string; mime_type: string; size: number }> {
+	const stat = await statOf(storage, key);
 	return { key, mime_type: stat.mime, size: stat.size };
 }
 
-/** Moves every one of `ids` or none: a missing or trashed one rejects the whole move. */
+/** `ids`를 모두 옮기거나 하나도 옮기지 않는다: 없거나 휴지통에 있는 것이 하나라도 있으면 이동 전체를 거절한다. */
 async function updateMany(input: z.infer<typeof updateManyInput>, ctx: WriteContext): Promise<MediaItem[]> {
 	const storage = storageOf(ctx);
 	if (input.folder_id !== null) await rejectFolder(ctx, input.folder_id);
-	const ids = [...new Set(input.ids)];
+	// 행을 `id` 순으로 잠가 겹치는 다건 이동끼리 교착하지 않게 한다.
+	const ids = [...new Set(input.ids)].sort();
 	const active = await ctx.db
 		.selectFrom("media")
 		.select("id")
 		.where("id", "in", ids)
 		.where("trashed_at", "is", null)
+		.orderBy("id", "asc")
+		.forNoKeyUpdate()
 		.execute();
 	if (active.length !== ids.length) throw new MontiError("NOT_FOUND", "Some of the ids are not active media items");
 	const rows = await ctx.db

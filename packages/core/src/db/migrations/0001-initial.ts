@@ -29,7 +29,7 @@ async function createMedia(db: Kysely<unknown>): Promise<void> {
 		.createTable("media")
 		.addColumn("id", "uuid", (column) => column.primaryKey())
 		.addColumn("folder_id", "uuid", (column) => column.references("folders.id"))
-		.addColumn("key", "text", (column) => column.notNull())
+		.addColumn("key", "text", (column) => column.notNull().unique())
 		.addColumn("filename", "text", (column) => column.notNull())
 		.addColumn("mime_type", "text", (column) => column.notNull())
 		.addColumn("size", "integer", (column) => column.notNull())

@@ -1,12 +1,13 @@
 import { randomUUID } from "node:crypto";
-import type { Kysely } from "kysely";
-import { afterEach, beforeEach, expect, it } from "vitest";
+import { type Kysely, sql } from "kysely";
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { createTestDatabase, type TestDatabase } from "../../__test__/database";
 import { createMemoryStorage, type MemoryStorage } from "../../__test__/memory-storage";
 import { migrate } from "../../db/migrate";
 import { initial } from "../../db/migrations/0001-initial";
 import type { Database } from "../../db/types";
 import { createMonti } from "../../engine/engine";
+import type { StorageAdapter } from "../../engine/types";
 import { removeLooseFiles } from "./loose-files";
 import { media } from "./media";
 
@@ -19,9 +20,14 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
 function montiOf(withStorage = true) {
+	return montiWith(withStorage ? storage : undefined);
+}
+
+/** 저장소로 `adapter`를 쓰는 엔진. */
+function montiWith(adapter: StorageAdapter | undefined) {
 	return createMonti(db, { media }, [], {
 		schema: { locales: ["ko"], collections: { [POSTS]: { fields: { title: { type: "text" } } } } },
-		config: { name: "Monti Blog", dev: false, storage: withStorage ? storage : undefined },
+		config: { name: "Monti Blog", dev: false, storage: adapter },
 		schemaFile: "unused-schema-file",
 		configFile: "unused-config-file",
 	});
@@ -102,6 +108,60 @@ async function codeOf(run: Promise<unknown>): Promise<string | null> {
 	);
 }
 
+/** 한 번 열리는 문: `pass`를 부른 쪽은 `open`될 때까지 기다리고, `reached`는 누군가 문 앞에 왔을 때 풀린다. */
+interface Gate {
+	reached: Promise<void>;
+	open: () => void;
+	pass: () => Promise<void>;
+}
+
+function gate(): Gate {
+	const reached = Promise.withResolvers<void>();
+	const opened = Promise.withResolvers<void>();
+	async function pass(): Promise<void> {
+		reached.resolve();
+		await opened.promise;
+	}
+	return { reached: reached.promise, open: () => opened.resolve(), pass };
+}
+
+/** 메서드마다 그 키로 불리면 문에서 기다리게 할 키와 문. */
+type Gates = Partial<Record<"stat" | "remove", { key: string; gate: Gate }>>;
+
+/** 테스트 저장소와 같되, `gates`의 메서드를 그 키로 부르면 문이 열릴 때까지 기다리는 저장소. */
+function gatedStorage(gates: Gates): StorageAdapter {
+	async function hold(method: keyof Gates, key: string): Promise<void> {
+		const held = gates[method];
+		if (held?.key === key) await held.gate.pass();
+	}
+	return {
+		ticket: storage.ticket,
+		url: storage.url,
+		stat: async (key) => {
+			await hold("stat", key);
+			return storage.stat(key);
+		},
+		remove: async (key) => {
+			await hold("remove", key);
+			await storage.remove(key);
+		},
+	};
+}
+
+/** 이 DB에서 잠금을 기다리는 연결이 `count`개가 될 때까지 기다린다. */
+async function waitForLockWaits(count: number): Promise<void> {
+	await vi.waitFor(
+		async () => {
+			const { rows } = await sql<{ waiting: number }>`
+				select count(*)::int as waiting from pg_stat_activity
+				where datname = current_database() and wait_event_type = 'Lock'
+			`.execute(db);
+			if (rows[0]?.waiting !== count) throw new Error("아직 잠금을 기다리는 연결이 없다");
+		},
+		{ timeout: 2000, interval: 10 },
+	);
+}
+
 it("MED-UPL-1 issues an upload ticket for a new UUID key and records it in loose_files for 24 hours", async () => {
 	const startedAt = Date.now();
 	const output = await montiOf().media.startUpload({ mime_type: "image/png", size: 1024 });
@@ -129,6 +189,24 @@ it("MED-UPL-2 rejects media.startUpload with BAD_REQUEST on an engine without st
 	});
 	// MED-UPL-2.2
 	expect(await looseKeys()).toEqual([]);
+});
+
+it("MED-UPL-3 시험 실행(dryRun)에서는 업로드 티켓을 발급할 수 없고 등록 시험 실행은 DB를 남기지 않는다", async () => {
+	const key = randomUUID();
+	storage.seed(key, { mime: "image/png", size: 10 });
+	const monti = montiOf();
+
+	const upload = monti.dryRun((tx) => tx.media.startUpload({ mime_type: "image/png", size: 10 }));
+	// MED-UPL-3.1
+	await expect(upload).rejects.toMatchObject({ code: "BAD_REQUEST" });
+	// MED-UPL-3.1
+	expect({ tickets: storage.tickets, loose: await looseKeys() }).toEqual({ tickets: [], loose: [] });
+
+	const output = await monti.dryRun((tx) => tx.media.create({ key }));
+	// MED-UPL-3.2
+	expect(output).toMatchObject({ key, mime_type: "image/png", size: 10, url: `memory://${key}` });
+	// MED-UPL-3.2
+	expect(await mediaRows()).toEqual([]);
 });
 
 it("MED-CRT-1 스토리지 파일을 확인해 미디어로 등록하고 임시 목록에서 해당 키만 지운다", async () => {
@@ -224,6 +302,35 @@ it("MED-CRT-6 빈 파일 이름으로는 미디어를 등록할 수 없다", asy
 	await expect(montiOf().media.create({ key, filename: "" })).rejects.toMatchObject({ code: "BAD_REQUEST" });
 	// MED-CRT-6.2
 	expect(await mediaRows()).toEqual([]);
+});
+
+it("MED-CRT-7 같은 파일 키로 동시에 미디어를 등록하면 한 건만 성공하고 나머지는 충돌로 거절된다", async () => {
+	const key = randomUUID();
+	storage.seed(key, { mime: "image/png", size: 10 });
+	const monti = montiOf();
+
+	const codes = await Promise.all([codeOf(monti.media.create({ key })), codeOf(monti.media.create({ key }))]);
+
+	// MED-CRT-7.1
+	expect([...codes].sort()).toEqual(["CONFLICT", null]);
+	// MED-CRT-7.2
+	expect((await mediaRows()).map((row) => row.key)).toEqual([key]);
+});
+
+it("MED-CRT-8 파일 크기가 DB 허용 범위를 벗어나면 업로드를 시작하거나 미디어를 등록할 수 없다", async () => {
+	const key = randomUUID();
+	storage.seed(key, { mime: "video/mp4", size: 2_147_483_648 });
+	const monti = montiOf();
+
+	const codes = [
+		await codeOf(monti.media.startUpload({ mime_type: "video/mp4", size: 2_147_483_648 })),
+		await codeOf(monti.media.create({ key })),
+	];
+
+	// MED-CRT-8.1
+	expect(codes).toEqual(["BAD_REQUEST", "BAD_REQUEST"]);
+	// MED-CRT-8.2
+	expect({ media: await mediaRows(), loose: await looseKeys() }).toEqual({ media: [], loose: [] });
 });
 
 it("MED-READ-1 lists only the media directly in the given folder", async () => {
@@ -411,6 +518,27 @@ it("MED-UPD-7 미디어 수정에서 미디어 범위가 아닌 폴더로 옮길
 	expect([(await mediaRow(first.id)).folder_id, (await mediaRow(second.id)).folder_id]).toEqual([null, null]);
 });
 
+it("MED-UPD-8 같은 미디어의 파일을 동시에 교체해도 먼저 교체된 중간 파일 키가 임시 목록에서 빠지지 않는다", async () => {
+	const row = await seedMedia();
+	const [first, second] = [randomUUID(), randomUUID()];
+	storage.seed(first, { mime: "image/png", size: 10 });
+	storage.seed(second, { mime: "image/png", size: 20 });
+	const held = gate();
+	const monti = montiWith(gatedStorage({ stat: { key: first, gate: held } }));
+
+	// 첫 교체가 미디어 행을 잡고 새 파일을 확인하는 동안 두 번째 교체가 시작되어 그 행을 기다린다.
+	const updates = [codeOf(monti.media.update({ id: row.id, key: first }))];
+	await held.reached;
+	updates.push(codeOf(monti.media.update({ id: row.id, key: second })));
+	await waitForLockWaits(1).finally(held.open);
+	const codes = await Promise.all(updates);
+
+	// MED-UPD-8.1
+	expect({ codes, key: (await mediaRow(row.id)).key }).toEqual({ codes: [null, null], key: second });
+	// MED-UPD-8.2
+	expect(await looseKeys()).toEqual(expect.arrayContaining([row.key, first]));
+});
+
 it("MED-CRT-2 registers the media with the given __preset_id", async () => {
 	const id = randomUUID();
 	const key = randomUUID();
@@ -436,28 +564,30 @@ async function seedLooseFileAt(key: string, hours: number): Promise<void> {
 		.execute();
 }
 
-it("MED-CLN-1 removes only the loose files past remove_after from the storage and from loose_files", async () => {
+it("MED-CLN-1 삭제 대기 시각이 지난 임시 파일만 스토리지와 loose_files에서 지우고 지운 키를 돌려준다", async () => {
 	const past = randomUUID();
 	const future = randomUUID();
 	await seedLooseFileAt(past, -1);
 	await seedLooseFileAt(future, 1);
 	const kept = await looseFile(future);
 
-	await removeLooseFiles({ db, storage });
+	const result = await removeLooseFiles({ db, storage });
 
 	// MED-CLN-1.1
-	expect({ removed: storage.removed.includes(past), row: await looseFile(past) }).toEqual({
-		removed: true,
-		row: undefined,
-	});
+	expect({
+		removed: storage.removed.includes(past),
+		row: await looseFile(past),
+		reported: result.removed.includes(past),
+	}).toEqual({ removed: true, row: undefined, reported: true });
 	// MED-CLN-1.2
-	expect({ removed: storage.removed.includes(future), row: await looseFile(future) }).toEqual({
+	expect({ removed: storage.removed.includes(future), row: await looseFile(future), failed: result.failed }).toEqual({
 		removed: false,
 		row: kept,
+		failed: [],
 	});
 });
 
-it("MED-CLN-2 keeps a loose file the storage failed to remove and goes on with the rest", async () => {
+it("MED-CLN-2 스토리지에서 지우지 못한 임시 파일은 목록에 남기고 실패 정보를 돌려주며 나머지는 계속 지운다", async () => {
 	const failing = randomUUID();
 	const removable = randomUUID();
 	await seedLooseFileAt(failing, -1);
@@ -473,9 +603,56 @@ it("MED-CLN-2 keeps a loose file the storage failed to remove and goes on with t
 	const run = removeLooseFiles({ db, storage: flaky });
 
 	// MED-CLN-2.3
-	await expect(run).resolves.toBeUndefined();
+	await expect(run).resolves.toEqual({ removed: [removable], failed: [{ key: failing, error: expect.any(Error) }] });
 	// MED-CLN-2.1
 	expect(await looseFile(removable)).toBeUndefined();
 	// MED-CLN-2.2
 	expect((await looseFile(failing))?.key).toBe(failing);
+});
+
+it("MED-CLN-3 임시 파일 정리와 미디어 등록이 같은 키로 동시에 실행되어도 등록에 성공한 파일이 스토리지에서 지워지지 않는다", async () => {
+	const [keyA, keyB] = [randomUUID(), randomUUID()];
+	storage.seed(keyA, { mime: "image/png", size: 10 });
+	storage.seed(keyB, { mime: "image/png", size: 20 });
+	await seedLooseFileAt(keyA, -1);
+	await seedLooseFileAt(keyB, -1);
+	const [removing, statting] = [gate(), gate()];
+	const gated = gatedStorage({ remove: { key: keyA, gate: removing }, stat: { key: keyB, gate: statting } });
+	const monti = montiWith(gated);
+
+	// keyB: 등록이 먼저 키를 잡고 파일을 확인하는 동안 정리가 시작된다.
+	const createB = codeOf(monti.media.create({ key: keyB }));
+	await statting.reached;
+	// keyA: 정리가 먼저 키를 잡고 파일을 지우는 동안 등록이 시작되어 그 키를 기다린다.
+	const cleanup = removeLooseFiles({ db, storage: gated });
+	await removing.reached;
+	const createA = codeOf(monti.media.create({ key: keyA }));
+	await waitForLockWaits(1).finally(removing.open);
+	const result = await cleanup;
+	const codeA = await createA;
+	statting.open();
+	await createB;
+	const stored = (await mediaRows()).map((row) => row.key);
+
+	// MED-CLN-3.1
+	expect({
+		removed: result.removed.includes(keyA),
+		code: codeA,
+		loose: await looseFile(keyA),
+		stored: stored.includes(keyA),
+	}).toEqual({ removed: true, code: "BAD_REQUEST", loose: undefined, stored: false });
+	// MED-CLN-3.2
+	expect({
+		removeCalled: storage.removed.includes(keyB),
+		file: await storage.stat(keyB),
+		stored: stored.includes(keyB),
+		loose: await looseFile(keyB),
+		skipped: [...result.removed, ...result.failed.map((failure) => failure.key)].includes(keyB) === false,
+	}).toEqual({
+		removeCalled: false,
+		file: { mime: "image/png", size: 20 },
+		stored: true,
+		loose: undefined,
+		skipped: true,
+	});
 });

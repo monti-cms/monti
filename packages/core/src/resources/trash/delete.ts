@@ -2,6 +2,7 @@ import { sql } from "kysely";
 import type { z } from "zod";
 import type { WriteContext } from "../../engine/types";
 import { tablesOf } from "../entries/tables";
+import { lockStorageKey, queueLooseFilesNow } from "../media/queries";
 import type { deleteInput } from "./input";
 import { findTarget, listedTargets, type TrashRef, type TrashTarget } from "./items";
 import { anyOf, entryTable, itemsOf, type Tree } from "./tree";
@@ -21,19 +22,30 @@ async function deleteEntries(ctx: WriteContext, table: string, ids: string[]): P
 	await tablesOf(ctx.db).deleteFrom(table).where("id", "=", anyOf(ids)).execute();
 }
 
-/** 미디어들을 지운다. 사용처 기록과 글의 참조는 DB 외래 키가 정리하고, 파일은 `loose_files`에 올린다. */
+/**
+ * 휴지통의 미디어들을 지운다. 사용처 기록과 글의 참조는 DB 외래 키가 정리하고, 파일은 지금 지울 임시 파일로 `loose_files`에
+ * 올린다. 키를 정렬된 순서로 먼저 잠가 같은 키의 등록·교체·정리와 겹치지 않게 한다.
+ */
 async function deleteMedia(ctx: WriteContext, ids: string[]): Promise<void> {
-	await ctx.db
-		.insertInto("loose_files")
-		.columns(["key", "remove_after"])
-		.expression((eb) =>
-			eb
-				.selectFrom("media")
-				.select(["key", sql<Date>`now()`.as("remove_after")])
-				.where("id", "=", anyOf(ids)),
-		)
+	if (ids.length === 0) return;
+	const candidates = await ctx.db
+		.selectFrom("media")
+		.select("key")
+		.where("id", "=", anyOf(ids))
+		.where("trashed_at", "is not", null)
+		.orderBy("key", "asc")
 		.execute();
-	await ctx.db.deleteFrom("media").where("id", "=", anyOf(ids)).execute();
+	for (const key of new Set(candidates.map((row) => row.key))) await lockStorageKey(ctx.db, key);
+	const deleted = await ctx.db
+		.deleteFrom("media")
+		.where("id", "=", anyOf(ids))
+		.where("trashed_at", "is not", null)
+		.returning("key")
+		.execute();
+	await queueLooseFilesNow(
+		ctx,
+		deleted.map((row) => row.key),
+	);
 }
 
 /** 폴더들을 지운다. 그 안에 남은 먼저 따로 버린 항목은 루트로 옮겨 휴지통에 둔다. */
