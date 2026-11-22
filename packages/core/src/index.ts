@@ -77,11 +77,14 @@ function coreResources(plugins: Plugin[], secret: string | undefined) {
 	return { entries, translationStatus, templates, folders, media, trash, schema, config, keys, session, admin };
 }
 
+/** `startMonti`가 돌려주는 코어 리소스 전체의 엔진 타입. */
+export type CoreMonti = Monti<ReturnType<typeof coreResources>>;
+
 /**
  * core를 조립한다: 스키마를 검사하고, core 리소스와 `config.plugins`(`keys`에는 암호화 비밀값 `secret`)로 엔진을 만든다.
  * DB는 건드리지 않는다. 테이블은 먼저 `migrateMonti`로 준비한다.
  */
-export function startMonti(options: StartOptions): Monti<ReturnType<typeof coreResources>> {
+export function startMonti(options: StartOptions): CoreMonti {
 	const { db, schemaFile, configFile } = options;
 	const plugins = options.config.plugins ?? [];
 	const state = { schema: validSchema(options.schema), config: options.config, schemaFile, configFile };
