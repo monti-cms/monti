@@ -5,12 +5,22 @@ import { parseInput } from "./input";
 import { createRouteTable, matchRoute } from "./match";
 import type { RouteTable } from "./types";
 
-/** 단일 리소스 `settings.get`, 고유 쓰기 액션 `jobs.run`, 쿼리 변환을 볼 `probes.list`를 더하는 테스트용 플러그인. */
+/** 단일 리소스 `settings.get`, 고유 액션 `jobs.run`, `oneOf` 유니온 `items.update`, 쓰기 `mut.list`, 쿼리 `probes.list` 플러그인. */
 const plugin: Plugin = {
 	name: "probe",
 	operations: {
 		settings: { get: defineRead({ input: z.object({}), run: async () => ({}) }) },
 		jobs: { run: defineWrite({ input: z.object({}), run: async () => ({}) }) },
+		mut: { list: defineWrite({ input: z.object({}), run: async () => [] }) },
+		items: {
+			update: defineWrite({
+				input: z.discriminatedUnion("mode", [
+					z.object({ mode: z.literal("one"), id: z.string() }),
+					z.object({ mode: z.literal("many"), ids: z.array(z.string()) }),
+				]),
+				run: async () => ({}),
+			}),
+		},
 		probes: {
 			list: defineRead({
 				input: z.object({
@@ -68,6 +78,8 @@ it("HTTP-RUT-1 표준 동사(`list`, `get`, `create`, `update`, `delete`)를 각
 	expect(route(core, "PATCH", "/api/templates/t1")).toMatchObject({ name: "templates.update", id: "t1" });
 	// HTTP-RUT-1.6
 	expect(route(core, "DELETE", "/api/templates/t1")).toMatchObject({ name: "templates.delete", id: "t1" });
+	// HTTP-RUT-1.7
+	expect(route(core, "patch", "/api/templates/t1")).toMatchObject({ name: "templates.update", id: "t1" });
 });
 
 it("HTTP-RUT-2 목록이 없는 단일 리소스는 `:id` 없는 경로로 조회·수정·삭제에 매핑한다", () => {
@@ -99,9 +111,14 @@ it("HTTP-RUT-3 단건과 다건 입력을 함께 받는 리소스는 `:id` 유�
 	expect(route(core, "DELETE", "/api/trash/t1")).toMatchObject({ name: "trash.delete", id: "t1" });
 	// HTTP-RUT-3.4
 	expect(route(core, "DELETE", "/api/trash")).toEqual({ name: "trash.delete", kind: "write", id: undefined });
+	// HTTP-RUT-3.5
+	expect([route(withPlugin, "PATCH", "/api/items/i1"), route(withPlugin, "PATCH", "/api/items")]).toEqual([
+		{ name: "items.update", kind: "write", id: "i1" },
+		{ name: "items.update", kind: "write", id: undefined },
+	]);
 });
 
-it("HTTP-RUT-4 표준 동사 외의 고유 액션과 플러그인 액션을 이름 대소문자 그대로 `POST /<resource>/<action>`으로 매핑한다", () => {
+it("HTTP-RUT-4 표준 동사 외의 고유 액션과 플러그인 액션을 이름 대소문자 그대로 `POST /<resource>/<action>`으로 매핑하고 `GET`에는 읽기 작업만 연다", () => {
 	// HTTP-RUT-4.1
 	expect([
 		route(withPlugin, "POST", "/api/entries/publish"),
@@ -114,6 +131,8 @@ it("HTTP-RUT-4 표준 동사 외의 고유 액션과 플러그인 액션을 이�
 	expect(route(withPlugin, "POST", "/api/keys/check")).toEqual({ name: "keys.check", kind: "read", id: undefined });
 	// HTTP-RUT-4.3
 	expect(route(withPlugin, "POST", "/api/jobs/run")).toEqual({ name: "jobs.run", kind: "write", id: undefined });
+	// HTTP-RUT-4.4
+	expect(matchRoute(withPlugin, "GET", "/api/mut")).toEqual({ kind: "not_found" });
 });
 
 it('HTTP-RUT-5 사용자 지정 `basePath`와 루트 기준(`""`, `"/"`)에서 경로를 매칭한다', () => {
@@ -256,11 +275,15 @@ it("HTTP-RUT-16 읽기 작업에 `?dryRun=true`를 붙이면 거절한다(`400`)
 	await expect(parse(core, "POST", "/api/keys/check?dryRun=true")).rejects.toMatchObject(BAD_REQUEST);
 });
 
-it("HTTP-RUT-17 `dryRun` 값이 `true`나 `false`가 아니면 거절한다(`400`)", async () => {
+it("HTTP-RUT-17 `dryRun` 값이 `true`나 `false`가 아니거나 두 번 이상 지정되면 거절한다(`400`)", async () => {
 	// HTTP-RUT-17.1
 	await expect(parse(core, "POST", "/api/entries?dryRun=yes")).rejects.toMatchObject(BAD_REQUEST);
 	// HTTP-RUT-17.1
 	await expect(parse(core, "POST", "/api/entries?dryRun=1")).rejects.toMatchObject(BAD_REQUEST);
+	// HTTP-RUT-17.2
+	await expect(parse(core, "POST", "/api/entries?dryRun=false&dryRun=true")).rejects.toMatchObject(BAD_REQUEST);
+	// HTTP-RUT-17.2
+	await expect(parse(core, "POST", "/api/entries?dryRun=true&dryRun=yes")).rejects.toMatchObject(BAD_REQUEST);
 });
 
 it("HTTP-RUT-18 쓰기 요청에 `dryRun` 외의 쿼리 키가 하나라도 붙으면 거절한다(`400`)", async () => {
@@ -301,10 +324,23 @@ it("HTTP-RUT-21 본문이 비어 있는 쓰기 요청은 `Content-Type` 없이�
 	expect(session.input).toEqual({});
 });
 
-it("HTTP-RUT-22 점(`.`) 중첩 쿼리에 위험한 프로토타입 키가 들어 있으면 거절한다(`400`)", async () => {
+it("HTTP-RUT-22 점(`.`) 중첩 쿼리의 위험한 프로토타입 키와 키 충돌은 거절하고(`400`), 상속 속성 이름은 전역 객체를 건드리지 않는다", async () => {
 	const queries = ["__proto__.polluted=1", "relation.constructor.x=1", "relation.prototype.y=1"];
 	const results = await Promise.allSettled(queries.map((query) => parse(withPlugin, "GET", `/api/probes?${query}`)));
 	const codes = results.map((result) => (result.status === "rejected" ? result.reason.code : "통과"));
+	const inherited = await parse(withPlugin, "GET", "/api/probes?toString.evil=1&toString.length=1");
+	const conflicts = await Promise.allSettled([
+		parse(withPlugin, "GET", "/api/probes?folder_id.extra=1&folder_id=null"),
+		parse(withPlugin, "GET", "/api/probes?folder_id=null&folder_id.extra=1"),
+	]);
+	const conflictCodes = conflicts.map((result) => (result.status === "rejected" ? result.reason.code : "통과"));
 	// HTTP-RUT-22.1
 	expect(codes).toEqual(["BAD_REQUEST", "BAD_REQUEST", "BAD_REQUEST"]);
+	// HTTP-RUT-22.2
+	expect([inherited.input, Object.hasOwn(Object.prototype.toString, "evil")]).toEqual([
+		{ toString: { evil: "1", length: "1" } },
+		false,
+	]);
+	// HTTP-RUT-22.3
+	expect(conflictCodes).toEqual(["BAD_REQUEST", "BAD_REQUEST"]);
 });

@@ -3,6 +3,9 @@ import type { CookieOptions, ResolvedCookie, SameSite } from "./types";
 /** `Set-Cookie`의 `SameSite` 속성에 쓰는 표기. */
 const SAME_SITE_LABEL: Record<SameSite, string> = { lax: "Lax", strict: "Strict", none: "None" };
 
+/** 쿠키 이름에 허용되지 않는 문자: 공백·제어문자·구분자(`;`, `=`). */
+const INVALID_NAME = /[\s;=]/;
+
 /** `Cookie` 헤더에서 이름이 `name`인 첫 쿠키의 값. 값 안의 `=`는 그대로 둔다. 헤더나 쿠키가 없으면 `undefined`다. */
 export function readCookie(header: string | null, name: string): string | undefined {
 	const prefix = `${name}=`;
@@ -13,9 +16,12 @@ export function readCookie(header: string | null, name: string): string | undefi
 	return undefined;
 }
 
-/** 기본값을 채운 쿠키 옵션. `sameSite: "none"`인데 `secure: false`면 브라우저가 버릴 쿠키라 오류를 던진다. */
+/** 기본값을 채운 쿠키 옵션. 잘못된 이름·경로·수명이나 `sameSite: "none"` + `secure: false`는 오류를 던진다. */
 export function resolveCookie(options: CookieOptions = {}): ResolvedCookie {
 	const { name = "monti_session", path = "/", sameSite = "lax", secure, maxAge = 2_592_000 } = options;
+	if (name === "" || INVALID_NAME.test(name)) throw new Error("쿠키 설정이 잘못되었다: 올바른 쿠키 이름이 아니다");
+	if (path === "" || path.includes(";")) throw new Error("쿠키 설정이 잘못되었다: 올바른 쿠키 경로가 아니다");
+	if (!Number.isInteger(maxAge) || maxAge <= 0) throw new Error("쿠키 설정이 잘못되었다: maxAge는 양의 정수여야 한다");
 	if (sameSite === "none" && secure === false) {
 		throw new Error('쿠키 설정이 잘못되었다: sameSite: "none"은 secure: false와 함께 쓸 수 없다');
 	}

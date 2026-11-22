@@ -247,8 +247,9 @@ it("HTTP-HDL-8 다건 수정 요청(`PATCH /api/entries`)으로 여러 글의 �
 	const response = await send(handler, "PATCH", "/api/entries", { cookie, json });
 	const moved = await bodyOf(response);
 	// HTTP-HDL-8.1
-	expect([response.status, moved]).toEqual([
+	expect([response.status, moved.length, moved]).toEqual([
 		200,
+		2,
 		expect.arrayContaining([
 			{ id: first.id, folder_id: folder.id },
 			{ id: second.id, folder_id: folder.id },
@@ -295,29 +296,42 @@ it("HTTP-HDL-11 쓰기 요청에 `?dryRun=true`를 붙이면 예상 결과만 �
 
 it("HTTP-HDL-12 인증·관리자 쓰기에 `?dryRun=true`를 붙이면 세션 쿠키를 발급하거나 지우지 않으며 토큰 원문도 노출하지 않는다", async () => {
 	const fresh = await setup({ admin: false });
-	const { handler, session } = await setup();
+	const { db, handler, session } = await setup();
+	const beforeSessions = await db.selectFrom("session").selectAll().execute();
 	const admin = await send(fresh.handler, "POST", "/api/admin?dryRun=true", { json: login });
+	const adminsAfter = await fresh.db.selectFrom("admin").selectAll().execute();
 	const signIn = await send(handler, "POST", "/api/session?dryRun=true", { json: login });
+	const sessionsAfter = await db.selectFrom("session").selectAll().execute();
 	const signOut = await send(handler, "DELETE", "/api/session?dryRun=true", { cookie: session });
 	const follow = await send(handler, "GET", "/api/templates", { cookie: session });
 	// HTTP-HDL-12.1
-	expect([admin.status, await bodyOf(admin), admin.headers.get("set-cookie")]).toEqual([
+	expect([admin.status, await bodyOf(admin), admin.headers.get("set-cookie"), adminsAfter]).toEqual([
 		201,
 		{ id: expect.any(String), email: EMAIL },
 		null,
+		[],
 	]);
 	// HTTP-HDL-12.2
-	expect([signIn.status, await bodyOf(signIn), signIn.headers.get("set-cookie")]).toEqual([200, { ok: true }, null]);
+	expect([signIn.status, await bodyOf(signIn), signIn.headers.get("set-cookie"), sessionsAfter.length]).toEqual([
+		200,
+		{ ok: true },
+		null,
+		beforeSessions.length,
+	]);
 	// HTTP-HDL-12.3
 	expect([signOut.status, signOut.headers.get("set-cookie"), follow.status]).toEqual([204, null, 200]);
 });
 
 it("HTTP-HDL-13 `createHttpHandler`의 `basePath`와 `cookie` 옵션이 전체 요청 파이프라인에 적용된다", async () => {
-	const { handler } = await setup({ options: { basePath: "/cms", cookie: { name: "sid", path: "/cms" } } });
+	const { handler } = await setup({
+		options: { basePath: "/cms", cookie: { name: "sid", path: "/cms", secure: true } },
+	});
 	const response = await send(handler, "POST", "/cms/session", { json: login });
 	const follow = await send(handler, "GET", "/cms/templates", { cookie: cookieOf(response) });
 	// HTTP-HDL-13.1
-	expect(response.headers.get("set-cookie")).toMatch(/^sid=[^;]+; HttpOnly; Path=\/cms;/);
+	expect(response.headers.get("set-cookie")).toMatch(
+		/^sid=[^;]+; HttpOnly; Path=\/cms; SameSite=Lax; Max-Age=2592000; Secure$/,
+	);
 	// HTTP-HDL-13.2
 	expect(follow.status).toBe(200);
 });
@@ -364,12 +378,20 @@ it("HTTP-HDL-15 로그인하지 않았거나 만료·위조된 세션 쿠키로 
 });
 
 it("HTTP-HDL-16 검증 실패·잘못된 로그인·권한 없음·없는 대상·중복 관리자가 각각의 HTTP 오류 상태와 JSON 형식으로 반환된다", async () => {
-	const { handler, session: cookie } = await setup({ config: { dev: false } });
+	const { monti, handler, session: cookie } = await setup({ config: { dev: false } });
+	const entry = await monti.entries.create({ collection: "posts", locale: "ko", slug: "hello" });
 	const invalid = await send(handler, "POST", "/api/templates", { cookie, json: { collection: "posts" } });
 	const wrong = await send(handler, "POST", "/api/session", { json: { email: EMAIL, password: "wrong-password" } });
 	const forbidden = await send(handler, "PATCH", "/api/config", { cookie, json: { name: "새 이름" } });
 	const missing = await send(handler, "GET", `/api/templates/${randomUUID()}`, { cookie });
 	const duplicate = await send(handler, "POST", "/api/admin", { json: login });
+	const bypassMove = await send(handler, "PATCH", "/api/entries/invalid-id", {
+		cookie,
+		json: { ids: [entry.id], folder_id: null },
+	});
+	const bypassSlug = await send(handler, "GET", "/api/entries/invalid-id?collection=posts&locale=ko&slug=hello", {
+		cookie,
+	});
 	// HTTP-HDL-16.1
 	expect([invalid.status, (await bodyOf(invalid)).error.code]).toEqual([400, "BAD_REQUEST"]);
 	// HTTP-HDL-16.2
@@ -380,6 +402,13 @@ it("HTTP-HDL-16 검증 실패·잘못된 로그인·권한 없음·없는 대상
 	expect([missing.status, (await bodyOf(missing)).error.code]).toEqual([404, "NOT_FOUND"]);
 	// HTTP-HDL-16.5
 	expect([duplicate.status, (await bodyOf(duplicate)).error.code]).toEqual([409, "CONFLICT"]);
+	// HTTP-HDL-16.6
+	expect([
+		bypassMove.status,
+		(await bodyOf(bypassMove)).error.code,
+		bypassSlug.status,
+		(await bodyOf(bypassSlug)).error.code,
+	]).toEqual([400, "BAD_REQUEST", 400, "BAD_REQUEST"]);
 });
 
 it("HTTP-HDL-17 작업 실행 중 예기치 않은 내부 오류가 나면 내부 상세를 숨기고 서버 오류(`500`)를 돌려준다", async () => {

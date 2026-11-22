@@ -23,10 +23,12 @@ function badRequest(message: string): MontiError {
 	return new MontiError("BAD_REQUEST", message);
 }
 
-/** `?dryRun`의 값: 없거나 `false`면 일반 실행, `true`면 시험 실행이다. 읽기 작업은 시험 실행할 수 없다. */
+/** `?dryRun`의 값: 없거나 `false`면 일반 실행, `true`면 시험 실행이다. 중복 지정과 읽기 시험 실행은 거절한다. */
 function dryRunOf(query: URLSearchParams, operation: RouteOperation): boolean {
-	const value = query.get(DRY_RUN);
-	if (value === null || value === "false") return false;
+	const values = query.getAll(DRY_RUN);
+	if (values.length > 1) throw badRequest("dryRun은 한 번만 지정할 수 있다");
+	const [value] = values;
+	if (value === undefined || value === "false") return false;
 	if (value !== "true") throw badRequest("dryRun은 true나 false만 쓸 수 있다");
 	if (operation.kind === "read") throw badRequest(`읽기 작업은 시험 실행할 수 없다: ${operation.name}`);
 	return true;
@@ -44,17 +46,18 @@ function queryInput(query: URLSearchParams, schema: Record<string, unknown>): Re
 	return input;
 }
 
-/**
- * `target`의 점 표기 경로 `path`에 `value`를 넣는다. 중간 객체가 없으면 만든다. 중간 값이 객체가 아니면(`?a=x&a.b=y`)
- * `Object()`가 감싼 임시 객체에 넣어 버려지고, 원래 값은 core 검증이 거절한다.
- */
+/** `target`의 점 표기 경로 `path`에 `value`를 넣는다. 자체 속성만 따라가며 스칼라·객체 충돌은 `BAD_REQUEST`다. */
 function setAt(target: Record<string, unknown>, path: string[], value: unknown): void {
 	let node = target;
 	for (const key of path.slice(0, -1)) {
-		node[key] ??= {};
-		node = Object(node[key]);
+		if (!Object.hasOwn(node, key)) node[key] = {};
+		const next = node[key];
+		if (!isPlainObject(next)) throw badRequest(`쿼리 키가 충돌한다: ${path.join(".")}`);
+		node = next;
 	}
-	node[path[path.length - 1]] = value;
+	const last = path[path.length - 1];
+	if (Object.hasOwn(node, last)) throw badRequest(`쿼리 키가 충돌한다: ${path.join(".")}`);
+	node[last] = value;
 }
 
 /**

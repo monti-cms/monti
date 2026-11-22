@@ -26,16 +26,18 @@
 ## 2. 공개 API
 
 ```ts
+export type SameSite = "lax" | "strict" | "none";
+
 export interface CookieOptions {
-	/** 세션 쿠키 이름 (기본: `"monti_session"`). */
+	/** 세션 쿠키 이름 (기본: `"monti_session"`). 빈 문자열·공백·`;`·`=`는 허용하지 않는다. */
 	name?: string;
-	/** 쿠키 `Path` 속성 (기본: `"/"`). */
+	/** 쿠키 `Path` 속성 (기본: `"/"`). 빈 문자열·`;`는 허용하지 않는다. */
 	path?: string;
 	/** 쿠키 `SameSite` 속성 (기본: `"lax"`). `"none"`이면 `Secure`를 자동으로 강제한다. */
-	sameSite?: "lax" | "strict" | "none";
+	sameSite?: SameSite;
 	/** `Secure` 속성. 생략하면 요청 URL이 `https:`이거나 `sameSite === "none"`일 때 붙인다. 리버스 프록시 앞단에서 TLS가 종료되어 요청 URL이 `http:`로 들어오는 운영 환경에서는 `true`를 명시한다. */
 	secure?: boolean;
-	/** 쿠키 `Max-Age` 초 (기본: `2_592_000`, core 세션 수명 30일과 동일). */
+	/** 쿠키 `Max-Age` 초 (기본: `2_592_000`, core 세션 수명 30일과 동일). 양의 정수만 허용한다. */
 	maxAge?: number;
 }
 
@@ -57,7 +59,7 @@ export function createHttpHandler(monti: Monti, options?: HttpHandlerOptions): H
 
 ### 3.1 표준 동사와 단일 리소스·단건·다건 판별
 
-표준 동사는 `list`, `get`, `create`, `update`, `delete` 5개이며, 그 외는 모두 고유 액션(`<action>`)이다. 각 Operation의 `spec.input` JSON Schema(union `anyOf` 포함)에서 다음 두 조건을 자동 판별한다.
+표준 동사는 `list`, `get`, `create`, `update`, `delete` 5개이며, 그 외는 모두 고유 액션(`<action>`)이다. HTTP 메서드는 대문자로 정규화해 매칭하며(`fetch`의 소문자 `"patch"` 포함), `GET` 경로에는 읽기(`kind === "read"`) Operation만 연다. 각 Operation의 `spec.input` JSON Schema(union `anyOf`·`oneOf` 포함)에서 다음 두 조건을 자동 판별한다.
 
 - **단건 `id` 분기 (`hasIdBranch`)**: `id` 속성을 받는 객체 분기가 하나 이상 있음.
 - **비-`id` 분기 (`hasNoIdBranch`)**: `id`가 필수가 아닌 객체 분기가 하나 이상 있음(단일 리소스 또는 `ids`/`before`/`all` 같은 다건·조건부 분기).
@@ -87,10 +89,10 @@ export function createHttpHandler(monti: Monti, options?: HttpHandlerOptions): H
   - 쿼리에서 `dryRun`은 예약 파라미터로 소비하며 Operation 입력 객체에 넘기지 않는다.
   - `dryRun=true`이면 쓰기(`kind === "write"`) Operation을 `monti.dryRun((tx) => tx[resource][action](input))`으로 실행한다.
   - 읽기(`kind === "read"`) Operation에 `dryRun=true`를 붙이면 `400 BAD_REQUEST`로 거절한다.
-  - `dryRun=false`는 일반 실행으로 취급하고, `true`/`false` 외의 값은 `400 BAD_REQUEST`로 거절한다.
+  - `dryRun=false`는 일반 실행으로 취급하고, `true`/`false` 외의 값이나 `dryRun` 중복 지정은 `400 BAD_REQUEST`로 거절한다.
   - 쓰기 메서드(`POST`, `PATCH`, `DELETE`) 요청에 `dryRun` 외의 쿼리 키(`dryrun`, `dry_run`, `locale` 등)가 하나라도 들어 있으면 실수 실행을 막기 위해 `400 BAD_REQUEST`로 거절한다.
 - **쿼리 파라미터 변환 (`GET`)**:
-  - 점(`.`) 표기 키는 중첩 객체로 조립한다(예: `?relation.field=author&relation.id=<uuid>` → `{ relation: { field: "author", id: "<uuid>" } }`). `__proto__`, `constructor`, `prototype` 세그먼트는 `400 BAD_REQUEST`로 거부한다.
+  - 점(`.`) 표기 키는 자체 속성만 따라가며 중첩 객체로 조립한다(예: `?relation.field=author&relation.id=<uuid>` → `{ relation: { field: "author", id: "<uuid>" } }`). `__proto__`, `constructor`, `prototype` 세그먼트와 스칼라·중첩 객체가 겹치는 키 충돌은 `400 BAD_REQUEST`로 거부한다.
   - `spec.input` JSON Schema의 해당 속성 타입을 참고해 변환한다:
     - `null` 허용 속성에서 `"null"` → `null` (예: `?folder_id=null`)
     - `boolean` 허용 속성에서 `"true"` → `true`, `"false"` → `false`
@@ -143,6 +145,7 @@ export function createHttpHandler(monti: Monti, options?: HttpHandlerOptions): H
 
 ### 5.1 성공 응답
 
+- 모든 응답(성공·오류·`204`)은 공유 캐시 노출을 막기 위해 `Cache-Control: no-store` 헤더를 포함한다.
 - `Content-Type: application/json; charset=utf-8` (`204` 제외)
 - 상태 코드:
   - `POST <base>/<resource>` (`create`, `session.create` 제외): `201 Created`
@@ -216,5 +219,6 @@ packages/http/src/
 ## 8. 정하지 않은 것 (추후 필요 시)
 
 - `entries.get`의 `{ collection, locale, slug }` 조회를 HTTP 경로로 별도 노출할지(현재 사이트 서버 코드는 JS에서 `monti.entries.get`을 직접 호출하고, 관리 화면은 `:id`를 사용한다).
-- `Origin` 검증이나 별도 CSRF 토큰 헤더(기본은 `HttpOnly; SameSite=Lax` 쿠키 + 본문 `Content-Type: application/json` 요구로 방어).
+- `Origin` 검증, 빈 본문 `POST`의 `Content-Type` 필수 여부, 별도 CSRF 토큰 헤더(기본은 `HttpOnly; SameSite=Lax` 쿠키 + 본문 `Content-Type: application/json` 요구로 방어).
+- `500` 내부 오류를 호스트에 통지하는 로깅 콜백(`onError`).
 - 다중 Operation 트랜잭션 배치 엔드포인트(`/batch`).

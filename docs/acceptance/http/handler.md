@@ -110,7 +110,7 @@
 - **전제**: `posts` 컬렉션의 글 2건과 활성 폴더 1개가 있고 로그인된 세션 쿠키가 있다
 - **행동**: `PATCH /api/entries`에 `{ ids: [글1, 글2], folder_id: 폴더 }`를 보낸다
 - **결과**:
-  - `HTTP-HDL-8.1` 상태 `200`으로 두 글의 바뀐 `folder_id` 목록을 반환한다
+  - `HTTP-HDL-8.1` 상태 `200`으로 정확히 두 글의 바뀐 `folder_id` 목록만 반환한다
 
 </details>
 
@@ -154,8 +154,8 @@
 - **전제**: 관리자가 없는 DB로 만든 핸들러(최초 관리자 생성용)와, 관리자가 있고 로그인된 세션 쿠키가 있는 핸들러(로그인·로그아웃용)가 있다
 - **행동**: `POST /api/admin?dryRun=true`, `POST /api/session?dryRun=true`, `DELETE /api/session?dryRun=true`를 각각 호출하고, 로그아웃 시험 실행 뒤 같은 쿠키로 `GET /api/templates`를 호출한다
 - **결과**:
-  - `HTTP-HDL-12.1` `POST /api/admin?dryRun=true`는 `201`, `{ id, email }` 본문(`token` 키 없음), `set-cookie` 헤더 없음이다
-  - `HTTP-HDL-12.2` `POST /api/session?dryRun=true`는 `200`, `{ ok: true }` 본문(`token` 키 없음), `set-cookie` 헤더 없음이다
+  - `HTTP-HDL-12.1` `POST /api/admin?dryRun=true`는 `201`, `{ id, email }` 본문(`token` 키 없음), `set-cookie` 헤더 없음이고 DB `admin` 테이블에 행이 없다
+  - `HTTP-HDL-12.2` `POST /api/session?dryRun=true`는 `200`, `{ ok: true }` 본문(`token` 키 없음), `set-cookie` 헤더 없음이고 DB `session` 행 수가 늘지 않는다
   - `HTTP-HDL-12.3` `DELETE /api/session?dryRun=true`는 `204`, `set-cookie` 헤더 없음이고 이어서 같은 쿠키로 보낸 `GET /api/templates`가 `200`으로 통과한다
 
 </details>
@@ -163,10 +163,10 @@
 <details>
 <summary><strong><code>HTTP-HDL-13</code></strong> `createHttpHandler`의 `basePath`와 `cookie` 옵션이 전체 요청 파이프라인에 적용된다</summary>
 
-- **전제**: 관리자가 있는 DB에 `createHttpHandler(monti, { basePath: "/cms", cookie: { name: "sid", path: "/cms" } })`로 핸들러를 만들었다
-- **행동**: `POST /cms/session`으로 로그인한 뒤 발급된 `sid` 쿠키로 `GET /cms/templates`를 호출한다
+- **전제**: 관리자가 있는 DB에 `createHttpHandler(monti, { basePath: "/cms", cookie: { name: "sid", path: "/cms", secure: true } })`로 핸들러를 만들었다
+- **행동**: HTTP 요청으로 `POST /cms/session`에 로그인한 뒤 발급된 `sid` 쿠키로 `GET /cms/templates`를 호출한다
 - **결과**:
-  - `HTTP-HDL-13.1` `POST /cms/session`의 `set-cookie` 헤더가 `sid=`와 `Path=/cms`를 사용한다
+  - `HTTP-HDL-13.1` `POST /cms/session`의 `set-cookie` 헤더가 `sid=`와 `Path=/cms`와 `; Secure`를 사용한다
   - `HTTP-HDL-13.2` 발급된 `sid` 쿠키로 보낸 `GET /cms/templates`가 `200`으로 통과한다
 
 </details>
@@ -199,14 +199,15 @@
 <details>
 <summary><strong><code>HTTP-HDL-16</code></strong> 검증 실패·잘못된 로그인·권한 없음·없는 대상·중복 관리자가 각각의 HTTP 오류 상태와 JSON 형식으로 반환된다</summary>
 
-- **전제**: 운영 모드(`dev: false`)로 시작한 `monti`에 관리자와 로그인된 세션 쿠키가 있다
-- **행동**: 잘못된 본문의 `POST /api/templates`, 틀린 비밀번호의 `POST /api/session`, 운영 서버의 `PATCH /api/config`, 없는 UUID의 `GET /api/templates/:id`, 중복 관리자 생성 `POST /api/admin`을 각각 호출한다
+- **전제**: 운영 모드(`dev: false`)로 시작한 `monti`에 관리자와 로그인된 세션 쿠키, 활성 글 1건이 있다
+- **행동**: 잘못된 본문의 `POST /api/templates`, 틀린 비밀번호의 `POST /api/session`, 운영 서버의 `PATCH /api/config`, 없는 UUID의 `GET /api/templates/:id`, 중복 관리자 생성 `POST /api/admin`, 그리고 잘못된 경로 `:id`로 다건 이동·슬러그 조회를 시도하는 `PATCH /api/entries/invalid-id`·`GET /api/entries/invalid-id?collection=posts&locale=ko&slug=...`를 각각 호출한다
 - **결과**:
   - `HTTP-HDL-16.1` 잘못된 본문의 `POST /api/templates`는 `400`과 `error.code === "BAD_REQUEST"`이다
   - `HTTP-HDL-16.2` 틀린 비밀번호의 `POST /api/session`은 `401`과 `error.code === "UNAUTHORIZED"`이다
   - `HTTP-HDL-16.3` 운영 서버의 `PATCH /api/config`는 `403`과 `error.code === "FORBIDDEN"`이다
   - `HTTP-HDL-16.4` 없는 UUID의 `GET /api/templates/:id`는 `404`과 `error.code === "NOT_FOUND"`이다
   - `HTTP-HDL-16.5` 중복 관리자 생성 `POST /api/admin`은 `409`와 `error.code === "CONFLICT"`이다
+  - `HTTP-HDL-16.6` 잘못된 경로 `:id`의 단건 `PATCH`·`GET`은 다건/슬러그 분기로 넘어가지 않고 모두 `400`(`BAD_REQUEST`)으로 거절된다
 
 </details>
 

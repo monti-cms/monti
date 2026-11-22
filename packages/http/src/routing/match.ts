@@ -34,9 +34,10 @@ export function matchRoute(table: RouteTable, method: string, pathname: string):
 	const actions = table.resources.get(segments[0]);
 	if (actions === undefined || segments.length > 2) return NOT_FOUND;
 	const [, member] = segments;
+	const normalized = method.toUpperCase();
 	const routes = member === undefined ? collectionRoutes(actions) : memberRoutes(actions, member);
-	const operation = routes.get(method);
-	if (operation !== undefined) return { kind: "match", operation, id: method === "POST" ? undefined : member };
+	const operation = routes.get(normalized);
+	if (operation !== undefined) return { kind: "match", operation, id: normalized === "POST" ? undefined : member };
 	const allow = METHOD_ORDER.filter((candidate) => routes.get(candidate) !== undefined);
 	return allow.length === 0 ? NOT_FOUND : { kind: "method_not_allowed", allow };
 }
@@ -62,24 +63,29 @@ function decodeSegment(segment: string): string {
 	}
 }
 
-/** `/<resource>` 경로: 목록(없으면 단일 리소스 조회), 생성, `id` 없는 분기의 수정·삭제. */
+/** `/<resource>` 경로: 읽기 목록(없으면 읽기 단일 리소스 조회), 생성, `id` 없는 분기의 수정·삭제. */
 function collectionRoutes(actions: Map<string, RouteOperation>): Routes {
 	return new Map([
-		["GET", actions.get("list") ?? opened(actions.get("get"), hasNoIdBranch)],
+		["GET", readOnly(actions.get("list")) ?? opened(readOnly(actions.get("get")), hasNoIdBranch)],
 		["POST", actions.get("create")],
 		["PATCH", opened(actions.get("update"), hasNoIdBranch)],
 		["DELETE", opened(actions.get("delete"), hasNoIdBranch)],
 	]);
 }
 
-/** `/<resource>/<member>` 경로: `id` 분기의 조회·수정·삭제, 또는 표준 동사가 아닌 고유 액션. */
+/** `/<resource>/<member>` 경로: 읽기 `id` 조회, `id` 수정·삭제, 또는 표준 동사가 아닌 고유 액션. */
 function memberRoutes(actions: Map<string, RouteOperation>, member: string): Routes {
 	return new Map([
-		["GET", opened(actions.get("get"), hasIdBranch)],
+		["GET", opened(readOnly(actions.get("get")), hasIdBranch)],
 		["POST", STANDARD_VERBS.has(member) ? undefined : actions.get(member)],
 		["PATCH", opened(actions.get("update"), hasIdBranch)],
 		["DELETE", opened(actions.get("delete"), hasIdBranch)],
 	]);
+}
+
+/** `GET`에 쓰기 Operation이 실수로 열리지 않도록 읽기 Operation만 통과시킨다. */
+function readOnly(operation: RouteOperation | undefined): RouteOperation | undefined {
+	return operation !== undefined && operation.kind === "read" ? operation : undefined;
 }
 
 /** 입력 스키마가 `accepts`를 만족할 때만 그 경로에 여는 Operation. */

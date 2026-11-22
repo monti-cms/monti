@@ -72,20 +72,21 @@
 - **전제**: 응답 데이터 `{ id: "1" }`와 `Set-Cookie` 헤더 문자열이 준비되어 있다
 - **행동**: `200` JSON 응답, `201` + `Set-Cookie` 응답, `204` 빈 응답을 각각 생성한다
 - **결과**:
-  - `HTTP-PRO-6.1` `200` 응답은 상태 `200`, `content-type`이 `application/json; charset=utf-8`, 본문이 `{"id":"1"}`이다
-  - `HTTP-PRO-6.2` `201` 응답은 상태 `201`, `set-cookie` 헤더가 전달한 문자열과 같고 본문이 `{"id":"1"}`이다
-  - `HTTP-PRO-6.3` `204` 응답은 상태 `204`, `content-type` 헤더 없음, 본문이 비어 있다
+  - `HTTP-PRO-6.1` `200` 응답은 상태 `200`, `content-type`이 `application/json; charset=utf-8`, `cache-control`이 `no-store`, 본문이 `{"id":"1"}`이다
+  - `HTTP-PRO-6.2` `201` 응답은 상태 `201`, `cache-control`이 `no-store`, `set-cookie` 헤더가 전달한 문자열과 같고 본문이 `{"id":"1"}`이다
+  - `HTTP-PRO-6.3` `204` 응답은 상태 `204`, `cache-control`이 `no-store`, `content-type` 헤더 없음, 본문이 비어 있다
 
 </details>
 
 <details>
 <summary><strong><code>HTTP-PRO-7</code></strong> 함수·순환 참조·큰 정수가 섞인 값도 안전하게 JSON 응답으로 직렬화한다</summary>
 
-- **전제**: 함수 속성, 같은 하위 객체(`{ tag: "x" }`)를 두 곳(`first`, `second`)에서 공유하는 참조, 자기 자신을 가리키는 조상 순환 참조(`self`), `bigint` 값(`count: 123n`), 문자열(`name: "Monti"`)이 들어 있는 객체가 있다
-- **행동**: 해당 객체로 `200` JSON 응답을 생성한다
+- **전제**: 함수 속성, 공유 참조(`first`, `second`), 조상 순환 참조(`self`), `bigint`(`123n`)가 든 객체, `toJSON()`이 새 객체로 자기 자신을 다시 가리키는 순환 객체, 그리고 최상위 함수 값이 있다
+- **행동**: 세 값으로 각각 `200` JSON 응답을 생성한다
 - **결과**:
-  - `HTTP-PRO-7.1` 오류 없이 `200` 응답이 생성된다
-  - `HTTP-PRO-7.2` 파싱한 본문이 `{ name: "Monti", count: "123", first: { tag: "x" }, second: { tag: "x" } }`와 일치한다
+  - `HTTP-PRO-7.1` 오류 없이 모두 `200` 응답이 생성된다
+  - `HTTP-PRO-7.2` 첫 응답의 파싱한 본문이 `{ name: "Monti", count: "123", first: { tag: "x" }, second: { tag: "x" } }`와 일치한다
+  - `HTTP-PRO-7.3` `toJSON()` 순환 객체는 순환 속성이 끊긴 `{}`로, 최상위 함수 값은 `null` JSON으로 직렬화된다
 
 </details>
 
@@ -115,23 +116,24 @@
 </details>
 
 <details>
-<summary><strong><code>HTTP-PRO-10</code></strong> `sameSite: "none"`과 `secure: false`를 함께 지정하면 잘못된 쿠키 설정으로 거절한다</summary>
+<summary><strong><code>HTTP-PRO-10</code></strong> 잘못된 쿠키 옵션 조합이나 유효하지 않은 이름·경로·수명은 설정 오류로 거절한다</summary>
 
-- **전제**: `{ sameSite: "none", secure: false }` 쿠키 옵션이 주어졌다
-- **행동**: 쿠키 옵션을 해석한다
+- **전제**: `{ sameSite: "none", secure: false }`, 빈 이름·세미콜론 포함 이름(`""`, `"a;b"`, `"a b"`), 빈 경로·세미콜론 포함 경로(`""`, `"/;x"`), 양의 정수가 아닌 수명(`0`, `-1`, `1.5`, `NaN`) 옵션들이 있다
+- **행동**: 각 쿠키 옵션을 해석한다
 - **결과**:
-  - `HTTP-PRO-10.1` 오류를 던진다
+  - `HTTP-PRO-10.1` 모든 잘못된 옵션이 쿠키 설정 오류를 던진다
 
 </details>
 
 <details>
-<summary><strong><code>HTTP-PRO-11</code></strong> 코어 오류가 아닌 예기치 않은 오류는 내부 상세를 숨기고 서버 오류(`500`)로 바꾼다</summary>
+<summary><strong><code>HTTP-PRO-11</code></strong> 코어 오류가 아닌 예기치 않은 오류나 직렬화 불가능한 오류도 내부 상세를 숨기고 서버 오류(`500`)로 바꾼다</summary>
 
-- **전제**: 내부 메시지가 담긴 일반 `Error("db connection failed: internal detail")`와 문자열 예외 `"unexpected"`가 있다
+- **전제**: 일반 `Error("db connection failed: internal detail")`, 문자열 예외 `"unexpected"`, `code`가 배열이거나 `message`가 빠진 비정상 오류 객체, 그리고 `details.toJSON()`이 예외를 던지는 코어 오류가 있다
 - **행동**: 각 예외를 HTTP 오류 응답으로 변환한다
 - **결과**:
-  - `HTTP-PRO-11.1` 두 응답 모두 상태 `500`, `content-type`이 `application/json; charset=utf-8`, 본문의 `error.code`가 `"INTERNAL_ERROR"`이다
+  - `HTTP-PRO-11.1` 일반 오류와 문자열 예외는 모두 상태 `500`, `content-type`이 `application/json; charset=utf-8`, `cache-control`이 `no-store`, 본문의 `error.code`가 `"INTERNAL_ERROR"`이다
   - `HTTP-PRO-11.2` 두 응답 본문 모두에 원본 오류 문자열(`"db connection failed: internal detail"`, `"unexpected"`)이 포함되지 않는다
+  - `HTTP-PRO-11.3` `code`가 배열이거나 `message`가 누락된 객체, 그리고 `details.toJSON()`이 예외를 던지는 오류도 예외를 전파하지 않고 `500` `INTERNAL_ERROR` JSON으로 응답한다
 
 </details>
 

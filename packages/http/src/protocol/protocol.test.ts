@@ -57,15 +57,26 @@ it("HTTP-PRO-6 성공 응답을 작업 성격에 맞는 상태(`200`, `201`, `20
 	const created = successResponse(201, { id: "1" }, setCookie);
 	const empty = successResponse(204, undefined);
 	// HTTP-PRO-6.1
-	expect([ok.status, ok.headers.get("content-type"), await ok.text()]).toEqual([200, JSON_TYPE, '{"id":"1"}']);
-	// HTTP-PRO-6.2
-	expect([created.status, created.headers.get("set-cookie"), await created.text()]).toEqual([
-		201,
-		setCookie,
+	expect([ok.status, ok.headers.get("content-type"), ok.headers.get("cache-control"), await ok.text()]).toEqual([
+		200,
+		JSON_TYPE,
+		"no-store",
 		'{"id":"1"}',
 	]);
+	// HTTP-PRO-6.2
+	expect([
+		created.status,
+		created.headers.get("cache-control"),
+		created.headers.get("set-cookie"),
+		await created.text(),
+	]).toEqual([201, "no-store", setCookie, '{"id":"1"}']);
 	// HTTP-PRO-6.3
-	expect([empty.status, empty.headers.get("content-type"), await empty.text()]).toEqual([204, null, ""]);
+	expect([
+		empty.status,
+		empty.headers.get("cache-control"),
+		empty.headers.get("content-type"),
+		await empty.text(),
+	]).toEqual([204, "no-store", null, ""]);
 });
 
 it("HTTP-PRO-7 함수·순환 참조·큰 정수가 섞인 값도 안전하게 JSON 응답으로 직렬화한다", async () => {
@@ -78,11 +89,20 @@ it("HTTP-PRO-7 함수·순환 참조·큰 정수가 섞인 값도 안전하게 J
 		second: shared,
 	};
 	value.self = value;
+	const toJsonLoop: { toJSON(): unknown } = {
+		toJSON() {
+			return { self: toJsonLoop };
+		},
+	};
 	const response = successResponse(200, value);
+	const fromToJson = successResponse(200, toJsonLoop);
+	const fromFn = successResponse(200, () => "top");
 	// HTTP-PRO-7.1
-	expect(response.status).toBe(200);
+	expect([response.status, fromToJson.status, fromFn.status]).toEqual([200, 200, 200]);
 	// HTTP-PRO-7.2
 	expect(await response.json()).toEqual({ name: "Monti", count: "123", first: { tag: "x" }, second: { tag: "x" } });
+	// HTTP-PRO-7.3
+	expect([await fromToJson.json(), await fromFn.json()]).toEqual([{}, null]);
 });
 
 it("HTTP-PRO-8 코어 오류를 대응하는 HTTP 오류 상태(`400`, `401`, `403`, `404`, `409`)와 오류 JSON으로 바꾼다", async () => {
@@ -122,27 +142,73 @@ it("HTTP-PRO-9 `Cookie` 헤더가 없거나 찾는 이름의 쿠키가 없으면
 	expect(values).toEqual([undefined, undefined, undefined]);
 });
 
-it('HTTP-PRO-10 `sameSite: "none"`과 `secure: false`를 함께 지정하면 잘못된 쿠키 설정으로 거절한다', () => {
+it("HTTP-PRO-10 잘못된 쿠키 옵션 조합이나 유효하지 않은 이름·경로·수명은 설정 오류로 거절한다", () => {
+	const invalid = [
+		{ sameSite: "none" as const, secure: false },
+		{ name: "" },
+		{ name: "a;b" },
+		{ name: "a b" },
+		{ path: "" },
+		{ path: "/;x" },
+		{ maxAge: 0 },
+		{ maxAge: -1 },
+		{ maxAge: 1.5 },
+		{ maxAge: Number.NaN },
+	];
+	const errors = invalid.map((options) => {
+		try {
+			resolveCookie(options);
+			return null;
+		} catch (error) {
+			return (error as Error).message;
+		}
+	});
 	// HTTP-PRO-10.1
-	expect(() => resolveCookie({ sameSite: "none", secure: false })).toThrow();
+	expect(errors.every((message) => typeof message === "string" && message.includes("쿠키 설정이 잘못되었다"))).toBe(
+		true,
+	);
 });
 
-it("HTTP-PRO-11 코어 오류가 아닌 예기치 않은 오류는 내부 상세를 숨기고 서버 오류(`500`)로 바꾼다", async () => {
+it("HTTP-PRO-11 코어 오류가 아닌 예기치 않은 오류나 직렬화 불가능한 오류도 내부 상세를 숨기고 서버 오류(`500`)로 바꾼다", async () => {
 	const leaked = "db connection failed: internal detail";
 	const responses = [errorResponse(new Error(leaked)), errorResponse("unexpected")];
 	const texts = await Promise.all(responses.map((response) => response.text()));
 	const results = responses.map((response, index) => [
 		response.status,
 		response.headers.get("content-type"),
+		response.headers.get("cache-control"),
 		JSON.parse(texts[index]).error.code,
 	]);
+	const unserializable = new MontiError("BAD_REQUEST", "실패", {
+		toJSON() {
+			throw new Error("boom");
+		},
+	});
+	const weird = [
+		errorResponse({ code: ["CONFLICT"], message: "배열 코드" }),
+		errorResponse({ code: "NOT_FOUND" }),
+		errorResponse(unserializable),
+	];
+	const weirdResults = await Promise.all(
+		weird.map(async (response) => [
+			response.status,
+			response.headers.get("cache-control"),
+			JSON.parse(await response.text()).error.code,
+		]),
+	);
 	// HTTP-PRO-11.1
 	expect(results).toEqual([
-		[500, JSON_TYPE, "INTERNAL_ERROR"],
-		[500, JSON_TYPE, "INTERNAL_ERROR"],
+		[500, JSON_TYPE, "no-store", "INTERNAL_ERROR"],
+		[500, JSON_TYPE, "no-store", "INTERNAL_ERROR"],
 	]);
 	// HTTP-PRO-11.2
 	expect([texts[0].includes(leaked), texts[1].includes("unexpected")]).toEqual([false, false]);
+	// HTTP-PRO-11.3
+	expect(weirdResults).toEqual([
+		[500, "no-store", "INTERNAL_ERROR"],
+		[500, "no-store", "INTERNAL_ERROR"],
+		[500, "no-store", "INTERNAL_ERROR"],
+	]);
 });
 
 it("HTTP-PRO-12 열려 있지 않은 메서드로 호출하면 허용된 메서드 목록과 함께 거절한다(`405`)", async () => {

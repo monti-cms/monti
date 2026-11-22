@@ -1,9 +1,11 @@
 /** `monti.spec()`이 주는 Operation 입력의 JSON Schema(또는 그 일부). */
 type JsonSchema = Record<string, unknown>;
 
-/** 스키마의 분기들: union(`anyOf`)이면 각 분기, 아니면 스키마 자신 하나. */
+/** 스키마의 분기들: union(`anyOf`·`oneOf`)이면 각 분기, 아니면 스키마 자신 하나. */
 function branchesOf(schema: JsonSchema): JsonSchema[] {
-	return Array.isArray(schema.anyOf) ? schema.anyOf : [schema];
+	if (Array.isArray(schema.anyOf)) return schema.anyOf;
+	if (Array.isArray(schema.oneOf)) return schema.oneOf;
+	return [schema];
 }
 
 /** 스키마의 `properties`. 없으면(`null` 분기 등) 빈 객체다. */

@@ -17,7 +17,7 @@
 <summary><strong><code>HTTP-RUT-1</code></strong> 표준 동사(`list`, `get`, `create`, `update`, `delete`)를 각각의 HTTP 메서드와 경로로 매핑하고 `GET /<resource>`에서는 목록을 우선한다</summary>
 
 - **전제**: 코어 기본 `specOf()` 명세로 라우트 테이블을 만들었다 (`basePath: "/api"`)
-- **행동**: `GET /api/templates`, `GET /api/entries`(비-`id` `get` 분기와 `list`가 함께 있는 리소스), `GET /api/templates/t1`, `POST /api/templates`, `PATCH /api/templates/t1`, `DELETE /api/templates/t1`을 각각 매칭한다
+- **행동**: `GET /api/templates`, `GET /api/entries`(비-`id` `get` 분기와 `list`가 함께 있는 리소스), `GET /api/templates/t1`, `POST /api/templates`, `PATCH /api/templates/t1`, 소문자 `patch /api/templates/t1`, `DELETE /api/templates/t1`을 각각 매칭한다
 - **결과**:
   - `HTTP-RUT-1.1` `GET /api/templates`는 `templates.list`로 매칭된다
   - `HTTP-RUT-1.2` `GET /api/entries`는 `entries.get`이 아니라 `entries.list`로 매칭된다
@@ -25,6 +25,7 @@
   - `HTTP-RUT-1.4` `POST /api/templates`는 `templates.create`로 매칭된다
   - `HTTP-RUT-1.5` `PATCH /api/templates/t1`은 `templates.update`(`id: "t1"`)로 매칭된다
   - `HTTP-RUT-1.6` `DELETE /api/templates/t1`은 `templates.delete`(`id: "t1"`)로 매칭된다
+  - `HTTP-RUT-1.7` 소문자 `patch /api/templates/t1`도 `templates.update`(`id: "t1"`)로 매칭된다
 
 </details>
 
@@ -43,25 +44,27 @@
 <details>
 <summary><strong><code>HTTP-RUT-3</code></strong> 단건과 다건 입력을 함께 받는 리소스는 `:id` 유무로 경로를 나눠 매핑한다</summary>
 
-- **전제**: 코어 기본 `specOf()` 명세로 라우트 테이블을 만들었다 (`basePath: "/api"`)
-- **행동**: `PATCH /api/entries/e1`, `PATCH /api/entries`, `DELETE /api/trash/t1`, `DELETE /api/trash`를 각각 매칭한다
+- **전제**: 코어 기본 `specOf()` 명세와 `oneOf` 판별 유니온(`id` 분기·`ids` 분기)을 가진 테스트용 플러그인 `update`로 라우트 테이블을 만들었다 (`basePath: "/api"`)
+- **행동**: `PATCH /api/entries/e1`, `PATCH /api/entries`, `DELETE /api/trash/t1`, `DELETE /api/trash`, 플러그인 `oneOf` 리소스의 `PATCH` 단건·다건 경로를 각각 매칭한다
 - **결과**:
   - `HTTP-RUT-3.1` `PATCH /api/entries/e1`은 `entries.update`(`id: "e1"`)로 매칭된다
   - `HTTP-RUT-3.2` `PATCH /api/entries`는 `entries.update`(경로 `id` 없음)로 매칭된다
   - `HTTP-RUT-3.3` `DELETE /api/trash/t1`은 `trash.delete`(`id: "t1"`)로 매칭된다
   - `HTTP-RUT-3.4` `DELETE /api/trash`는 `trash.delete`(경로 `id` 없음)로 매칭된다
+  - `HTTP-RUT-3.5` `oneOf` 판별 유니온 리소스도 `:id` 경로와 컬렉션 경로 모두 `update`로 매칭된다
 
 </details>
 
 <details>
-<summary><strong><code>HTTP-RUT-4</code></strong> 표준 동사 외의 고유 액션과 플러그인 액션을 이름 대소문자 그대로 `POST /<resource>/<action>`으로 매핑한다</summary>
+<summary><strong><code>HTTP-RUT-4</code></strong> 표준 동사 외의 고유 액션과 플러그인 액션을 이름 대소문자 그대로 `POST /<resource>/<action>`으로 매핑하고 `GET`에는 읽기 작업만 연다</summary>
 
-- **전제**: 코어 리소스와 고유 쓰기 액션을 등록한 테스트용 플러그인을 포함한 `specOf(plugins)` 명세로 라우트 테이블을 만들었다
-- **행동**: `POST /api/entries/publish`, `POST /api/media/startUpload`, `POST /api/keys/check`, 플러그인의 `POST /api/<pluginResource>/<action>`을 각각 매칭한다
+- **전제**: 코어 리소스와 고유 쓰기 액션, 그리고 `list` 이름으로 쓰기(`write`) 작업을 등록한 테스트용 플러그인을 포함한 `specOf(plugins)` 명세로 라우트 테이블을 만들었다
+- **행동**: `POST /api/entries/publish`, `POST /api/media/startUpload`, `POST /api/keys/check`, 플러그인의 `POST /api/<pluginResource>/<action>`, 그리고 쓰기 `list` 리소스에 대한 `GET`을 각각 매칭한다
 - **결과**:
   - `HTTP-RUT-4.1` `POST /api/entries/publish`는 `entries.publish`, `POST /api/media/startUpload`는 `media.startUpload`로 매칭된다
   - `HTTP-RUT-4.2` `POST /api/keys/check`는 `keys.check`(`kind: "read"`)로 매칭된다
   - `HTTP-RUT-4.3` 플러그인의 `POST /api/<pluginResource>/<action>`은 해당 고유 액션으로 매칭된다
+  - `HTTP-RUT-4.4` 쓰기 Operation이 `list` 이름으로 등록된 리소스는 `GET` 경로로 열리지 않는다(`not_found`)
 
 </details>
 
@@ -209,12 +212,13 @@
 </details>
 
 <details>
-<summary><strong><code>HTTP-RUT-17</code></strong> `dryRun` 값이 `true`나 `false`가 아니면 거절한다(`400`)</summary>
+<summary><strong><code>HTTP-RUT-17</code></strong> `dryRun` 값이 `true`나 `false`가 아니거나 두 번 이상 지정되면 거절한다(`400`)</summary>
 
-- **전제**: `POST /api/entries?dryRun=yes`와 `POST /api/entries?dryRun=1` 요청이 있다
-- **행동**: 두 요청의 입력을 각각 해석한다
+- **전제**: `POST /api/entries?dryRun=yes`, `POST /api/entries?dryRun=1`, 중복 지정 `POST /api/entries?dryRun=false&dryRun=true`·`POST /api/entries?dryRun=true&dryRun=yes` 요청이 있다
+- **행동**: 각 요청의 입력을 해석한다
 - **결과**:
-  - `HTTP-RUT-17.1` 두 요청 모두 `BAD_REQUEST` 오류를 던진다
+  - `HTTP-RUT-17.1` `dryRun=yes`와 `dryRun=1` 모두 `BAD_REQUEST` 오류를 던진다
+  - `HTTP-RUT-17.2` `dryRun`을 두 번 이상 지정한 요청도 모두 `BAD_REQUEST` 오류를 던진다
 
 </details>
 
@@ -261,11 +265,13 @@
 </details>
 
 <details>
-<summary><strong><code>HTTP-RUT-22</code></strong> 점(`.`) 중첩 쿼리에 위험한 프로토타입 키가 들어 있으면 거절한다(`400`)</summary>
+<summary><strong><code>HTTP-RUT-22</code></strong> 점(`.`) 중첩 쿼리의 위험한 프로토타입 키와 키 충돌은 거절하고(`400`), 상속 속성 이름은 전역 객체를 건드리지 않는다</summary>
 
-- **전제**: `?__proto__.polluted=1`, `?relation.constructor.x=1`, `?relation.prototype.y=1` 쿼리를 가진 `GET` 요청들이 있다
+- **전제**: 위험 키 쿼리(`?__proto__.polluted=1`, `?relation.constructor.x=1`, `?relation.prototype.y=1`), 상속 속성 쿼리(`?toString.evil=1`, `?toString.length=1`), 그리고 스칼라·객체 충돌 쿼리(`?folder_id.extra=1&folder_id=null`, `?folder_id=null&folder_id.extra=1`)가 있다
 - **행동**: 각 요청의 쿼리를 입력 객체로 조립한다
 - **결과**:
-  - `HTTP-RUT-22.1` 세 경우 모두 `BAD_REQUEST` 오류를 던진다
+  - `HTTP-RUT-22.1` 위험 키 세 경우 모두 `BAD_REQUEST` 오류를 던진다
+  - `HTTP-RUT-22.2` 상속 속성 쿼리는 예외 없이 자체 속성 객체로 조립되며 `Object.prototype.toString`에 속성이 추가되지 않는다
+  - `HTTP-RUT-22.3` 스칼라와 중첩 객체가 겹치는 충돌 쿼리 두 순서 모두 `BAD_REQUEST` 오류를 던진다
 
 </details>
