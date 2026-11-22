@@ -39,7 +39,10 @@
 	"overrides": [
 		{
 			"includes": ["src/**", "!**/*.test.{ts,mts,cts,tsx}", "!**/__test__/**"],
-			"plugins": ["./biome-plugins/no-inline-function-in-object.grit", "./biome-plugins/no-double-assertion.grit"],
+			"plugins": [
+				"../../biome-plugins/no-inline-function-in-object.grit",
+				"../../biome-plugins/no-double-assertion.grit"
+			],
 			"linter": {
 				"rules": {
 					"complexity": {
@@ -55,7 +58,7 @@
 			}
 		},
 		{
-			"includes": ["src/**/*.test.{ts,mts,cts,tsx}", "src/**/__test__/**"],
+			"includes": ["src/**/*.test.{ts,mts,cts,tsx}", "src/**/__test__/**", "tests/**/*.test.{ts,mts,cts,tsx}"],
 			"linter": {
 				"rules": {
 					"suspicious": {
@@ -67,7 +70,7 @@
 		},
 		{
 			"includes": ["src/**/types.{ts,mts,cts,tsx}"],
-			"plugins": ["./biome-plugins/types-only.grit"]
+			"plugins": ["../../biome-plugins/types-only.grit"]
 		}
 	]
 }

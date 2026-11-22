@@ -1,0 +1,72 @@
+{
+	"$schema": "https://biomejs.dev/schemas/2.3.10/schema.json",
+	"root": false,
+	"extends": "//",
+	"linter": {
+		"rules": {
+			"correctness": {
+				"noUnusedVariables": "error",
+				"noUnusedImports": "error"
+			},
+			"style": {
+				"noRestrictedImports": {
+					"level": "error",
+					"options": {
+						"patterns": [
+							{
+								"group": [
+									"next",
+									"next/**",
+									"react",
+									"react/**",
+									"react-dom",
+									"react-dom/**",
+									"@monti-cms/ui",
+									"@monti-cms/ui/**"
+								],
+								"message": "The CLI runs in Node.js and knows no web framework or UI package."
+							}
+						]
+					}
+				}
+			}
+		}
+	},
+	"overrides": [
+		{
+			"includes": ["src/**", "!**/*.test.{ts,mts,cts,tsx}", "!**/__test__/**"],
+			"plugins": [
+				"../../biome-plugins/no-inline-function-in-object.grit",
+				"../../biome-plugins/no-double-assertion.grit"
+			],
+			"linter": {
+				"rules": {
+					"complexity": {
+						"noExcessiveLinesPerFunction": {
+							"level": "error",
+							"options": {
+								"maxLines": 30,
+								"skipBlankLines": true
+							}
+						}
+					}
+				}
+			}
+		},
+		{
+			"includes": ["src/**/*.test.{ts,mts,cts,tsx}", "src/**/__test__/**", "tests/**/*.test.{ts,mts,cts,tsx}"],
+			"linter": {
+				"rules": {
+					"suspicious": {
+						"noFocusedTests": "error",
+						"noSkippedTests": "error"
+					}
+				}
+			}
+		},
+		{
+			"includes": ["src/**/types.{ts,mts,cts,tsx}"],
+			"plugins": ["../../biome-plugins/types-only.grit"]
+		}
+	]
+}

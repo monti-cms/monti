@@ -14,11 +14,11 @@
 // "node:process"`, `process[key]` with a key that is not a written string, `process` passed on under another name).
 
 import { spawnSync } from "node:child_process";
-import { readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
 
-const AC_DIR = "docs/acceptance/core";
+const ACCEPTANCE_ROOT = "docs/acceptance";
 export const CORE_SRC = "packages/core/src";
 
 const SOURCE_FILE = /\.(?:[cm]?[jt]s|[jt]sx)$/;
@@ -46,9 +46,6 @@ const DATABASE_MODULE =
 	/^(?:pg|postgres|drizzle[\w-]*|kysely|prisma|typeorm|@prisma\/[\w-]+)(?:\/|$)|(?:^|\/)db(?:\/|\.|$)|database/i;
 const MOCK_METHODS = new Set(["mock", "doMock", "unstable_mockModule"]);
 const DATABASE_WORDS = new Set(["db", "pool", "pg", "database"]);
-
-// The one list of environment variables the core may read: the properties of `ProcessEnv` in this file.
-const ENV_TYPES = "packages/core/env.d.ts";
 
 // ---- TypeScript ----
 
@@ -89,19 +86,19 @@ export function loadTypeScript(root) {
 
 // ---- acceptance conditions ----
 
-/** Reads `docs/acceptance/core/*.md` into a map of AC id to its results, and the problems in the documents. */
-function readAcceptance(root) {
+/** Reads `docs/acceptance/<pkg>/*.md` into a map of AC id to its results, and the problems in the documents. */
+function readAcceptance(root, acDir) {
 	const acs = new Map();
 	const problems = [];
-	const names = readdirOrEmpty(path.join(root, AC_DIR), { recursive: true })
+	const names = readdirOrEmpty(path.join(root, acDir), { recursive: true })
 		.filter((entry) => entry.isFile() && entry.name.endsWith(".md"))
 		.map((entry) =>
-			path.relative(path.join(root, AC_DIR), path.join(entry.parentPath, entry.name)).split(path.sep).join("/"),
+			path.relative(path.join(root, acDir), path.join(entry.parentPath, entry.name)).split(path.sep).join("/"),
 		)
 		.sort();
 
 	for (const name of names) {
-		const file = `${AC_DIR}/${name}`;
+		const file = `${acDir}/${name}`;
 		let current;
 		for (const [index, line] of readFileSync(path.join(root, file), "utf8").split(/\r?\n/).entries()) {
 			const at = `${file}:${index + 1}`;
@@ -140,8 +137,8 @@ function readdirOrEmpty(dir, options = {}) {
 
 // ---- reading one source file ----
 
-export function sourceFiles(root) {
-	return readdirOrEmpty(path.join(root, CORE_SRC), { recursive: true })
+export function sourceFiles(root, srcDir = CORE_SRC) {
+	return readdirOrEmpty(path.join(root, srcDir), { recursive: true })
 		.filter((entry) => entry.isFile())
 		.map((entry) => path.relative(root, path.join(entry.parentPath, entry.name)).split(path.sep).join("/"))
 		.filter(
@@ -356,17 +353,17 @@ function isNodeNamespace(ts, node) {
 }
 
 /**
- * The names declared on `interface ProcessEnv` inside `namespace NodeJS` in `packages/core/env.d.ts`; none when the file is
+ * The names declared on `interface ProcessEnv` inside `namespace NodeJS` in `envTypes`; none when the file is
  * missing. Another `interface ProcessEnv` in the file does not reach `process.env` and approves nothing.
  */
-function approvedEnvironment(ts, root) {
+function approvedEnvironment(ts, root, envTypes) {
 	let text;
 	try {
-		text = readFileSync(path.join(root, ENV_TYPES), "utf8");
+		text = readFileSync(path.join(root, envTypes), "utf8");
 	} catch {
 		return new Set();
 	}
-	const sf = ts.createSourceFile(ENV_TYPES, text, ts.ScriptTarget.Latest, true);
+	const sf = ts.createSourceFile(envTypes, text, ts.ScriptTarget.Latest, true);
 	const names = new Set();
 	for (const node of descendants(ts, sf)) {
 		if (!ts.isInterfaceDeclaration(node) || node.name.text !== "ProcessEnv") continue;
@@ -379,17 +376,16 @@ function approvedEnvironment(ts, root) {
 	return names;
 }
 
-const BY_NAME = `process.env must be read as process.env.NAME, with NAME declared in ${ENV_TYPES}`;
-
 /** Every read of `process.env`: `process.env.NAME` for a declared NAME, and without a fallback written in. */
-function environmentReads(ts, nodes, at, approved) {
+function environmentReads(ts, nodes, at, approved, envTypes) {
+	const byName = `process.env must be read as process.env.NAME, with NAME declared in ${envTypes}`;
 	const problems = [];
 	for (const pattern of nodes.filter((node) => envDestructured(ts, node)))
-		problems.push(at(pattern.getStart(), BY_NAME));
+		problems.push(at(pattern.getStart(), byName));
 	for (const env of nodes.filter((node) => envAccess(ts, node))) {
 		const { parent } = env;
 		if (!ts.isPropertyAccessExpression(env) || !ts.isPropertyAccessExpression(parent) || parent.expression !== env) {
-			problems.push(at(env.getStart(), BY_NAME));
+			problems.push(at(env.getStart(), byName));
 			continue;
 		}
 		const name = parent.name.text;
@@ -397,7 +393,7 @@ function environmentReads(ts, nodes, at, approved) {
 			problems.push(
 				at(
 					parent.getStart(),
-					`process.env.${name} is not declared in ${ENV_TYPES}: ask the PM and owner to approve it and add it there instead of inventing one`,
+					`process.env.${name} is not declared in ${envTypes}: ask the PM and owner to approve it and add it there instead of inventing one`,
 				),
 			);
 		if (hasFallback(ts, parent))
@@ -523,10 +519,10 @@ function readTests(ts, sf, nodes, at, tests) {
 }
 
 /** Puts the tests against the AC: one each, only for conditions that exist, and every result checked by an expect. */
-function matchTests(acs, tests) {
+function matchTests(acs, tests, acDir) {
 	const problems = [];
 	for (const test of tests) {
-		if (!acs.has(test.id)) problems.push(`${test.at}: ${test.id} is not in ${AC_DIR}`);
+		if (!acs.has(test.id)) problems.push(`${test.at}: ${test.id} is not in ${acDir}`);
 	}
 	for (const ac of acs.values()) {
 		const own = tests.filter((test) => test.id === ac.id);
@@ -552,26 +548,84 @@ function matchTests(acs, tests) {
 	return problems;
 }
 
-/** Checks `packages/core/src` against `docs/acceptance/core` and returns the problems, empty when it passes. */
-export function checkFence(root) {
-	const ts = loadTypeScript(root);
-	const { acs, problems } = readAcceptance(root);
+/** Safety-only test checks for integration suites under `packages/<pkg>/tests`: no skipped/focused/empty tests. */
+function checkIntegrationTestFile(ts, nodes, at) {
+	const problems = skippedTests(ts, nodes, at);
+	const testNodes = nodes.filter((node) => isTestCall(ts, node));
+	const expects = nodes.filter((node) => isExpectCall(ts, node));
+	for (const testNode of testNodes) {
+		const callback = testNode.arguments.find((arg) => ts.isArrowFunction(arg) || ts.isFunctionExpression(arg));
+		const emptyBody = callback && ts.isBlock(callback.body) && callback.body.statements.length === 0;
+		const hasExpect = expects.some((exp) => testNode.pos <= exp.pos && exp.end <= testNode.end);
+		if (emptyBody || (expects.length === 0 && !hasExpect)) {
+			problems.push(at(testNode.getStart(), "this test has no expect"));
+		}
+	}
+	return problems;
+}
+
+/** Packages under `docs/acceptance/<pkg>/`, plus `core` so core fixtures always run. */
+function fencedPackages(root) {
+	const dirs = readdirOrEmpty(path.join(root, ACCEPTANCE_ROOT))
+		.filter((entry) => entry.isDirectory())
+		.map((entry) => entry.name);
+	return [...new Set(["core", ...dirs])].sort();
+}
+
+/** Checks one package's `packages/<pkg>/src` against `docs/acceptance/<pkg>`. */
+function checkPackageFence(ts, root, pkg) {
+	const acDir = `${ACCEPTANCE_ROOT}/${pkg}`;
+	const srcDir = `packages/${pkg}/src`;
+	const envTypes = `packages/${pkg}/env.d.ts`;
+	const checkEnv = pkg === "core" || existsSync(path.join(root, envTypes));
+	const { acs, problems } = readAcceptance(root, acDir);
 	const tests = [];
-	const approved = approvedEnvironment(ts, root);
-	for (const file of sourceFiles(root)) {
+	const approved = checkEnv ? approvedEnvironment(ts, root, envTypes) : undefined;
+	for (const file of sourceFiles(root, srcDir)) {
 		const sf = ts.createSourceFile(file, readFileSync(path.join(root, file), "utf8"), ts.ScriptTarget.Latest, true);
 		const at = (position, message) => {
 			const place = `${file}:${sf.getLineAndCharacterOfPosition(position).line + 1}`;
 			return message === undefined ? place : `${place}: ${message}`;
 		};
 		const nodes = descendants(ts, sf);
-		problems.push(
-			...suppressions(ts, sf, at),
-			...fakeDatabase(ts, nodes, at),
-			...environmentReads(ts, nodes, at, approved),
-		);
+		problems.push(...suppressions(ts, sf, at), ...fakeDatabase(ts, nodes, at));
+		if (checkEnv) problems.push(...environmentReads(ts, nodes, at, approved, envTypes));
 		if (TEST_FILE.test(file)) problems.push(...readTests(ts, sf, nodes, at, tests));
 	}
-	problems.push(...matchTests(acs, tests));
+	problems.push(...matchTests(acs, tests, acDir));
+	return problems;
+}
+
+/** Checks `packages/<pkg>/tests` across all packages for suppressions, fake DBs, and skipped/empty tests. */
+function checkIntegrationDirs(ts, root) {
+	const problems = [];
+	const pkgs = readdirOrEmpty(path.join(root, "packages"))
+		.filter((entry) => entry.isDirectory())
+		.map((entry) => entry.name)
+		.sort();
+	for (const pkg of pkgs) {
+		for (const file of sourceFiles(root, `packages/${pkg}/tests`)) {
+			const sf = ts.createSourceFile(file, readFileSync(path.join(root, file), "utf8"), ts.ScriptTarget.Latest, true);
+			const at = (position, message) => {
+				const place = `${file}:${sf.getLineAndCharacterOfPosition(position).line + 1}`;
+				return message === undefined ? place : `${place}: ${message}`;
+			};
+			const nodes = descendants(ts, sf);
+			problems.push(
+				...suppressions(ts, sf, at),
+				...fakeDatabase(ts, nodes, at),
+				...checkIntegrationTestFile(ts, nodes, at),
+			);
+		}
+	}
+	return problems;
+}
+
+/** Checks all fenced packages (`docs/acceptance/<pkg>` ↔ `packages/<pkg>/src`) and `packages/<pkg>/tests`. */
+export function checkFence(root) {
+	const ts = loadTypeScript(root);
+	const problems = [];
+	for (const pkg of fencedPackages(root)) problems.push(...checkPackageFence(ts, root, pkg));
+	problems.push(...checkIntegrationDirs(ts, root));
 	return problems;
 }

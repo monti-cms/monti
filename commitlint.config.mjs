@@ -24,6 +24,7 @@ export default {
 			// The packages that exist, and the repo's own areas. A new package adds its scope here.
 			[
 				"core",
+				"cli",
 				"ui",
 				"admin",
 				"ai",
