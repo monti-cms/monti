@@ -58,3 +58,16 @@
   - `CLI-MGF-4.2` 디렉터리에 `.sql` 파일과 `_snapshot.json`이 모두 생성되지 않는다
 
 </details>
+
+### 경계 · 방어 검증
+
+<details>
+<summary><strong><code>CLI-MGF-5</code></strong> 번호가 없는 `.sql` 파일이 섞여 있어도 숫자 접두사 파일만 기준으로 다음 번호를 매기고 기존 파일을 덮어쓰지 않는다</summary>
+
+- **전제**: `manual.sql`, `0001_init.sql`과 직전 `_snapshot.json`이 있는 디렉터리에서, `posts`에 새 필드 `subtitle`을 추가한 스키마가 있다
+- **행동**: 이름 `"add subtitle"`로 `generateMigration`을 실행한다
+- **결과**:
+  - `CLI-MGF-5.1` 반환된 파일 이름이 `"0002_add_subtitle.sql"`이다
+  - `CLI-MGF-5.2` 기존 `manual.sql`과 `0001_init.sql` 내용이 그대로 유지된다
+
+</details>

@@ -104,14 +104,15 @@
 ### 경계 · 방어 검증
 
 <details>
-<summary><strong><code>CLI-TLS-8</code></strong> 개발 서버 설정으로 `migrate up`을 실행하면 거절한다</summary>
+<summary><strong><code>CLI-TLS-8</code></strong> 개발 서버 설정으로 `migrate up`을 실행하면 DB를 건드리지 않고 거절한다</summary>
 
-- **전제**: `config.dev: true` 설정 프로젝트와 미적용 `0001_init.sql`, 실제 PostgreSQL `DATABASE_URL`이 있다
+- **전제**: 비어 있는 DB, `posts` 컬렉션이 정의된 `config.dev: true` 설정 프로젝트, 미적용 `0001_init.sql`, 실제 PostgreSQL `DATABASE_URL`이 있다
 - **행동**: `runCli(["migrate", "up"], io)`를 실행한다
 - **결과**:
   - `CLI-TLS-8.1` 반환 종료 코드가 `1`이다
   - `CLI-TLS-8.2` `stderr`에 오류 메시지가 출력된다
   - `CLI-TLS-8.3` `stdout`이 비어 있다
+  - `CLI-TLS-8.4` DB에 `migrations`와 `posts` 테이블이 모두 없다
 
 </details>
 
@@ -193,5 +194,16 @@
 - **결과**:
   - `CLI-TLS-14.1` 자식 프로세스 종료 코드가 `0`이다
   - `CLI-TLS-14.2` `stdout`을 파싱한 JSON의 `name`이 `"env-blog"`이다
+
+</details>
+
+<details>
+<summary><strong><code>CLI-TLS-15</code></strong> `migrate`·`clean-files`에 오타 옵션·남는 인자나 `migrate status --dry-run`을 주면 DB를 열지 않고 사용법 오류로 거절한다</summary>
+
+- **전제**: 유효한 프로젝트와 `DATABASE_URL`이 비어 있는 `io`가 있다
+- **행동**: `runCli(["migrate", "up", "--dry-rnu"], io)`, `runCli(["migrate", "status", "--dry-run"], io)`, `runCli(["clean-files", "extra"], io)`를 각각 실행한다
+- **결과**:
+  - `CLI-TLS-15.1` 세 호출 모두 반환 종료 코드가 `2`이다
+  - `CLI-TLS-15.2` 세 호출 모두 `stderr`에 오류 메시지가 출력되고 `stdout`이 비어 있다
 
 </details>

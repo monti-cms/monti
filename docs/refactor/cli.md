@@ -7,7 +7,7 @@
 판단 기준은 하나다. **"터미널에서 Monti 프로젝트를 부팅하고 Operation·마이그레이션·정리 작업을 실행하는 데 필요한가?"**
 
 **cli가 하는 일**
-- **프로젝트 부팅**: 현재 작업 디렉터리에서 `.env.local`·`.env`(Node 24 내장 `util.parseEnv`, 우선순위 `기존 env > .env.local > .env`), `monti.config.ts`, `monti.schema.ts`(`default` export)를 `jiti` 단일 로더로 읽어 PostgreSQL(`pg` + `Kysely`) 연결을 열고 `startMonti`로 엔진을 조립한 뒤, 명령이 끝나면 DB 연결을 정리한다.
+- **프로젝트 부팅**: 현재 작업 디렉터리에서 `.env.local`·`.env`(Node 24 내장 `util.parseEnv`, 우선순위 `기존 env > .env.local > .env`), `monti.config.ts`, `monti.schema.ts`(`default` export)를 `jiti` 단일 로더로 읽어 PostgreSQL(`pg` + `Kysely`) 연결을 열고 순수 조립 함수 `startMonti`로 엔진을 조립한 뒤, 명령이 끝나면 DB 연결을 정리한다. DB 마이그레이션(`migrateMonti` + 프로젝트 SQL)은 오직 `monti migrate up`만 실행한다.
 - **범용 Operation 실행기 (`monti <resource> <action>`)**: `specOf(plugins)`로 DB 연결 없이도 도움말·명세를 보여 주고, 실행 시 코어·플러그인의 모든 Operation을 호출한다. `--input` JSON·단순 스칼라 플래그 파싱, 필수 비밀값 숨김 프롬프트, `--dry-run`, JSON 출력, 종료 코드 매핑을 담당한다.
 - **운영 마이그레이션 도구 (`monti migrate`)**: `core`가 공개하는 `snapshotOf`·`planSchemaDiff`·`migrate`·`coreMigrations`를 그대로 사용해 `migrations/_snapshot.json`(DB 테이블·컬럼 스펙 스냅샷)과 현재 `monti.schema.ts`를 비교해 순수 SQL 마이그레이션 파일(`migrations/0001_<name>.sql`)을 생성하고, 운영 DB에 적용(`up`)하거나 상태(`status`)를 조회한다.
 - **임시 파일 정리 (`monti clean-files`)**: `core`의 `removeLooseFiles({ db, storage })`를 CLI에서 실행한다.
@@ -100,12 +100,12 @@ migrations/
 
 ### 5.3 적용(`up`)과 상태(`status`)
 - `monti migrate up`:
-  - `config.dev === true`이면 `startMonti` 호출 전에 실행을 거절한다.
-  - 실행 직전 대상 DB의 `host/database` 이름(비밀번호 제외)을 `stderr`에 출력해 잘못된 DB 적용을 방지한다.
-  - 먼저 `core`·플러그인 내장 마이그레이션을 적용한 뒤, `migrations/*.sql`을 파일명 오름차순으로 읽어 `core`의 공개 `migrate(db, "project", steps)`로 실행한다(`"project"`은 사용자 프로젝트 SQL 마이그레이션 전용 출처이며, 각 `.sql` 파일은 `pg` 드라이버 위에서 바인딩 없는 `sql.raw(text)`로 한 트랜잭션 안에서 실행).
-  - `--dry-run`을 주면 단일 트랜잭션 안에서 아직 적용되지 않은 코어(`coreMigrations`)·플러그인·프로젝트 `.sql` 단계를 모두 순서대로 시험 실행한 뒤 무조건 롤백해, 빈 DB에서도 테이블을 하나도 남기지 않는다(파일 안에 `COMMIT`이나 `CREATE INDEX CONCURRENTLY` 같은 트랜잭션 외부 구문이 없는 일반 DDL·DML을 기준으로 한다).
+  - `config.dev === true`이면 DB를 건드리지 않고 실행을 거절한다.
+  - DB 연결 성공 후 서버에서 실제 접속한 호스트·포트·DB 이름(`current_database()`, `inet_server_addr()`, `inet_server_port()`)을 조회해 비밀번호 유출 없이 `stderr`에 출력한다.
+  - 먼저 `migrateMonti({ db, schema, config })`로 `core`·플러그인 내장 마이그레이션을 적용한 뒤, `migrations/*.sql`을 파일명 오름차순으로 읽어 `core`의 공개 `migrate(db, "project", steps)`로 실행한다(`"project"`은 사용자 프로젝트 SQL 마이그레이션 전용 출처이며, 각 `.sql` 파일은 `pg` 드라이버 위에서 바인딩 없는 `sql.raw(text)`로 한 트랜잭션 안에서 실행).
+  - `--dry-run`을 주면 스키마·플러그인 사전 검증(`snapshotOf`·`specOf`) 후 단일 트랜잭션 안에서 `migrations` 테이블 준비·미적용 코어(`coreMigrations`)·플러그인·프로젝트 `.sql` 단계 실행 및 이력 기록을 순서대로 시험 실행한 뒤 무조건 롤백해, 빈 DB에서도 테이블을 하나도 남기지 않는다(파일 안에 `COMMIT`이나 `CREATE INDEX CONCURRENTLY` 같은 트랜잭션 외부 구문이 없는 일반 DDL·DML을 기준으로 한다).
 - `monti migrate status`:
-  - `startMonti`를 부르지 않고 DB 연결만 열어 `migrations` 테이블의 `source = "project"` 행만 조회해 각 `.sql` 파일의 `{ name, applied }` 목록을 JSON으로 출력한다(`migrations` 테이블이 아직 없으면 생성하지 않고 모든 파일을 `applied: false`로 반환).
+  - `migrateMonti`를 부르지 않고 DB 연결만 열어 `migrations` 테이블의 `source = "project"` 행만 조회해 각 `.sql` 파일의 `{ name, applied }` 목록을 JSON으로 출력한다(`migrations` 테이블이 아직 없으면 생성하지 않고 모든 파일을 `applied: false`로 반환).
 
 ## 6. 폴더 구조와 코드 규칙
 
@@ -126,9 +126,9 @@ packages/cli/src/
 │   └── runner.ts               migrate generate / up / status 조율 (core의 planSchemaDiff·migrate 사용)
 │
 ├── boot/                       층 2: 프로젝트 부팅 (환경 변수·TS 설정 파일·DB·startMonti)
-│   ├── env.ts                  .env.local/.env 로드 및 DATABASE_URL / MONTI_SECRET 해석
+│   ├── env.ts                  .env.local/.env 파싱 및 우선순위 합치기
 │   ├── load.ts                 jiti 기반 monti.config.ts · monti.schema.ts 로드
-│   └── connect.ts              pg + Kysely<Database> 연결 및 startMonti 호출·정리
+│   └── connect.ts              DATABASE_URL·MONTI_SECRET 해석, pg + Kysely<Database> 연결·정리 및 startMonti 호출
 │
 └── commands/                   층 3: 명령 실행 조율 (parse, migrate, boot 조합)
     ├── run.ts                  최상위 명령 디스패치 및 종료 코드·오류 포매팅

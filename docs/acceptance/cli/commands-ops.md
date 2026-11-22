@@ -116,26 +116,26 @@
 </details>
 
 <details>
-<summary><strong><code>CLI-OPS-9</code></strong> 함수나 순환 참조가 섞인 설정 객체도 직렬화 가능한 값을 보존하며 JSON으로 출력한다</summary>
+<summary><strong><code>CLI-OPS-9</code></strong> 함수나 순환 참조가 섞인 설정 객체도 비순환 공유 참조와 직렬화 가능한 값을 보존하며 JSON으로 출력한다</summary>
 
-- **전제**: 함수와 자기 자신에 대한 순환 참조 속성, `name: "custom"`을 가진 플러그인을 등록한 프로젝트와 유효한 `DATABASE_URL`이 있다
+- **전제**: 함수, 자기 자신에 대한 순환 참조 속성, 두 경로가 함께 가리키는 공유 객체와 `name: "custom"`을 가진 플러그인을 등록한 프로젝트와 유효한 `DATABASE_URL`이 있다
 - **행동**: `runCli(["config", "get"], io)`를 실행한다
 - **결과**:
   - `CLI-OPS-9.1` 반환 종료 코드가 `0`이다
-  - `CLI-OPS-9.2` `stdout`을 파싱한 JSON에 설정의 `name`이 들어 있다
+  - `CLI-OPS-9.2` `stdout`을 파싱한 JSON에 설정의 `name`과 공유 객체 값이 두 경로 모두 보존되어 있다
   - `CLI-OPS-9.3` `stdout`을 파싱한 JSON의 `plugins`에 `"custom"` 이름이 보존되어 있다
 
 </details>
 
 <details>
-<summary><strong><code>CLI-OPS-10</code></strong> 쓰기 작업에 `--dry-run`을 붙이면 결과만 출력하고 변경을 저장하지 않는다</summary>
+<summary><strong><code>CLI-OPS-10</code></strong> 쓰기 작업에 `--dry-run`을 붙이면 개발 설정에서도 테이블 동기화나 저장 없이 결과만 출력한다</summary>
 
-- **전제**: 코어 마이그레이션이 적용된 DB, `posts` 컬렉션이 정의된 프로젝트와 `DATABASE_URL`이 있다
+- **전제**: 코어 마이그레이션이 적용된 DB(`posts` 테이블은 없음), `config.dev: true`와 `posts` 컬렉션이 정의된 프로젝트, `DATABASE_URL`이 있다
 - **행동**: `runCli(["folders", "create", "--scope", "posts", "--name", "시험", "--dry-run"], io)`를 실행한다
 - **결과**:
   - `CLI-OPS-10.1` 반환 종료 코드가 `0`이다
   - `CLI-OPS-10.2` `stdout`을 파싱한 JSON에 `name: "시험"` 폴더가 들어 있다
-  - `CLI-OPS-10.3` DB의 `folders` 테이블에 그 폴더가 없다
+  - `CLI-OPS-10.3` DB의 `folders` 테이블에 그 폴더가 없고 `posts` 테이블도 새로 생기지 않는다
 
 </details>
 
@@ -216,11 +216,45 @@
 <details>
 <summary><strong><code>CLI-OPS-17</code></strong> 작업이 코어 오류로 거절되면 이유를 `[코드] 메시지` 형식으로 `stderr`에 출력한다</summary>
 
-- **전제**: 유효한 프로젝트와 실제 PostgreSQL `DATABASE_URL`이 준비되어 있다
+- **전제**: 코어 마이그레이션이 적용된 실제 PostgreSQL `DATABASE_URL`과 유효한 프로젝트가 준비되어 있다
 - **행동**: 존재하지 않는 ID로 `runCli(["keys", "delete", "--id", "missing-key-id"], io)`를 실행한다
 - **결과**:
   - `CLI-OPS-17.1` 반환 종료 코드가 `1`이다
   - `CLI-OPS-17.2` `stderr`가 `"[NOT_FOUND] "`로 시작하고 뒤에 오류 메시지가 이어진다
   - `CLI-OPS-17.3` `stdout`이 비어 있다
+
+</details>
+
+<details>
+<summary><strong><code>CLI-OPS-18</code></strong> 작업 이름 없이 리소스 이름만 실행하면 그 리소스의 도움말을 `stdout`에 출력한다</summary>
+
+- **전제**: 유효한 프로젝트와 `DATABASE_URL`이 비어 있는 `io`가 있다
+- **행동**: `runCli(["folders"], io)`를 실행한다
+- **결과**:
+  - `CLI-OPS-18.1` 반환 종료 코드가 `0`이다
+  - `CLI-OPS-18.2` `stdout`에 `folders` 리소스의 작업 목록(`list`, `create`, `update`)이 들어 있다
+  - `CLI-OPS-18.3` `stderr`가 비어 있다
+
+</details>
+
+<details>
+<summary><strong><code>CLI-OPS-19</code></strong> `anyOf` 분기 중 `id`로 선택된 `keys.check`에서는 대화형 터미널에서도 다른 분기의 `secret`을 묻지 않는다</summary>
+
+- **전제**: 저장된 API 키(`keyId`)와 확인 서비스 플러그인이 있는 프로젝트, `MONTI_SECRET`·`DATABASE_URL`이 설정된 환경, `isTTY: true`인 `io`가 있다
+- **행동**: `runCli(["keys", "check", "--id", keyId], io)`를 실행한다
+- **결과**:
+  - `CLI-OPS-19.1` `promptSecret`이 호출되지 않는다
+  - `CLI-OPS-19.2` 반환 종료 코드가 `0`이다
+
+</details>
+
+<details>
+<summary><strong><code>CLI-OPS-20</code></strong> `spec --dry-run`이나 오타 옵션을 붙인 작업은 DB를 열지 않고 사용법 오류로 거절한다</summary>
+
+- **전제**: `posts` 컬렉션이 정의된 프로젝트와 `DATABASE_URL`이 비어 있는 `io`가 있다
+- **행동**: `runCli(["spec", "--dry-run"], io)`와 `runCli(["folders", "list", "--scoep", "posts"], io)`를 각각 실행한다
+- **결과**:
+  - `CLI-OPS-20.1` 두 호출 모두 반환 종료 코드가 `2`이다
+  - `CLI-OPS-20.2` 두 호출 모두 `stderr`에 오류 메시지가 출력되고 `stdout`이 비어 있다
 
 </details>

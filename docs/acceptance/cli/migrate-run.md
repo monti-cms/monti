@@ -49,12 +49,24 @@
 
 </details>
 
+<details>
+<summary><strong><code>CLI-MGR-9</code></strong> 이미 일부 마이그레이션이 적용된 DB에서 `--dry-run`을 실행하면 이미 적용된 단계는 건너뛰고 새 파일만 시험 실행한 뒤 롤백한다</summary>
+
+- **전제**: 코어 마이그레이션과 `0001_init.sql`까지 이미 적용된 DB와 `0001_init.sql`, `0002_add_subtitle.sql`이 있는 디렉터리 `dir`이 있다
+- **행동**: `runMigrations({ db, project, dir, dryRun: true })`를 실행한다
+- **결과**:
+  - `CLI-MGR-9.1` 반환값이 `["0002_add_subtitle.sql"]`이다
+  - `CLI-MGR-9.2` `posts_data` 테이블에 `subtitle` 열이 추가되지 않는다
+  - `CLI-MGR-9.3` `migrations` 테이블에 `("project", "0002_add_subtitle.sql")`이 기록되지 않는다
+
+</details>
+
 ### 경계 · 방어 검증
 
 <details>
-<summary><strong><code>CLI-MGR-4</code></strong> `--dry-run` 중 잘못된 SQL이 있으면 오류를 던지고 앞선 변경을 모두 롤백한다</summary>
+<summary><strong><code>CLI-MGR-4</code></strong> `--dry-run` 중 실행 오류가 나면 오류를 던지고 앞선 변경을 모두 롤백한다</summary>
 
-- **전제**: 비어 있는 DB와 테이블을 만든 뒤 문법 오류가 이어지는 `.sql` 파일이 있다
+- **전제**: 비어 있는 DB와 테이블을 만든 뒤 실행 오류(`SELECT 1 / 0`)가 이어지는 `.sql` 파일이 있다
 - **행동**: `runMigrations({ db, project, dir, dryRun: true })`를 실행한다
 - **결과**:
   - `CLI-MGR-4.1` 오류가 던져진다

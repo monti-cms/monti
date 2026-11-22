@@ -92,7 +92,7 @@
 <details>
 <summary><strong><code>CLI-BOOT-7</code></strong> `MONTI_SECRET` 없이도 DB에 연결해 실행하고 끝나면 연결을 닫는다</summary>
 
-- **전제**: 실제 PostgreSQL의 `DATABASE_URL`만 있고 `MONTI_SECRET`은 없는 `env`와 유효한 프로젝트(`project`)가 있다
+- **전제**: 코어 마이그레이션이 적용된 실제 PostgreSQL의 `DATABASE_URL`만 있고 `MONTI_SECRET`은 없는 `env`와 유효한 프로젝트(`project`)가 있다
 - **행동**: `withMonti({ project, env }, async ({ monti, db }) => ...)` 안에서 `folders.create`를 실행하고, 종료 후 콜백이 받은 `db`로 쿼리를 시도한다
 - **결과**:
   - `CLI-BOOT-7.1` 콜백 안에서 `folders.create`가 성공해 폴더가 생성된다
@@ -103,7 +103,7 @@
 <details>
 <summary><strong><code>CLI-BOOT-8</code></strong> `MONTI_SECRET`이 있으면 암호화 키 작업에 전달된다</summary>
 
-- **전제**: `DATABASE_URL`과 `MONTI_SECRET`이 모두 설정된 `env`와 유효한 프로젝트(`project`)가 있다
+- **전제**: 코어 마이그레이션이 적용된 실제 PostgreSQL의 `DATABASE_URL`과 `MONTI_SECRET`이 모두 설정된 `env`와 유효한 프로젝트(`project`)가 있다
 - **행동**: `withMonti({ project, env }, async ({ monti }) => ...)` 안에서 `keys.create`를 실행한다
 - **결과**:
   - `CLI-BOOT-8.1` `keys.create`가 성공해 `api_keys` 테이블에 행이 생긴다

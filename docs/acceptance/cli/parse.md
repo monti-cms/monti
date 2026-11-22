@@ -53,7 +53,7 @@
 - **결과**:
   - `CLI-PRS-4.1` 전체 도움말에 전역 옵션과 주요 명령(`migrate`, `spec`, `clean-files`)이 들어 있다
   - `CLI-PRS-4.2` 리소스 도움말에 `list`, `create` 작업 이름이 들어 있다
-  - `CLI-PRS-4.3` 작업 도움말에 입력 속성 이름과 `--input`, `--dry-run`(쓰기 작업) 안내가 들어 있다
+  - `CLI-PRS-4.3` 작업 도움말에 입력 속성 이름, `--input`, `--dry-run`(쓰기 작업)과 민감 필드(`secret` 등)의 숨김 입력·`--input -` 안내가 들어 있다
 
 </details>
 
@@ -96,5 +96,49 @@
 - **행동**: 인자 배열을 파싱한다
 - **결과**:
   - `CLI-PRS-8.1` 사용법 오류(`exitCode: 2`)를 던진다
+
+</details>
+
+<details>
+<summary><strong><code>CLI-PRS-9</code></strong> `-h`와 `-v` 별칭을 인식하고 앞 옵션의 값으로 삼키지 않는다</summary>
+
+- **전제**: `["-h"]`, `["-v"]`, `["--config", "-h"]` 인자 배열이 준비되어 있다
+- **행동**: 각 인자 배열을 파싱한다
+- **결과**:
+  - `CLI-PRS-9.1` `["-h"]`는 `help: true`로, `["-v"]`는 `version: true`로 해석된다
+  - `CLI-PRS-9.2` `["--config", "-h"]`는 값 누락으로 사용법 오류(`exitCode: 2`)를 던진다
+
+</details>
+
+<details>
+<summary><strong><code>CLI-PRS-10</code></strong> 불리언 옵션의 `"true"`·`"false"` 문자열을 변환하고 잘못된 값은 거절한다</summary>
+
+- **전제**: 불리언 속성 `all`을 가진 Operation 명세가 있다
+- **행동**: `{ all: "true" }`, `{ all: "false" }`, `{ all: "yes" }`로 각각 입력을 해석한다
+- **결과**:
+  - `CLI-PRS-10.1` `"true"`는 `true`로, `"false"`는 `false`로 변환된다
+  - `CLI-PRS-10.2` `"yes"`는 사용법 오류(`exitCode: 2`)를 던진다
+
+</details>
+
+<details>
+<summary><strong><code>CLI-PRS-11</code></strong> 숫자 옵션의 빈 문자열과 정수 옵션의 소수 값은 거절한다</summary>
+
+- **전제**: 숫자(`number`) 속성 `score`와 정수(`integer | null`) 속성 `width`를 가진 Operation 명세가 있다
+- **행동**: `{ score: "" }`와 `{ width: "1.5" }`로 각각 입력을 해석한다
+- **결과**:
+  - `CLI-PRS-11.1` `{ score: "" }`는 사용법 오류(`exitCode: 2`)를 던진다
+  - `CLI-PRS-11.2` `{ width: "1.5" }`는 사용법 오류(`exitCode: 2`)를 던진다
+
+</details>
+
+<details>
+<summary><strong><code>CLI-PRS-12</code></strong> 명세에 없는 알 수 없는 옵션이나 객체·배열 속성의 개별 플래그는 거절한다</summary>
+
+- **전제**: `collection`(문자열)과 `fields`(객체) 속성을 가진 Operation 명세가 있다
+- **행동**: 오타 옵션 `{ colecton: "posts" }`와 객체 개별 플래그 `{ fields: "{}" }`로 각각 입력을 해석한다
+- **결과**:
+  - `CLI-PRS-12.1` 알 수 없는 옵션 `{ colecton: "posts" }`는 사용법 오류(`exitCode: 2`)를 던진다
+  - `CLI-PRS-12.2` 객체 개별 플래그 `{ fields: "{}" }`는 `--input` 안내와 함께 사용법 오류(`exitCode: 2`)를 던진다
 
 </details>
