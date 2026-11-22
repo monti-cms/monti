@@ -174,7 +174,7 @@ export interface MontiConfig {
 
 서버 플러그인(`Plugin`)은 `name`, `operations`, `keyServices`, `migrations`, `onEvent` 다섯 속성을 가진다.
 
-- **마이그레이션(`migrations`)**: 앱이 시작될 때 core 먼저, 그다음 플러그인 순서로 한 번씩 실행하고 `migrations` 테이블(`(scope, name)`)에 기록한다.
+- **마이그레이션(`migrations`)**: 앱이 시작될 때 core(`"@monti-cms/core"`) 먼저, 그다음 플러그인(`plugin.name`) 순서로 한 번씩 실행하고 `migrations` 테이블(`(source, name)`)에 기록한다.
 - **DB 타입 확장**: `defineRead`·`defineWrite`에 플러그인 테이블 타입(`TTables`)을 넘기면 `ctx.db`에서 core 테이블과 함께 조회할 수 있다.
 
 ## 6. 데이터베이스와 컬렉션 테이블 구조
