@@ -174,7 +174,7 @@ export interface MontiConfig {
 
 서버 플러그인(`Plugin`)은 `name`, `operations`, `keyServices`, `migrations`, `onEvent` 다섯 속성을 가진다.
 
-- **마이그레이션(`migrations`)**: 앱이 시작될 때 core(`"@monti-cms/core"`) 먼저, 그다음 플러그인(`plugin.name`) 순서로 한 번씩 실행하고 `migrations` 테이블(`(source, name)`)에 기록한다.
+- **마이그레이션(`migrations`)**: DB 준비 함수 `migrateMonti({ db, schema, config })`가 core(`"@monti-cms/core"`) 먼저, 그다음 플러그인(`plugin.name`) 순서로 한 번씩 실행하고 `migrations` 테이블(`(source, name)`)에 기록한다(`config.dev === true`이면 컬렉션 테이블까지 동기화). `startMonti`는 DB를 변경하지 않고 스키마 검사와 엔진 조립만 수행한다.
 - **DB 타입 확장**: `defineRead`·`defineWrite`에 플러그인 테이블 타입(`TTables`)을 넘기면 `ctx.db`에서 core 테이블과 함께 조회할 수 있다.
 
 ## 6. 데이터베이스와 컬렉션 테이블 구조
@@ -420,7 +420,7 @@ packages/core/src/
 1. **`db/`**: 고정 테이블 마이그레이션, 마이그레이션 실행기, 컬렉션 테이블 동기화 받침.
 2. **`engine/`**: Operation 정의·실행, 트랜잭션, `dryRun`, 이벤트, 오류, 플러그인 조립.
 3. **`resources/`와 `rich-text/`**: 리소스별 Operation과 본문 검증.
-4. **공개 출구(`index.ts`)와 명세**: `startMonti`, `specOf`, `migrate`, `snapshotOf`, `planSchemaDiff`, `defineRead`·`defineWrite`, `MontiError`, `validateDoc`, `removeLooseFiles`와 Operation 명세.
+4. **공개 출구(`index.ts`)와 명세**: `startMonti`, `migrateMonti`, `coreMigrations`, `specOf`, `migrate`, `snapshotOf`, `planSchemaDiff`, `defineRead`·`defineWrite`, `MontiError`, `validateDoc`, `removeLooseFiles`와 Operation 명세.
 
 - **인수 조건(AC)**: 단계마다 `docs/acceptance/core/`에 1~2초 안에 읽히는 쉬운 문장으로 규칙 하나당 AC 하나씩 간결하게 적고 소유자의 승인을 받는다. 제목에는 오류 코드나 내부 변수명을 넣지 않는다.
 - **테스트와 검증**: 승인된 AC마다 테스트 하나를 작성하며 제목은 AC 번호로 시작하고 각 `expect` 위에 결과 번호(`// DB-3.1`) 주석을 단다. 모든 테스트는 실제 PostgreSQL에서 실행한다.
