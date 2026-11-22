@@ -12,5 +12,5 @@
 		"isolatedModules": true,
 		"types": ["node"]
 	},
-	"include": ["src", "env.d.ts"]
+	"include": ["src", "tests", "env.d.ts"]
 }
