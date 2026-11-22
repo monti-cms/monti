@@ -48,7 +48,7 @@ export interface HttpHandlerOptions {
 
 export type HttpHandler = (request: Request) => Promise<Response>;
 
-export function createHttpHandler(monti: Monti, options?: HttpHandlerOptions): HttpHandler;
+export function createHttpHandler(monti: CoreMonti, options?: HttpHandlerOptions): HttpHandler;
 ```
 
 ## 3. REST 매핑 규칙

@@ -94,7 +94,7 @@
 <summary><strong><code>HTTP-RUT-7</code></strong> API 밖의 경로, 경계가 다른 접두 경로, 없는 리소스·단일 리소스 `:id`·3단 이상 경로는 찾을 수 없음(`404`)으로 분류한다</summary>
 
 - **전제**: `basePath: "/api"`인 라우트 테이블이 있다
-- **행동**: `GET /other/entries`, `GET /api2/templates`, `GET /api`, `GET /api/unknown`, `GET /api/schema/abc`, `POST /api/schema/unknown`, `GET /api/entries/a/b`를 각각 매칭한다
+- **행동**: `GET /other/entries`, `GET /api_templates`, `GET /api`, `GET /api/unknown`, `GET /api/schema/abc`, `POST /api/schema/unknown`, `GET /api/entries/a/b`를 각각 매칭한다
 - **결과**:
   - `HTTP-RUT-7.1` 일곱 경로 모두 미발견(`not_found`) 결과를 돌려준다
 
@@ -104,11 +104,12 @@
 <summary><strong><code>HTTP-RUT-8</code></strong> 다른 메서드로 열린 경로에 허용되지 않은 메서드를 보내면 정해진 순서의 허용 목록과 함께 거절한다(`405`)</summary>
 
 - **전제**: `basePath: "/api"`인 라우트 테이블이 있다
-- **행동**: `DELETE /api/schema`, `PATCH /api/templates`(단건 전용 리소스에 `:id` 없음), `POST /api/entries/unknown`(`:id` 경로가 `GET`·`PATCH`로 열림)을 각각 매칭한다
+- **행동**: `DELETE /api/schema`, `PATCH /api/templates`(단건 전용 리소스에 `:id` 없음), `POST /api/entries/unknown`(`:id` 경로가 `GET`·`PATCH`로 열림), `POST /api/templates/t1`(`:id` 경로가 `GET`·`PATCH`·`DELETE`로 열림)을 각각 매칭한다
 - **결과**:
   - `HTTP-RUT-8.1` `DELETE /api/schema`는 메서드 미허용(`method_not_allowed`)이며 허용 목록이 `["GET", "PATCH"]`이다
   - `HTTP-RUT-8.2` `PATCH /api/templates`는 메서드 미허용이며 허용 목록이 `["GET", "POST"]`이다
   - `HTTP-RUT-8.3` `POST /api/entries/unknown`은 메서드 미허용이며 허용 목록이 `["GET", "PATCH"]`이다
+  - `HTTP-RUT-8.4` `POST /api/templates/t1`은 메서드 미허용이며 허용 목록이 `["GET", "PATCH", "DELETE"]`이다
 
 </details>
 
@@ -116,9 +117,9 @@
 <summary><strong><code>HTTP-RUT-9</code></strong> 표준 동사를 `POST /<resource>/<verb>` 액션 경로로 호출하는 것을 허용하지 않는다</summary>
 
 - **전제**: `basePath: "/api"`인 라우트 테이블이 있다
-- **행동**: `POST /api/entries/list`(`:id` 경로가 `GET`·`PATCH`로 열림)와 `POST /api/schema/get`(`:id` 경로가 열려 있지 않음)을 각각 매칭한다
+- **행동**: `POST /api/entries/list`, `POST /api/entries/create`, `POST /api/entries/update`, `POST /api/templates/delete`(`:id` 경로가 다른 메서드로 열림)와 `POST /api/schema/get`(`:id` 경로가 열려 있지 않음)을 각각 매칭한다
 - **결과**:
-  - `HTTP-RUT-9.1` `POST /api/entries/list`는 메서드 미허용(`method_not_allowed`)이며 허용 목록이 `["GET", "PATCH"]`이다
+  - `HTTP-RUT-9.1` `entries`의 `list`·`create`·`update`는 메서드 미허용(`["GET", "PATCH"]`), `templates`의 `delete`는 메서드 미허용(`["GET", "PATCH", "DELETE"]`)이다
   - `HTTP-RUT-9.2` `POST /api/schema/get`은 미발견(`not_found`) 결과를 돌려준다
 
 </details>
@@ -142,10 +143,11 @@
 <details>
 <summary><strong><code>HTTP-RUT-11</code></strong> `GET` 쿼리를 작업 명세 타입(`null`·숫자·참거짓)과 점(`.`) 중첩 객체로 변환한다</summary>
 
-- **전제**: `folder_id`(문자열 또는 `null`), `limit`(정수), `draft`(불리언), `relation`(`{ field: string, id: string }` 중첩 객체)을 받는 `GET` 작업 명세가 있다
-- **행동**: `?folder_id=null&limit=20&draft=true&relation.field=author&relation.id=u1` 쿼리로 입력을 조립한다
+- **전제**: `folder_id`(문자열 또는 `null`), `limit`(정수), `score`(실수 `number`), `draft`(불리언), `code`(문자열), `relation`(`{ field: string, id: string }` 중첩 객체)을 받는 `GET` 작업 명세가 있다
+- **행동**: `?folder_id=null&limit=20&score=3.5&draft=true&code=123&relation.field=author&relation.id=u1` 쿼리와 `?folder_id=abc&draft=false` 쿼리로 각각 입력을 조립한다
 - **결과**:
-  - `HTTP-RUT-11.1` 입력 객체가 `{ folder_id: null, limit: 20, draft: true, relation: { field: "author", id: "u1" } }`로 조립된다
+  - `HTTP-RUT-11.1` 첫 쿼리는 `{ folder_id: null, limit: 20, score: 3.5, draft: true, code: "123", relation: { field: "author", id: "u1" } }`로 조립된다
+  - `HTTP-RUT-11.2` 둘째 쿼리는 `{ folder_id: "abc", draft: false }`로 조립된다
 
 </details>
 
@@ -163,7 +165,7 @@
 <details>
 <summary><strong><code>HTTP-RUT-13</code></strong> 경로 `:id`와 쿼리 또는 JSON 본문을 합쳐 입력을 만들며 경로 `:id`가 우선한다</summary>
 
-- **전제**: `GET /api/entries/path-id?locale=en&id=query-id` 요청과 `PATCH /api/templates/path-id` 요청(`Content-Type: application/json`, 본문 `{"id":"body-id","name":"새 이름"}`)이 있다
+- **전제**: `GET /api/entries/path-id?locale=en&id=query-id` 요청과 `PATCH /api/templates/path-id` 요청(`Content-Type: application/json ; charset=utf-8`, 본문 `{"id":"body-id","name":"새 이름"}`)이 있다
 - **행동**: 두 요청의 입력을 각각 조립한다
 - **결과**:
   - `HTTP-RUT-13.1` `GET` 입력은 `{ id: "path-id", locale: "en" }`이다
@@ -174,11 +176,12 @@
 <details>
 <summary><strong><code>HTTP-RUT-14</code></strong> 쓰기 요청의 `?dryRun=true`를 시험 실행 플래그로 분리하고 입력 객체에서는 뺀다</summary>
 
-- **전제**: 쓰기 작업 `entries.create`에 대한 `POST /api/entries?dryRun=true`와 `POST /api/entries?dryRun=false` 요청(`Content-Type: application/json`, 본문 `{"collection":"posts","locale":"ko"}`)이 있다
-- **행동**: 두 요청의 입력과 `dryRun` 여부를 해석한다
+- **전제**: 쓰기 작업 `entries.create`에 대한 `POST /api/entries?dryRun=true`와 `POST /api/entries?dryRun=false` 요청(`Content-Type: application/json`, 본문 `{"collection":"posts","locale":"ko"}`), 그리고 읽기 작업의 `GET /api/entries?dryRun=false&collection=posts` 요청이 있다
+- **행동**: 세 요청의 입력과 `dryRun` 여부를 해석한다
 - **결과**:
   - `HTTP-RUT-14.1` `?dryRun=true`는 `dryRun: true`이고 입력 객체에 `dryRun` 키가 없으며 `{ collection: "posts", locale: "ko" }`만 들어 있다
-  - `HTTP-RUT-14.2` `?dryRun=false`는 `dryRun: false`이다
+  - `HTTP-RUT-14.2` 쓰기 `?dryRun=false`는 `dryRun: false`이다
+  - `HTTP-RUT-14.3` 읽기 `GET /api/entries?dryRun=false&collection=posts`는 `dryRun: false`이고 입력 객체에 `dryRun` 키가 없는 `{ collection: "posts" }`이다
 
 </details>
 
@@ -187,10 +190,10 @@
 <details>
 <summary><strong><code>HTTP-RUT-15</code></strong> `GET` 쿼리에서 명세 타입으로 바꿀 수 없는 값은 거절하지 않고 문자열 그대로 둔다</summary>
 
-- **전제**: `limit`(정수)과 `draft`(불리언)을 받는 `GET` 작업 명세가 있다
-- **행동**: `?limit=abc&draft=yes` 쿼리로 입력을 조립한다
+- **전제**: `limit`(정수), `score`(실수), `draft`(불리언)을 받는 `GET` 작업 명세가 있다
+- **행동**: `?limit=abc&score=&draft=yes` 쿼리로 입력을 조립한다
 - **결과**:
-  - `HTTP-RUT-15.1` 오류를 던지지 않고 `{ limit: "abc", draft: "yes" }`로 조립된다
+  - `HTTP-RUT-15.1` 오류를 던지지 않고 `{ limit: "abc", score: "", draft: "yes" }`로 조립된다
 
 </details>
 

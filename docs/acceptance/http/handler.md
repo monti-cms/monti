@@ -30,11 +30,12 @@
 <summary><strong><code>HTTP-HDL-2</code></strong> 로그인하면 성공 응답(`200`)과 세션 쿠키를 돌려주고 응답 본문에는 토큰 원문을 숨긴다</summary>
 
 - **전제**: 관리자가 이미 생성되어 있다
-- **행동**: 쿠키 없이 `POST /api/session`에 올바른 `{ email, password }` JSON 본문을 보낸다
+- **행동**: 쿠키 없이 HTTP와 HTTPS 요청으로 각각 `POST /api/session`에 올바른 `{ email, password }` JSON 본문을 보낸다
 - **결과**:
   - `HTTP-HDL-2.1` 상태 코드가 `200`이고 본문이 `{ ok: true }`이며 `token` 키가 없다
-  - `HTTP-HDL-2.2` `set-cookie` 헤더에 `monti_session=...`과 `HttpOnly`가 설정된다
+  - `HTTP-HDL-2.2` HTTP 요청의 `set-cookie` 헤더에 `monti_session=...`과 `HttpOnly`가 설정되고 `; Secure`는 붙지 않는다
   - `HTTP-HDL-2.3` 발급된 쿠키로 `GET /api/templates`를 호출하면 `200`으로 통과한다
+  - `HTTP-HDL-2.4` HTTPS 요청의 `set-cookie` 헤더에는 `; Secure`가 붙는다
 
 </details>
 
@@ -96,7 +97,7 @@
 <details>
 <summary><strong><code>HTTP-HDL-7</code></strong> 글 목록 조회에서 `folder_id=null`과 점(`.`) 관계 쿼리 필터가 실제 DB 결과와 맞물려 동작한다</summary>
 
-- **전제**: `authors`·`posts`(관계 필드 `author` 포함) 컬렉션과 `posts` 폴더, 글 2건(한 글은 `author`를 참조하고 루트 폴더에 있고, 다른 글은 하위 폴더에 있음)이 있고 세션 쿠키가 있다
+- **전제**: `authors`·`posts`(관계 필드 `author` 포함) 컬렉션과 `posts` 폴더, 글 3건(루트 폴더에 있고 `author`를 참조하는 글, 루트 폴더에 있지만 `author`를 참조하지 않는 글, 하위 폴더에 있고 `author`를 참조하는 글)이 있고 세션 쿠키가 있다
 - **행동**: `GET /api/entries?collection=posts&status=draft&folder_id=null&relation.field=author&relation.id=<authorId>`를 호출한다
 - **결과**:
   - `HTTP-HDL-7.1` 상태 `200`으로 루트 폴더에 있고 해당 `author`를 참조하는 글 1건만 반환한다

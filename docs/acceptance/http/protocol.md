@@ -74,7 +74,7 @@
 - **결과**:
   - `HTTP-PRO-6.1` `200` 응답은 상태 `200`, `content-type`이 `application/json; charset=utf-8`, 본문이 `{"id":"1"}`이다
   - `HTTP-PRO-6.2` `201` 응답은 상태 `201`, `set-cookie` 헤더가 전달한 문자열과 같고 본문이 `{"id":"1"}`이다
-  - `HTTP-PRO-6.3` `204` 응답은 상태 `204`이고 본문이 비어 있다
+  - `HTTP-PRO-6.3` `204` 응답은 상태 `204`, `content-type` 헤더 없음, 본문이 비어 있다
 
 </details>
 
@@ -127,11 +127,11 @@
 <details>
 <summary><strong><code>HTTP-PRO-11</code></strong> 코어 오류가 아닌 예기치 않은 오류는 내부 상세를 숨기고 서버 오류(`500`)로 바꾼다</summary>
 
-- **전제**: 내부 메시지가 담긴 일반 `Error("postgres://secret failed")`와 문자열 예외 `"unexpected"`가 있다
+- **전제**: 내부 메시지가 담긴 일반 `Error("db connection failed: internal detail")`와 문자열 예외 `"unexpected"`가 있다
 - **행동**: 각 예외를 HTTP 오류 응답으로 변환한다
 - **결과**:
   - `HTTP-PRO-11.1` 두 응답 모두 상태 `500`, `content-type`이 `application/json; charset=utf-8`, 본문의 `error.code`가 `"INTERNAL_ERROR"`이다
-  - `HTTP-PRO-11.2` 두 응답 본문 모두에 원본 오류 문자열(`"postgres://secret failed"`, `"unexpected"`)이 포함되지 않는다
+  - `HTTP-PRO-11.2` 두 응답 본문 모두에 원본 오류 문자열(`"db connection failed: internal detail"`, `"unexpected"`)이 포함되지 않는다
 
 </details>
 
