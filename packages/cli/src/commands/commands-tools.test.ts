@@ -6,9 +6,18 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { coreMigrations, migrate, snapshotOf } from "@monti-cms/core";
 import { sql } from "kysely";
+import pg from "pg";
 import { afterEach, beforeEach, expect, it } from "vitest";
 import { createTestDatabase, type TestDatabase, tableExists } from "../__test__/database";
-import { defaultModule, parseOutput, postsSchema, projectModule, testIo, writeProject } from "../__test__/project";
+import {
+	defaultModule,
+	migrateCore,
+	parseOutput,
+	postsSchema,
+	projectModule,
+	testIo,
+	writeProject,
+} from "../__test__/project";
 import { formatGlobalHelp } from "../parse/help";
 import { runCli } from "./run";
 
@@ -87,6 +96,23 @@ function withCredentials(base: string): URL {
 	return url;
 }
 
+/**
+ * 연결 문자열 `url`로 연결한 서버가 알려 주는 DB 이름, 주소(넷마스크 없이), 포트. `migrate up`이 `stderr`에 알릴 대상 DB와
+ * 견준다.
+ */
+async function serverTarget(url: string): Promise<{ name: string; host: string; port: number }> {
+	const client = new pg.Client({ connectionString: url });
+	await client.connect();
+	try {
+		const { rows } = await client.query(
+			"select current_database() as name, host(inet_server_addr()) as host, inet_server_port() as port",
+		);
+		return rows[0];
+	} finally {
+		await client.end();
+	}
+}
+
 /** 자식 프로세스의 환경 변수: PATH·HOME·USER와 PostgreSQL 변수(`PG*`)만 이어 받고 `DATABASE_URL`을 둔다. */
 function childEnv(databaseUrl: string): NodeJS.ProcessEnv {
 	const kept = Object.entries(process.env).filter(
@@ -144,6 +170,7 @@ it("CLI-TLS-4 `migrate up`은 비밀번호를 가린 대상 DB 정보를 `stderr
 	const url = withCredentials(base);
 	await writeProject(cwd, { "monti.config.ts": productionConfig });
 	await writeSql("0001_init.sql", initSql);
+	const target = await serverTarget(url.href);
 	const { io, stdout, stderr } = testIo(cwd, { env: { DATABASE_URL: url.href } });
 
 	const code = await runCli(["migrate", "up"], io);
@@ -151,7 +178,7 @@ it("CLI-TLS-4 `migrate up`은 비밀번호를 가린 대상 DB 정보를 `stderr
 	// CLI-TLS-4.1
 	expect(code).toBe(0);
 	// CLI-TLS-4.2
-	expect(stderr()).toContain(`${url.host}${url.pathname}`);
+	expect(stderr()).toContain(`${target.name} (${target.host}:${target.port})`);
 	// CLI-TLS-4.3
 	expect(stderr()).not.toContain(url.password);
 	// CLI-TLS-4.4
@@ -206,20 +233,23 @@ it("CLI-TLS-7 `migrate --help`는 전체 도움말을 `stdout`에 출력한다",
 	expect(stderr()).toBe("");
 });
 
-it("CLI-TLS-8 개발 서버 설정으로 `migrate up`을 실행하면 거절한다", async () => {
-	const { url } = await database();
+it("CLI-TLS-8 개발 서버 설정으로 `migrate up`을 실행하면 DB를 건드리지 않고 거절한다", async () => {
+	const { url, db } = await database();
 	await writeProject(cwd, { "monti.config.ts": devConfig });
 	await writeSql("0001_init.sql", initSql);
 	const { io, stdout, stderr } = testIo(cwd, { env: { DATABASE_URL: url } });
 
 	const code = await runCli(["migrate", "up"], io);
 
+	const tables = { migrations: await tableExists(db, "migrations"), posts: await tableExists(db, "posts") };
 	// CLI-TLS-8.1
 	expect(code).toBe(1);
 	// CLI-TLS-8.2
 	expect(stderr()).toMatch(/\S/);
 	// CLI-TLS-8.3
 	expect(stdout()).toBe("");
+	// CLI-TLS-8.4
+	expect(tables).toEqual({ migrations: false, posts: false });
 });
 
 it("CLI-TLS-9 `migrate up` 중 일반 SQL 오류가 나면 코어 코드 접두 없이 `stderr`에 출력하고 실행 오류로 끝난다", async () => {
@@ -299,7 +329,8 @@ it("CLI-TLS-12 `--dry-run`을 지원하지 않는 `clean-files`에 `--dry-run`�
 });
 
 it("CLI-TLS-13 `bin.mjs`는 표준 입력(`--input -`)으로 전달된 JSON을 읽어 명령을 실행하고 결과를 `stdout`에 출력한다", async () => {
-	const { url } = await database();
+	const { url, db } = await database();
+	await migrateCore(db);
 	await writeProject(cwd, {
 		"shared.ts": 'export const siteName = "파이프 사이트";\n',
 		"monti.config.ts": 'import { siteName } from "./shared";\n\nexport default { name: siteName };\n',
@@ -328,7 +359,8 @@ export default {
 }, 30_000);
 
 it("CLI-TLS-14 `bin.mjs`는 작업 디렉터리의 `.env` 값을 `process.env`에 채워 설정 파일에서도 읽히게 한다", async () => {
-	const { url } = await database();
+	const { url, db } = await database();
+	await migrateCore(db);
 	await writeProject(cwd, {
 		".env": 'SITE_NAME="env-blog"\n',
 		"monti.config.ts": 'export default { name: process.env.SITE_NAME ?? "fallback" };\n',
@@ -341,3 +373,24 @@ it("CLI-TLS-14 `bin.mjs`는 작업 디렉터리의 `.env` 값을 `process.env`�
 	// CLI-TLS-14.2
 	expect(parseOutput(child.stdout)).toMatchObject({ name: "env-blog" });
 }, 30_000);
+
+it("CLI-TLS-15 `migrate`·`clean-files`에 오타 옵션·남는 인자나 `migrate status --dry-run`을 주면 DB를 열지 않고 사용법 오류로 거절한다", async () => {
+	await writeProject(cwd);
+	const runs = [
+		["migrate", "up", "--dry-rnu"],
+		["migrate", "status", "--dry-run"],
+		["clean-files", "extra"],
+	].map((argv) => ({ argv, run: testIo(cwd) }));
+
+	const codes: number[] = [];
+	for (const { argv, run } of runs) codes.push(await runCli(argv, run.io));
+
+	// CLI-TLS-15.1
+	expect(codes).toEqual([2, 2, 2]);
+	// CLI-TLS-15.2
+	expect(runs.map(({ run }) => ({ stderr: /\S/.test(run.stderr()), stdout: run.stdout() }))).toEqual([
+		{ stderr: true, stdout: "" },
+		{ stderr: true, stdout: "" },
+		{ stderr: true, stdout: "" },
+	]);
+});

@@ -4,8 +4,17 @@ import path from "node:path";
 import { coreMigrations, type Database, type MontiConfig, migrate, specOf, startMonti } from "@monti-cms/core";
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, expect, it } from "vitest";
-import { createTestDatabase, type TestDatabase } from "../__test__/database";
-import { parseOutput, postsSchema, projectModule, siteConfig, testIo, writeProject } from "../__test__/project";
+import { createTestDatabase, type TestDatabase, tableExists } from "../__test__/database";
+import {
+	defaultModule,
+	migrateCore,
+	parseOutput,
+	postsSchema,
+	projectModule,
+	siteConfig,
+	testIo,
+	writeProject,
+} from "../__test__/project";
 import { formatGlobalHelp } from "../parse/help";
 import { runCli } from "./run";
 
@@ -46,13 +55,28 @@ const notes = { name: "notes", operations: { notes: { ping: defineWrite({ input:
 export default { name: "테스트 사이트", plugins: [notes] };
 `;
 
-/** 함수 속성과 자기 자신을 가리키는 속성을 가진 플러그인 `custom`을 쓰는 `monti.config.ts`. */
+/**
+ * 함수 속성, 자기 자신을 가리키는 속성, 두 속성(`first`·`second`)이 함께 가리키는 공유 객체를 가진 플러그인 `custom`을 쓰는
+ * `monti.config.ts`.
+ */
 const customPluginConfig = `function ignoreEvent(): void {}
 
-const custom: Record<string, unknown> = { name: "custom", onEvent: ignoreEvent };
+const shared = { label: "공유" };
+const custom: Record<string, unknown> = { name: "custom", onEvent: ignoreEvent, first: shared, second: shared };
 custom.self = custom;
 
 export default { name: "테스트 사이트", plugins: [custom] };
+`;
+
+/** 개발 서버 설정(`dev: true`) `monti.config.ts`. */
+const devConfig = defaultModule({ name: "테스트 사이트", dev: true });
+
+/** 키 서비스 `openai`(어떤 비밀값이든 받아들인다)를 등록한 플러그인을 쓰는 `monti.config.ts`. */
+const keyServiceConfig = `async function check(): Promise<void> {}
+
+const openai = { name: "openai-keys", keyServices: [{ service: "openai", check }] };
+
+export default { name: "테스트 사이트", plugins: [openai] };
 `;
 
 /** `words` 가운데 `text`에 들어 있지 않은 것. */
@@ -60,9 +84,9 @@ function missingFrom(text: string, words: string[]): string[] {
 	return words.filter((word) => !text.includes(word));
 }
 
-/** core로 API 키 하나를 저장하고 그 `id`를 돌려준다. */
+/** core 마이그레이션이 적용된 `db`에 core로 API 키 하나를 저장하고 그 `id`를 돌려준다. */
 async function storeKey(db: Kysely<Database>): Promise<string> {
-	const monti = await startMonti({
+	const monti = startMonti({
 		db,
 		schema: postsSchema,
 		config: siteConfig,
@@ -158,7 +182,8 @@ it("CLI-OPS-6 알 수 없는 리소스나 작업의 `--help`는 사용법 오류
 });
 
 it("CLI-OPS-7 플러그인이 등록한 작업을 실행해 결과를 순수 JSON으로 출력한다", async () => {
-	const { url } = await database();
+	const { url, db } = await database();
+	await migrateCore(db);
 	await writeProject(cwd, { "monti.config.ts": notesConfig });
 	const { io, stdout, stderr } = testIo(cwd, { env: { DATABASE_URL: url } });
 
@@ -174,6 +199,7 @@ it("CLI-OPS-7 플러그인이 등록한 작업을 실행해 결과를 순수 JSO
 
 it("CLI-OPS-8 반환값이 없는 작업을 실행하면 변경을 적용하고 `stdout`에 `null`을 출력한다", async () => {
 	const { url, db } = await database();
+	await migrateCore(db);
 	await writeProject(cwd);
 	const keyId = await storeKey(db);
 	const { io, stdout } = testIo(cwd, { env: { DATABASE_URL: url } });
@@ -188,8 +214,9 @@ it("CLI-OPS-8 반환값이 없는 작업을 실행하면 변경을 적용하고 
 	expect(await db.selectFrom("api_keys").select("id").where("id", "=", keyId).execute()).toEqual([]);
 });
 
-it("CLI-OPS-9 함수나 순환 참조가 섞인 설정 객체도 직렬화 가능한 값을 보존하며 JSON으로 출력한다", async () => {
-	const { url } = await database();
+it("CLI-OPS-9 함수나 순환 참조가 섞인 설정 객체도 비순환 공유 참조와 직렬화 가능한 값을 보존하며 JSON으로 출력한다", async () => {
+	const { url, db } = await database();
+	await migrateCore(db);
 	await writeProject(cwd, { "monti.config.ts": customPluginConfig });
 	const { io, stdout } = testIo(cwd, { env: { DATABASE_URL: url } });
 
@@ -199,29 +226,38 @@ it("CLI-OPS-9 함수나 순환 참조가 섞인 설정 객체도 직렬화 가�
 	// CLI-OPS-9.1
 	expect(code).toBe(0);
 	// CLI-OPS-9.2
-	expect(output).toMatchObject({ name: "테스트 사이트" });
+	expect(output).toMatchObject({
+		name: "테스트 사이트",
+		plugins: [{ first: { label: "공유" }, second: { label: "공유" } }],
+	});
 	// CLI-OPS-9.3
 	expect(output.plugins).toMatchObject([{ name: "custom" }]);
 });
 
-it("CLI-OPS-10 쓰기 작업에 `--dry-run`을 붙이면 결과만 출력하고 변경을 저장하지 않는다", async () => {
+it("CLI-OPS-10 쓰기 작업에 `--dry-run`을 붙이면 개발 설정에서도 테이블 동기화나 저장 없이 결과만 출력한다", async () => {
 	const { url, db } = await database();
+	// 코어 마이그레이션만 적용한다: 개발 서버 설정으로 `migrateMonti`를 부르면 `posts` 테이블까지 맞춰 버린다.
 	await migrate(db, "@monti-cms/core", coreMigrations);
-	await writeProject(cwd);
+	await writeProject(cwd, { "monti.config.ts": devConfig });
 	const { io, stdout } = testIo(cwd, { env: { DATABASE_URL: url } });
 
 	const code = await runCli(["folders", "create", "--scope", "posts", "--name", "시험", "--dry-run"], io);
 
+	const after = {
+		folders: await db.selectFrom("folders").select("id").where("name", "=", "시험").execute(),
+		posts: await tableExists(db, "posts"),
+	};
 	// CLI-OPS-10.1
 	expect(code).toBe(0);
 	// CLI-OPS-10.2
 	expect(parseOutput(stdout())).toMatchObject({ name: "시험" });
 	// CLI-OPS-10.3
-	expect(await db.selectFrom("folders").select("id").where("name", "=", "시험").execute()).toEqual([]);
+	expect(after).toEqual({ folders: [], posts: false });
 });
 
 it("CLI-OPS-11 대화형 터미널에서 필수 민감 필드가 빠지면 숨김 입력으로 받아 실행한다", async () => {
 	const { url, db } = await database();
+	await migrateCore(db);
 	await writeProject(cwd);
 	const env = { DATABASE_URL: url, MONTI_SECRET: masterSecret };
 	const { io, prompts } = testIo(cwd, { env, isTTY: true, secret: "sk-test-9876" });
@@ -238,6 +274,7 @@ it("CLI-OPS-11 대화형 터미널에서 필수 민감 필드가 빠지면 숨�
 
 it("CLI-OPS-12 선택 민감 필드는 대화형 터미널에서도 숨김 입력을 묻지 않는다", async () => {
 	const { url, db } = await database();
+	await migrateCore(db);
 	await writeProject(cwd);
 	const keyId = await storeKey(db);
 	const env = { DATABASE_URL: url, MONTI_SECRET: masterSecret };
@@ -256,7 +293,8 @@ it("CLI-OPS-12 선택 민감 필드는 대화형 터미널에서도 숨김 입�
 });
 
 it("CLI-OPS-13 비대화형 터미널에서 필수 민감 필드가 빠지면 숨김 입력을 묻지 않고 거절한다", async () => {
-	const { url } = await database();
+	const { url, db } = await database();
+	await migrateCore(db);
 	await writeProject(cwd);
 	const env = { DATABASE_URL: url, MONTI_SECRET: masterSecret };
 	const { io, stderr, prompts } = testIo(cwd, { env, isTTY: false, secret: "sk-test-9876" });
@@ -314,7 +352,8 @@ it("CLI-OPS-16 `--input`과 개별 플래그를 함께 주면 사용법 오류�
 });
 
 it("CLI-OPS-17 작업이 코어 오류로 거절되면 이유를 `[코드] 메시지` 형식으로 `stderr`에 출력한다", async () => {
-	const { url } = await database();
+	const { url, db } = await database();
+	await migrateCore(db);
 	await writeProject(cwd);
 	const { io, stdout, stderr } = testIo(cwd, { env: { DATABASE_URL: url } });
 
@@ -326,4 +365,53 @@ it("CLI-OPS-17 작업이 코어 오류로 거절되면 이유를 `[코드] 메�
 	expect(stderr()).toMatch(/^\[NOT_FOUND\] \S/);
 	// CLI-OPS-17.3
 	expect(stdout()).toBe("");
+});
+
+it("CLI-OPS-18 작업 이름 없이 리소스 이름만 실행하면 그 리소스의 도움말을 `stdout`에 출력한다", async () => {
+	await writeProject(cwd);
+	const { io, stdout, stderr } = testIo(cwd);
+
+	const code = await runCli(["folders"], io);
+
+	// CLI-OPS-18.1
+	expect(code).toBe(0);
+	// CLI-OPS-18.2
+	expect(missingFrom(stdout(), ["list", "create", "update"])).toEqual([]);
+	// CLI-OPS-18.3
+	expect(stderr()).toBe("");
+});
+
+it("CLI-OPS-19 `anyOf` 분기 중 `id`로 선택된 `keys.check`에서는 대화형 터미널에서도 다른 분기의 `secret`을 묻지 않는다", async () => {
+	const { url, db } = await database();
+	await migrateCore(db);
+	await writeProject(cwd, { "monti.config.ts": keyServiceConfig });
+	const keyId = await storeKey(db);
+	const env = { DATABASE_URL: url, MONTI_SECRET: masterSecret };
+	const { io, prompts } = testIo(cwd, { env, isTTY: true, secret: "sk-test-0000" });
+
+	const code = await runCli(["keys", "check", "--id", keyId], io);
+
+	// CLI-OPS-19.1
+	expect(prompts).toEqual([]);
+	// CLI-OPS-19.2
+	expect(code).toBe(0);
+});
+
+it("CLI-OPS-20 `spec --dry-run`이나 오타 옵션을 붙인 작업은 DB를 열지 않고 사용법 오류로 거절한다", async () => {
+	await writeProject(cwd);
+	const spec = testIo(cwd);
+	const typo = testIo(cwd);
+
+	const codes = [
+		await runCli(["spec", "--dry-run"], spec.io),
+		await runCli(["folders", "list", "--scoep", "posts"], typo.io),
+	];
+
+	// CLI-OPS-20.1
+	expect(codes).toEqual([2, 2]);
+	// CLI-OPS-20.2
+	expect([spec, typo].map((run) => ({ stderr: /\S/.test(run.stderr()), stdout: run.stdout() }))).toEqual([
+		{ stderr: true, stdout: "" },
+		{ stderr: true, stdout: "" },
+	]);
 });

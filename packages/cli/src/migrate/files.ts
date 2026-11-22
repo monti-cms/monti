@@ -1,5 +1,6 @@
+import { randomUUID } from "node:crypto";
 import { existsSync } from "node:fs";
-import { mkdir, readdir, readFile, rename, writeFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { planSchemaDiff, type Schema, type SchemaSnapshot, snapshotOf } from "@monti-cms/core";
 
@@ -53,9 +54,12 @@ async function readSnapshot(dir: string): Promise<SchemaSnapshot> {
 	return JSON.parse(await readFile(file, "utf8"));
 }
 
-/** 기존 `.sql` 파일의 가장 큰 번호 다음 번호를 4자리(`0001`)로 돌려준다. */
+/**
+ * 기존 `.sql` 파일의 가장 큰 번호 다음 번호를 4자리(`0001`)로 돌려준다. 번호로 시작하지 않는 파일(`manual.sql` 등)은 번호가
+ * 없으므로(`NaN`) 세지 않는다.
+ */
 async function nextNumber(dir: string): Promise<string> {
-	const numbers = (await listMigrationFiles(dir)).map((name) => Number.parseInt(name, 10));
+	const numbers = (await listMigrationFiles(dir)).map((name) => Number.parseInt(name, 10)).filter(Number.isInteger);
 	return String(Math.max(0, ...numbers) + 1).padStart(4, "0");
 }
 
@@ -65,13 +69,20 @@ function slugOf(name: string): string {
 }
 
 /**
- * `.sql` 파일을 먼저 쓰고 `_snapshot.json`을 바꾼다. 스냅샷은 임시 파일에 다 쓴 뒤 이름을 바꿔(rename) 한 번에 교체하므로,
- * 중간에 멈춰도 반쯤 쓰인 스냅샷이 남지 않는다.
+ * `.sql` 파일을 먼저 쓰고 `_snapshot.json`을 바꾼다. `.sql` 파일은 같은 이름의 파일이 이미 있으면 덮어쓰지 않고 실패한다.
+ * 스냅샷은 이 실행만 쓰는 임시 파일에 다 쓴 뒤 이름을 바꿔(rename) 한 번에 교체하므로, 중간에 멈춰도 반쯤 쓰인 스냅샷이
+ * 남지 않는다. 스냅샷을 바꾸지 못하면 임시 파일과 방금 쓴 `.sql` 파일을 지우고 그 오류를 던진다.
  */
 async function writeMigration(dir: string, migration: GeneratedMigration, snapshot: SchemaSnapshot): Promise<void> {
 	await mkdir(dir, { recursive: true });
-	await writeFile(path.join(dir, migration.filename), migration.sql);
-	const temporary = path.join(dir, `${snapshotFile}.tmp`);
-	await writeFile(temporary, `${JSON.stringify(snapshot, null, "\t")}\n`);
-	await rename(temporary, path.join(dir, snapshotFile));
+	const sqlFile = path.join(dir, migration.filename);
+	await writeFile(sqlFile, migration.sql, { flag: "wx" });
+	const temporary = path.join(dir, `_snapshot.${process.pid}.${randomUUID()}.tmp`);
+	try {
+		await writeFile(temporary, `${JSON.stringify(snapshot, null, "\t")}\n`);
+		await rename(temporary, path.join(dir, snapshotFile));
+	} catch (error) {
+		await Promise.allSettled([rm(temporary, { force: true }), rm(sqlFile, { force: true })]);
+		throw error;
+	}
 }

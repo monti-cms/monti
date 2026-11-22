@@ -30,13 +30,26 @@ const switchOptions = new Map<string, "dryRun" | "help" | "version">([
 	["-v", "version"],
 ]);
 
+/** 내장 명령(`spec`, `migrate`, `clean-files`)이 받는 것: 위치 인자 수(명령 이름 포함)의 상한과 `--dry-run`을 받는지. */
+interface BuiltInArgs {
+	positionals: number;
+	dryRun: boolean;
+}
+
 /**
  * 명령줄 인자를 전역 옵션, 위치 인자, 개별 옵션으로 나눈다. 전역 옵션은 어느 자리에 와도 되고, 이름이 같은 작업 속성보다
  * 앞선다. 값을 받는 전역 옵션 뒤에 값이 없으면 사용법 오류다. 개별 옵션 `--key` 뒤에 값이 없으면(인자가 끝났거나 다음이
- * 다른 옵션) `true`로 두고, 그 속성이 값 없이 쓸 수 있는 참거짓인지는 입력 변환이 가린다.
+ * 다른 옵션) `true`로 두고, 그 속성이 값 없이 쓸 수 있는 참거짓인지는 입력 변환이 가린다. 개별 옵션은 프로토타입이 없는
+ * 객체에 담아 `--__proto__` 같은 이름도 옵션으로 남긴다.
  */
 export function parseArgs(argv: readonly string[]): ParsedArgs {
-	const parsed: ParsedArgs = { dryRun: false, help: false, version: false, positionals: [], flags: {} };
+	const parsed: ParsedArgs = {
+		dryRun: false,
+		help: false,
+		version: false,
+		positionals: [],
+		flags: Object.create(null),
+	};
 	let index = 0;
 	while (index < argv.length) index = readToken(parsed, argv, index);
 	return parsed;
@@ -65,8 +78,23 @@ function readToken(parsed: ParsedArgs, argv: readonly string[], index: number): 
 	return value === undefined ? index + 1 : index + 2;
 }
 
-/** `argv[index]` 다음 토큰이 옵션 값이면 그 값. 인자가 끝났거나 다음이 다른 옵션(`--`로 시작)이면 `undefined`다. */
+/**
+ * `argv[index]` 다음 토큰이 옵션 값이면 그 값. 인자가 끝났거나 다음이 다른 옵션(`--`로 시작하거나 `-h`·`-v` 별칭)이면
+ * `undefined`다.
+ */
 function valueAfter(argv: readonly string[], index: number): string | undefined {
 	const next = argv[index + 1];
-	return next === undefined || next.startsWith("--") ? undefined : next;
+	return next === undefined || next.startsWith("--") || switchOptions.has(next) ? undefined : next;
+}
+
+/**
+ * 내장 명령 `command`가 받지 않는 인자를 DB를 열기 전에 사용법 오류로 거절한다: 작업 입력(`--input`)과 개별 옵션(오타 옵션
+ * 포함), `accepted`보다 많은 위치 인자, 받지 않는 `--dry-run`.
+ */
+export function rejectUnusedArgs(parsed: ParsedArgs, command: string, accepted: BuiltInArgs): void {
+	const option = parsed.input === undefined ? Object.keys(parsed.flags)[0] : "input";
+	if (option !== undefined) throw new CliUsageError(`${command}에 쓸 수 없는 옵션이다: --${option}`);
+	const extra = parsed.positionals.slice(accepted.positionals);
+	if (extra.length > 0) throw new CliUsageError(`${command} 뒤에 남는 인자가 있다: ${extra.join(" ")}`);
+	if (parsed.dryRun && !accepted.dryRun) throw new CliUsageError(`${command}에는 --dry-run을 쓸 수 없다`);
 }

@@ -16,6 +16,12 @@ const eraseKeys = new Set(["\u007f", "\b"]);
 /** 숨김 입력을 그만두는 글자(Ctrl+C). */
 const cancelKey = "\u0003";
 
+/** 숨김 입력을 받는 중에 `stdin`이 끝났음을 알리는 사건: 입력 끝(`end`), 닫힘(`close`), 오류(`error`). */
+const endEvents = ["end", "close", "error"];
+
+/** 설정 파일도 `.env`도 쓰지 않는 도움말·버전 옵션. `.env`를 읽지 못해도 이 옵션이 있으면 그대로 실행한다. */
+const infoFlags = new Set(["--help", "-h", "--version", "-v"]);
+
 function stdout(text) {
 	process.stdout.write(text);
 }
@@ -39,7 +45,8 @@ function loader(file) {
 
 /**
  * 터미널인 `stdin`을 raw 모드로 바꿔, 받은 글자를 화면에 보이지 않게 모아 한 줄을 받고 원래 모드로 돌린다. Enter(또는 Ctrl+D)에서
- * 그 줄을 돌려주고, Ctrl+C에서는 오류로 끝난다.
+ * 그 줄을 돌려주고, Ctrl+C에서나 줄을 끝내기 전에 `stdin`이 끝나면(`endEvents`) 오류로 끝난다. Backspace는 글자 하나를 코드
+ * 포인트 단위로 지워 이모지 같은 글자를 반만 남기지 않는다. 어떻게 끝나든 듣던 사건을 모두 떼고 원래 모드로 돌린다.
  */
 function readHiddenLine(stdin) {
 	const wasRaw = stdin.isRaw;
@@ -49,7 +56,8 @@ function readHiddenLine(stdin) {
 		let line = "";
 		function finish(settle, value) {
 			stdin.off("data", onData);
-			stdin.setRawMode(wasRaw);
+			for (const event of endEvents) stdin.off(event, onEnd);
+			if (!stdin.destroyed) stdin.setRawMode(wasRaw);
 			stdin.pause();
 			settle(value);
 		}
@@ -57,10 +65,14 @@ function readHiddenLine(stdin) {
 			for (const key of chunk) {
 				if (key === cancelKey) return finish(reject, new Error("입력을 취소했다"));
 				if (enterKeys.has(key)) return finish(resolve, line);
-				line = eraseKeys.has(key) ? line.slice(0, -1) : line + key;
+				line = eraseKeys.has(key) ? [...line].slice(0, -1).join("") : line + key;
 			}
 		}
+		function onEnd(error) {
+			finish(reject, error instanceof Error ? error : new Error("줄을 끝내기 전에 입력이 끝났다"));
+		}
 		stdin.on("data", onData);
+		for (const event of endEvents) stdin.on(event, onEnd);
 		stdin.resume();
 	});
 }
@@ -75,22 +87,39 @@ async function promptSecret(label) {
 	}
 }
 
-const { loadEnv } = await jiti.import("./boot/env.ts");
-
-// 작업 디렉터리의 `.env.local`·`.env` 값 가운데 `process.env`에 없는 이름만 채워, 설정 파일도 `process.env`에서 읽게 한다.
-for (const [key, value] of Object.entries(loadEnv(process.cwd(), process.env))) {
-	if (process.env[key] === undefined && value !== undefined) process.env[key] = value;
+/**
+ * 작업 디렉터리의 `.env.local`·`.env` 값 가운데 `process.env`에 없는 이름만 채워, 설정 파일도 `process.env`에서 읽게 한다.
+ * 파일을 읽지 못하면(폴더이거나 읽을 권한이 없는 등) 한 줄 오류를 쓰고 `false`다. 다만 `argv`가 도움말·버전(`infoFlags`)을
+ * 물으면 `.env`가 필요 없으므로 오류 없이 `true`다.
+ */
+async function fillProcessEnv(argv) {
+	const { loadEnv } = await jiti.import("./boot/env.ts");
+	try {
+		for (const [key, value] of Object.entries(loadEnv(process.cwd(), process.env))) {
+			if (process.env[key] === undefined && value !== undefined) process.env[key] = value;
+		}
+		return true;
+	} catch (error) {
+		if (argv.some((arg) => infoFlags.has(arg))) return true;
+		stderr(`.env 파일을 읽을 수 없다: ${error.message}\n`);
+		return false;
+	}
 }
 
-const { runCli } = await jiti.import("./index.ts");
+/** `argv`(명령 이름 뒤의 인자)를 실행하고 종료 코드를 돌려준다. `.env`를 읽지 못했으면 실행하지 않고 `1`이다. */
+async function main(argv) {
+	if (!(await fillProcessEnv(argv))) return 1;
+	const { runCli } = await jiti.import("./index.ts");
+	return runCli(argv, {
+		cwd: process.cwd(),
+		env: process.env,
+		isTTY: Boolean(process.stdin.isTTY),
+		stdout,
+		stderr,
+		readStdin,
+		promptSecret,
+		loader,
+	});
+}
 
-process.exitCode = await runCli(process.argv.slice(2), {
-	cwd: process.cwd(),
-	env: process.env,
-	isTTY: Boolean(process.stdin.isTTY),
-	stdout,
-	stderr,
-	readStdin,
-	promptSecret,
-	loader,
-});
+process.exitCode = await main(process.argv.slice(2));

@@ -1,4 +1,4 @@
-import { mkdtemp, readdir, readFile, rm } from "node:fs/promises";
+import { mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { type Schema, snapshotOf } from "@monti-cms/core";
@@ -33,6 +33,11 @@ afterEach(async () => {
 /** 마이그레이션 폴더의 `_snapshot.json`을 읽어 JSON으로 돌려준다. */
 async function savedSnapshot(): Promise<unknown> {
 	return JSON.parse(await readFile(path.join(dir, "_snapshot.json"), "utf8"));
+}
+
+/** 마이그레이션 폴더의 파일 `name`의 내용. */
+async function migrationText(name: string): Promise<string> {
+	return readFile(path.join(dir, name), "utf8");
 }
 
 /** `0001_init_posts.sql`과 `posts` 스키마의 `_snapshot.json`이 있는 마이그레이션 폴더를 만든다. */
@@ -78,4 +83,17 @@ it("CLI-MGF-4 `--dry-run`으로 마이그레이션을 만들면 파일을 쓰지
 	expect(generated?.sql).toContain('create table "posts"');
 	// CLI-MGF-4.2
 	expect(await readdir(root, { recursive: true })).toEqual([]);
+});
+
+it("CLI-MGF-5 번호가 없는 `.sql` 파일이 섞여 있어도 숫자 접두사 파일만 기준으로 다음 번호를 매기고 기존 파일을 덮어쓰지 않는다", async () => {
+	await generateMigration({ dir, schema: posts, name: "init" });
+	await writeFile(path.join(dir, "manual.sql"), "select 1;\n");
+	const before = { manual: await migrationText("manual.sql"), init: await migrationText("0001_init.sql") };
+
+	const generated = await generateMigration({ dir, schema: postsWithSubtitle, name: "add subtitle" });
+
+	// CLI-MGF-5.1
+	expect(generated?.filename).toBe("0002_add_subtitle.sql");
+	// CLI-MGF-5.2
+	expect({ manual: await migrationText("manual.sql"), init: await migrationText("0001_init.sql") }).toEqual(before);
 });

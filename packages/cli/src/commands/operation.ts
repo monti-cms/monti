@@ -2,21 +2,18 @@ import { type OperationSpec, specOf } from "@monti-cms/core";
 import { withMonti } from "../boot/connect";
 import { loadEnv } from "../boot/env";
 import type { LoadedProject } from "../migrate/runner";
-import type { ParsedArgs } from "../parse/args";
+import { type ParsedArgs, rejectUnusedArgs } from "../parse/args";
 import { CliUsageError } from "../parse/error";
 import { formatOperationHelp, formatResourceHelp } from "../parse/help";
-import { buildOperationInput } from "../parse/input";
+import { buildOperationInput, secretFields } from "../parse/input";
 import { requiredProperties } from "../parse/json-schema";
 import { writeJson } from "./output";
 import { loadProject } from "./project";
 import type { CliIo } from "./types";
 
-/** 비어 있으면 대화형 터미널에서 숨김 입력으로 묻는 민감 필드. */
-const secretFields = new Set(["password", "currentPassword", "secret", "token"]);
-
 /** `monti spec`: DB 없이 core와 설정의 플러그인이 가진 모든 작업의 명세를 JSON으로 쓴다. */
 export async function printSpec(parsed: ParsedArgs, io: CliIo): Promise<void> {
-	if (parsed.dryRun) throw new CliUsageError("spec에는 --dry-run을 쓸 수 없다");
+	rejectUnusedArgs(parsed, "spec", { positionals: 1, dryRun: false });
 	const { config } = await loadProject(parsed, io);
 	writeJson(io, specOf(config.plugins));
 }

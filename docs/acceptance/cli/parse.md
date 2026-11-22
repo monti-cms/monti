@@ -48,8 +48,8 @@
 <details>
 <summary><strong><code>CLI-PRS-4</code></strong> `--help`로 전체 도움말과 특정 리소스·작업의 도움말을 만든다</summary>
 
-- **전제**: `entries.list`와 `entries.create`를 포함한 `OperationSpec[]` 목록이 있다
-- **행동**: 전체 도움말, `entries` 리소스 도움말, `entries.create` 작업 도움말을 각각 생성한다
+- **전제**: `entries.list`, `entries.create`, `keys.create`(민감 필드 `secret` 포함)를 포함한 `OperationSpec[]` 목록이 있다
+- **행동**: 전체 도움말, `entries` 리소스 도움말, `entries.create`와 `keys.create` 작업 도움말을 각각 생성한다
 - **결과**:
   - `CLI-PRS-4.1` 전체 도움말에 전역 옵션과 주요 명령(`migrate`, `spec`, `clean-files`)이 들어 있다
   - `CLI-PRS-4.2` 리소스 도움말에 `list`, `create` 작업 이름이 들어 있다

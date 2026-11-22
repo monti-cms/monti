@@ -1,7 +1,8 @@
 import { mkdir, symlink, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import path from "node:path";
-import type { MontiConfig, Schema } from "@monti-cms/core";
+import { type Database, type MontiConfig, migrateMonti, type Schema } from "@monti-cms/core";
+import type { Kysely } from "kysely";
 import type { CliIo } from "../commands/types";
 
 /** 테스트가 CLI에 넘기는 입출력과, CLI가 쓴 출력·숨김 입력 요청을 보는 함수. */
@@ -37,6 +38,14 @@ export const postsSchema: Schema = {
 
 /** 이 저장소의 core 패키지 폴더. */
 const coreDir = path.resolve(createRequire(import.meta.url).resolve("@monti-cms/core"), "../..");
+
+/**
+ * `db`에 core 마이그레이션을 적용한다: `monti migrate up`을 거친 DB처럼 core 테이블이 있다. 개발 서버 설정이 아니므로
+ * 컬렉션 테이블(`posts` 등)은 만들지 않는다.
+ */
+export async function migrateCore(db: Kysely<Database>): Promise<void> {
+	await migrateMonti({ db, schema: postsSchema, config: siteConfig });
+}
 
 /** `value`를 `default`로 내보내는 TypeScript 모듈 글. */
 export function defaultModule(value: unknown): string {

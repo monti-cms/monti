@@ -133,13 +133,29 @@ it("CLI-MGR-3 `--dry-run`은 빈 DB에서도 내장·프로젝트 마이그레�
 	expect(tables).toEqual({ folders: false, migrations: false });
 });
 
-it("CLI-MGR-4 `--dry-run` 중 잘못된 SQL이 있으면 오류를 던지고 앞선 변경을 모두 롤백한다", async () => {
-	await writeSql("0001_broken.sql", "create table broken_step (id integer);\ncreat table typo (id integer);\n");
+it("CLI-MGR-9 이미 일부 마이그레이션이 적용된 DB에서 `--dry-run`을 실행하면 이미 적용된 단계는 건너뛰고 새 파일만 시험 실행한 뒤 롤백한다", async () => {
+	await writeSql("0001_init.sql", initSql);
+	await runMigrations({ db: testDb.db, project: pluginProject(), dir });
+	await writeSql("0002_add_subtitle.sql", addSubtitleSql);
+
+	const tried = await runMigrations({ db: testDb.db, project: pluginProject(), dir, dryRun: true });
+
+	// CLI-MGR-9.1
+	expect(tried).toEqual(["0002_add_subtitle.sql"]);
+	// CLI-MGR-9.2
+	expect(await columnsOf(testDb.db, "posts_data")).not.toContain("subtitle");
+	// CLI-MGR-9.3
+	expect(await recordedMigrations(testDb.db)).not.toContainEqual(["project", "0002_add_subtitle.sql"]);
+});
+
+it("CLI-MGR-4 `--dry-run` 중 실행 오류가 나면 오류를 던지고 앞선 변경을 모두 롤백한다", async () => {
+	// 문법은 맞아 앞의 `create table`까지 실제로 실행된 뒤, 0으로 나누기(`22012`)에서 실패한다.
+	await writeSql("0001_broken.sql", "create table broken_step (id integer);\nselect 1 / 0;\n");
 
 	const tried = runMigrations({ db: testDb.db, project: projectWith({ name: "테스트" }), dir, dryRun: true });
 
 	// CLI-MGR-4.1
-	await expect(tried).rejects.toMatchObject({ code: "42601" });
+	await expect(tried).rejects.toMatchObject({ code: "22012" });
 	const tables = {
 		created: await tableExists(testDb.db, "broken_step"),
 		migrations: await tableExists(testDb.db, "migrations"),

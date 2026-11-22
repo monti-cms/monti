@@ -1,4 +1,5 @@
 import type { OperationSpec } from "@monti-cms/core";
+import { secretFields } from "./input";
 import { propertyNames, propertyTypes } from "./json-schema";
 
 /** 두 칸 표의 한 줄: 왼쪽에 명령·옵션, 오른쪽에 설명. */
@@ -28,6 +29,9 @@ const globalOptions: Row[] = [
 const inputOption: Row = ["--input <json|->", "입력 전체를 JSON으로 전달 (-이면 표준 입력에서 읽기)"];
 
 const dryRunOption: Row = ["--dry-run", "실행 결과만 확인하고 저장하지 않기"];
+
+/** 민감 필드의 설명: 명령줄에 값을 적지 않고 넘기는 두 방법. */
+const secretNote = "필수인데 비워 두면 숨김 입력으로 묻는다 (파이프에서는 --input -로 넘긴다)";
 
 const kindLabels: Record<OperationSpec["kind"], string> = { read: "읽기", write: "쓰기" };
 
@@ -65,13 +69,19 @@ export function formatResourceHelp(resource: string, specs: readonly OperationSp
 	return helpText(`사용법: monti ${resource} <action> [options]`, [["작업", actions]]);
 }
 
-/** 작업 도움말: 입력 속성마다 개별 옵션과 받는 타입, 그리고 `--input`과 (쓰기 작업이면) `--dry-run`. */
+/**
+ * 작업 도움말: 입력 속성마다 개별 옵션과 받는 타입, 민감 필드(`secret` 등)가 있으면 숨김 입력과 `--input -` 안내, 그리고
+ * `--input`과 (쓰기 작업이면) `--dry-run`.
+ */
 export function formatOperationHelp(spec: OperationSpec): string {
-	const inputs = propertyNames(spec.input).map((name) => inputRow(spec.input, name));
+	const names = propertyNames(spec.input);
+	const inputs = names.map((name) => inputRow(spec.input, name));
+	const secrets = names.filter((name) => secretFields.has(name)).map((name): Row => [`--${name}`, secretNote]);
 	const options = spec.kind === "write" ? [inputOption, dryRunOption] : [inputOption];
 	const usage = `사용법: monti ${spec.name.replace(".", " ")} [options]\n${kindLabels[spec.kind]} 작업`;
 	return helpText(usage, [
 		["입력", inputs],
+		["민감 입력", secrets],
 		["옵션", options],
 	]);
 }

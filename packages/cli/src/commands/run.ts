@@ -53,18 +53,33 @@ async function dispatch(parsed: ParsedArgs, io: CliIo): Promise<void> {
 
 /**
  * 오류로 끝낼 종료 코드와 `stderr`에 쓸 메시지. CLI 오류는 그 종료 코드로, core 오류는 `[코드] 메시지`로, 그 밖의 오류(DB·파일
- * 오류 등)는 메시지만 쓰고 `1`로 끝낸다.
+ * 오류 등)와 오류 객체가 아닌 값(`throw null` 등)은 메시지만 쓰고 `1`로 끝낸다.
  */
 function describeError(error: unknown): { exitCode: number; message: string } {
 	if (error instanceof CliError) return { exitCode: error.exitCode, message: error.message };
-	const { code, message } = error as { code?: unknown; message: string };
+	const { code } = Object(error) as { code?: unknown };
+	const message = messageOf(error);
 	return { exitCode: 1, message: isErrorCode(code) ? `[${code}] ${message}` : message };
 }
 
 /**
+ * 오류의 메시지. 메시지가 비어 있으면(여러 주소에 연결하다 모두 실패한 `AggregateError` 등) 첫 하위 오류의 메시지나 오류
+ * 코드를 쓰고, 그것도 없으면(오류 객체가 아닌 값 등) 그 값을 글로 바꾼다.
+ */
+function messageOf(error: unknown): string {
+	const { message, errors, code } = Object(error) as {
+		message?: unknown;
+		errors?: { message?: unknown }[];
+		code?: unknown;
+	};
+	const text = [message, errors?.[0]?.message, code].find((part) => typeof part === "string" && part !== "");
+	return typeof text === "string" ? text : String(error);
+}
+
+/**
  * `code`가 core의 오류 코드인지. 설정 파일이 불러온 core는 CLI의 core와 다른 모듈일 수 있어, `instanceof MontiError` 대신
- * 코드로 가린다. DB 오류(`42601` 등)나 Node 오류(`ENOENT` 등)의 코드는 core 오류 코드가 아니다.
+ * 코드로 가린다. 글자가 아닌 코드나 DB 오류(`42601` 등)·Node 오류(`ENOENT` 등)의 코드는 core 오류 코드가 아니다.
  */
 function isErrorCode(code: unknown): code is ErrorCode {
-	return Object.hasOwn(errorCodes, String(code));
+	return typeof code === "string" && Object.hasOwn(errorCodes, code);
 }

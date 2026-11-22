@@ -1,7 +1,7 @@
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import type { Database, MontiConfig, Schema } from "@monti-cms/core";
+import { type Database, type MontiConfig, migrateMonti, type Schema } from "@monti-cms/core";
 import { type Kysely, sql } from "kysely";
 import { afterEach, beforeEach, expect, it } from "vitest";
 import { createTestDatabase, type TestDatabase } from "../__test__/database";
@@ -140,6 +140,7 @@ it("CLI-BOOT-6 설정 파일이나 스키마 파일에 `default` export가 없�
 
 it("CLI-BOOT-7 `MONTI_SECRET` 없이도 DB에 연결해 실행하고 끝나면 연결을 닫는다", async () => {
 	const { url, db } = await database();
+	await migrateMonti({ db, schema, config });
 
 	const used = await withMonti({ project: project(), env: { DATABASE_URL: url } }, async (context) => {
 		await context.monti.folders.create({ scope: "media", name: "사진" });
@@ -156,6 +157,7 @@ it("CLI-BOOT-7 `MONTI_SECRET` 없이도 DB에 연결해 실행하고 끝나면 �
 
 it("CLI-BOOT-8 `MONTI_SECRET`이 있으면 암호화 키 작업에 전달된다", async () => {
 	const { url, db } = await database();
+	await migrateMonti({ db, schema, config });
 	const env = { DATABASE_URL: url, MONTI_SECRET: "test-master-secret" };
 
 	await withMonti({ project: project(), env }, async ({ monti }) => {
@@ -187,6 +189,7 @@ it("CLI-BOOT-10 실행 중 오류가 나도 오류를 그대로 전달하고 DB 
 
 	// CLI-BOOT-10.1
 	await expect(running).rejects.toBe(failure);
+	// 콜백이 한 번도 쿼리하지 않아 Kysely가 연결을 열지 않았으므로, 닫힌 것은 `withDb`가 직접 닫은 pg 풀이다.
 	// CLI-BOOT-10.2
-	await expect(sql`select 1`.execute(used[0])).rejects.toThrow("destroyed");
+	await expect(sql`select 1`.execute(used[0])).rejects.toThrow("Cannot use a pool after calling end on the pool");
 });
