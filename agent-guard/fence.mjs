@@ -25,9 +25,11 @@ const SOURCE_FILE = /\.(?:[cm]?[jt]s|[jt]sx)$/;
 export const TEST_FILE = /\.(?:test|spec)\.(?:[cm]?[jt]s|[jt]sx)$|(?:^|\/)__test__\//;
 
 const ID = "[A-Z][A-Z0-9]*(?:-[A-Z][A-Z0-9]*)*-\\d+";
-const AC_HEADER = new RegExp(`^(${ID})\\s{2,}\\S`);
-const RESULT_LINE = new RegExp(`^\\s*(?:결과\\s+)?(${ID}\\.\\d+)\\s+\\S`);
-const DEFERRED = /\[보류(?::[^\]]*)?\]\s*$/;
+const AC_HEADER = new RegExp(
+	`^(?:(${ID})\\s{2,}\\S|<summary><strong><code>(${ID})<\\/code><\\/strong>\\s+\\S.*<\\/summary>\\s*$)`,
+);
+const RESULT_LINE = new RegExp(`^\\s*(?:(?:결과\\s+)?(${ID}\\.\\d+)\\s+\\S|-\\s+\`(${ID}\\.\\d+)\`\\s+\\S)`);
+const DEFERRED = /\[보류(?::[^\]]*)?\](?:<\/summary>)?\s*$/;
 const TEST_TITLE = new RegExp(`^(${ID})\\s+(\\S.*)$`, "s");
 const RESULT_COMMENT = new RegExp(`^//\\s*(${ID}\\.\\d+)\\s*$`);
 
@@ -106,12 +108,12 @@ function readAcceptance(root) {
 			const header = AC_HEADER.exec(line);
 			const result = RESULT_LINE.exec(line);
 			if (header) {
-				const [, id] = header;
+				const id = header[1] ?? header[2];
 				current = { id, at, deferred: DEFERRED.test(line), results: new Map() };
 				if (acs.has(id)) problems.push(`${at}: ${id} is already defined at ${acs.get(id).at}`);
 				else acs.set(id, current);
 			} else if (result) {
-				const [, id] = result;
+				const id = result[1] ?? result[2];
 				if (!current) problems.push(`${at}: ${id} is not under an acceptance condition`);
 				else if (!id.startsWith(`${current.id}.`)) problems.push(`${at}: ${id} is under ${current.id}`);
 				else if (current.results.has(id))
