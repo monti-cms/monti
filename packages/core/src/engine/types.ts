@@ -232,7 +232,7 @@ export interface Plugin {
 	name: string;
 	operations?: Record<string, Record<string, Operation>>;
 	keyServices?: KeyServiceDefinition[];
-	/** Run once each, in array order, after the core's, under the plugin's `name` as scope. */
+	/** core의 단계 다음에 배열 순서대로 한 번씩, 플러그인의 `name`을 출처(`source`)로 삼아 실행한다. */
 	migrations?: Migration[];
 	onEvent?: (event: MontiEvent, ctx: { monti: Monti }) => void | Promise<void>;
 }

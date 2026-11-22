@@ -44,7 +44,7 @@ async function nameInFile(): Promise<string> {
 
 beforeEach(async () => {
 	testDb = await createTestDatabase();
-	await migrate(testDb.db, "core", [initial]);
+	await migrate(testDb.db, "@monti-cms/core", [initial]);
 	db = testDb.db as Kysely<Database>;
 	dir = await mkdtemp(path.join(tmpdir(), "monti-config-"));
 	schemaFile = path.join(dir, "monti.schema.ts");

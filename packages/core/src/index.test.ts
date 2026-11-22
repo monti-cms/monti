@@ -16,7 +16,7 @@ import { initial } from "./db/migrations/0001-initial";
 import type { Database, Migration } from "./db/types";
 import { defineWrite } from "./engine/operation";
 import type { MontiConfig, Plugin, Schema } from "./engine/types";
-import { migrate, planSchemaDiff, snapshotOf, specOf, startMonti } from "./index";
+import { coreMigrations, migrate, planSchemaDiff, snapshotOf, specOf, startMonti } from "./index";
 
 let testDb: TestDatabase;
 let db: Kysely<Database>;
@@ -177,10 +177,10 @@ async function tagRun(input: { name: string }): Promise<{ tag: string }> {
 	return { tag: input.name };
 }
 
-/** 앱의 마이그레이션 단계가 만드는 테이블. */
-async function createNotes(appDb: Kysely<unknown>): Promise<void> {
-	await appDb.schema
-		.createTable("app_notes")
+/** 프로젝트의 마이그레이션 단계가 만드는 테이블. */
+async function createNotes(projectDb: Kysely<unknown>): Promise<void> {
+	await projectDb.schema
+		.createTable("project_notes")
 		.addColumn("id", "uuid", (column) => column.primaryKey())
 		.execute();
 }
@@ -197,8 +197,8 @@ it("START-1 시작하면 코어와 플러그인의 마이그레이션을 코어 
 
 	// START-1.1
 	expect(await recordedMigrations(testDb.db)).toEqual([
+		["@monti-cms/core", initial.name],
 		["albums", "photos"],
-		["core", initial.name],
 	]);
 	// START-1.2
 	expect(await tableExists(testDb.db, "albums_photos")).toBe(true);
@@ -304,20 +304,39 @@ it("START-9 DB 연결 없이도 코어와 플러그인의 Operation 명세를 �
 	expect(spec).toEqual(monti.spec());
 });
 
-it("START-10 공개 마이그레이션 실행기로 앱 범위의 마이그레이션 단계를 실행할 수 있다", async () => {
-	await migrate(db, "core", [initial]);
+it("START-10 공개 마이그레이션 실행기로 프로젝트 출처의 마이그레이션 단계를 실행할 수 있다", async () => {
+	await migrate(db, "@monti-cms/core", coreMigrations);
 	const step: Migration = { name: "0001-notes", up: createNotes };
 
-	await migrate(db, "app", [step]);
+	await migrate(db, "project", [step]);
 
 	// START-10.1
-	expect(await tableExists(testDb.db, "app_notes")).toBe(true);
+	expect(await tableExists(testDb.db, "project_notes")).toBe(true);
 	// START-10.2
-	expect(await recordedMigrations(testDb.db)).toContainEqual(["app", step.name]);
+	expect(await recordedMigrations(testDb.db)).toContainEqual(["project", step.name]);
+});
+
+it("START-13 공개된 코어 내장 마이그레이션 목록을 단일 롤백 트랜잭션으로 시험 실행하면 DB에 변경을 남기지 않는다", async () => {
+	const tx = await testDb.db.startTransaction().execute();
+	let foldersInside = false;
+	try {
+		for (const migration of coreMigrations) await migration.up(tx);
+		foldersInside = await tableExists(tx, "folders");
+	} finally {
+		await tx.rollback().execute();
+	}
+
+	// START-13.1
+	expect(foldersInside).toBe(true);
+	// START-13.2
+	expect({
+		folders: await tableExists(testDb.db, "folders"),
+		migrations: await tableExists(testDb.db, "migrations"),
+	}).toEqual({ folders: false, migrations: false });
 });
 
 it("START-11 빈 스냅샷과 새 스키마의 차이를 SQL로 생성해 적용하면 개발 서버 동기화와 같은 테이블과 열이 만들어진다", async () => {
-	await migrate(db, "core", [initial]);
+	await migrate(db, "@monti-cms/core", coreMigrations);
 
 	await runStatements(planSchemaDiff(snapshotOf(empty), blog));
 

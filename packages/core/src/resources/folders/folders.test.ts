@@ -25,7 +25,7 @@ function montiOf() {
 
 beforeEach(async () => {
 	testDb = await createTestDatabase();
-	await migrate(testDb.db, "core", [initial]);
+	await migrate(testDb.db, "@monti-cms/core", [initial]);
 	db = testDb.db as Kysely<Database>;
 });
 

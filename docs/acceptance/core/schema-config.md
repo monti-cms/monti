@@ -120,6 +120,17 @@
 
 </details>
 
+<details>
+<summary><strong><code>SCH-UPD-17</code></strong> 값이 들어 있는 다건 관계 필드의 대상을 바꿔도 기존 글을 정상적으로 읽고 수정·발행할 수 있다</summary>
+
+- **전제**: `config.dev`가 `true`이고 `authors`·`members` 컬렉션과 `authors`를 가리키는 다건 `relation` 필드(`contributors`)에 값이 저장된 글이 있는 `posts` 컬렉션이 적용되어 있다
+- **행동**: `contributors`의 `to`를 `members`로 바꾼 스키마로 `schema.update`를 실행한 뒤 기존 글을 조회·수정·발행한다
+- **결과**:
+  - `SCH-UPD-17.1` 기존 글 조회 결과에서 `contributors` 필드가 비어 있다
+  - `SCH-UPD-17.2` 기존 글의 다른 필드를 수정하고 발행할 수 있다
+
+</details>
+
 ### 경계 · 방어 검증
 
 <details>

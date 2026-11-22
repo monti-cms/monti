@@ -1,7 +1,7 @@
 import type { Kysely } from "kysely";
 import { migrate } from "./db/migrate";
 import { initial } from "./db/migrations/0001-initial";
-import type { Database } from "./db/types";
+import type { Database, Migration } from "./db/types";
 import { createMonti } from "./engine/engine";
 import { keyServicesOf, withPlugins } from "./engine/plugins";
 import { validSchema } from "./engine/schema-file";
@@ -97,9 +97,12 @@ export function specOf(plugins: Plugin[] = []): OperationSpec[] {
 	return specsOf(withPlugins(coreResources(plugins, undefined), plugins));
 }
 
-/** core의 단계를 `"core"` 범위로, 그다음 각 플러그인의 단계를 그 `name` 범위로 실행한다. */
+/** core에 들어 있는 마이그레이션 단계들, 실행 순서대로. `startMonti`는 이것을 `"@monti-cms/core"` 출처로 실행한다. */
+export const coreMigrations: readonly Migration[] = [initial];
+
+/** core의 단계를 `"@monti-cms/core"` 출처로, 그다음 각 플러그인의 단계를 그 `name` 출처로 실행한다. */
 async function migrateAll(db: Kysely<Database>, plugins: Plugin[]): Promise<void> {
-	await migrate(db, "core", [initial]);
+	await migrate(db, "@monti-cms/core", coreMigrations);
 	for (const plugin of plugins) {
 		if (plugin.migrations !== undefined) await migrate(db, plugin.name, plugin.migrations);
 	}

@@ -85,15 +85,15 @@ export async function tableExists(db: Kysely<unknown>, table: string): Promise<b
 	return rows[0]?.name != null;
 }
 
-/** `migrations` 테이블의 행을 `[scope, name]` 쌍으로, 코드 단위 순으로 정렬해 돌려준다. */
+/** `migrations` 테이블의 행을 `[source, name]` 쌍으로, 코드 단위 순으로 정렬해 돌려준다. */
 export async function recordedMigrations(db: Kysely<unknown>): Promise<[string, string][]> {
-	const { rows } = await sql<{ scope: string; name: string }>`
-		select scope, name from migrations
+	const { rows } = await sql<{ source: string; name: string }>`
+		select source, name from migrations
 	`.execute(db);
-	return rows.map((row): [string, string] => [row.scope, row.name]).sort(byCodeUnit);
+	return rows.map((row): [string, string] => [row.source, row.name]).sort(byCodeUnit);
 }
 
-function byCodeUnit([scopeA, nameA]: [string, string], [scopeB, nameB]: [string, string]): number {
-	if (scopeA !== scopeB) return scopeA < scopeB ? -1 : 1;
+function byCodeUnit([sourceA, nameA]: [string, string], [sourceB, nameB]: [string, string]): number {
+	if (sourceA !== sourceB) return sourceA < sourceB ? -1 : 1;
 	return nameA < nameB ? -1 : nameA > nameB ? 1 : 0;
 }

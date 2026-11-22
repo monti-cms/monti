@@ -23,7 +23,7 @@ const owner = { email: "owner@example.com", password: "correct horse battery sta
 
 beforeEach(async () => {
 	testDb = await createTestDatabase();
-	await migrate(testDb.db, "core", [initial]);
+	await migrate(testDb.db, "@monti-cms/core", [initial]);
 	db = testDb.db as Kysely<Database>;
 	monti = montiOf(db);
 	adminId = (await monti.admin.create(owner)).id;

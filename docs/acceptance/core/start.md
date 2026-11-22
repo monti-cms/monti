@@ -6,7 +6,7 @@
 |---|---|---|
 | `startMonti` | 스키마 검사 → 코어·플러그인 마이그레이션 순차 실행 → 개발 서버(`dev: true`)만 컬렉션 테이블 동기화 → `monti` 반환(`secret`은 `keys` 내부 격리, `admin`·`session`·`keys` 쓰기는 `onEvent` 미통지) | 잘못된 스키마는 마이그레이션 전 `BAD_REQUEST` |
 | `monti.spec()` · `specOf` | DB 연결 유무와 무관하게 코어 전체 및 플러그인 Operation의 이름·종류·입력 JSON Schema 명세를 돌려준다 | 중복 플러그인 경로 거절 |
-| `migrate` | 지정한 범위(`scope`)의 마이그레이션 단계를 순서대로 실행하고 `migrations` 테이블에 기록한다 | 실패한 단계 롤백 |
+| `migrate` · `coreMigrations` | 지정한 출처(`source`)의 마이그레이션 단계를 순서대로 실행해 `migrations` 테이블에 기록하고, 코어 내장 마이그레이션 목록(`coreMigrations`)을 공개한다 | 실패한 단계 롤백 |
 | `snapshotOf` · `planSchemaDiff` | 스키마의 DB 테이블·열 스냅샷을 만들고, 이전 스냅샷과 새 스키마의 차이를 개발 서버 동기화와 동일한 PostgreSQL DDL 문장 목록으로 생성한다 | 잘못된 스키마 `BAD_REQUEST` |
 
 ---
@@ -21,7 +21,7 @@
 - **전제**: 비어 있는 DB와, 코어 테이블을 참조하는 테이블을 만드는 마이그레이션 단계를 가진 플러그인이 있다
 - **행동**: 그 플러그인을 `config.plugins`에 넣고 `startMonti({ db, schema, config, schemaFile, configFile })`를 실행한다
 - **결과**:
-  - `START-1.1` `migrations`에 `"core"` 범위의 단계와 플러그인 이름 범위의 단계가 기록된다
+  - `START-1.1` `migrations`에 `"@monti-cms/core"` 출처의 단계와 플러그인 이름 출처의 단계가 기록된다
   - `START-1.2` 플러그인 테이블이 만들어져 있다
 
 </details>
@@ -99,13 +99,24 @@
 </details>
 
 <details>
-<summary><strong><code>START-10</code></strong> 공개 마이그레이션 실행기로 앱 범위의 마이그레이션 단계를 실행할 수 있다</summary>
+<summary><strong><code>START-10</code></strong> 공개 마이그레이션 실행기로 프로젝트 출처의 마이그레이션 단계를 실행할 수 있다</summary>
 
 - **전제**: 코어 마이그레이션이 적용된 DB와, 테이블을 만드는 마이그레이션 단계 하나가 있다
-- **행동**: 공개 출구에서 불러온 `migrate(db, "app", [step])`을 실행한다
+- **행동**: 공개 출구에서 불러온 `migrate(db, "project", [step])`을 실행한다
 - **결과**:
   - `START-10.1` 단계가 만든 테이블이 DB에 존재한다
-  - `START-10.2` `migrations` 테이블에 `("app", step.name)`이 기록된다
+  - `START-10.2` `migrations` 테이블에 `("project", step.name)`이 기록된다
+
+</details>
+
+<details>
+<summary><strong><code>START-13</code></strong> 공개된 코어 내장 마이그레이션 목록을 단일 롤백 트랜잭션으로 시험 실행하면 DB에 변경을 남기지 않는다</summary>
+
+- **전제**: 비어 있는 DB가 있다
+- **행동**: 단일 트랜잭션을 열어 `coreMigrations`의 각 `up(tx)`을 순서대로 실행하고 롤백한다
+- **결과**:
+  - `START-13.1` 트랜잭션 안에서 코어 고정 테이블(`folders`)이 생성되어 조회할 수 있다
+  - `START-13.2` 롤백 후 DB에 `folders`와 `migrations` 테이블이 모두 없다
 
 </details>
 

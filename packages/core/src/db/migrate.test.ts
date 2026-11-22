@@ -50,29 +50,29 @@ function failingAfterCreate(name: string): Migration {
 it("DB-MIG-1 마이그레이션 배열을 순서대로 실행한다", async () => {
 	const log: string[] = [];
 
-	await migrate(testDb.db, "core", [logged("second", log), logged("first", log)]);
+	await migrate(testDb.db, "@monti-cms/core", [logged("second", log), logged("first", log)]);
 
 	// DB-MIG-1.1
 	expect(log).toEqual(["second", "first"]);
 	// DB-MIG-1.2
 	expect(await recordedMigrations(testDb.db)).toEqual([
-		["core", "first"],
-		["core", "second"],
+		["@monti-cms/core", "first"],
+		["@monti-cms/core", "second"],
 	]);
 });
 
 it("DB-MIG-2 이미 실행된 마이그레이션은 건너뛰고 새 마이그레이션만 실행한다", async () => {
-	await migrate(testDb.db, "core", [logged("first", [])]);
+	await migrate(testDb.db, "@monti-cms/core", [logged("first", [])]);
 	const log: string[] = [];
 
-	await migrate(testDb.db, "core", [logged("first", log), logged("second", log)]);
+	await migrate(testDb.db, "@monti-cms/core", [logged("first", log), logged("second", log)]);
 
 	// DB-MIG-2.1
 	expect(log).toEqual(["second"]);
 	// DB-MIG-2.2
 	expect(await recordedMigrations(testDb.db)).toEqual([
-		["core", "first"],
-		["core", "second"],
+		["@monti-cms/core", "first"],
+		["@monti-cms/core", "second"],
 	]);
 });
 
@@ -80,7 +80,7 @@ it("DB-MIG-3 마이그레이션이 중간에 실패하면 해당 마이그레이
 	const log: string[] = [];
 	const migrations = [creating("first", "first_table", log), failingAfterCreate("second"), logged("third", log)];
 
-	const run = migrate(testDb.db, "core", migrations);
+	const run = migrate(testDb.db, "@monti-cms/core", migrations);
 
 	// DB-MIG-3.5
 	await expect(run).rejects.toThrow("두 번째 마이그레이션이 실패한다");
@@ -89,17 +89,17 @@ it("DB-MIG-3 마이그레이션이 중간에 실패하면 해당 마이그레이
 		recorded: await recordedMigrations(testDb.db),
 	};
 	// DB-MIG-3.1
-	expect(firstState).toEqual({ table: true, recorded: expect.arrayContaining([["core", "first"]]) });
+	expect(firstState).toEqual({ table: true, recorded: expect.arrayContaining([["@monti-cms/core", "first"]]) });
 	// DB-MIG-3.2
 	expect(await tableExists(testDb.db, "second_table")).toBe(false);
 	// DB-MIG-3.3
-	expect(await recordedMigrations(testDb.db)).toEqual([["core", "first"]]);
+	expect(await recordedMigrations(testDb.db)).toEqual([["@monti-cms/core", "first"]]);
 	// DB-MIG-3.4
 	expect(log).toEqual(["first"]);
 });
 
-it("DB-MIG-4 코어와 플러그인의 마이그레이션 이력을 범위별로 구분해 기록한다", async () => {
-	await migrate(testDb.db, "core", [logged("init", [])]);
+it("DB-MIG-4 코어와 플러그인의 마이그레이션 이력을 출처별로 구분해 기록한다", async () => {
+	await migrate(testDb.db, "@monti-cms/core", [logged("init", [])]);
 	const log: string[] = [];
 
 	await migrate(testDb.db, "@monti-cms/ai", [logged("init", log)]);
@@ -109,12 +109,12 @@ it("DB-MIG-4 코어와 플러그인의 마이그레이션 이력을 범위별로
 	// DB-MIG-4.2
 	expect(await recordedMigrations(testDb.db)).toEqual([
 		["@monti-cms/ai", "init"],
-		["core", "init"],
+		["@monti-cms/core", "init"],
 	]);
 });
 
 it("DB-SCH-1 첫 마이그레이션이 8개 고정 도메인 테이블을 만든다", async () => {
-	await migrate(testDb.db, "core", [initial]);
+	await migrate(testDb.db, "@monti-cms/core", [initial]);
 
 	// DB-SCH-1.1
 	expect(await columnsOf(testDb.db, "templates")).toEqual(["id", "collection", "name", "content"].sort());
@@ -137,5 +137,5 @@ it("DB-SCH-1 첫 마이그레이션이 8개 고정 도메인 테이블을 만든
 	// DB-SCH-1.8
 	expect(await columnsOf(testDb.db, "api_keys")).toEqual(["id", "service", "name", "secret", "last4"].sort());
 	// DB-SCH-1.9
-	expect(await recordedMigrations(testDb.db)).toEqual([["core", "0001-initial"]]);
+	expect(await recordedMigrations(testDb.db)).toEqual([["@monti-cms/core", "0001-initial"]]);
 });
