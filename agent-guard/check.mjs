@@ -33,6 +33,7 @@ const PROTECTED_FILES = new Set([
 	".agents/hooks.json",
 	".gemini/settings.json",
 	".secretlintrc.json",
+	"stryker.base.mjs",
 ]);
 const PROTECTED_PACKAGE_PATTERNS = [
 	/^packages\/[^/]+\/(?:biome-plugins|tests)\//,
