@@ -2,11 +2,9 @@ import { z } from "zod";
 import { isOperation } from "./operation";
 import type { OperationSpec, ResourceTree } from "./types";
 
-/** `monti.spec()` over the assembled resource tree. */
-export function specOf(tree: ResourceTree): () => OperationSpec[] {
-	return function spec() {
-		return entriesOf(tree, "");
-	};
+/** 조립한 리소스 트리에 있는 모든 Operation의 명세. `monti.spec()`과 공개 `specOf`가 함께 쓴다. */
+export function specsOf(tree: ResourceTree): OperationSpec[] {
+	return entriesOf(tree, "");
 }
 
 /**

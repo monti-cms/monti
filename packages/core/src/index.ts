@@ -1,13 +1,12 @@
 import type { Kysely } from "kysely";
-import { z } from "zod";
 import { migrate } from "./db/migrate";
 import { initial } from "./db/migrations/0001-initial";
 import type { Database } from "./db/types";
 import { createMonti } from "./engine/engine";
-import { MontiError } from "./engine/errors";
-import { keyServicesOf } from "./engine/plugins";
-import { schemaShape } from "./engine/schema-file";
-import type { Monti, MontiState, Plugin, Schema } from "./engine/types";
+import { keyServicesOf, withPlugins } from "./engine/plugins";
+import { validSchema } from "./engine/schema-file";
+import { specsOf } from "./engine/spec";
+import type { Monti, MontiState, OperationSpec, Plugin } from "./engine/types";
 import { admin } from "./resources/admin/admin";
 import { config } from "./resources/config/config";
 import { entries } from "./resources/entries/entries";
@@ -22,6 +21,7 @@ import { translationStatus } from "./resources/translation-status/translation-st
 import { trash } from "./resources/trash/trash";
 
 // 공개 출구: 앱(`next`, `cli`), 플러그인, 본문을 다루는 패키지가 쓰는 것.
+export { migrate } from "./db/migrate";
 export type {
 	AdminTable,
 	ApiKeysTable,
@@ -55,6 +55,9 @@ export type {
 	WriteOperation,
 } from "./engine/types";
 export { removeLooseFiles } from "./resources/media/loose-files";
+export { planSchemaDiff } from "./resources/schema/schema-diff";
+export type { SchemaSnapshot } from "./resources/schema/snapshot";
+export { snapshotOf } from "./resources/schema/snapshot";
 export type { Block, BlockDefinition, Doc, DocIssue, MarkDefinition, ValidateDocOptions } from "./rich-text/types";
 export { validateDoc } from "./rich-text/validate-doc";
 
@@ -86,16 +89,12 @@ export async function startMonti(options: StartOptions): Promise<Monti<ReturnTyp
 	return monti;
 }
 
-function validSchema(value: Schema): Schema {
-	const result = schemaShape.safeParse(value);
-	if (!result.success) {
-		throw new MontiError(
-			"BAD_REQUEST",
-			`스키마가 올바르지 않다: ${z.prettifyError(result.error)}`,
-			result.error.issues,
-		);
-	}
-	return result.data;
+/**
+ * DB 없이 core 리소스와 `plugins`의 Operation을 모은 명세를 돌려준다. 같은 플러그인으로 시작한 `monti.spec()`과 같다.
+ * 경로가 겹치는 플러그인 Operation은 `startMonti`처럼 `CONFLICT`로 거절한다.
+ */
+export function specOf(plugins: Plugin[] = []): OperationSpec[] {
+	return specsOf(withPlugins(coreResources(plugins, undefined), plugins));
 }
 
 /** core의 단계를 `"core"` 범위로, 그다음 각 플러그인의 단계를 그 `name` 범위로 실행한다. */
