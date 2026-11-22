@@ -4,7 +4,7 @@ import { MontiError } from "./errors";
 import { createEvents } from "./events";
 import { isOperation } from "./operation";
 import { withPlugins } from "./plugins";
-import { specOf } from "./spec";
+import { specsOf } from "./spec";
 import { createState } from "./state";
 import type {
 	Monti,
@@ -13,6 +13,7 @@ import type {
 	MontiState,
 	MontiWriteClient,
 	Operation,
+	OperationSpec,
 	Plugin,
 	ReadContext,
 	ResourceTree,
@@ -35,9 +36,9 @@ interface Runner {
 }
 
 /**
- * The engine over a resource tree and its plugins: `monti.<resource>.<action>(input)` runs the operation at that key
- * path. A plugin's operations join the tree and its `onEvent` subscribes to committed writes. `initial` is the schema
- * and config the operations see and the files their changes are written to.
+ * 리소스 트리와 플러그인 위의 엔진: `monti.<resource>.<action>(input)`은 그 키 경로의 Operation을 실행한다. 플러그인의
+ * Operation은 트리에 더해지고, 플러그인의 `onEvent`는 커밋된 쓰기를 구독한다. `initial`은 Operation이 보는 스키마와
+ * 설정, 그리고 그 변경을 쓸 파일이다.
  */
 export function createMonti<R extends ResourceTree>(
 	db: Kysely<Database>,
@@ -49,11 +50,14 @@ export function createMonti<R extends ResourceTree>(
 	const state = createState(initial ?? ({} as MontiState));
 	const tree = withPlugins(resources, plugins);
 	const client = buildClient(tree, "", directRunner(db, state, events.emit), true) as MontiClient<R>;
+	function spec(): OperationSpec[] {
+		return specsOf(tree);
+	}
 	const monti = Object.assign(client, {
 		onEvent: events.onEvent,
 		transaction: transactionOf<R>(db, state, tree, events.emit),
 		dryRun: dryRunOf<R>(db, state, tree),
-		spec: specOf(tree),
+		spec,
 	});
 	for (const plugin of plugins) {
 		const { onEvent } = plugin;

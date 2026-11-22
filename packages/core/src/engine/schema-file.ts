@@ -1,5 +1,6 @@
 import { writeFile } from "node:fs/promises";
 import { z } from "zod";
+import { MontiError } from "./errors";
 import type { Schema } from "./types";
 
 const fieldMeta = {
@@ -160,6 +161,19 @@ export const schemaShape: z.ZodType<Schema> = z.object({
 		.refine(fitsIdentifiers, { message: "키나 만들어질 테이블·열 이름이 UTF-8 63바이트를 넘습니다" })
 		.refine(hasRelationTargets, { message: "관계 필드의 `to`가 스키마에 없는 컬렉션입니다" }),
 });
+
+/** `schemaShape`로 검사해 모르는 키를 뺀 스키마를 돌려준다. 올바르지 않으면 `BAD_REQUEST`로 거절한다. */
+export function validSchema(value: Schema): Schema {
+	const result = schemaShape.safeParse(value);
+	if (!result.success) {
+		throw new MontiError(
+			"BAD_REQUEST",
+			`스키마가 올바르지 않다: ${z.prettifyError(result.error)}`,
+			result.error.issues,
+		);
+	}
+	return result.data;
+}
 
 /** 스키마를 `monti.schema.ts`에 모듈의 기본 내보내기로 쓴다. */
 export async function writeSchemaFile(file: string, schema: Schema): Promise<void> {

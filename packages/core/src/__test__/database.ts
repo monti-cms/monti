@@ -60,6 +60,24 @@ export async function columnsOf(db: Kysely<unknown>, table: string): Promise<str
 	return rows.map((row) => row.column_name).sort();
 }
 
+/**
+ * 테이블의 열마다 `format_type` 표기의 타입. 단일 열 외래 키가 있으면 `" references <가리키는 테이블>"`을 붙인다.
+ * 테이블이 없으면 빈 객체다.
+ */
+export async function columnDefinitionsOf(db: Kysely<unknown>, table: string): Promise<Record<string, string>> {
+	const { rows } = await sql<{ name: string; definition: string }>`
+		select a.attname as name,
+			format_type(a.atttypid, a.atttypmod) || coalesce(' references ' || fk.target, '') as definition
+		from pg_attribute a
+		left join lateral (
+			select t.relname as target from pg_constraint k join pg_class t on t.oid = k.confrelid
+			where k.conrelid = a.attrelid and k.contype = 'f' and k.conkey = array[a.attnum]
+		) fk on true
+		where a.attrelid = to_regclass(${`public.${table}`}) and a.attnum > 0 and not a.attisdropped
+	`.execute(db);
+	return Object.fromEntries(rows.map((row) => [row.name, row.definition]));
+}
+
 export async function tableExists(db: Kysely<unknown>, table: string): Promise<boolean> {
 	const { rows } = await sql<{ name: string | null }>`select to_regclass(${`public.${table}`})::text as name`.execute(
 		db,
