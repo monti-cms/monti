@@ -67,12 +67,12 @@ monti <command> [options]
 
 ### 4.2 `--dry-run`
 - `write` Operation에 `--dry-run`을 붙이면 `monti.dryRun((tx) => tx[resource][action](input))`으로 실행하고 결과 JSON을 출력한다.
-- `read` Operation에 `--dry-run`을 붙이면 사용 오류(종료 코드 `2`)로 거절한다.
+- `read` Operation이나 `--dry-run`을 지원하지 않는 내장 명령(`clean-files`, `migrate status` 등)에 `--dry-run`을 붙이면 사용 오류(종료 코드 `2`)로 거절한다.
 
 ### 4.3 출력과 종료 코드
-- **표준 출력 (`stdout`)**: 성공 시 순수 JSON만 출력한다. 반환값이 없는 명령(`keys.delete`, `session.delete`, `clean-files` 등)은 `null`을 출력하고, `config.get`처럼 직렬화할 수 없는 값(함수·순환 참조)이 섞인 객체는 순환 참조를 안전하게 끊어 직렬화 오류 없이 출력한다.
-- **표준 오류 (`stderr`)**: 오류 메시지(`[코드] 메시지`), 도움말, `migrate up` 대상 DB 정보(host·DB 이름, 비밀번호 제외)를 출력한다.
-- **오류 판별**: 플러그인·로더 경계에서 안전한 판별을 위해 `instanceof` 대신 오류 객체의 `code` 속성으로 `MontiError`를 판별한다.
+- **표준 출력 (`stdout`)**: 성공 시 순수 JSON을 출력한다(`--help`·`-h`·인자 없는 실행·`monti migrate --help`는 표준 CLI 관례대로 도움말을, `--version`·`-v`는 버전 문자열을 `stdout`에 출력). 반환값이 없는 명령(`keys.delete`, `session.delete`, `clean-files`, 변경 없는 `migrate generate` 등)은 `null`을 출력하고, `config.get`처럼 직렬화할 수 없는 값(함수·순환 참조)이 섞인 객체는 조상 경로 순환 참조만 안전하게 끊어 직렬화 가능한 중첩 값을 보존하며 출력한다.
+- **표준 오류 (`stderr`)**: 오류 메시지(코어 `ErrorCode` 5종이면 `[코드] 메시지`, 그 외 DB·파일·CLI 오류는 일반 메시지), `migrate up` 대상 DB 정보(host·DB 이름, 비밀번호 제외), `migrate generate` 변경 없음 안내를 출력한다.
+- **오류 판별**: 플러그인·로더 경계에서 안전한 판별을 위해 `instanceof` 대신 오류 객체의 `code` 속성이 코어의 `ErrorCode` 집합(`BAD_REQUEST`, `NOT_FOUND`, `CONFLICT`, `FORBIDDEN`, `UNAUTHORIZED`)에 속하는지로 `MontiError`를 판별한다.
 - **종료 코드**:
   - `0`: 성공
   - `1`: 실행 오류 (`core`가 던진 모든 `MontiError`, DB·파일·네트워크 오류)
@@ -94,7 +94,7 @@ migrations/
 ### 5.2 SQL 생성 규칙 (`core`와 단일 함수 공유)
 - `core`가 공개하는 순수 함수 `snapshotOf(schema)`와 `planSchemaDiff(prevSnapshot, nextSchema)`를 그대로 사용한다. 개발 서버의 `syncSchemaTables`와 CLI의 `migrate generate`가 **동일한 비교·판단 로직**(FK 대상 변경 시 `DROP`+`ADD`, 타입 변경 시 `castExpression` 등)을 공유한다.
 - `_snapshot.json`에는 사용자 `Schema` 원본이 아니라 DB 테이블·컬럼 스펙(`snapshotOf` 결과)을 저장해, 이후 `core` 버전이 올라가도 과거 DB 상태가 변질되지 않게 한다.
-- `prev`와 `next` 사이에 변경 SQL이 없으면 새 `.sql` 파일을 만들지 않고 `"변경 사항이 없다"`고 알린다.
+- `prev`와 `next` 사이에 변경 SQL이 없으면 새 `.sql` 파일을 만들지 않고 `stdout`에 `null`, `stderr`에 `"변경 사항이 없다"` 안내를 출력한다.
 - 파일 반영 시 `.sql` 파일을 먼저 기록한 뒤 `_snapshot.json`을 임시 파일에서 교체(원자적 rename)해 중간 중단으로 스냅샷이 깨지지 않게 한다.
 - `--dry-run`을 주면 디스크에 `.sql` 파일과 `_snapshot.json`을 쓰지 않고 `{ "sql": "..." }` JSON만 출력한다.
 
@@ -113,7 +113,7 @@ migrations/
 
 ```text
 packages/cli/src/
-├── bin.ts                      [진입점] jiti 단일 로더로 실행, process.argv·exitCode 처리
+├── bin.mjs                     [진입점] jiti 단일 로더로 실행, process.argv·exitCode·stdin·TTY 숨김 입력 처리
 ├── index.ts                    [공개 API] runCli(argv, io) — 테스트 가능한 순수 진입 함수
 │
 ├── parse/                      층 0: 인자 파싱·도움말·타입 변환
@@ -137,8 +137,8 @@ packages/cli/src/
     └── clean-files.ts          monti clean-files
 ```
 
-- **단방향 의존**: `parse/` → `migrate/` → `boot/` → `commands/` → `index.ts` → `bin.ts`.
-- **테스트 가능성**: `bin.ts`만 `process.argv`/`process.exitCode`를 만지고, 모든 명령 로직은 `runCli(argv, { stdout, stderr, stdin, env, cwd, isTTY })`로 주입받아 실제 PostgreSQL과 임시 디렉터리에서 테스트한다.
+- **단방향 의존**: `parse/` → `migrate/` → `boot/` → `commands/` → `index.ts` → `bin.mjs`.
+- **테스트 가능성**: `bin.mjs`만 `process.argv`/`process.exitCode`를 만지고, 모든 명령 로직은 `runCli(argv, { stdout, stderr, readStdin, promptSecret, env, cwd, isTTY, loader? })`로 주입받아 실제 PostgreSQL과 임시 디렉터리에서 테스트한다.
 
 ## 7. 작업 단계
 
