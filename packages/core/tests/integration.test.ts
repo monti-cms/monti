@@ -17,6 +17,7 @@ import {
 	MontiError,
 	type MontiEvent,
 	migrate,
+	migrateMonti,
 	type Plugin,
 	planSchemaDiff,
 	type ReadContext,
@@ -28,9 +29,10 @@ import {
 	type WriteContext,
 } from "../src/index";
 
-// 공통 준비: 테스트마다 새 DB와 임시 폴더를 만들어 `startMonti` 하나로 코어 리소스 전체를 올리고, 끝나면 모두 지운다.
+// 공통 준비: 테스트마다 새 DB와 임시 폴더를 만들어 `migrateMonti`로 DB를 준비하고 `startMonti`로 코어 리소스 전체를 올리고,
+// 끝나면 모두 지운다.
 
-type CoreMonti = Awaited<ReturnType<typeof startMonti>>;
+type CoreMonti = ReturnType<typeof startMonti>;
 
 /** `dryRun` 콜백이 받는 쓰기 전용 호출. `transaction` 콜백이 받는 호출도 이 쓰기들을 모두 가진다. */
 type WriteClient = Parameters<Parameters<CoreMonti["dryRun"]>[0]>[0];
@@ -86,13 +88,15 @@ async function newFiles(schema: Schema): Promise<Pick<Stack, "schemaFile" | "con
 	return { schemaFile, configFile };
 }
 
-/** 이 테스트만 쓰는 빈 DB에서 실제 앱처럼 `startMonti` 하나로 코어 리소스 전체를 올린다. */
+/** 이 테스트만 쓰는 빈 DB를 실제 앱처럼 `migrateMonti`로 준비한 뒤 `startMonti`로 코어 리소스 전체를 올린다. */
 async function boot(schema: Schema, config: Omit<MontiConfig, "name">, secret?: string): Promise<Stack> {
 	const testDb = await createTestDatabase();
 	cleanups.push(testDb.drop);
 	const db = testDb.db as Kysely<Database>;
 	const files = await newFiles(schema);
-	const monti = await startMonti({ db, schema, config: { name: SITE, ...config }, ...files, secret });
+	const options = { db, schema, config: { name: SITE, ...config } };
+	await migrateMonti(options);
+	const monti = startMonti({ ...options, ...files, secret });
 	return { db, monti, ...files };
 }
 
@@ -495,13 +499,15 @@ async function bootProduction(): Promise<Stack> {
 
 /**
  * 새 코드를 배포하듯 프로젝트 마이그레이션 전체를 다시 넘겨 바꾼 스키마의 단계만 적용하고(이미 적용한 단계는 건너뛴다), 같은
- * DB에서 바꾼 스키마 파일을 불러 운영 서버를 다시 시작한다.
+ * DB에서 바꾼 스키마 파일을 불러 `migrateMonti`로 DB를 준비한 뒤 운영 서버를 다시 시작한다.
  */
 async function evolveProduction(old: Stack): Promise<Stack> {
 	await migrate(old.db, "project", projectMigrations());
 	await writeFile(old.schemaFile, schemaText(AFTER));
 	const { db, schemaFile, configFile } = old;
-	const monti = await startMonti({ db, schema: AFTER, config: { name: SITE, dev: false }, schemaFile, configFile });
+	const options = { db, schema: AFTER, config: { name: SITE, dev: false } };
+	await migrateMonti(options);
+	const monti = startMonti({ ...options, schemaFile, configFile });
 	return { ...old, monti };
 }
 
