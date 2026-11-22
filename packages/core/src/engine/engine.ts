@@ -43,11 +43,11 @@ interface Runner {
 export function createMonti<R extends ResourceTree>(
 	db: Kysely<Database>,
 	resources: R,
-	plugins: Plugin[] = [],
-	initial?: MontiState,
+	plugins: Plugin<NoInfer<R>>[] = [],
+	initial?: MontiState<NoInfer<R>>,
 ): Monti<R> {
 	const events = createEvents();
-	const state = createState(initial ?? ({} as MontiState));
+	const state = createState((initial ?? {}) as MontiState);
 	const tree = withPlugins(resources, plugins);
 	const client = buildClient(tree, "", directRunner(db, state, events.emit), true) as MontiClient<R>;
 	function spec(): OperationSpec[] {

@@ -6,7 +6,7 @@ import type { KeyServiceDefinition, Operation, Plugin, ResourceTree } from "./ty
  * existing resource; a path that is already taken, by the core or by an earlier plugin, is rejected. `resources` is
  * left as it is.
  */
-export function withPlugins(resources: ResourceTree, plugins: Plugin[]): ResourceTree {
+export function withPlugins<R extends ResourceTree>(resources: ResourceTree, plugins: Plugin<R>[]): ResourceTree {
 	const tree: ResourceTree = { ...resources };
 	for (const plugin of plugins) {
 		for (const [resource, actions] of Object.entries(plugin.operations ?? {})) {
@@ -36,14 +36,18 @@ function addActions(
 }
 
 /** The key services every plugin registers, in plugin order. */
-export function keyServicesOf(plugins: Plugin[]): KeyServiceDefinition[] {
+export function keyServicesOf<R extends ResourceTree>(plugins: Plugin<R>[]): KeyServiceDefinition[] {
 	return plugins.filter(hasKeyServices).flatMap(keyServicesOfPlugin);
 }
 
-function hasKeyServices(plugin: Plugin): plugin is Plugin & { keyServices: KeyServiceDefinition[] } {
+function hasKeyServices<R extends ResourceTree>(
+	plugin: Plugin<R>,
+): plugin is Plugin<R> & { keyServices: KeyServiceDefinition[] } {
 	return plugin.keyServices !== undefined;
 }
 
-function keyServicesOfPlugin(plugin: Plugin & { keyServices: KeyServiceDefinition[] }): KeyServiceDefinition[] {
+function keyServicesOfPlugin<R extends ResourceTree>(
+	plugin: Plugin<R> & { keyServices: KeyServiceDefinition[] },
+): KeyServiceDefinition[] {
 	return plugin.keyServices;
 }

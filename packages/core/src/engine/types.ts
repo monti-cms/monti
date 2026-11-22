@@ -78,7 +78,7 @@ interface ConditionalFieldSchema extends FieldMeta {
 export type FieldSchema = ValueFieldSchema | ConditionalFieldSchema;
 
 /** The site settings (`monti.config.ts`). */
-export interface MontiConfig {
+export interface MontiConfig<R extends ResourceTree = Record<never, never>> {
 	name: string;
 	/** Whether this is a dev server: only a dev server changes the schema and the config. */
 	dev?: boolean;
@@ -89,7 +89,7 @@ export interface MontiConfig {
 	/** Where the media files live; without it the media resource is refused. */
 	storage?: StorageAdapter;
 	/** The server plugins, in the order their migrations run. */
-	plugins?: Plugin[];
+	plugins?: Plugin<R>[];
 }
 
 /**
@@ -111,9 +111,9 @@ export interface StorageAdapter {
 }
 
 /** The schema and config the engine starts with, and the files it writes their changes to. */
-export interface MontiState {
+export interface MontiState<R extends ResourceTree = Record<never, never>> {
 	schema: Schema;
-	config: MontiConfig;
+	config: MontiConfig<R>;
 	schemaFile: string;
 	configFile: string;
 }
@@ -200,7 +200,7 @@ export type MontiWriteClient<R extends ResourceTree> = {
 type WriteClientNode<N> =
 	N extends WriteOperation<infer I, infer O> ? Call<I, O> : N extends ResourceTree ? MontiWriteClient<N> : never;
 
-export type Monti<R extends ResourceTree = ResourceTree> = MontiClient<R> & {
+export type Monti<R extends ResourceTree = Record<never, never>> = MontiClient<R> & {
 	/** Runs the callback's calls in one transaction; their events are sent in call order once it commits. */
 	transaction<T>(fn: (tx: MontiClient<R>) => Promise<T>): Promise<T>;
 	/** Runs the callback's writes as they would run, then rolls them back: no event is sent. */
@@ -228,11 +228,11 @@ export interface KeyServiceDefinition {
  * A server plugin: the operations it adds to the resource tree, its key services, the migrations of its tables and its
  * subscriber to committed writes.
  */
-export interface Plugin {
+export interface Plugin<R extends ResourceTree = Record<never, never>> {
 	name: string;
 	operations?: Record<string, Record<string, Operation>>;
 	keyServices?: KeyServiceDefinition[];
 	/** core의 단계 다음에 배열 순서대로 한 번씩, 플러그인의 `name`을 출처(`source`)로 삼아 실행한다. */
 	migrations?: Migration[];
-	onEvent?: (event: MontiEvent, ctx: { monti: Monti }) => void | Promise<void>;
+	onEvent?(event: MontiEvent, ctx: { monti: Monti<R> }): void | Promise<void>;
 }
