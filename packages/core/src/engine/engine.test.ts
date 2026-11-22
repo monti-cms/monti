@@ -392,7 +392,21 @@ it("ENG-TX-4 turns a PostgreSQL unique violation in a write into CONFLICT and ro
 	expect(listener).not.toHaveBeenCalled();
 });
 
-it("ENG-TX-5 fails transaction and dryRun with the CONFLICT a callback caught and ignored", async () => {
+/** 콜백이 받는 클라이언트 가운데 폴더 쓰기 두 개. */
+interface FolderWrites {
+	folders: Record<"add" | "create", (input: z.infer<typeof folderInput>) => Promise<unknown>>;
+}
+
+/** 중복으로 `CONFLICT`가 나는 `create`를 잡아 무시하고, `followUp`이면 DB 쓰기를 하나 더 이어간 뒤 정상 반환한다. */
+async function ignoreConflict(tx: FolderWrites, followUp: boolean): Promise<string> {
+	// 중복 앞의 `add`는 통지되면 안 되는 이벤트를 쌓는다.
+	await tx.folders.add({ id: randomUUID(), name: "Albums" });
+	await tx.folders.create({ id: randomUUID(), name: "Photos" }).catch(() => undefined);
+	if (followUp) await tx.folders.add({ id: randomUUID(), name: "Videos" });
+	return "done";
+}
+
+it("ENG-TX-5 콜백이 잡아 무시한 CONFLICT 뒤에 정상 반환하거나 후속 DB 쓰기를 이어가도 transaction과 dryRun은 CONFLICT로 실패한다", async () => {
 	const add = defineWrite({ input: folderInput, run: insertFolder });
 	const create = defineWrite({
 		input: folderInput,
@@ -405,26 +419,21 @@ it("ENG-TX-5 fails transaction and dryRun with the CONFLICT a callback caught an
 	const listener = vi.fn();
 	monti.onEvent(listener);
 
-	// The `add` before the duplicate queues an event that must not be sent.
-	const transaction = monti.transaction(async (tx) => {
-		await tx.folders.add({ id: randomUUID(), name: "Albums" });
-		await tx.folders.create({ id: randomUUID(), name: "Photos" }).catch(() => undefined);
-		return "done";
-	});
-	// ENG-TX-5.1
-	await expect(transaction).rejects.toBeInstanceOf(MontiError);
-	// ENG-TX-5.1
-	await expect(transaction).rejects.toMatchObject({ code: "CONFLICT" });
+	const outcomes: unknown[] = [];
+	for (const followUp of [false, true]) {
+		outcomes.push(await monti.transaction((tx) => ignoreConflict(tx, followUp)).catch((error: unknown) => error));
+		outcomes.push(await monti.dryRun((tx) => ignoreConflict(tx, followUp)).catch((error: unknown) => error));
+	}
 
-	const dryRun = monti.dryRun(async (tx) => {
-		await tx.folders.add({ id: randomUUID(), name: "Videos" });
-		await tx.folders.create({ id: randomUUID(), name: "Clips" }).catch(() => undefined);
-		return "done";
-	});
 	// ENG-TX-5.1
-	await expect(dryRun).rejects.toBeInstanceOf(MontiError);
+	expect(outcomes.every((outcome) => outcome instanceof MontiError)).toBe(true);
 	// ENG-TX-5.1
-	await expect(dryRun).rejects.toMatchObject({ code: "CONFLICT" });
+	expect(outcomes.map((outcome) => (outcome as MontiError).code)).toEqual([
+		"CONFLICT",
+		"CONFLICT",
+		"CONFLICT",
+		"CONFLICT",
+	]);
 	// ENG-TX-5.2
 	expect(await folderNames()).toEqual([]);
 	// ENG-TX-5.3

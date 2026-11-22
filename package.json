@@ -5,9 +5,9 @@
 	"scripts": {
 		"lint": "pnpm exec biome check . && pnpm lint:secrets && pnpm lint:deps && pnpm lint:unused && pnpm lint:dup",
 		"lint:secrets": "secretlint \"packages/**\" \"scripts/**\"",
-		"lint:deps": "pnpm --filter @monti-cms/core --filter @monti-cms/cli --filter @monti-cms/http --fail-if-no-match lint:deps",
-		"lint:unused": "pnpm --filter @monti-cms/core --filter @monti-cms/cli --filter @monti-cms/http --fail-if-no-match lint:unused",
-		"lint:dup": "pnpm --filter @monti-cms/core --filter @monti-cms/cli --filter @monti-cms/http --fail-if-no-match lint:dup",
+		"lint:deps": "pnpm --filter @monti-cms/core --filter @monti-cms/cli --filter @monti-cms/http --filter @monti-cms/storage-s3 --fail-if-no-match lint:deps",
+		"lint:unused": "pnpm --filter @monti-cms/core --filter @monti-cms/cli --filter @monti-cms/http --filter @monti-cms/storage-s3 --fail-if-no-match lint:unused",
+		"lint:dup": "pnpm --filter @monti-cms/core --filter @monti-cms/cli --filter @monti-cms/http --filter @monti-cms/storage-s3 --fail-if-no-match lint:dup",
 		"lint:fix": "pnpm exec biome check . --write",
 		"prepare": "husky"
 	},

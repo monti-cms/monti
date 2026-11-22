@@ -58,7 +58,11 @@ export type {
 	WriteContext,
 	WriteOperation,
 } from "./engine/types";
-export { removeLooseFiles } from "./resources/media/loose-files";
+export {
+	type RemoveLooseFilesFailure,
+	type RemoveLooseFilesResult,
+	removeLooseFiles,
+} from "./resources/media/loose-files";
 export { planSchemaDiff } from "./resources/schema/schema-diff";
 export type { SchemaSnapshot } from "./resources/schema/snapshot";
 export { snapshotOf } from "./resources/schema/snapshot";
