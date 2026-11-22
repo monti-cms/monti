@@ -7,9 +7,9 @@
 판단 기준은 하나다. **"터미널에서 Monti 프로젝트를 부팅하고 Operation·마이그레이션·정리 작업을 실행하는 데 필요한가?"**
 
 **cli가 하는 일**
-- **프로젝트 부팅**: 현재 작업 디렉터리에서 `.env.local`·`.env`(Node 내장 `process.loadEnvFile`), `monti.config.ts`, `monti.schema.ts`(`default` export)를 `jiti` 단일 로더로 읽어 PostgreSQL(`pg` + `Kysely`) 연결을 열고 `startMonti`로 엔진을 조립한 뒤, 명령이 끝나면 DB 연결을 정리한다.
+- **프로젝트 부팅**: 현재 작업 디렉터리에서 `.env.local`·`.env`(Node 24 내장 `util.parseEnv`, 우선순위 `기존 env > .env.local > .env`), `monti.config.ts`, `monti.schema.ts`(`default` export)를 `jiti` 단일 로더로 읽어 PostgreSQL(`pg` + `Kysely`) 연결을 열고 `startMonti`로 엔진을 조립한 뒤, 명령이 끝나면 DB 연결을 정리한다.
 - **범용 Operation 실행기 (`monti <resource> <action>`)**: `specOf(plugins)`로 DB 연결 없이도 도움말·명세를 보여 주고, 실행 시 코어·플러그인의 모든 Operation을 호출한다. `--input` JSON·단순 스칼라 플래그 파싱, 필수 비밀값 숨김 프롬프트, `--dry-run`, JSON 출력, 종료 코드 매핑을 담당한다.
-- **운영 마이그레이션 도구 (`monti migrate`)**: `core`가 공개하는 `snapshotOf`·`planSchemaDiff`·`migrate`를 그대로 사용해 `migrations/_snapshot.json`(DB 테이블·컬럼 스펙 스냅샷)과 현재 `monti.schema.ts`를 비교해 순수 SQL 마이그레이션 파일(`migrations/0001_<name>.sql`)을 생성하고, 운영 DB에 적용(`up`)하거나 상태(`status`)를 조회한다.
+- **운영 마이그레이션 도구 (`monti migrate`)**: `core`가 공개하는 `snapshotOf`·`planSchemaDiff`·`migrate`·`coreMigrations`를 그대로 사용해 `migrations/_snapshot.json`(DB 테이블·컬럼 스펙 스냅샷)과 현재 `monti.schema.ts`를 비교해 순수 SQL 마이그레이션 파일(`migrations/0001_<name>.sql`)을 생성하고, 운영 DB에 적용(`up`)하거나 상태(`status`)를 조회한다.
 - **임시 파일 정리 (`monti clean-files`)**: `core`의 `removeLooseFiles({ db, storage })`를 CLI에서 실행한다.
 
 **cli가 하지 않는 일**
@@ -36,13 +36,13 @@ monti <command> [options]
 | `monti spec` | **불필요** | `specOf(plugins)` 결과를 JSON으로 출력 |
 | `monti <resource> <action> [options]` | 필요 | 코어·플러그인 Operation 실행 (`--input` JSON 또는 스칼라 플래그, 쓰기 전용 `--dry-run`) |
 | `monti migrate generate [name] [--dry-run]` | **불필요** | `migrations/_snapshot.json` ↔ 현재 `monti.schema.ts` 비교 후 SQL 마이그레이션 파일 생성 및 스냅샷 갱신 (`--dry-run`이면 파일·스냅샷을 쓰지 않고 SQL만 출력) |
-| `monti migrate status` | 필요(읽기만) | DB를 변경하지 않고 `migrations` 테이블(`scope = "app"`)과 `migrations/*.sql`을 대조해 적용됨/미적용 목록 출력 (테이블이 아직 없으면 전부 미적용) |
-| `monti migrate up [--dry-run]` | 필요 | 운영 설정(`config.dev !== true`)에서 미적용 `migrations/*.sql`을 `scope = "app"`으로 실행 (`--dry-run`이면 내장 마이그레이션 적용 후 미적용 앱 SQL만 한 트랜잭션으로 시험 실행 뒤 롤백) |
+| `monti migrate status` | 필요(읽기만) | DB를 변경하지 않고 `migrations` 테이블(`source = "project"`)과 `migrations/*.sql`을 대조해 적용됨/미적용 목록 출력 (테이블이 아직 없으면 전부 미적용) |
+| `monti migrate up [--dry-run]` | 필요 | 운영 설정(`config.dev !== true`)에서 내장 마이그레이션과 미적용 `migrations/*.sql`(`source = "project"`)을 실행 (`--dry-run`이면 미적용 내장·프로젝트 마이그레이션 전체를 한 트랜잭션으로 시험 실행 뒤 롤백해 DB를 전혀 변경하지 않음) |
 | `monti clean-files` | 필요 | `removeLooseFiles({ db, storage })` 실행 (`storage` 미설정 시 오류 종료) |
 
 ## 3. 프로젝트 부팅과 환경 변수
 
-- **환경 변수 로딩**: 작업 디렉터리에 `.env.local`, `.env`가 있으면 이미 설정된 `process.env` 값을 덮어쓰지 않고 보충한다(Node 24 내장 `process.loadEnvFile` 사용).
+- **환경 변수 로딩**: 작업 디렉터리에 `.env.local`, `.env`가 있으면 Node 24 내장 `util.parseEnv`로 읽어 `기존 env > .env.local > .env` 우선순위로 합친다(파일이 없으면 기존 환경 변수를 그대로 사용한다).
   - `DATABASE_URL` (DB 연결이 필요한 명령에서 필수): PostgreSQL 연결 문자열. 없으면 오류 메시지와 함께 종료 코드 `1`로 종료한다.
   - `MONTI_SECRET` (선택): `startMonti({ ..., secret })`에 전달하는 암호화 비밀값.
 - **설정·스키마 파일 로딩**: `bin` 진입점에서 `jiti` 인스턴스 하나로 CLI와 사용자 설정 파일(`monti.config.ts`, `monti.schema.ts`의 `default` export)을 함께 로드해 모듈 이중 로딩을 방지한다. `startMonti`에는 해석된 절대 경로를 `configFile`·`schemaFile`로 전달한다.
@@ -100,12 +100,12 @@ migrations/
 
 ### 5.3 적용(`up`)과 상태(`status`)
 - `monti migrate up`:
-  - `config.dev === true`이면 실행을 거절한다.
+  - `config.dev === true`이면 `startMonti` 호출 전에 실행을 거절한다.
   - 실행 직전 대상 DB의 `host/database` 이름(비밀번호 제외)을 `stderr`에 출력해 잘못된 DB 적용을 방지한다.
-  - 먼저 `core`·플러그인 내장 마이그레이션을 적용한 뒤, `migrations/*.sql`을 파일명 오름차순으로 읽어 `core`의 공개 `migrate(db, "app", steps)`로 실행한다(`"app"`은 앱 SQL 마이그레이션 전용 범위이며, 각 `.sql` 파일은 `pg` 드라이버 위에서 바인딩 없는 `sql.raw(text)`로 한 트랜잭션 안에서 실행).
-  - `--dry-run`을 주면 내장 마이그레이션 확인 후, 미적용 `.sql` 파일 전체를 하나의 트랜잭션 안에서 순서대로 실행한 뒤 무조건 롤백한다(파일 안에 `COMMIT`이나 `CREATE INDEX CONCURRENTLY` 같은 트랜잭션 외부 구문이 없는 일반 DDL·DML을 기준으로 한다).
+  - 먼저 `core`·플러그인 내장 마이그레이션을 적용한 뒤, `migrations/*.sql`을 파일명 오름차순으로 읽어 `core`의 공개 `migrate(db, "project", steps)`로 실행한다(`"project"`은 사용자 프로젝트 SQL 마이그레이션 전용 출처이며, 각 `.sql` 파일은 `pg` 드라이버 위에서 바인딩 없는 `sql.raw(text)`로 한 트랜잭션 안에서 실행).
+  - `--dry-run`을 주면 단일 트랜잭션 안에서 아직 적용되지 않은 코어(`coreMigrations`)·플러그인·프로젝트 `.sql` 단계를 모두 순서대로 시험 실행한 뒤 무조건 롤백해, 빈 DB에서도 테이블을 하나도 남기지 않는다(파일 안에 `COMMIT`이나 `CREATE INDEX CONCURRENTLY` 같은 트랜잭션 외부 구문이 없는 일반 DDL·DML을 기준으로 한다).
 - `monti migrate status`:
-  - DB를 수정하지 않고 `migrations` 테이블의 `scope = "app"` 행만 조회해 각 `.sql` 파일의 `{ name, applied }` 목록을 JSON으로 출력한다(`migrations` 테이블이 아직 없으면 모든 파일을 `applied: false`로 반환).
+  - `startMonti`를 부르지 않고 DB 연결만 열어 `migrations` 테이블의 `source = "project"` 행만 조회해 각 `.sql` 파일의 `{ name, applied }` 목록을 JSON으로 출력한다(`migrations` 테이블이 아직 없으면 생성하지 않고 모든 파일을 `applied: false`로 반환).
 
 ## 6. 폴더 구조와 코드 규칙
 
