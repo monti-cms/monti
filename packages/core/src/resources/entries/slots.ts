@@ -1,3 +1,4 @@
+import { subfieldsOf } from "../../engine/schema-file";
 import type { CollectionSchema, FieldSchema, ValueFieldSchema } from "../../engine/types";
 
 /**
@@ -25,16 +26,11 @@ export interface ConditionalValue {
 }
 
 function branchSlots(key: string, field: ConditionalField): Slot[] {
-	return Object.entries(field.options).flatMap(([option, branch]) =>
-		Object.entries(branch.fields).map(([sub, subfield]) => ({
-			field: subfield,
-			key,
-			option,
-			sub,
-			column: `${key}__${option}__${sub}`,
-			path: `${key}.${option}.${sub}`,
-		})),
-	);
+	return subfieldsOf(key, field).map((subfield) => ({
+		...subfield,
+		key,
+		path: `${key}.${subfield.option}.${subfield.sub}`,
+	}));
 }
 
 /** 컬렉션의 모든 값 필드 자리. 조건부 필드는 분기마다 하위 필드 자리로 펼친다. */

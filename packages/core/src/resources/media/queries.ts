@@ -2,6 +2,7 @@ import type { Selectable } from "kysely";
 import type { MediaTable } from "../../db/types";
 import { MontiError } from "../../engine/errors";
 import type { ReadContext, StorageAdapter, WriteContext } from "../../engine/types";
+import { isActiveFolder } from "../folders/folders";
 
 /** What the media actions return of a media item: its row without `trashed_at`, and where its file is read from. */
 export interface MediaItem {
@@ -44,16 +45,11 @@ export async function rejectTakenKey(ctx: WriteContext, key: string): Promise<vo
 	if (taken !== undefined) throw new MontiError("CONFLICT", "A media item already has this key");
 }
 
-/** Rejects a folder that is not an active folder of the `"media"` scope. */
+/** `"media"` 범위의 활성 폴더가 아니면 거절한다. */
 export async function rejectFolder(ctx: WriteContext, folderId: string): Promise<void> {
-	const folder = await ctx.db
-		.selectFrom("folders")
-		.select("id")
-		.where("id", "=", folderId)
-		.where("scope", "=", "media")
-		.where("trashed_at", "is", null)
-		.executeTakeFirst();
-	if (folder === undefined) throw new MontiError("BAD_REQUEST", "The folder is not an active media folder");
+	if (!(await isActiveFolder(ctx, folderId, "media"))) {
+		throw new MontiError("BAD_REQUEST", "The folder is not an active media folder");
+	}
 }
 
 /** Puts `key` in `loose_files`, to be removed in 24 hours. */

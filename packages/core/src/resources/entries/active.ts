@@ -24,15 +24,18 @@ function addReferences(refs: References, path: string, table: string, ids: Itera
 	return refs;
 }
 
-/** `fields`의 미디어·관계 필드가 참조하는 대상들, 필드 경로별로. */
+/** `fields`의 미디어·관계 필드가 참조하는 대상들, 필드 경로별로. `only`를 주면 그 테이블을 가리키는 필드만 본다. */
 export function referencesIn(
 	collection: CollectionSchema,
 	fields: Record<string, unknown>,
 	refs: References = new Map(),
+	only?: string,
 ) {
 	for (const { slot, value } of valuesOf(collection, fields)) {
 		const table = targetOf(slot.field);
-		if (table !== undefined) addReferences(refs, slot.path, table, [value].flat() as string[]);
+		if (table !== undefined && (only === undefined || table === only)) {
+			addReferences(refs, slot.path, table, [value].flat() as string[]);
+		}
 	}
 	return refs;
 }
