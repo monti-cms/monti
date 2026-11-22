@@ -112,6 +112,53 @@ describe("what passes", () => {
 		passes(PASSING);
 	});
 
+	test("collapsible markdown <details> AC format with backtick result bullets passes and validates deferred markers", () => {
+		const collapsibleAc = `# Database
+
+<details>
+<summary><strong><code>DB-MIG-3</code></strong> 마이그레이션이 중간에 실패하면 롤백한다</summary>
+
+- **전제**: 마이그레이션 3개가 주어진다
+- **행동**: 실행한다
+- **결과**:
+  - \`DB-MIG-3.1\` 두 번째 테이블이 없다
+  - \`DB-MIG-3.2\` 오류가 던져진다
+
+</details>
+
+<details>
+<summary><strong><code>DB-MIG-4</code></strong> 보류된 항목 [보류: 추후 구현]</summary>
+
+- **결과**:
+  - \`DB-MIG-4.1\` 나중에 확인한다
+
+</details>
+`;
+		passes({
+			"docs/acceptance/core/db.md": collapsibleAc,
+			"packages/core/src/db/migrate.test.ts": `import { expect, it } from "vitest";
+it("DB-MIG-3 rolls back", () => {
+	// DB-MIG-3.1
+	expect(1).toBe(1);
+	// DB-MIG-3.2
+	expect(2).toBe(2);
+});
+`,
+		});
+		fails(
+			{
+				"docs/acceptance/core/db.md": collapsibleAc,
+				"packages/core/src/db/migrate.test.ts": `import { expect, it } from "vitest";
+it("DB-MIG-3 rolls back", () => {
+	// DB-MIG-3.1
+	expect(1).toBe(1);
+});
+`,
+			},
+			/DB-MIG-3\.2 is not checked/,
+		);
+	});
+
 	test("title in a template literal, a result checked by more than one expect, and async checks", () => {
 		passes(
 			files(`import { expect, it } from "vitest";
@@ -273,8 +320,8 @@ it("DB-3 second", () => {
 		}
 	});
 
-	test("a Korean title fails", () => {
-		fails(files(dbTest(ALL_CHECKS, "DB-3 실패한 마이그레이션을 되돌린다")), /must be in English/);
+	test("a Korean title passes", () => {
+		passes(files(dbTest(ALL_CHECKS, "DB-3 실패한 마이그레이션을 되돌린다")));
 	});
 
 	test("a title that is not a plain string fails", () => {
@@ -506,6 +553,8 @@ describe("suppression comments", () => {
 		"// eslint-disable-next-line no-console",
 		"/* eslint-disable */",
 		"/** @ts-expect-error */",
+		"// Stryker disable next-line all: because",
+		"/* Stryker disable all */",
 	];
 	for (const comment of COMMENTS) {
 		test(`${comment} fails in any source file`, () => {

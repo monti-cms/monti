@@ -1,0 +1,295 @@
+# `resources/media/` 인수 조건
+
+[`docs/refactor/core.md`](../../refactor/core.md) 3.5절(`StorageAdapter`), 6절(`media`, `loose_files`), 7절(`media` 리소스)의 인수 조건이다. `resources/media/uses.ts`는 `templates`·`entries` 단계에서 다룬다.
+
+| 액션 / 함수 | 하는 일 | 주요 거절 |
+|---|---|---|
+| `media.startUpload` | 새 UUID `key`로 `storage.ticket` 발급 및 `loose_files` 24시간 만료 등록 | `storage` 미설정 `BAD_REQUEST` |
+| `media.create` | `storage.stat` 확인 후 미디어 등록(`filename` 생략 시 `key`) 및 `loose_files` 제거 | `storage` 없음·없는 파일·빈 `filename`·잘못된 폴더 `BAD_REQUEST`, 중복 `key` `CONFLICT` |
+| `media.list` · `get` | 활성 미디어를 `url`과 함께 조회(`get`은 `uses` 포함, `folder_id` 생략=전체·`null`=루트) | 휴지통·미존재 `NOT_FOUND` |
+| `media.update` | 단건 메타 수정·폴더 이동·파일 교체(이전 `key` 24시간 대기 등록), 다건 폴더 일괄 이동 | 빈 `filename`·잘못된 폴더 `BAD_REQUEST`, 휴지통 포함 시 전체 롤백 `NOT_FOUND` |
+| `removeLooseFiles` | 만료된 `loose_files`만 `storage.remove`로 정리(실패 항목은 목록 유지 후 계속 진행) | Operation 아님(`transaction`·`dryRun` 밖에서 호출) |
+
+---
+
+## 1. 업로드 시작 (`startUpload`)
+
+### 핵심 요구사항
+
+<details>
+<summary><strong><code>MED-UPL-1</code></strong> 새 키로 업로드 티켓을 발급하고 임시 파일 목록에 24시간 뒤 만료로 기록한다</summary>
+
+- **전제**: `storage`가 설정되어 있고 `loose_files`가 비어 있다
+- **행동**: `mime_type`과 `size`로 `media.startUpload`를 실행한다
+- **결과**:
+  - `MED-UPL-1.1` 반환값의 `key`가 UUID 형식이다
+  - `MED-UPL-1.2` `storage.ticket`이 반환된 `key`와 `{ mime, size }`로 호출된다
+  - `MED-UPL-1.3` 반환값의 `url`과 `headers`가 `storage.ticket`의 결과와 같다
+  - `MED-UPL-1.4` `loose_files`에 해당 `key`의 행이 생긴다
+  - `MED-UPL-1.5` 실행 시각과 해당 행의 `remove_after` 차이가 24시간이다
+
+</details>
+
+### 경계 · 방어 검증
+
+<details>
+<summary><strong><code>MED-UPL-2</code></strong> 스토리지가 설정되지 않은 엔진에서는 업로드를 시작할 수 없다</summary>
+
+- **전제**: `storage` 없이 엔진이 생성되어 있고 `loose_files`가 비어 있다
+- **행동**: `mime_type`과 `size`로 `media.startUpload`를 실행한다
+- **결과**:
+  - `MED-UPL-2.1` `BAD_REQUEST` 오류를 던진다
+  - `MED-UPL-2.2` `loose_files`가 비어 있다
+
+</details>
+
+## 2. 생성 (`create`)
+
+### 핵심 요구사항
+
+<details>
+<summary><strong><code>MED-CRT-1</code></strong> 스토리지 파일을 확인해 미디어로 등록하고 임시 목록에서 해당 키만 지운다</summary>
+
+- **전제**: `storage`에 파일이 올라가 있고, 그 `key`와 다른 `key` 하나가 `loose_files`에 들어 있다
+- **행동**: 올라간 `key`와 `width`, `height`로 `media.create`를 실행한다
+- **결과**:
+  - `MED-CRT-1.1` 반환값의 `key`, `filename`(`key`), `mime_type`(`storage.stat`의 `mime`), `size`(`storage.stat`의 `size`), `folder_id`(`null`), `width`, `height`가 일치한다
+  - `MED-CRT-1.2` 반환값의 `url`이 `storage.url(key)`이다
+  - `MED-CRT-1.3` `media` 테이블에 해당 `id`, `key`, `filename`, `mime_type`, `size`, `folder_id`, `width`, `height`를 가진 행이 저장된다
+  - `MED-CRT-1.4` `loose_files`에서 등록한 `key`는 삭제된다
+  - `MED-CRT-1.5` `loose_files`에 원래 있던 다른 `key`는 남아 있다
+
+</details>
+
+<details>
+<summary><strong><code>MED-CRT-2</code></strong> 지정한 ID로 미디어를 등록한다</summary>
+
+- **전제**: `storage`에 파일이 올라가 있고 `media`가 비어 있다
+- **행동**: 미리 정한 UUID `__preset_id`와 올라간 `key`로 `media.create`를 실행한다
+- **결과**:
+  - `MED-CRT-2.1` 반환값의 `id`가 전달한 `__preset_id`이다
+  - `MED-CRT-2.2` `media` 테이블에 해당 `id`의 행이 하나 생긴다
+
+</details>
+
+### 경계 · 방어 검증
+
+<details>
+<summary><strong><code>MED-CRT-3</code></strong> 스토리지에 파일이 없는 키로는 미디어를 등록할 수 없다</summary>
+
+- **전제**: `storage`가 설정되어 있고 해당 `key`의 파일이 없으며 `media`가 비어 있다
+- **행동**: 없는 `key`로 `media.create`를 실행한다
+- **결과**:
+  - `MED-CRT-3.1` `BAD_REQUEST` 오류를 던진다
+  - `MED-CRT-3.2` `media` 테이블이 비어 있다
+
+</details>
+
+<details>
+<summary><strong><code>MED-CRT-4</code></strong> 이미 등록된 키로는 미디어를 다시 등록할 수 없다</summary>
+
+- **전제**: `storage`에 파일이 있고, 같은 `key`를 가진 휴지통(`trashed_at` 설정) `media` 행이 하나 있다
+- **행동**: 해당 `key`로 `media.create`를 실행한다
+- **결과**:
+  - `MED-CRT-4.1` `CONFLICT` 오류를 던진다
+  - `MED-CRT-4.2` `media` 테이블의 행은 원래 하나 그대로이다
+
+</details>
+
+<details>
+<summary><strong><code>MED-CRT-5</code></strong> 미디어 범위가 아닌 폴더에는 미디어를 등록할 수 없다</summary>
+
+- **전제**: `storage`에 파일이 있고, 컬렉션 `scope`의 폴더가 하나 있으며 `media`가 비어 있다
+- **행동**: 해당 컬렉션 폴더의 `id`를 `folder_id`로 주어 `media.create`를 실행한다
+- **결과**:
+  - `MED-CRT-5.1` `BAD_REQUEST` 오류를 던진다
+  - `MED-CRT-5.2` `media` 테이블이 비어 있다
+
+</details>
+
+<details>
+<summary><strong><code>MED-CRT-6</code></strong> 빈 파일 이름으로는 미디어를 등록할 수 없다</summary>
+
+- **전제**: `storage`에 파일이 올라가 있고 `media`가 비어 있다
+- **행동**: 올라간 `key`와 빈 문자열 `filename: ""`로 `media.create`를 실행한다
+- **결과**:
+  - `MED-CRT-6.1` `BAD_REQUEST` 오류를 던진다
+  - `MED-CRT-6.2` `media` 테이블이 비어 있다
+
+</details>
+
+## 3. 조회 (`list` · `get`)
+
+### 핵심 요구사항
+
+<details>
+<summary><strong><code>MED-READ-1</code></strong> 지정한 폴더 직속의 미디어만 돌려준다</summary>
+
+- **전제**: 대상 폴더 직속의 미디어, 그 하위 폴더의 미디어, `folder_id`가 `null`인 미디어가 있다
+- **행동**: `folder_id`로 대상 폴더의 `id`를 주어 `media.list`를 실행한다
+- **결과**:
+  - `MED-READ-1.1` 대상 폴더 직속의 미디어 하나만 돌려준다
+
+</details>
+
+<details>
+<summary><strong><code>MED-READ-2</code></strong> 폴더를 비워 조회하면 루트 미디어만 돌려준다</summary>
+
+- **전제**: `folder_id`가 `null`인 미디어와 폴더에 속한 미디어가 있다
+- **행동**: `folder_id: null`로 `media.list`를 실행한다
+- **결과**:
+  - `MED-READ-2.1` `folder_id`가 `null`인 미디어 하나만 돌려준다
+
+</details>
+
+<details>
+<summary><strong><code>MED-READ-3</code></strong> 조건 없이 조회하면 모든 활성 미디어를 URL과 함께 돌려준다</summary>
+
+- **전제**: `storage`가 설정되어 있고, 루트 미디어, 폴더에 속한 미디어, 휴지통에 들어가 있는(`trashed_at` 설정) 미디어가 있다
+- **행동**: 인자 없이 `media.list`를 실행한다
+- **결과**:
+  - `MED-READ-3.1` `trashed_at`이 `null`인 미디어 두 개만 돌려준다
+  - `MED-READ-3.2` 반환된 각 항목의 `url`이 `storage.url(key)`이다
+
+</details>
+
+<details>
+<summary><strong><code>MED-READ-4</code></strong> 활성 미디어 1건을 URL 및 사용처 목록과 함께 돌려준다</summary>
+
+- **전제**: `storage`가 설정되어 있고 활성 미디어가 하나 있으며 `media_uses`에 그 미디어를 가리키는 행이 하나 있다
+- **행동**: 해당 미디어의 `id`로 `media.get`을 실행한다
+- **결과**:
+  - `MED-READ-4.1` 반환값의 `id`가 해당 미디어의 `id`이다
+  - `MED-READ-4.2` 반환값의 `url`이 `storage.url(key)`이다
+  - `MED-READ-4.3` 반환값의 `uses`가 `media_uses`에 기록된 `{ source_kind, source_id, field_path }` 목록이다
+
+</details>
+
+### 경계 · 방어 검증
+
+<details>
+<summary><strong><code>MED-READ-5</code></strong> 휴지통에 있는 미디어는 조회할 수 없다</summary>
+
+- **전제**: 휴지통에 들어가 있는(`trashed_at` 설정) 미디어가 하나 있다
+- **행동**: 해당 미디어의 `id`로 `media.get`을 실행한다
+- **결과**:
+  - `MED-READ-5.1` `NOT_FOUND` 오류를 던진다
+
+</details>
+
+## 4. 수정 (`update`)
+
+### 핵심 요구사항
+
+<details>
+<summary><strong><code>MED-UPD-1</code></strong> 단건 수정에서 파일 정보만 주면 지정한 열을 바꾸고 폴더와 파일 키는 유지한다</summary>
+
+- **전제**: 폴더에 속하고 `filename`, `width`, `height`가 들어 있는 미디어가 하나 있다
+- **행동**: `id`와 새 `filename`, `width`, `height`만으로 `media.update`를 실행한다
+- **결과**:
+  - `MED-UPD-1.1` 반환값의 `filename`, `width`, `height`가 새 값이다
+  - `MED-UPD-1.2` 반환값의 `folder_id`가 원래 그대로이다
+  - `MED-UPD-1.3` 반환값의 `key`가 원래 그대로이다
+  - `MED-UPD-1.4` `media` 테이블에서 해당 행의 `filename`, `width`, `height`가 새 값이다
+
+</details>
+
+<details>
+<summary><strong><code>MED-UPD-2</code></strong> 단건 수정에서 새 파일 키로 교체하면 MIME·용량·URL을 갱신하고 이전 키를 임시 목록에 넣는다</summary>
+
+- **전제**: `storage`에 다른 `mime`과 `size`의 새 `key`가 올라가 있고 `loose_files`에 들어 있으며, 기존 미디어가 하나 있다
+- **행동**: `id`와 새 `key`로 `media.update`를 실행한다
+- **결과**:
+  - `MED-UPD-2.1` 반환값의 `key`, `mime_type`, `size`(새 파일의 `storage.stat` `mime`·`size`)가 갱신된다
+  - `MED-UPD-2.2` 반환값의 `url`이 새 `key`의 `storage.url`이다
+  - `MED-UPD-2.3` `media` 테이블에서 해당 행의 `key`, `mime_type`, `size`가 새 값으로 바뀐다
+  - `MED-UPD-2.4` `loose_files`에서 새 `key`는 삭제된다
+  - `MED-UPD-2.5` `loose_files`에 이전 `key`의 행이 생긴다
+  - `MED-UPD-2.6` 실행 시각과 이전 `key` 행의 `remove_after` 차이가 24시간이다
+
+</details>
+
+<details>
+<summary><strong><code>MED-UPD-3</code></strong> 다건 수정은 지정한 미디어들을 한 폴더로 일괄 이동한다</summary>
+
+- **전제**: 폴더에 속하지 않은 미디어 두 개와 `"media"` `scope`의 폴더가 하나 있다
+- **행동**: 두 미디어의 `ids`와 해당 `folder_id`로 `media.update`를 실행한다
+- **결과**:
+  - `MED-UPD-3.1` 반환 목록이 요청한 두 미디어의 `{ id, folder_id: 새 folder_id }`로 이루어진다
+  - `MED-UPD-3.2` `media` 테이블에서 두 행 모두 `folder_id`가 새 `folder_id`이다
+
+</details>
+
+### 경계 · 방어 검증
+
+<details>
+<summary><strong><code>MED-UPD-4</code></strong> 다건 수정 대상 중 하나라도 휴지통에 있으면 전체 이동을 취소한다</summary>
+
+- **전제**: 폴더에 속하지 않은 활성 미디어 하나, 휴지통에 들어가 있는(`trashed_at` 설정) 미디어 하나, `"media"` `scope`의 폴더가 하나 있다
+- **행동**: 두 미디어의 `ids`와 해당 `folder_id`로 `media.update`를 실행한다
+- **결과**:
+  - `MED-UPD-4.1` `NOT_FOUND` 오류를 던진다
+  - `MED-UPD-4.2` `media` 테이블에서 활성 미디어의 `folder_id`가 `null` 그대로이다
+
+</details>
+
+<details>
+<summary><strong><code>MED-UPD-5</code></strong> 단건 수정에서 파일 이름을 빈 문자열로 바꿀 수 없다</summary>
+
+- **전제**: 활성 미디어가 하나 있다
+- **행동**: 해당 미디어의 `id`와 빈 문자열 `filename: ""`로 `media.update`를 실행한다
+- **결과**:
+  - `MED-UPD-5.1` `BAD_REQUEST` 오류를 던진다
+  - `MED-UPD-5.2` `media` 테이블에서 해당 미디어의 `filename`이 원래 그대로이다
+
+</details>
+
+<details>
+<summary><strong><code>MED-UPD-6</code></strong> 단건 수정에서 바꿀 항목이 없거나 같은 파일 키를 다시 주면 기존 미디어를 그대로 돌려준다</summary>
+
+- **전제**: 활성 미디어가 하나 있다
+- **행동**: 해당 미디어의 `id`만으로 `media.update`를 실행하고, 이어서 같은 `key`로 `media.update`를 실행한다
+- **결과**:
+  - `MED-UPD-6.1` 두 호출 모두 기존 미디어와 같은 `id`, `key`, `filename`을 돌려주고 `loose_files`에 행이 생기지 않는다
+
+</details>
+
+<details>
+<summary><strong><code>MED-UPD-7</code></strong> 미디어 수정에서 미디어 범위가 아닌 폴더로 옮길 수 없고, 다건 수정에서는 폴더를 비워 루트로 옮길 수 있다</summary>
+
+- **전제**: `"media"` 폴더에 속한 활성 미디어 둘과 컬렉션 `scope`의 폴더가 하나 있다
+- **행동**: 단건·다건 `media.update`에 컬렉션 폴더의 `id`를 주고, 이어서 다건 `media.update`에 `folder_id: null`을 준다
+- **결과**:
+  - `MED-UPD-7.1` 컬렉션 폴더를 준 단건·다건 호출 모두 `BAD_REQUEST` 오류를 던진다
+  - `MED-UPD-7.2` `folder_id: null` 다건 호출은 두 미디어의 `folder_id`를 모두 `null`로 바꾼다
+
+</details>
+
+## 5. 임시 파일 정리 (`removeLooseFiles`)
+
+### 핵심 요구사항
+
+<details>
+<summary><strong><code>MED-CLN-1</code></strong> 임시 파일 정리는 삭제 대기 시각이 지난 임시 파일만 스토리지에서 지우고 목록에서 뺀다</summary>
+
+- **전제**: `storage`가 설정되어 있고, 삭제 대기 시각(`remove_after`)이 지금보다 앞선 `loose_files` 행과 뒤인 행이 하나씩 있다
+- **행동**: `removeLooseFiles({ db, storage })`를 실행한다
+- **결과**:
+  - `MED-CLN-1.1` 앞선 행의 `key`로 스토리지의 `remove`를 호출하고 `loose_files` 테이블에서 그 행이 없다
+  - `MED-CLN-1.2` 뒤인 행은 `loose_files` 테이블에 원래 그대로 있고 그 `key`로는 `remove`를 호출하지 않는다
+
+</details>
+
+### 경계 · 방어 검증
+
+<details>
+<summary><strong><code>MED-CLN-2</code></strong> 스토리지에서 지우지 못한 임시 파일은 목록에 남기고 나머지는 계속 지운다</summary>
+
+- **전제**: `storage`가 설정되어 있고, 삭제 대기 시각이 지금보다 앞선 `loose_files` 행이 둘 있으며 스토리지가 그중 한 `key`를 지울 때만 오류를 던진다
+- **행동**: `removeLooseFiles({ db, storage })`를 실행한다
+- **결과**:
+  - `MED-CLN-2.1` 지울 수 있었던 `key`의 행은 `loose_files` 테이블에서 없어진다
+  - `MED-CLN-2.2` 지우지 못한 `key`의 행은 `loose_files` 테이블에 그대로 남는다
+  - `MED-CLN-2.3` 오류를 던지지 않는다
+
+</details>

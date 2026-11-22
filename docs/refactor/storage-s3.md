@@ -12,7 +12,7 @@
 
 ## 2. 테스트 계획 전에 정할 것
 
-- 확정될 `StorageAdapter`와 기존 업로드·URL 처리의 대응.
-- `loose_files`의 실제 삭제 시점·실행 주체와 실패 처리. 이는 core의 미디어·휴지통 Operation 설계와 함께 정하며 `dryRun`에서 외부 삭제를 실행하지 않는다(T312).
+- 확정된 `StorageAdapter`(`ticket`, `stat`, `url`, `remove`)와 기존 `@monti-cms/storage-s3` 구현의 연결 및 허용 MIME·크기 정책 유지.
+- `loose_files`의 실제 삭제는 core의 `resources/media/` 함수 `removeLooseFiles({ db, storage })`가 하고 부르는 시점과 주체는 웹 쪽이다(T312). `StorageAdapter.remove`는 없는 `key`에도 오류 없이 끝나야 하므로, 공급자가 없는 객체에 오류를 주면(GCS 404, Azure Blob `BlobNotFound`, Backblaze B2 `file_not_present`) 어댑터가 그 정확한 미존재 오류만 성공으로 바꾸고 권한·인증·네트워크 오류는 그대로 올린다.
 
 기존 저장소 패키지 구현을 core 안으로 가져오거나, 저장소가 없을 때 자동으로 로컬 디스크를 사용하는 길을 만들지 않는다.

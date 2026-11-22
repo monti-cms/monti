@@ -4,11 +4,18 @@
 module.exports = {
 	forbidden: [
 		{
-			name: "layer-0-imports-no-other-folder",
-			comment: "db/ and rich-text/ import nothing from the engine, the resources, or each other.",
+			name: "rich-text-imports-no-other-folder",
+			comment: "rich-text/ (layer 0) imports nothing from db/, the engine, or the resources.",
 			severity: "error",
-			from: { path: "^src/(db|rich-text)/" },
-			to: { path: "^src/(engine|resources|db|rich-text)/", pathNot: "^src/$1/" },
+			from: { path: "^src/rich-text/" },
+			to: { path: "^src/(engine|resources|db)/" },
+		},
+		{
+			name: "db-imports-only-rich-text",
+			comment: "db/ (layer 1) imports nothing from the engine or the resources.",
+			severity: "error",
+			from: { path: "^src/db/" },
+			to: { path: "^src/(engine|resources)/" },
 		},
 		{
 			name: "engine-imports-no-resources",

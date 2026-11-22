@@ -7,13 +7,13 @@
 - `@monti-cms/blocks` 등 블록 패키지가 특정 블록의 전용 기능을 맡는다. 코드 블록도 이미지·콜아웃·탭처럼 문서의 한 블록이다.
 - 기존 core의 `code/`에 있던 Shiki 문법 색칠, 언어·테마 처리, 줄 강조·집중·접기·글자 효과·코드 줄 참조와 그 검사를 받는다. core에 `code/`나 `code-blocks/`를 다시 만들지 않는다.
 - 코드 블록 전용 속성과 표시·편집 규칙을 블록 기능에 둔다. core는 공개된 문서·블록 규격과 등록된 데이터 검증 계약을 사용하며 특정 블록의 표시 규칙을 하드코딩하지 않는다.
-- `BlockDefinition`의 데이터 계약은 core의 `rich-text/`에 남는다. `Site`·`Editor` 같은 화면 컴포넌트는 블록 정의에 담지 않는다(아래 "고칠 것"). 서버 데이터 계약과 화면 부품을 분리한다.
+- `BlockDefinition`·`MarkDefinition`의 데이터 계약은 core의 `rich-text/`에 남는다. `Site`·`Editor` 같은 화면 컴포넌트는 블록·서식 정의에 담지 않는다(아래 "고칠 것"). 서버 데이터 계약과 화면 부품을 분리한다.
 - Markdown 펜스의 읽기·쓰기는 [mdx.md](mdx.md)와 연결한다. 본문 전체를 그리는 순회·기본 렌더러는 [rendering.md](rendering.md)의 책임이다.
 - 기존 `@monti-cms/core/code` 소비자와 토큰·테마 생성 스크립트의 경로를 후속 작업에서 함께 맞춘다. 예전 파일 경로가 새 패키지 배치를 제약하지 않는다.
 
 ## 고칠 것
 
-- **블록 정의에서 화면 컴포넌트 칸을 뺀다**(소유자 판단, 2026-11-18). 지금 `packages/blocks`의 정의는 `Site`, `Editor`, `Icon`, `label`, `menu` 같은 화면 칸을 함께 담는데, 블록을 화면에 그리는 일은 사이트(블로그)가 하는 일이고 CMS가 신경 쓸 일이 아니다. CMS는 블록의 데이터 계약(`type`, `attrs`, `holds` 등)만 안다. 이관할 때 정의에서 화면 칸을 빼고, 각 정의 위에 달아 둔 `TODO(refactor)` 주석도 함께 지운다. 사이트가 컴포넌트를 렌더러와 편집기에 어떻게 연결할지는 [rendering.md](rendering.md)와 [admin.md](admin.md)의 작업에서 정한다.
+- **블록·서식 정의에서 화면 컴포넌트 칸을 뺀다**(소유자 판단, 2026-11-18). 지금 `packages/blocks`의 정의는 `Site`, `Editor`, `Icon`, `label`, `menu` 같은 화면 칸을 함께 담는데, 블록과 서식을 화면에 그리는 일은 사이트(블로그)가 하는 일이고 CMS가 신경 쓸 일이 아니다. CMS는 데이터 계약(`type`, `attrs`, `holds`, `children` 등)만 안다. 이관할 때 정의에서 화면 칸을 빼고, 각 정의 위에 달아 둔 `TODO(refactor)` 주석도 함께 지운다. 사이트가 컴포넌트를 렌더러와 편집기에 어떻게 연결할지는 [rendering.md](rendering.md)와 [admin.md](admin.md)의 작업에서 정한다.
 
 ## 2. 이 패키지의 테스트 계획 전에 정할 것
 

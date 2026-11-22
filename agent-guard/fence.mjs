@@ -24,13 +24,14 @@ export const CORE_SRC = "packages/core/src";
 const SOURCE_FILE = /\.(?:[cm]?[jt]s|[jt]sx)$/;
 export const TEST_FILE = /\.(?:test|spec)\.(?:[cm]?[jt]s|[jt]sx)$|(?:^|\/)__test__\//;
 
-const ID = "[A-Z][A-Z0-9]*-\\d+";
-const AC_HEADER = new RegExp(`^(${ID})\\s{2,}\\S`);
-const RESULT_LINE = new RegExp(`^\\s*(?:결과\\s+)?(${ID}\\.\\d+)\\s+\\S`);
-const DEFERRED = /\[보류(?::[^\]]*)?\]\s*$/;
+const ID = "[A-Z][A-Z0-9]*(?:-[A-Z][A-Z0-9]*)*-\\d+";
+const AC_HEADER = new RegExp(
+	`^(?:(${ID})\\s{2,}\\S|<summary><strong><code>(${ID})<\\/code><\\/strong>\\s+\\S.*<\\/summary>\\s*$)`,
+);
+const RESULT_LINE = new RegExp(`^\\s*(?:(?:결과\\s+)?(${ID}\\.\\d+)\\s+\\S|-\\s+\`(${ID}\\.\\d+)\`\\s+\\S)`);
+const DEFERRED = /\[보류(?::[^\]]*)?\](?:<\/summary>)?\s*$/;
 const TEST_TITLE = new RegExp(`^(${ID})\\s+(\\S.*)$`, "s");
 const RESULT_COMMENT = new RegExp(`^//\\s*(${ID}\\.\\d+)\\s*$`);
-const HANGUL = /[ᄀ-ᇿㄱ-ㆎ가-힣]/;
 
 const TEST_ROOTS = new Set(["it", "test", "describe"]);
 const TEST_MODIFIERS = new Set(["concurrent", "sequential", "fails", "skip", "only", "todo"]);
@@ -39,7 +40,7 @@ const PARAMETERIZED = new Set(["each", "for"]);
 const BANNED_OPTIONS = new Set(["skip", "only", "todo"]);
 const BANNED_NAMES = new Set(["xit", "xtest", "xdescribe", "fit", "fdescribe"]);
 
-const SUPPRESSION = /biome-ignore|@ts-expect-error|@ts-nocheck|@ts-ignore|eslint-disable/;
+const SUPPRESSION = /biome-ignore|@ts-expect-error|@ts-nocheck|@ts-ignore|eslint-disable|Stryker\s+disable/;
 const FAKE_DATABASE = /^(?:pg-mem|pglite|@electric-sql\/pglite[\w-]*|better-sqlite3|sql\.js)(?:\/|$)/;
 const DATABASE_MODULE =
 	/^(?:pg|postgres|drizzle[\w-]*|kysely|prisma|typeorm|@prisma\/[\w-]+)(?:\/|$)|(?:^|\/)db(?:\/|\.|$)|database/i;
@@ -107,12 +108,12 @@ function readAcceptance(root) {
 			const header = AC_HEADER.exec(line);
 			const result = RESULT_LINE.exec(line);
 			if (header) {
-				const [, id] = header;
+				const id = header[1] ?? header[2];
 				current = { id, at, deferred: DEFERRED.test(line), results: new Map() };
 				if (acs.has(id)) problems.push(`${at}: ${id} is already defined at ${acs.get(id).at}`);
 				else acs.set(id, current);
 			} else if (result) {
-				const [, id] = result;
+				const id = result[1] ?? result[2];
 				if (!current) problems.push(`${at}: ${id} is not under an acceptance condition`);
 				else if (!id.startsWith(`${current.id}.`)) problems.push(`${at}: ${id} is under ${current.id}`);
 				else if (current.results.has(id))
@@ -490,7 +491,6 @@ function readTests(ts, sf, nodes, at, tests) {
 		if (title === undefined) problems.push(where("the test title must be a string"));
 		else if (!match)
 			problems.push(where(`the title "${title}" must start with an AC number and then say what is checked`));
-		else if (HANGUL.test(title)) problems.push(where(`the title "${title}" must be in English`));
 		else found.push({ node, id: match[1], at: at(node.getStart()), expects: [] });
 	}
 

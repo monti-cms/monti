@@ -666,6 +666,8 @@ describe("--pre-tool", () => {
 		const f = fixture();
 		for (const file of [
 			"packages/core/env.d.ts",
+			"packages/core/stryker.config.mjs",
+			"packages/core/vitest.config.ts",
 			"docs/acceptance/core/a.md",
 			"agent-guard/check.mjs",
 			".secretlintrc.json",

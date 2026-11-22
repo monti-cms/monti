@@ -21,7 +21,7 @@
 ## 3. 제안 검증·승인
 
 - 조회는 공개 Operation을 직접 호출한다. 쓰기 제안은 core의 `dryRun`으로 동일 `run`을 실행해 결과를 확인한 뒤 AI의 제안 데이터에 `{ operation, input, output }`을 보관한다.
-- 연속 제안은 선행 작업까지 함께 시험한다. 생성 입력의 선택적 UUID를 미리 지정해 제안과 실제 적용을 연결하며 `$item` 같은 참조 문법을 만들지 않는다.
+- 연속 제안은 선행 작업까지 함께 시험한다. LLM 도구 스키마에서는 `__preset_id`를 숨기고 AI 실행기가 `__preset_id`를 받는 Operation의 첫 `dryRun` 직전에 `randomUUID()`를 주입해 `{ operation, input, output }`을 고정 저장·재실행하며 `$item` 같은 참조 문법을 만들지 않는다(`media.startUpload`는 제안에 넣지 않고 즉시 실행·커밋하며, 제안에는 그 `key`를 쓰는 `media.create`만 담는다. 실행기는 LLM이 `__preset_id`를 보내더라도 항상 덮어쓴다).
 - 승인한 제안은 `transaction`으로 적용한다. 다중 대상의 일부 선택은 admin이 추린 ID를 입력으로 사용한다.
 - `preview`, `places`, `follows`, `each`나 별도 사전 검사 훅을 core에 되살리지 않는다.
 - LLM 스트리밍·실행 중단·제안 상태 알림은 AI와 서버 연결 계층이 담당한다. core에 AI 전용 `streams`, `cleanUp` 슬롯을 만들지 않는다.
