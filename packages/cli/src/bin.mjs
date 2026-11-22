@@ -75,6 +75,13 @@ async function promptSecret(label) {
 	}
 }
 
+const { loadEnv } = await jiti.import("./boot/env.ts");
+
+// 작업 디렉터리의 `.env.local`·`.env` 값 가운데 `process.env`에 없는 이름만 채워, 설정 파일도 `process.env`에서 읽게 한다.
+for (const [key, value] of Object.entries(loadEnv(process.cwd(), process.env))) {
+	if (process.env[key] === undefined && value !== undefined) process.env[key] = value;
+}
+
 const { runCli } = await jiti.import("./index.ts");
 
 process.exitCode = await runCli(process.argv.slice(2), {

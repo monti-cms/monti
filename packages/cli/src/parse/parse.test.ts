@@ -28,6 +28,13 @@ const scalarSpec: OperationSpec = {
 	},
 };
 
+/** 숫자(`number`) 속성 `width`를 받는 작업 명세. */
+const numberSpec: OperationSpec = {
+	name: "media.resize",
+	kind: "write",
+	input: { type: "object", properties: { width: { type: "number" } } },
+};
+
 /** 표준 입력을 읽지 않는 해석에 넘기는 표준 입력: 비어 있다. */
 async function noStdin(): Promise<string> {
 	return "";
@@ -79,7 +86,8 @@ it("CLI-PRS-2 `--input`으로 JSON 문자열이나 표준 입력(`--input -`)을
 });
 
 it("CLI-PRS-3 `--key value`·`--flag` 옵션을 작업 명세의 타입(글자·숫자·참거짓)에 맞게 변환한다", async () => {
-	const input = await buildOperationInput(scalarSpec, undefined, { key: "abc", width: "800", all: true }, noStdin);
+	const { flags } = parseArgs(["--all", "--key", "abc", "--width", "800"]);
+	const input = await buildOperationInput(scalarSpec, undefined, flags, noStdin);
 	// CLI-PRS-3.1
 	expect(input).toEqual({ key: "abc", width: 800, all: true });
 });
@@ -131,7 +139,7 @@ it("CLI-PRS-6 `--input`의 JSON 문법이 틀리면 거절한다", async () => {
 });
 
 it("CLI-PRS-7 숫자 옵션에 숫자가 아닌 값을 주면 거절한다", async () => {
-	const input = buildOperationInput(scalarSpec, undefined, { width: "abc" }, noStdin);
+	const input = buildOperationInput(numberSpec, undefined, { width: "abc" }, noStdin);
 	// CLI-PRS-7.1
 	await expect(input).rejects.toMatchObject({ exitCode: 2 });
 });

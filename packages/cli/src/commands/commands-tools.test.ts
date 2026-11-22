@@ -268,7 +268,9 @@ it("CLI-TLS-10 `clean-files`는 만료된 임시 파일을 저장소와 DB에서
 });
 
 it("CLI-TLS-11 `storage`가 설정되지 않았으면 `clean-files`를 거절한다", async () => {
-	const { url } = await database();
+	const { url, db } = await database();
+	// 코어 마이그레이션까지 적용한 운영 DB: 거절할 까닭이 저장소 설정 하나뿐이다.
+	await migrate(db, "@monti-cms/core", coreMigrations);
 	await writeProject(cwd);
 	const { io, stdout, stderr } = testIo(cwd, { env: { DATABASE_URL: url } });
 
@@ -323,4 +325,19 @@ export default {
 	expect(parseOutput(child.stdout)).toMatchObject({ name: "파이프" });
 	// CLI-TLS-13.3
 	expect(child.stderr).toBe("");
+}, 30_000);
+
+it("CLI-TLS-14 `bin.mjs`는 작업 디렉터리의 `.env` 값을 `process.env`에 채워 설정 파일에서도 읽히게 한다", async () => {
+	const { url } = await database();
+	await writeProject(cwd, {
+		".env": 'SITE_NAME="env-blog"\n',
+		"monti.config.ts": 'export default { name: process.env.SITE_NAME ?? "fallback" };\n',
+	});
+
+	const child = spawnSync(process.execPath, [binFile, "config", "get"], { cwd, env: childEnv(url), encoding: "utf8" });
+
+	// CLI-TLS-14.1
+	expect(child.status).toBe(0);
+	// CLI-TLS-14.2
+	expect(parseOutput(child.stdout)).toMatchObject({ name: "env-blog" });
 }, 30_000);

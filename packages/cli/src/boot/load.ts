@@ -17,8 +17,8 @@ interface LoadOptions {
 	loader?: ModuleLoader;
 }
 
-/** 기본 로더가 쓰는 jiti. 파일이 바뀌면 다시 읽도록 모듈을 캐시하지 않는다. */
-const jiti = createJiti(import.meta.url, { moduleCache: false });
+/** 기본 로더가 쓰는 jiti. */
+const jiti = createJiti(import.meta.url);
 
 /** jiti로 TypeScript 파일을 불러온다. */
 function importWithJiti(file: string): Promise<Record<string, unknown>> {
