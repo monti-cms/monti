@@ -7,7 +7,7 @@
 | `monti migrate generate` | DB 연결 없이 스냅샷과 스키마 차이로 SQL 파일을 생성하고, `--dry-run` 시 `{ sql }` JSON을, 변경 없음 시 `stdout` `null`과 `stderr` 안내를 출력한다 | 잘못된 스키마 시 실행 오류(`1`) |
 | `monti migrate up` · `status` | `up`은 대상 DB 정보(비밀번호 제외)를 `stderr`에 출력한 뒤 미적용 SQL을 적용(`--dry-run`은 빈 DB에도 무변경), `status`는 `migrations` 테이블 생성 없이 상태 JSON을 출력하며 `migrate --help`는 전체 도움말을 출력한다 | 개발 설정 `up`·SQL 오류 시 `1` |
 | `monti clean-files` | 만료된 임시 파일을 저장소와 DB에서 제거하고 `stdout`에 `null`을 출력한다 | `storage` 미설정 시 `1`, `--dry-run` 시 `2` |
-| `bin.mjs` | 실제 프로세스 진입점에서 단일 `jiti` 로더와 표준 입력(`--input -`) 파이프를 연결해 명령을 실행하고 종료 코드를 반영한다 | 오류 시 `process.exitCode` 반영 |
+| `bin.mjs` | 실제 프로세스 진입점에서 `.env.local`·`.env` 값을 `process.env`에 채우고 단일 `jiti` 로더와 표준 입력(`--input -`) 파이프를 연결해 명령을 실행한다 | 오류 시 `process.exitCode` 반영 |
 
 ---
 
@@ -182,5 +182,16 @@
   - `CLI-TLS-13.1` 자식 프로세스 종료 코드가 `0`이다
   - `CLI-TLS-13.2` `stdout`을 파싱한 JSON에 `name: "파이프"` 폴더가 들어 있다
   - `CLI-TLS-13.3` `stderr`가 비어 있다
+
+</details>
+
+<details>
+<summary><strong><code>CLI-TLS-14</code></strong> `bin.mjs`는 작업 디렉터리의 `.env` 값을 `process.env`에 채워 설정 파일에서도 읽히게 한다</summary>
+
+- **전제**: `.env`에 `SITE_NAME="env-blog"`가 적혀 있고, `monti.config.ts`가 `name: process.env.SITE_NAME ?? "fallback"`을 내보내는 프로젝트와 실제 PostgreSQL `DATABASE_URL`이 있다
+- **행동**: 자식 프로세스로 `node packages/cli/src/bin.mjs config get`을 실행한다
+- **결과**:
+  - `CLI-TLS-14.1` 자식 프로세스 종료 코드가 `0`이다
+  - `CLI-TLS-14.2` `stdout`을 파싱한 JSON의 `name`이 `"env-blog"`이다
 
 </details>
