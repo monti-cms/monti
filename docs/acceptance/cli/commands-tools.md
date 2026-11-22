@@ -6,7 +6,7 @@
 |---|---|---|
 | `monti migrate generate` | DB 연결 없이 스냅샷과 스키마 차이로 SQL 파일을 생성하고, `--dry-run` 시 `{ sql }` JSON을, 변경 없음 시 `stdout` `null`과 `stderr` 안내를 출력한다 | 잘못된 스키마 시 실행 오류(`1`) |
 | `monti migrate up` · `status` | `up`은 대상 DB 정보(비밀번호 제외)를 `stderr`에 출력한 뒤 미적용 SQL을 적용(`--dry-run`은 빈 DB에도 무변경), `status`는 `migrations` 테이블 생성 없이 상태 JSON을 출력하며 `migrate --help`는 전체 도움말을 출력한다 | 개발 설정 `up`·SQL 오류 시 `1` |
-| `monti clean-files` | 만료된 임시 파일을 저장소와 DB에서 제거하고 `stdout`에 `null`을 출력한다 | `storage` 미설정 시 `1`, `--dry-run` 시 `2` |
+| `monti clean-files` | 만료된 임시 파일을 저장소와 DB에서 제거하고 `stdout`에 `null`을 출력한다 | `storage` 미설정·일부 삭제 실패 시 `1`, `--dry-run` 시 `2` |
 | `bin.mjs` | 실제 프로세스 진입점에서 `.env.local`·`.env` 값을 `process.env`에 채우고 단일 `jiti` 로더와 표준 입력(`--input -`) 파이프를 연결해 명령을 실행한다 | 오류 시 `process.exitCode` 반영 |
 
 ---
@@ -167,6 +167,17 @@
   - `CLI-TLS-12.1` 반환 종료 코드가 `2`이다
   - `CLI-TLS-12.2` `stderr`에 오류 메시지가 출력된다
   - `CLI-TLS-12.3` `stdout`이 비어 있다
+
+</details>
+
+<details>
+<summary><strong><code>CLI-TLS-16</code></strong> `clean-files` 중 일부 임시 파일 삭제가 실패하면 지울 수 있었던 파일은 정리하고 오류 종료한다</summary>
+
+- **전제**: 만료된 `loose_files` 행이 둘 있고 그중 한 키에서만 오류를 던지는 `storage` 어댑터가 설정된 프로젝트와 실제 PostgreSQL `DATABASE_URL`이 있다
+- **행동**: `runCli(["clean-files"], io)`를 실행한다
+- **결과**:
+  - `CLI-TLS-16.1` 반환 종료 코드가 `1`이고 `stderr`에 실패 키와 오류 이유가 포함된 메시지가 출력되며 `stdout`이 비어 있다
+  - `CLI-TLS-16.2` 성공한 키는 `loose_files`에서 삭제되고 실패한 키는 `loose_files`에 그대로 남는다
 
 </details>
 

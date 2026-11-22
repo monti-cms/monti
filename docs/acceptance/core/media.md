@@ -4,11 +4,11 @@
 
 | 액션 / 함수 | 하는 일 | 주요 거절 |
 |---|---|---|
-| `media.startUpload` | 새 UUID `key`로 `storage.ticket` 발급 및 `loose_files` 24시간 만료 등록 | `storage` 미설정 `BAD_REQUEST` |
-| `media.create` | `storage.stat` 확인 후 미디어 등록(`filename` 생략 시 `key`) 및 `loose_files` 제거 | `storage` 없음·없는 파일·빈 `filename`·잘못된 폴더 `BAD_REQUEST`, 중복 `key` `CONFLICT` |
+| `media.startUpload` | 새 UUID `key`로 `storage.ticket` 발급 및 `loose_files` 24시간 만료 등록 | `storage` 미설정·`dryRun` 실행·크기 범위 초과 시 `BAD_REQUEST` |
+| `media.create` | `storage.stat` 확인 후 미디어 등록(`filename` 생략 시 `key`) 및 `loose_files` 제거 | `storage` 없음·없는 파일·크기 범위 초과·빈 `filename`·잘못된 폴더 `BAD_REQUEST`, 중복 `key`(동시 등록 포함) `CONFLICT` |
 | `media.list` · `get` | 활성 미디어를 `url`과 함께 조회(`get`은 `uses` 포함, `folder_id` 생략=전체·`null`=루트) | 휴지통·미존재 `NOT_FOUND` |
-| `media.update` | 단건 메타 수정·폴더 이동·파일 교체(이전 `key` 24시간 대기 등록), 다건 폴더 일괄 이동 | 빈 `filename`·잘못된 폴더 `BAD_REQUEST`, 휴지통 포함 시 전체 롤백 `NOT_FOUND` |
-| `removeLooseFiles` | 만료된 `loose_files`만 `storage.remove`로 정리(실패 항목은 목록 유지 후 계속 진행) | Operation 아님(`transaction`·`dryRun` 밖에서 호출) |
+| `media.update` | 단건 메타 수정·폴더 이동·파일 교체(동시 교체 시에도 이전 `key` 24시간 대기 등록), 다건 폴더 일괄 이동 | 빈 `filename`·잘못된 폴더 `BAD_REQUEST`, 휴지통 포함 시 전체 롤백 `NOT_FOUND` |
+| `removeLooseFiles` | 만료된 `loose_files`만 동시 등록과 충돌하지 않게 `storage.remove`로 정리하고 `{ removed, failed }`를 돌려준다 | Operation 아님(`transaction`·`dryRun` 밖에서 호출) |
 
 ---
 
@@ -40,6 +40,17 @@
 - **결과**:
   - `MED-UPL-2.1` `BAD_REQUEST` 오류를 던진다
   - `MED-UPL-2.2` `loose_files`가 비어 있다
+
+</details>
+
+<details>
+<summary><strong><code>MED-UPL-3</code></strong> 시험 실행(dryRun)에서는 업로드 티켓을 발급할 수 없고 등록 시험 실행은 DB를 남기지 않는다</summary>
+
+- **전제**: `storage`가 설정되어 있고 파일 하나가 올라가 있으며 `loose_files`와 `media`가 비어 있다
+- **행동**: `monti.dryRun` 안에서 `media.startUpload`를 실행하고, 이어서 `monti.dryRun` 안에서 올라간 파일로 `media.create`를 실행한다
+- **결과**:
+  - `MED-UPL-3.1` `media.startUpload`는 `BAD_REQUEST` 오류를 던지고 `storage.ticket`이 호출되지 않으며 `loose_files`가 비어 있다
+  - `MED-UPL-3.2` `media.create`는 `storage.stat`·`url`로 계산한 결과를 돌려주고 `media` 테이블은 비어 있다
 
 </details>
 
@@ -115,6 +126,28 @@
 - **결과**:
   - `MED-CRT-6.1` `BAD_REQUEST` 오류를 던진다
   - `MED-CRT-6.2` `media` 테이블이 비어 있다
+
+</details>
+
+<details>
+<summary><strong><code>MED-CRT-7</code></strong> 같은 파일 키로 동시에 미디어를 등록하면 한 건만 성공하고 나머지는 충돌로 거절된다</summary>
+
+- **전제**: `storage`에 파일이 올라가 있고 `media`가 비어 있다
+- **행동**: 같은 `key`로 `media.create` 두 건을 동시에 실행한다
+- **결과**:
+  - `MED-CRT-7.1` 한 건은 성공하고 나머지 한 건은 `CONFLICT` 오류를 던진다
+  - `MED-CRT-7.2` `media` 테이블에 해당 `key`의 행이 정확히 하나만 저장된다
+
+</details>
+
+<details>
+<summary><strong><code>MED-CRT-8</code></strong> 파일 크기가 DB 허용 범위를 벗어나면 업로드를 시작하거나 미디어를 등록할 수 없다</summary>
+
+- **전제**: `storage`에 `size`가 `2_147_483_648`인 파일이 `key`로 올라가 있고 `media`와 `loose_files`가 비어 있다
+- **행동**: `size: 2_147_483_648`로 `media.startUpload`를 실행하고, 해당 `key`로 `media.create`를 실행한다
+- **결과**:
+  - `MED-CRT-8.1` 두 호출 모두 `BAD_REQUEST` 오류를 던진다
+  - `MED-CRT-8.2` `media` 테이블과 `loose_files` 테이블이 모두 비어 있다
 
 </details>
 
@@ -265,6 +298,17 @@
 
 </details>
 
+<details>
+<summary><strong><code>MED-UPD-8</code></strong> 같은 미디어의 파일을 동시에 교체해도 먼저 교체된 중간 파일 키가 임시 목록에서 빠지지 않는다</summary>
+
+- **전제**: 기존 키를 가진 활성 미디어가 하나 있고, 스토리지에 두 개의 새 키가 올라가 있으며, 첫 번째 교체가 진행 중인 동안 두 번째 교체가 시작된다
+- **행동**: 두 새 키로 같은 미디어의 `media.update`를 동시에 실행한다
+- **결과**:
+  - `MED-UPD-8.1` 두 호출 모두 성공하고 최종 `media` 행의 `key`가 두 번째 새 키이다
+  - `MED-UPD-8.2` `loose_files` 테이블에 원래 키와 첫 번째 새 키가 모두 들어 있다
+
+</details>
+
 ## 5. 임시 파일 정리 (`removeLooseFiles`)
 
 ### 핵심 요구사항
@@ -275,21 +319,32 @@
 - **전제**: `storage`가 설정되어 있고, 삭제 대기 시각(`remove_after`)이 지금보다 앞선 `loose_files` 행과 뒤인 행이 하나씩 있다
 - **행동**: `removeLooseFiles({ db, storage })`를 실행한다
 - **결과**:
-  - `MED-CLN-1.1` 앞선 행의 `key`로 스토리지의 `remove`를 호출하고 `loose_files` 테이블에서 그 행이 없다
-  - `MED-CLN-1.2` 뒤인 행은 `loose_files` 테이블에 원래 그대로 있고 그 `key`로는 `remove`를 호출하지 않는다
+  - `MED-CLN-1.1` 앞선 행의 `key`로 스토리지의 `remove`를 호출하고 `loose_files` 테이블에서 그 행이 없으며 반환값의 `removed`에 포함된다
+  - `MED-CLN-1.2` 뒤인 행은 `loose_files` 테이블에 원래 그대로 있고 그 `key`로는 `remove`를 호출하지 않으며 반환값의 `failed`가 비어 있다
 
 </details>
 
 ### 경계 · 방어 검증
 
 <details>
-<summary><strong><code>MED-CLN-2</code></strong> 스토리지에서 지우지 못한 임시 파일은 목록에 남기고 나머지는 계속 지운다</summary>
+<summary><strong><code>MED-CLN-2</code></strong> 스토리지에서 지우지 못한 임시 파일은 목록에 남기고 실패 정보를 돌려주며 나머지는 계속 지운다</summary>
 
 - **전제**: `storage`가 설정되어 있고, 삭제 대기 시각이 지금보다 앞선 `loose_files` 행이 둘 있으며 스토리지가 그중 한 `key`를 지울 때만 오류를 던진다
 - **행동**: `removeLooseFiles({ db, storage })`를 실행한다
 - **결과**:
   - `MED-CLN-2.1` 지울 수 있었던 `key`의 행은 `loose_files` 테이블에서 없어진다
   - `MED-CLN-2.2` 지우지 못한 `key`의 행은 `loose_files` 테이블에 그대로 남는다
-  - `MED-CLN-2.3` 오류를 던지지 않는다
+  - `MED-CLN-2.3` 오류를 던지지 않고 반환값의 `removed`에 성공 키, `failed`에 실패 키가 담긴다
+
+</details>
+
+<details>
+<summary><strong><code>MED-CLN-3</code></strong> 임시 파일 정리와 미디어 등록이 같은 키로 동시에 실행되어도 등록에 성공한 파일이 스토리지에서 지워지지 않는다</summary>
+
+- **전제**: 스토리지에 두 파일(`keyA`, `keyB`)이 올라가 있고 둘 다 삭제 대기 시각이 지난 `loose_files` 행이 있다. `keyA`는 정리가 `storage.remove`를 실행하는 도중 `media.create`가 시작되고, `keyB`는 `media.create`가 `storage.stat`을 실행하는 도중 정리가 시작된다
+- **행동**: `keyA`와 `keyB` 각각에 대해 `removeLooseFiles({ db, storage })`와 `media.create`를 동시에 실행한다
+- **결과**:
+  - `MED-CLN-3.1` 정리가 먼저 잡은 `keyA`는 정리가 완료되어 `removed`에 포함되고 `loose_files`에서 삭제되며, 동시 실행된 `media.create`는 `BAD_REQUEST`로 거절되어 `media`에 저장되지 않는다
+  - `MED-CLN-3.2` 등록이 먼저 잡은 `keyB`는 정리가 건너뛰어 `storage.remove`를 호출하지 않고, `media.create`가 성공해 파일이 스토리지에 남고 `media`에 저장되며 `loose_files`에서 삭제된다
 
 </details>
