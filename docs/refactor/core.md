@@ -174,7 +174,7 @@ export interface MontiConfig {
 
 서버 플러그인(`Plugin`)은 `name`, `operations`, `keyServices`, `migrations`, `onEvent` 다섯 속성을 가진다.
 
-- **마이그레이션(`migrations`)**: 앱이 시작될 때 core(`"@monti-cms/core"`) 먼저, 그다음 플러그인(`plugin.name`) 순서로 한 번씩 실행하고 `migrations` 테이블(`(source, name)`)에 기록한다.
+- **마이그레이션(`migrations`)**: DB 준비 함수 `migrateMonti({ db, schema, config })`가 core(`"@monti-cms/core"`) 먼저, 그다음 플러그인(`plugin.name`) 순서로 한 번씩 실행하고 `migrations` 테이블(`(source, name)`)에 기록한다(`config.dev === true`이면 컬렉션 테이블까지 동기화). `startMonti`는 DB를 변경하지 않고 스키마 검사와 엔진 조립만 수행한다.
 - **DB 타입 확장**: `defineRead`·`defineWrite`에 플러그인 테이블 타입(`TTables`)을 넘기면 `ctx.db`에서 core 테이블과 함께 조회할 수 있다.
 
 ## 6. 데이터베이스와 컬렉션 테이블 구조
@@ -319,7 +319,7 @@ erDiagram
 
 ### 6.2 스키마 변경과 마이그레이션
 
-- **개발 서버 (`config.dev === true`)**: 엔진 시작 시와 `schema.update` 실행 시 현재 스키마와 DB의 컬렉션 테이블 구조를 비교해 같은 트랜잭션 안에서 테이블·컬럼·외래 키를 즉시 맞춘다(`CREATE` / `ALTER` / `DROP`). 열의 타입을 바꿀 때 `number`·`boolean`·`date` → `text`는 기존 값을 문자열로 유지하고, `text` → `number`는 숫자 형태의 값만 숫자로 바꾸고 나머지는 `NULL`로 비우며, 단건 `select` → 다건 `select`(`text[]`)는 기존 값을 1개짜리 배열로 감싸고, 다건 `select`(`text[]`) → 단건 `select`는 첫 번째 원소만 남기며, `relation` 필드의 대상 컬렉션(`to`)이 바뀌거나 호환되지 않거나 변환할 수 없는 값은 `NULL`로 비워 변환한다. 변경하지 않은 필드의 기존 값은 그대로 유지한다. 이 스키마 스냅샷·SQL diff 순수 함수(`snapshotOf`, `planSchemaDiff`)는 `index.ts`에서 공개해 개발 서버 동기화와 마이그레이션 CLI가 완전히 동일한 규칙을 공유한다.
+- **개발 서버 (`config.dev === true`)**: `migrateMonti` 실행 시와 `schema.update` 실행 시 현재 스키마와 DB의 컬렉션 테이블 구조를 비교해 같은 트랜잭션 안에서 테이블·컬럼·외래 키를 즉시 맞춘다(`CREATE` / `ALTER` / `DROP`). 열의 타입을 바꿀 때 `number`·`boolean`·`date` → `text`는 기존 값을 문자열로 유지하고, `text` → `number`는 숫자 형태의 값만 숫자로 바꾸고 나머지는 `NULL`로 비우며, 단건 `select` → 다건 `select`(`text[]`)는 기존 값을 1개짜리 배열로 감싸고, 다건 `select`(`text[]`) → 단건 `select`는 첫 번째 원소만 남기며, `relation` 필드의 대상 컬렉션(`to`)이 바뀌거나 호환되지 않거나 변환할 수 없는 값은 `NULL`로 비워 변환한다. 변경하지 않은 필드의 기존 값은 그대로 유지한다. 이 스키마 스냅샷·SQL diff 순수 함수(`snapshotOf`, `planSchemaDiff`)는 `index.ts`에서 공개해 개발 서버 동기화와 마이그레이션 CLI가 완전히 동일한 규칙을 공유한다.
 - **운영 서버 (`config.dev !== true`)**: 서버가 임의로 테이블을 추측해 바꾸지 않고 등록된 마이그레이션 단계만 순서대로 실행한다. 배포 전 마이그레이션 파일 생성과 실행은 CLI가 맡으며, 이를 위해 `index.ts`에서 `migrate`, `specOf`, `snapshotOf`, `planSchemaDiff`를 공개한다.
 
 ### 6.3 초안(`draft`)과 발행본(`published`), `slug`와 필수값(`required`)
@@ -420,7 +420,7 @@ packages/core/src/
 1. **`db/`**: 고정 테이블 마이그레이션, 마이그레이션 실행기, 컬렉션 테이블 동기화 받침.
 2. **`engine/`**: Operation 정의·실행, 트랜잭션, `dryRun`, 이벤트, 오류, 플러그인 조립.
 3. **`resources/`와 `rich-text/`**: 리소스별 Operation과 본문 검증.
-4. **공개 출구(`index.ts`)와 명세**: `startMonti`, `specOf`, `migrate`, `snapshotOf`, `planSchemaDiff`, `defineRead`·`defineWrite`, `MontiError`, `validateDoc`, `removeLooseFiles`와 Operation 명세.
+4. **공개 출구(`index.ts`)와 명세**: `startMonti`, `migrateMonti`, `coreMigrations`, `specOf`, `migrate`, `snapshotOf`, `planSchemaDiff`, `defineRead`·`defineWrite`, `MontiError`, `validateDoc`, `removeLooseFiles`와 Operation 명세.
 
 - **인수 조건(AC)**: 단계마다 `docs/acceptance/core/`에 1~2초 안에 읽히는 쉬운 문장으로 규칙 하나당 AC 하나씩 간결하게 적고 소유자의 승인을 받는다. 제목에는 오류 코드나 내부 변수명을 넣지 않는다.
 - **테스트와 검증**: 승인된 AC마다 테스트 하나를 작성하며 제목은 AC 번호로 시작하고 각 `expect` 위에 결과 번호(`// DB-3.1`) 주석을 단다. 모든 테스트는 실제 PostgreSQL에서 실행한다.

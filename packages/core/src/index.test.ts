@@ -16,7 +16,7 @@ import { initial } from "./db/migrations/0001-initial";
 import type { Database, Migration } from "./db/types";
 import { defineWrite } from "./engine/operation";
 import type { MontiConfig, Plugin, Schema } from "./engine/types";
-import { coreMigrations, migrate, planSchemaDiff, snapshotOf, specOf, startMonti } from "./index";
+import { coreMigrations, migrate, migrateMonti, planSchemaDiff, snapshotOf, specOf, startMonti } from "./index";
 
 let testDb: TestDatabase;
 let db: Kysely<Database>;
@@ -154,6 +154,12 @@ afterEach(async () => {
 	await rm(dir, { recursive: true });
 });
 
+/** `migrateMonti`로 테스트 DB를 준비한다. */
+function prepare(plugins: Plugin[], prepareSchema: Schema = schema, config: Partial<MontiConfig> = {}) {
+	return migrateMonti({ db, schema: prepareSchema, config: { name: "Monti Blog", plugins, ...config } });
+}
+
+/** `startMonti`로 엔진을 조립한다. */
 function start(plugins: Plugin[], startSchema: Schema = schema, config: Partial<MontiConfig> = {}) {
 	return startMonti({
 		db,
@@ -190,10 +196,10 @@ async function runStatements(statements: string[]): Promise<void> {
 	for (const statement of statements) await sql.raw(statement).execute(db);
 }
 
-it("START-1 시작하면 코어와 플러그인의 마이그레이션을 코어 먼저 실행한다", async () => {
+it("START-1 코어와 플러그인의 내장 마이그레이션을 코어 먼저 실행한다", async () => {
 	const plugin: Plugin = { name: "albums", migrations: [{ name: "photos", up: createPhotos }] };
 
-	await start([plugin]);
+	await prepare([plugin]);
 
 	// START-1.1
 	expect(await recordedMigrations(testDb.db)).toEqual([
@@ -207,8 +213,9 @@ it("START-1 시작하면 코어와 플러그인의 마이그레이션을 코어 
 it("START-2 `monti` 객체로 코어 리소스와 플러그인 Operation을 모두 실행할 수 있다", async () => {
 	const tag = defineWrite({ input: z.object({ name: z.string() }), run: tagRun });
 	const plugin: Plugin = { name: "albums", operations: { albums: { tag } } };
+	await prepare([plugin]);
 
-	const monti = await start([plugin]);
+	const monti = start([plugin]);
 	const folder = await monti.folders.create({ scope: "media", name: "Photos" });
 	// 플러그인 Operation은 `monti`의 타입에 없으므로 이름으로 꺼낸다.
 	const albums: { tag: (input: { name: string }) => Promise<{ tag: string }> } = Reflect.get(monti, "albums");
@@ -220,11 +227,11 @@ it("START-2 `monti` 객체로 코어 리소스와 플러그인 Operation을 모�
 	expect(output).toEqual({ tag: "Summer" });
 });
 
-it("START-3 스키마에 지원하지 않는 필드 종류가 들어 있으면 마이그레이션 전에 시작을 거절한다", async () => {
-	const started = start([], unknownType);
+it("START-3 스키마에 지원하지 않는 필드 종류가 들어 있으면 마이그레이션 전에 거절한다", async () => {
+	const migrated = prepare([], unknownType);
 
 	// START-3.1
-	await expect(started).rejects.toMatchObject({ code: "BAD_REQUEST" });
+	await expect(migrated).rejects.toMatchObject({ code: "BAD_REQUEST" });
 	// START-3.2
 	expect(await tableExists(testDb.db, "migrations")).toBe(false);
 });
@@ -233,7 +240,7 @@ it("START-4 플러그인의 키 서비스가 `keys.check`에 연결된다", asyn
 	const check = vi.fn<(secret: string) => Promise<void>>().mockResolvedValue(undefined);
 	const plugin: Plugin = { name: "mail", keyServices: [{ service: "mail", check }] };
 
-	const monti = await start([plugin]);
+	const monti = start([plugin]);
 	await monti.keys.check({ service: "mail", secret: "mail-secret-1234" });
 
 	// START-4.1
@@ -241,7 +248,7 @@ it("START-4 플러그인의 키 서비스가 `keys.check`에 연결된다", asyn
 });
 
 it("START-5 `monti` 객체의 명세에 코어의 모든 Operation이 들어 있다", async () => {
-	const monti = await start([]);
+	const monti = start([]);
 
 	const names = monti.spec().map((entry) => entry.name);
 
@@ -249,8 +256,8 @@ it("START-5 `monti` 객체의 명세에 코어의 모든 Operation이 들어 있
 	expect(names.sort()).toEqual([...coreOperations].sort());
 });
 
-it("START-6 개발 서버로 시작하면 스키마에 정의된 컬렉션 테이블을 DB에 준비한다", async () => {
-	await start([], schema, { dev: true });
+it("START-6 개발 서버에서 DB를 준비하면 스키마에 정의된 컬렉션 테이블도 함께 만든다", async () => {
+	await prepare([], schema, { dev: true });
 
 	// START-6.1
 	expect({ posts: await tableExists(testDb.db, "posts"), data: await tableExists(testDb.db, "posts_data") }).toEqual({
@@ -259,8 +266,8 @@ it("START-6 개발 서버로 시작하면 스키마에 정의된 컬렉션 테�
 	});
 });
 
-it("START-7 운영 서버로 시작하면 등록된 마이그레이션만 실행하고 컬렉션 테이블은 자동으로 만들지 않는다", async () => {
-	await start([], schema, { dev: false });
+it("START-7 운영 서버에서 DB를 준비하면 등록된 마이그레이션만 실행하고 컬렉션 테이블은 자동으로 만들지 않는다", async () => {
+	await prepare([], schema, { dev: false });
 
 	// START-7.1
 	expect({
@@ -270,8 +277,19 @@ it("START-7 운영 서버로 시작하면 등록된 마이그레이션만 실행
 	}).toEqual({ migrations: true, posts: false, data: false });
 });
 
+it("START-14 엔진 조립만 호출하면 개발 설정이어도 DB 테이블을 만들거나 바꾸지 않는다", async () => {
+	// 돌려준 값이 `Promise`라도 끝날 때까지 기다린 뒤 DB를 본다.
+	await start([], schema, { dev: true });
+
+	// START-14.1
+	expect(await tableExists(testDb.db, "migrations")).toBe(false);
+	// START-14.2
+	expect(await tableExists(testDb.db, "posts")).toBe(false);
+});
+
 it("START-8 관리자·세션·키 리소스의 쓰기는 이벤트 구독자에게 통지하지 않는다", async () => {
-	const monti = await startMonti({
+	await prepare([]);
+	const monti = startMonti({
 		db,
 		schema,
 		config: { name: "Monti Blog" },
@@ -296,7 +314,7 @@ it("START-9 DB 연결 없이도 코어와 플러그인의 Operation 명세를 �
 	const plugin: Plugin = { name: "albums", operations: { albums: { tag } } };
 
 	const spec = specOf([plugin]);
-	const monti = await start([plugin]);
+	const monti = start([plugin]);
 
 	// START-9.1
 	expect(spec.map((entry) => entry.name).sort()).toEqual([...coreOperations, "albums.tag"].sort());
@@ -380,7 +398,7 @@ it("START-11 빈 스냅샷과 새 스키마의 차이를 SQL로 생성해 적용
 });
 
 it("START-12 스키마 변경 SQL은 열 추가·타입 변환·외래 키 대상 교체·열 삭제·컬렉션 삭제를 실제 DB에서 정상 실행한다", async () => {
-	await start([], beforeChange, { dev: true });
+	await prepare([], beforeChange, { dev: true });
 	const [post, author] = [randomUUID(), randomUUID()];
 	await sql`insert into authors (id, source_locale) values (${author}, 'ko')`.execute(db);
 	await sql`insert into posts (id, source_locale) values (${post}, 'ko')`.execute(db);

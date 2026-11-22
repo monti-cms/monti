@@ -68,6 +68,9 @@ export interface StartOptions extends MontiState {
 	secret?: string;
 }
 
+/** 앱이 `migrateMonti`에 넘기는 것: DB와, 앱이 불러온 스키마와 설정. */
+export type MigrateOptions = Pick<StartOptions, "db" | "schema" | "config">;
+
 /** core의 리소스 트리. `keys`는 플러그인이 등록한 키 서비스와 암호화 비밀값을 쓴다. */
 function coreResources(plugins: Plugin[], secret: string | undefined) {
 	const keys = createKeys(keyServicesOf(plugins), secret);
@@ -75,18 +78,26 @@ function coreResources(plugins: Plugin[], secret: string | undefined) {
 }
 
 /**
- * core를 시작한다: 스키마를 검사하고, core 리소스와 `config.plugins`(`keys`에는 암호화 비밀값 `secret`)로 엔진을 조립한 뒤, core 마이그레이션과 각 플러그인의
- * 마이그레이션을 `config.plugins` 순서로 실행한다. 개발 서버(`config.dev: true`)이면 스키마의 컬렉션 테이블을 DB에
- * 맞춘다. 스키마가 올바르다고 확인되기 전에는 DB를 건드리지 않는다.
+ * core를 조립한다: 스키마를 검사하고, core 리소스와 `config.plugins`(`keys`에는 암호화 비밀값 `secret`)로 엔진을 만든다.
+ * DB는 건드리지 않는다. 테이블은 먼저 `migrateMonti`로 준비한다.
  */
-export async function startMonti(options: StartOptions): Promise<Monti<ReturnType<typeof coreResources>>> {
+export function startMonti(options: StartOptions): Monti<ReturnType<typeof coreResources>> {
 	const { db, schemaFile, configFile } = options;
 	const plugins = options.config.plugins ?? [];
 	const state = { schema: validSchema(options.schema), config: options.config, schemaFile, configFile };
-	const monti = createMonti(db, coreResources(plugins, options.secret), plugins, state);
-	await migrateAll(db, plugins);
-	if (options.config.dev === true) await db.transaction().execute((tx) => syncSchemaTables(tx, state.schema));
-	return monti;
+	return createMonti(db, coreResources(plugins, options.secret), plugins, state);
+}
+
+/**
+ * DB를 준비한다: 스키마를 검사하고, core 마이그레이션과 각 플러그인의 마이그레이션을 `config.plugins` 순서로 실행한다.
+ * 개발 서버(`config.dev: true`)이면 스키마의 컬렉션 테이블을 DB에 맞춘다. 스키마가 올바르다고 확인되기 전에는 DB를
+ * 건드리지 않는다.
+ */
+export async function migrateMonti(options: MigrateOptions): Promise<void> {
+	const { db } = options;
+	const checked = validSchema(options.schema);
+	await migrateAll(db, options.config.plugins ?? []);
+	if (options.config.dev === true) await db.transaction().execute((tx) => syncSchemaTables(tx, checked));
 }
 
 /**
@@ -97,7 +108,7 @@ export function specOf(plugins: Plugin[] = []): OperationSpec[] {
 	return specsOf(withPlugins(coreResources(plugins, undefined), plugins));
 }
 
-/** core에 들어 있는 마이그레이션 단계들, 실행 순서대로. `startMonti`는 이것을 `"@monti-cms/core"` 출처로 실행한다. */
+/** core에 들어 있는 마이그레이션 단계들, 실행 순서대로. `migrateMonti`는 이것을 `"@monti-cms/core"` 출처로 실행한다. */
 export const coreMigrations: readonly Migration[] = [initial];
 
 /** core의 단계를 `"@monti-cms/core"` 출처로, 그다음 각 플러그인의 단계를 그 `name` 출처로 실행한다. */
