@@ -19,7 +19,7 @@ const updateOneInput = z.object({
 	...dataShape,
 });
 
-const moveInput = z.object({ ids: z.array(uuidInput).nonempty(), folder_id: folderInput });
+const moveInput = z.strictObject({ ids: z.array(uuidInput).nonempty(), folder_id: folderInput });
 
 export const updateInput = z.union([updateOneInput, moveInput]);
 

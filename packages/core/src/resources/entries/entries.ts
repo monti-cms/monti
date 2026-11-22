@@ -17,7 +17,7 @@ const statusInput = z.enum(["published", "draft"]).optional();
 
 const getInput = z.union([
 	z.object({ id: uuidInput, locale: z.string().optional(), status: statusInput }),
-	z.object({ collection: z.string(), locale: z.string(), slug: z.string(), status: statusInput }),
+	z.strictObject({ collection: z.string(), locale: z.string(), slug: z.string(), status: statusInput }),
 ]);
 
 /** 한 언어의 글: 발행본, `status: "draft"`이면 작업본. */
