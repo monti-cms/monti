@@ -1,7 +1,7 @@
 import { CliUsageError } from "./error";
 
 /** 명령줄을 나눈 결과: 전역 옵션, 위치 인자(명령), 작업에 넘길 개별 옵션. */
-interface ParsedArgs {
+export interface ParsedArgs {
 	config?: string;
 	schema?: string;
 	migrations?: string;

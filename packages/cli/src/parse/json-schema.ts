@@ -2,6 +2,7 @@
 interface JsonSchema {
 	type?: unknown;
 	properties?: Record<string, JsonSchema>;
+	required?: string[];
 	anyOf?: JsonSchema[];
 	oneOf?: JsonSchema[];
 }
@@ -21,6 +22,17 @@ function propertyOf(shape: JsonSchema, name: string): JsonSchema[] {
 export function propertyNames(input: Record<string, unknown>): string[] {
 	const shapes = branchesOf(input as JsonSchema);
 	return [...new Set(shapes.flatMap((shape) => Object.keys(shape.properties ?? {})))];
+}
+
+/**
+ * 작업 입력에서 `given`이 고른 모양의 필수 속성 이름. 입력이 여러 모양(`anyOf`) 중 하나이면 `given`의 속성을 모두 받는 첫
+ * 모양을 고르고, 그런 모양이 없거나 입력이 한 모양뿐이면 입력 자체의 필수 속성이다.
+ */
+export function requiredProperties(input: Record<string, unknown>, given: Record<string, unknown>): string[] {
+	const schema = input as JsonSchema;
+	const names = Object.keys(given);
+	const shape = schema.anyOf?.find((branch) => names.every((name) => propertyOf(branch, name).length > 0)) ?? schema;
+	return shape.required ?? [];
 }
 
 /** 작업 입력의 `name` 속성이 받는 JSON 타입(`string`, `integer`, `null` 등). 여러 모양에 같은 이름이 있으면 모두 모은다. */
