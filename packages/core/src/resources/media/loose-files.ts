@@ -39,7 +39,7 @@ export async function removeLooseFiles({
 }
 
 /**
- * 키 하나를 그 키의 잠금 아래에서 지운다. 미디어 등록이 키를 잡고 있거나 그사이 행이 없어졌거나 다른 정리가 잡은 행이면
+ * 키 하나를 그 키의 잠금 아래에서 지운다. 다른 쓰기(등록·교체·삭제·정리)가 키를 잡고 있거나 그사이 행이 없어졌으면
  * 건너뛴다. 저장소 오류는 트랜잭션을 되돌려 행을 남기고 그대로 던진다.
  */
 async function removeOneLooseFile(
@@ -55,8 +55,6 @@ async function removeOneLooseFile(
 			.select("key")
 			.where("key", "=", key)
 			.where("remove_after", "<", now)
-			.forUpdate()
-			.skipLocked()
 			.executeTakeFirst();
 		if (row === undefined) return "skipped";
 		await storage.remove(key);

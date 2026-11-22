@@ -23,19 +23,28 @@ async function deleteEntries(ctx: WriteContext, table: string, ids: string[]): P
 }
 
 /**
- * 휴지통의 미디어들을 지운다. 사용처 기록과 글의 참조는 DB 외래 키가 정리하고, 파일은 지금 지울 임시 파일로 `loose_files`에
- * 올린다. 키를 정렬된 순서로 먼저 잠가 같은 키의 등록·교체·정리와 겹치지 않게 한다.
+ * 휴지통에 있는 미디어 `ids`의 저장소 키를 정렬된 순서로 잠가 같은 키의 등록·교체·정리와 겹치지 않게 한다. 한 번의 삭제가
+ * 지울 모든 키를 한꺼번에 잠가, 대상을 다른 순서로 준 동시 삭제끼리도 서로 기다리다 멈추지 않는다.
  */
-async function deleteMedia(ctx: WriteContext, ids: string[]): Promise<void> {
+async function lockTrashedMediaKeys(ctx: WriteContext, ids: string[]): Promise<void> {
 	if (ids.length === 0) return;
-	const candidates = await ctx.db
+	const rows = await ctx.db
 		.selectFrom("media")
 		.select("key")
+		.distinct()
 		.where("id", "=", anyOf(ids))
 		.where("trashed_at", "is not", null)
 		.orderBy("key", "asc")
 		.execute();
-	for (const key of new Set(candidates.map((row) => row.key))) await lockStorageKey(ctx.db, key);
+	for (const { key } of rows) await lockStorageKey(ctx.db, key);
+}
+
+/**
+ * 휴지통의 미디어들을 지운다. 사용처 기록과 글의 참조는 DB 외래 키가 정리하고, 파일은 지금 지울 임시 파일로 `loose_files`에
+ * 올린다. 키는 `deleteItems`가 먼저 잠근다.
+ */
+async function deleteMedia(ctx: WriteContext, ids: string[]): Promise<void> {
+	if (ids.length === 0) return;
 	const deleted = await ctx.db
 		.deleteFrom("media")
 		.where("id", "=", anyOf(ids))
@@ -85,7 +94,13 @@ async function targetsOf(ctx: WriteContext, input: DeleteInput): Promise<TrashTa
 /** 휴지통 항목을 함께 들어간 것과 함께 영구 삭제한다. */
 export async function deleteItems(input: DeleteInput, ctx: WriteContext): Promise<TrashRef | TrashRef[]> {
 	const targets = await targetsOf(ctx, input);
-	for (const target of targets) await deleteTree(ctx, await itemsOf(ctx, target));
+	const trees: Tree[] = [];
+	for (const target of targets) trees.push(await itemsOf(ctx, target));
+	await lockTrashedMediaKeys(
+		ctx,
+		trees.flatMap((tree) => tree.media),
+	);
+	for (const tree of trees) await deleteTree(ctx, tree);
 	const refs = targets.map(({ kind, id }) => ({ kind, id }));
 	return "id" in input ? refs[0] : refs;
 }

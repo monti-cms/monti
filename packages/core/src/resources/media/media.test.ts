@@ -528,15 +528,21 @@ it("MED-UPD-8 같은 미디어의 파일을 동시에 교체해도 먼저 교체
 
 	// 첫 교체가 미디어 행을 잡고 새 파일을 확인하는 동안 두 번째 교체가 시작되어 그 행을 기다린다.
 	const updates = [codeOf(monti.media.update({ id: row.id, key: first }))];
-	await held.reached;
-	updates.push(codeOf(monti.media.update({ id: row.id, key: second })));
-	await waitForLockWaits(1).finally(held.open);
-	const codes = await Promise.all(updates);
+	// 확인이 실패해도 문을 열고 교체들이 끝나기를 기다려, 트랜잭션이 연결을 잡은 채 남지 않게 한다.
+	try {
+		await held.reached;
+		updates.push(codeOf(monti.media.update({ id: row.id, key: second })));
+		await waitForLockWaits(1).finally(held.open);
+		const codes = await Promise.all(updates);
 
-	// MED-UPD-8.1
-	expect({ codes, key: (await mediaRow(row.id)).key }).toEqual({ codes: [null, null], key: second });
-	// MED-UPD-8.2
-	expect(await looseKeys()).toEqual(expect.arrayContaining([row.key, first]));
+		// MED-UPD-8.1
+		expect({ codes, key: (await mediaRow(row.id)).key }).toEqual({ codes: [null, null], key: second });
+		// MED-UPD-8.2
+		expect(await looseKeys()).toEqual(expect.arrayContaining([row.key, first]));
+	} finally {
+		held.open();
+		await Promise.allSettled(updates);
+	}
 });
 
 it("MED-CRT-2 registers the media with the given __preset_id", async () => {
@@ -622,37 +628,47 @@ it("MED-CLN-3 임시 파일 정리와 미디어 등록이 같은 키로 동시�
 
 	// keyB: 등록이 먼저 키를 잡고 파일을 확인하는 동안 정리가 시작된다.
 	const createB = codeOf(monti.media.create({ key: keyB }));
-	await statting.reached;
-	// keyA: 정리가 먼저 키를 잡고 파일을 지우는 동안 등록이 시작되어 그 키를 기다린다.
-	const cleanup = removeLooseFiles({ db, storage: gated });
-	await removing.reached;
-	const createA = codeOf(monti.media.create({ key: keyA }));
-	await waitForLockWaits(1).finally(removing.open);
-	const result = await cleanup;
-	const codeA = await createA;
-	statting.open();
-	await createB;
-	const stored = (await mediaRows()).map((row) => row.key);
+	const pending: Promise<unknown>[] = [createB];
+	// 확인이 실패해도 두 문을 열고 남은 실행이 끝나기를 기다려, 트랜잭션이 연결을 잡은 채 남지 않게 한다.
+	try {
+		await statting.reached;
+		// keyA: 정리가 먼저 키를 잡고 파일을 지우는 동안 등록이 시작되어 그 키를 기다린다.
+		const cleanup = removeLooseFiles({ db, storage: gated });
+		pending.push(cleanup);
+		await removing.reached;
+		const createA = codeOf(monti.media.create({ key: keyA }));
+		pending.push(createA);
+		await waitForLockWaits(1).finally(removing.open);
+		const result = await cleanup;
+		const codeA = await createA;
+		statting.open();
+		await createB;
+		const stored = (await mediaRows()).map((row) => row.key);
 
-	// MED-CLN-3.1
-	expect({
-		removed: result.removed.includes(keyA),
-		code: codeA,
-		loose: await looseFile(keyA),
-		stored: stored.includes(keyA),
-	}).toEqual({ removed: true, code: "BAD_REQUEST", loose: undefined, stored: false });
-	// MED-CLN-3.2
-	expect({
-		removeCalled: storage.removed.includes(keyB),
-		file: await storage.stat(keyB),
-		stored: stored.includes(keyB),
-		loose: await looseFile(keyB),
-		skipped: [...result.removed, ...result.failed.map((failure) => failure.key)].includes(keyB) === false,
-	}).toEqual({
-		removeCalled: false,
-		file: { mime: "image/png", size: 20 },
-		stored: true,
-		loose: undefined,
-		skipped: true,
-	});
+		// MED-CLN-3.1
+		expect({
+			removed: result.removed.includes(keyA),
+			code: codeA,
+			loose: await looseFile(keyA),
+			stored: stored.includes(keyA),
+		}).toEqual({ removed: true, code: "BAD_REQUEST", loose: undefined, stored: false });
+		// MED-CLN-3.2
+		expect({
+			removeCalled: storage.removed.includes(keyB),
+			file: await storage.stat(keyB),
+			stored: stored.includes(keyB),
+			loose: await looseFile(keyB),
+			skipped: [...result.removed, ...result.failed.map((failure) => failure.key)].includes(keyB) === false,
+		}).toEqual({
+			removeCalled: false,
+			file: { mime: "image/png", size: 20 },
+			stored: true,
+			loose: undefined,
+			skipped: true,
+		});
+	} finally {
+		removing.open();
+		statting.open();
+		await Promise.allSettled(pending);
+	}
 });

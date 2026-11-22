@@ -70,7 +70,7 @@ export async function lockActiveMedia(
 		.where("trashed_at", "is", null)
 		.forNoKeyUpdate()
 		.executeTakeFirst();
-	if (row === undefined) throw new MontiError("NOT_FOUND", "No active media item has this id");
+	if (row === undefined) throw new MontiError("NOT_FOUND", "이 id의 활성 미디어가 없다");
 	return row;
 }
 
@@ -96,10 +96,10 @@ export async function removeLooseFile(ctx: WriteContext, key: string): Promise<v
 	await ctx.db.deleteFrom("loose_files").where("key", "=", key).execute();
 }
 
-/** `keys`를 지금 지울 임시 파일로 `loose_files`에 올린다. 이미 있는 키는 지울 시각만 지금으로 당긴다. */
+/** `keys`를 지금 지울 임시 파일로 `loose_files`에 올린다. 이미 있는 키는 지울 시각을 지금으로 맞춘다. */
 export async function queueLooseFilesNow(ctx: WriteContext, keys: string[]): Promise<void> {
 	if (keys.length === 0) return;
-	const rows = [...new Set(keys)].sort().map((key) => ({ key, remove_after: sql<Date>`now()` }));
+	const rows = [...keys].sort().map((key) => ({ key, remove_after: sql<Date>`now()` }));
 	await ctx.db
 		.insertInto("loose_files")
 		.values(rows)
