@@ -23,14 +23,17 @@ function kept(slot: Slot, id: unknown, isActive: IsActive): boolean {
 	return table === undefined || isActive(table, id as string);
 }
 
-/** 자리 하나의 저장된 값. 비었거나 살아 있지 않은 참조만 남으면 undefined. */
+/**
+ * 자리 하나의 저장된 값. 비었거나 살아 있지 않은 참조만 남으면 undefined. 관계 대상(`to`)을 바꾸기 전에 저장된 `_rels`
+ * 행은 새 대상 열이 비어 있으므로(`null`) 값에 넣지 않는다.
+ */
 function storedValue(slot: Slot, stored: Stored, isActive: IsActive): unknown {
 	if (isMany(slot.field)) {
 		const column = `${targetOf(slot.field)}_id`;
 		const ids = stored.rels
 			.filter((rel) => rel.path === slot.path)
 			.map((rel) => rel[column])
-			.filter((id) => kept(slot, id, isActive));
+			.filter((id) => id !== null && kept(slot, id, isActive));
 		return ids.length > 0 ? ids : undefined;
 	}
 	const value = stored.row[slot.column];

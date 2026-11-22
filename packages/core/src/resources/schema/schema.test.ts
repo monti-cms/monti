@@ -10,6 +10,7 @@ import { initial } from "../../db/migrations/0001-initial";
 import type { Database } from "../../db/types";
 import { createMonti } from "../../engine/engine";
 import type { CollectionSchema, Schema } from "../../engine/types";
+import { entries } from "../entries/entries";
 import { schema } from "./schema";
 import { syncSchemaTables } from "./sync-tables";
 
@@ -63,11 +64,11 @@ function withCollections(collections: Record<string, CollectionSchema>): Schema 
 	return { locales: ["ko"], collections };
 }
 
-/** `applied` 스키마가 파일과 DB에 적용된 상태의 엔진. */
+/** `applied` 스키마가 파일과 DB에 적용된 상태에서 `schema`·`entries` 리소스를 가진 엔진. */
 async function montiOf(dev: boolean, applied: Schema = original) {
 	await writeFile(schemaFile, `export default ${JSON.stringify(applied)};\n`);
 	await syncSchemaTables(db, applied);
-	return createMonti(db, { schema }, [], {
+	return createMonti(db, { schema, entries }, [], {
 		schema: applied,
 		config: { name: "Monti Blog", dev },
 		schemaFile,
@@ -118,7 +119,7 @@ async function codeOf(run: Promise<unknown>): Promise<string | null> {
 
 beforeEach(async () => {
 	testDb = await createTestDatabase();
-	await migrate(testDb.db, "core", [initial]);
+	await migrate(testDb.db, "@monti-cms/core", [initial]);
 	db = testDb.db as Kysely<Database>;
 	dir = await mkdtemp(path.join(tmpdir(), "monti-schema-"));
 	schemaFile = path.join(dir, "monti.schema.ts");
@@ -385,6 +386,38 @@ it("SCH-UPD-8 스키마에서 컬렉션을 지우면 그 컬렉션의 테이블�
 
 	// SCH-UPD-8.1
 	expect(await tablesExisting(["posts", "posts_data", "posts_rels"])).toEqual([]);
+});
+
+/** `authors`·`members`와, 다건 `relation` 필드 `contributors`가 `to` 컬렉션을 가리키는 `posts`가 있는 스키마. */
+function withContributors(to: string): Schema {
+	return withCollections({
+		authors: { fields: {} },
+		members: { fields: {} },
+		posts: { fields: { title: { type: "text" }, contributors: { type: "relation", to, many: true } } },
+	});
+}
+
+it("SCH-UPD-17 값이 들어 있는 다건 관계 필드의 대상을 바꿔도 기존 글을 정상적으로 읽고 수정·발행할 수 있다", async () => {
+	const monti = await montiOf(true, withContributors("authors"));
+	const author = await monti.entries.create({ collection: "authors", locale: "ko" });
+	const post = await monti.entries.create({
+		collection: "posts",
+		locale: "ko",
+		slug: "hello",
+		fields: { title: "옛 제목", contributors: [author.id] },
+	});
+
+	await monti.schema.update(withContributors("members"));
+	const draft = await monti.entries.get({ id: post.id, status: "draft" });
+
+	// SCH-UPD-17.1
+	expect(draft.fields).not.toHaveProperty("contributors");
+
+	await monti.entries.update({ id: post.id, fields: { ...draft.fields, title: "새 제목" } });
+	const published = await monti.entries.publish({ id: post.id });
+
+	// SCH-UPD-17.2
+	expect(published).toMatchObject({ fields: { title: "새 제목" }, published_at: expect.any(Date) });
 });
 
 it("SCH-UPD-9 개발 서버가 아니면 스키마를 수정할 수 없다", async () => {

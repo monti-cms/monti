@@ -54,7 +54,7 @@ function montiOf(withStorage = true) {
 
 beforeEach(async () => {
 	testDb = await createTestDatabase();
-	await migrate(testDb.db, "core", [initial]);
+	await migrate(testDb.db, "@monti-cms/core", [initial]);
 	await syncSchemaTables(testDb.db, SCHEMA);
 	db = testDb.db as Kysely<Database>;
 	tables = testDb.db.withTables<Record<string, Row>>();

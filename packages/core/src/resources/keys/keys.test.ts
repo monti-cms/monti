@@ -41,7 +41,7 @@ const storageKey = { service: "storage", name: "Storage", secret: "storage-secre
 
 beforeEach(async () => {
 	testDb = await createTestDatabase();
-	await migrate(testDb.db, "core", [initial]);
+	await migrate(testDb.db, "@monti-cms/core", [initial]);
 	db = testDb.db as Kysely<Database>;
 	passing.mockReset().mockResolvedValue(undefined);
 	rejecting.mockReset().mockRejectedValue(new Error("connection refused"));
