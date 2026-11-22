@@ -25,6 +25,7 @@ export default {
 			[
 				"core",
 				"cli",
+				"http",
 				"ui",
 				"admin",
 				"ai",

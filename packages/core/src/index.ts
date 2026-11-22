@@ -6,7 +6,14 @@ import { createMonti } from "./engine/engine";
 import { keyServicesOf, withPlugins } from "./engine/plugins";
 import { validSchema } from "./engine/schema-file";
 import { specsOf } from "./engine/spec";
-import type { Monti, MontiState, OperationSpec, Plugin } from "./engine/types";
+import type {
+	Monti as EngineMonti,
+	MontiConfig as EngineMontiConfig,
+	MontiState as EngineMontiState,
+	Plugin as EnginePlugin,
+	OperationSpec,
+	ResourceTree,
+} from "./engine/types";
 import { admin } from "./resources/admin/admin";
 import { config } from "./resources/config/config";
 import { entries } from "./resources/entries/entries";
@@ -41,11 +48,8 @@ export type {
 	ErrorCode,
 	FieldSchema,
 	KeyServiceDefinition,
-	Monti,
-	MontiConfig,
 	MontiEvent,
 	OperationSpec,
-	Plugin,
 	ReadContext,
 	ReadOperation,
 	Schema,
@@ -65,8 +69,25 @@ export { snapshotOf } from "./resources/schema/snapshot";
 export type { Block, BlockDefinition, Doc, DocIssue, MarkDefinition, ValidateDocOptions } from "./rich-text/types";
 export { validateDoc } from "./rich-text/validate-doc";
 
+/** core의 리소스 트리. `keys`는 플러그인이 등록한 키 서비스와 암호화 비밀값을 쓴다. */
+function coreResources<R extends ResourceTree>(plugins: EnginePlugin<R>[], secret: string | undefined) {
+	const keys = createKeys(keyServicesOf(plugins), secret);
+	return { entries, translationStatus, templates, folders, media, trash, schema, config, keys, session, admin };
+}
+
+type CoreResources = ReturnType<typeof coreResources>;
+
+/** `startMonti`가 돌려주는 엔진 타입. 제네릭 `R`을 주면 커스텀 리소스 트리에도 쓸 수 있다. */
+export type Monti<R extends ResourceTree = CoreResources> = EngineMonti<R>;
+
+/** 서버 플러그인 타입. `onEvent`의 `ctx.monti`는 기본적으로 코어 리소스 전체(`Monti`)를 안다. */
+export type Plugin<R extends ResourceTree = CoreResources> = EnginePlugin<R>;
+
+/** 사이트 설정(`monti.config.ts`) 타입. */
+export type MontiConfig<R extends ResourceTree = CoreResources> = EngineMontiConfig<R>;
+
 /** 앱이 `startMonti`에 넘기는 것: DB와, 두 파일에서 불러온 스키마와 설정, 선택 암호화 비밀값. */
-export interface StartOptions extends MontiState {
+export interface StartOptions extends EngineMontiState<CoreResources> {
 	db: Kysely<Database>;
 	/** `keys` 리소스가 저장하는 키를 암호화하는 비밀값. 설정(`config`)에 두지 않고 `keys` 리소스에만 넘긴다. */
 	secret?: string;
@@ -75,17 +96,11 @@ export interface StartOptions extends MontiState {
 /** 앱이 `migrateMonti`에 넘기는 것: DB와, 앱이 불러온 스키마와 설정. */
 export type MigrateOptions = Pick<StartOptions, "db" | "schema" | "config">;
 
-/** core의 리소스 트리. `keys`는 플러그인이 등록한 키 서비스와 암호화 비밀값을 쓴다. */
-function coreResources(plugins: Plugin[], secret: string | undefined) {
-	const keys = createKeys(keyServicesOf(plugins), secret);
-	return { entries, translationStatus, templates, folders, media, trash, schema, config, keys, session, admin };
-}
-
 /**
  * core를 조립한다: 스키마를 검사하고, core 리소스와 `config.plugins`(`keys`에는 암호화 비밀값 `secret`)로 엔진을 만든다.
  * DB는 건드리지 않는다. 테이블은 먼저 `migrateMonti`로 준비한다.
  */
-export function startMonti(options: StartOptions): Monti<ReturnType<typeof coreResources>> {
+export function startMonti(options: StartOptions): Monti {
 	const { db, schemaFile, configFile } = options;
 	const plugins = options.config.plugins ?? [];
 	const state = { schema: validSchema(options.schema), config: options.config, schemaFile, configFile };

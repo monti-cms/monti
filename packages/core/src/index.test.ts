@@ -15,8 +15,18 @@ import {
 import { initial } from "./db/migrations/0001-initial";
 import type { Database, Migration } from "./db/types";
 import { defineWrite } from "./engine/operation";
-import type { MontiConfig, Plugin, Schema } from "./engine/types";
-import { coreMigrations, migrate, migrateMonti, planSchemaDiff, snapshotOf, specOf, startMonti } from "./index";
+import {
+	coreMigrations,
+	type MontiConfig,
+	migrate,
+	migrateMonti,
+	type Plugin,
+	planSchemaDiff,
+	type Schema,
+	snapshotOf,
+	specOf,
+	startMonti,
+} from "./index";
 
 let testDb: TestDatabase;
 let db: Kysely<Database>;

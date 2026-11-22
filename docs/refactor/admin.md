@@ -10,7 +10,7 @@
 - `kind: "screen"`으로 정의하던 `screen.openEntry`, `list.show`, `list.select`는 화면과 AI가 주고받는 UI 도구로 옮긴다. DB Operation으로 만들지 않는다.
 - 설정 탭, 툴바, 입력 부품, 미리보기, 상태바와 팝오버는 `AdminPlugin` 등 화면 확장으로 제공한다. core의 서버 `Plugin`에 UI 슬롯을 만들지 않는다.
 - 맞춤법·문장 길이·금지어 등 글쓰기 보조 진단은 에디터와 화면 확장에서 담당한다. 필수값·참조·본문 구조처럼 저장·발행의 데이터 무결성 검증은 core Operation에 남는다. 화면 진단으로 서버 검증을 대신하지 않는다.
-- `MontiError.code`와 `details`를 화면 언어에 맞는 메시지로 표시한다. HTTP 상태 응답은 [next.md](next.md)의 책임이다.
+- `MontiError.code`와 `details`를 화면 언어에 맞는 메시지로 표시한다. HTTP 상태 응답은 [http.md](http.md)의 책임이다.
 
 ## 2. AI 제안과 실행 취소
 
@@ -23,7 +23,7 @@
 ## 3. 외부 기능 연결
 
 - 구조·설정 편집 UI는 core가 제공하는 실제 `dev` 판정을 따른다. 기본값은 `NODE_ENV === "development"`이고 명시적 설정으로 덮어쓸 수 있다. 코드 파일 반영은 core의 커밋 이후 규칙을 따른다.
-- 브라우저 요청은 `@monti-cms/next`의 REST 입구를 사용한다. 화면에서 DB나 별도 저장 규칙을 만들지 않는다.
+- 브라우저 요청은 `@monti-cms/http`([http.md](http.md))의 REST 입구를 사용한다. 화면에서 DB나 별도 저장 규칙을 만들지 않는다. Next.js 전용 연결(`AdminPage`, `adminRoute` 래퍼, `draftMode` 미리보기, `onEvent` 기반 `revalidatePath`·`after` 캐시 갱신)은 `@monti-cms/admin/next` 서브패스로 제공한다([next.md](next.md)에서 이관).
 - 어시스턴트 답변의 Markdown 읽기는 [mdx.md](mdx.md)의 외부 변환기를 사용한다. `@monti-cms/core/markdown`을 다시 만들지 않는다.
 - 본문 표시와 코드 블록의 표현은 [rendering.md](rendering.md)·[blocks.md](blocks.md)를 사용한다. 실제 패키지·export 위치는 해당 작업에서 정한다.
 
