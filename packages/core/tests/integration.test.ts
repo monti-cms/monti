@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { readFileSync } from "node:fs";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -34,6 +35,9 @@ type CoreMonti = Awaited<ReturnType<typeof startMonti>>;
 /** `dryRun` 콜백이 받는 쓰기 전용 호출. `transaction` 콜백이 받는 호출도 이 쓰기들을 모두 가진다. */
 type WriteClient = Parameters<Parameters<CoreMonti["dryRun"]>[0]>[0];
 
+/** `entries`가 돌려주는 글 한 건. */
+type Entry = Awaited<ReturnType<CoreMonti["entries"]["get"]>>;
+
 /** `startMonti`로 올린 코어와 그 DB, 그리고 앱이 스키마·설정을 불러온 두 파일. */
 interface Stack {
 	db: Kysely<Database>;
@@ -61,10 +65,14 @@ function schemaText(schema: Schema): string {
 	return `export default ${JSON.stringify(schema)};\n`;
 }
 
+/** `monti.schema.ts`의 글자에 들어 있는 스키마. */
+function schemaOfText(text: string): unknown {
+	return JSON.parse(text.replace(/^export default /, "").replace(/;\s*$/, ""));
+}
+
 /** `monti.schema.ts`에 지금 들어 있는 스키마. */
 async function schemaInFile(file: string): Promise<unknown> {
-	const text = await readFile(file, "utf8");
-	return JSON.parse(text.replace(/^export default /, "").replace(/;\s*$/, ""));
+	return schemaOfText(await readFile(file, "utf8"));
 }
 
 /** 이 테스트만 쓰는 임시 폴더에 `monti.schema.ts`와 `monti.config.ts`를 둔다. */
@@ -198,11 +206,12 @@ async function upload(cms: Cms, filename: string, folderId: string) {
 	return cms.monti.media.create({ key: ticket.key, folder_id: folderId, filename, width: 1200, height: 630 });
 }
 
-/** 글·미디어 폴더, 끝내지 않은 업로드 하나, 미디어 둘(표지와 본문 이미지), 본문 이미지를 쓰는 템플릿을 만든다. */
+/** 글·미디어 폴더, 파일만 올리고 미디어로 등록하지 않은 업로드 하나, 미디어 둘(표지와 본문 이미지), 본문 이미지를 쓰는 템플릿을 만든다. */
 async function prepareLibrary(cms: Cms) {
 	const postFolder = await cms.monti.folders.create({ scope: "posts", name: "공지" });
 	const mediaFolder = await cms.monti.folders.create({ scope: "media", name: "이미지" });
 	const abandoned = await cms.monti.media.startUpload({ mime_type: "image/png", size: 512 });
+	cms.storage.files.set(abandoned.key, { mime: "image/png", size: 512 });
 	const cover = await upload(cms, "cover.png", mediaFolder.id);
 	const inline = await upload(cms, "inline.png", mediaFolder.id);
 	expect(cover).toMatchObject({ folder_id: mediaFolder.id, mime_type: "image/png", url: `memory://${cover.key}` });
@@ -293,15 +302,19 @@ async function publishBoth(cms: Cms, post: Post) {
 	expect(await cms.monti.entries.list({ collection: "posts", locale: "en" })).toEqual([en]);
 }
 
-/** 발행본이 쓰는 표지를 휴지통에 넣으면 발행본에서만 비고 발행이 막히며, 되살리면 다시 발행된다. */
+/**
+ * 발행본이 쓰는 표지를 휴지통에 넣으면 발행본에서만 비고 발행이 막히며, 되살리면 다시 발행하기 전부터 기존 발행본에 표지가
+ * 돌아오고 다시 발행할 수 있다.
+ */
 async function trashAndRestoreCover(cms: Cms, post: Post) {
 	const { id, refs } = post;
 	const fields = postFields(refs, EDITED_TITLE, CAPTION);
 	await cms.monti.trash.move({ id: refs.cover });
-	expect((await cms.monti.entries.get({ id })).fields).toEqual({ ...fields, cover: undefined });
+	expect((await cms.monti.entries.get({ id, status: "published" })).fields).toEqual({ ...fields, cover: undefined });
 	expect((await cms.monti.entries.get({ id, status: "draft" })).fields).toEqual(fields);
 	await expect(cms.monti.entries.publish({ id })).rejects.toMatchObject({ code: "BAD_REQUEST" });
 	await cms.monti.trash.restore({ id: refs.cover });
+	expect((await cms.monti.entries.get({ id, status: "published" })).fields).toEqual(fields);
 	expect((await cms.monti.entries.publish({ id })).fields).toEqual(fields);
 }
 
@@ -327,16 +340,19 @@ async function purgeAll(cms: Cms, library: Library, post: Post) {
 	expect(await looseKeys(cms.db)).toEqual([library.cover.key, library.inline.key, library.abandonedKey].sort());
 }
 
-/** 영구 삭제한 미디어의 파일은 바로, 끝내지 않은 업로드의 파일은 24시간이 지난 뒤에 저장소와 대기열에서 지운다. */
+/** 영구 삭제한 미디어의 파일은 바로, 등록하지 않은 업로드의 파일은 24시간이 지난 뒤에 저장소와 대기열에서 지운다. */
 async function sweepLooseFiles(cms: Cms, library: Library) {
 	vi.useFakeTimers({ toFake: ["Date"] });
 	vi.setSystemTime(Date.now() + HOUR_MS);
 	await removeLooseFiles({ db: cms.db, storage: cms.storage });
 	expect([...cms.storage.removed].sort()).toEqual([library.cover.key, library.inline.key].sort());
+	// 1시간 뒤: 등록하지 않은 업로드의 파일만 저장소에 남는다.
+	expect([...cms.storage.files.keys()]).toEqual([library.abandonedKey]);
 	expect(await looseKeys(cms.db)).toEqual([library.abandonedKey]);
 	vi.setSystemTime(Date.now() + 24 * HOUR_MS);
 	await removeLooseFiles({ db: cms.db, storage: cms.storage });
 	expect(cms.storage.removed.slice(2)).toEqual([library.abandonedKey]);
+	expect([...cms.storage.files.keys()]).toEqual([]);
 	expect(await looseKeys(cms.db)).toEqual([]);
 	vi.useRealTimers();
 }
@@ -404,9 +420,12 @@ const AFTER: Schema = {
 
 const EMPTY: Schema = { locales: ["ko"], collections: {} };
 
-/** 개발 서버에서 바꾸기 전 스키마로 작가·회원·`legacy` 글과 발행된 `posts` 글을 저장한다. */
-async function seedBeforeChange(dev: Stack) {
-	const { entries } = dev.monti;
+/**
+ * 바꾸기 전 스키마로 작가·회원·`legacy` 글과, 작가를 가리키는 `posts` 글을 저장하고 발행한다: 그 글은 초안과 발행본이 모두
+ * 있다. 개발 서버와 운영 서버에 같은 글을 넣는다.
+ */
+async function seedBeforeChange(stack: Stack) {
+	const { entries } = stack.monti;
 	const author = await entries.create({
 		collection: "authors",
 		locale: "ko",
@@ -422,16 +441,21 @@ async function seedBeforeChange(dev: Stack) {
 	await entries.create({ collection: "legacy", locale: "ko", fields: { note: "지울 컬렉션의 글" } });
 	const fields = { title: "스키마 진화", code: 42, category: "news", contributors: [author.id] };
 	const post = await entries.create({ collection: "posts", locale: "ko", slug: "evolve", fields });
-	await entries.publish({ id: post.id });
-	return { postId: post.id, memberId: member.id };
+	return { published: await entries.publish({ id: post.id }), memberId: member.id };
 }
 
+type Seeded = Awaited<ReturnType<typeof seedBeforeChange>>;
+
+/** 스키마를 바꾼 직후 그 글의 필드: `code`는 글자, `category`는 1개짜리 목록이 되고, 대상이 바뀐 `contributors`는 빈다. */
+const CONVERTED = { title: "스키마 진화", code: "42", category: ["news"] };
+
 /** 스키마를 바꾸면 기존 값이 새 열 타입으로 옮겨지고 대상이 바뀐 관계는 비며, 그 글을 고쳐 다시 발행할 수 있다. */
-async function evolveOnDev(dev: Stack, seeded: Awaited<ReturnType<typeof seedBeforeChange>>) {
-	const { postId: id, memberId } = seeded;
+async function evolveOnDev(dev: Stack, seeded: Seeded) {
+	const { id } = seeded.published;
+	const { memberId } = seeded;
 	expect(await dev.monti.schema.update(AFTER)).toEqual(AFTER);
 	const draft = await dev.monti.entries.get({ id, status: "draft" });
-	expect(draft.fields).toEqual({ title: "스키마 진화", code: "42", category: ["news"] });
+	expect(draft.fields).toEqual(CONVERTED);
 	const fields = {
 		title: "스키마 진화",
 		code: "A-42",
@@ -452,38 +476,61 @@ function runStatements(statements: string[]): Migration["up"] {
 	};
 }
 
-/** 비어 있는 운영 DB에서 운영 서버를 시작하고, 바꾸기 전 스키마와 같은 스키마 변경을 프로젝트 마이그레이션으로 적용한다. */
-async function bootProduction(): Promise<Stack> {
-	const prod = await boot(AFTER, { dev: false });
-	// 운영 서버는 스키마를 보고 컬렉션 테이블을 스스로 만들지 않는다.
-	expect(await tableExists(prod.db, "posts")).toBe(false);
-	await migrate(prod.db, "project", [
+/** 프로젝트 마이그레이션 두 단계: 빈 스키마 → 바꾸기 전, 바꾸기 전 → 바꾼 뒤를 개발 서버와 같은 규칙(`planSchemaDiff`)으로 뽑은 SQL. */
+function projectMigrations(): Migration[] {
+	return [
 		{ name: "0001-collections", up: runStatements(planSchemaDiff(snapshotOf(EMPTY), BEFORE)) },
 		{ name: "0002-evolve-posts", up: runStatements(planSchemaDiff(snapshotOf(BEFORE), AFTER)) },
-	]);
+	];
+}
+
+/** 비어 있는 운영 DB에서 바꾸기 전 스키마로 운영 서버를 시작하고, 첫 프로젝트 마이그레이션만 적용한다. */
+async function bootProduction(): Promise<Stack> {
+	const prod = await boot(BEFORE, { dev: false });
+	// 운영 서버는 스키마를 보고 컬렉션 테이블을 스스로 만들지 않는다.
+	expect(await tableExists(prod.db, "posts")).toBe(false);
+	await migrate(prod.db, "project", projectMigrations().slice(0, 1));
 	return prod;
 }
 
-/** 운영 서버는 글을 만들고 발행하고 읽지만, 스키마와 설정은 바꾸지 않는다. */
-async function useProduction(prod: Stack) {
+/**
+ * 새 코드를 배포하듯 프로젝트 마이그레이션 전체를 다시 넘겨 바꾼 스키마의 단계만 적용하고(이미 적용한 단계는 건너뛴다), 같은
+ * DB에서 바꾼 스키마 파일을 불러 운영 서버를 다시 시작한다.
+ */
+async function evolveProduction(old: Stack): Promise<Stack> {
+	await migrate(old.db, "project", projectMigrations());
+	await writeFile(old.schemaFile, schemaText(AFTER));
+	const { db, schemaFile, configFile } = old;
+	const monti = await startMonti({ db, schema: AFTER, config: { name: SITE, dev: false }, schemaFile, configFile });
+	return { ...old, monti };
+}
+
+/** 마이그레이션 직후 기존 글: 초안과 발행본이 개발 서버와 같은 값으로 바뀌고, 발행본은 발행 시각·슬러그와 함께 남는다. */
+async function expectExistingConverted(prod: Stack, existing: Entry): Promise<Entry> {
+	const { id } = existing;
+	expect((await prod.monti.entries.get({ id, status: "draft" })).fields).toEqual(CONVERTED);
+	const published = await prod.monti.entries.get({ id, status: "published" });
+	expect(published).toEqual({ ...existing, fields: CONVERTED });
+	return published;
+}
+
+/** 운영 서버는 기존 회원을 가리키는 글을 만들고 발행하고 기존 글과 함께 읽지만, 스키마와 설정은 바꾸지 않는다. */
+async function useProduction(prod: Stack, memberId: string, existing: Entry) {
 	const { entries } = prod.monti;
-	const member = await entries.create({
-		collection: "members",
-		locale: "ko",
-		slug: "member",
-		fields: { name: "회원" },
-	});
 	const fields = {
-		title: "운영 첫 글",
+		title: "운영 새 글",
 		code: "P-1",
 		category: ["tech"],
-		contributors: [member.id],
+		contributors: [memberId],
 		new_col: "운영 값",
 	};
 	const post = await entries.create({ collection: "posts", locale: "ko", slug: "launch", fields });
 	const published = await entries.publish({ id: post.id });
 	expect(published.fields).toEqual(fields);
-	expect(await entries.list({ collection: "posts" })).toEqual([published]);
+	// `entries.list`는 순서를 정하지 않는다.
+	const listed = await entries.list({ collection: "posts" });
+	expect(listed).toHaveLength(2);
+	expect(listed).toEqual(expect.arrayContaining([existing, published]));
 	await expect(prod.monti.schema.update(BEFORE)).rejects.toMatchObject({ code: "FORBIDDEN" });
 	await expect(prod.monti.config.update({ name: "운영에서 바꾼 이름" })).rejects.toMatchObject({ code: "FORBIDDEN" });
 }
@@ -498,13 +545,16 @@ async function collectionTables(db: Kysely<Database>) {
 }
 
 it(
-	"시나리오 2: 개발 서버에서 바꾼 스키마를 같은 SQL로 운영 DB에 옮기면, 운영 서버는 글을 쓰고 스키마·설정 변경은 막는다",
+	"시나리오 2: 개발 서버에서 바꾼 스키마를 같은 SQL로 운영 DB에 옮기면 기존 글이 같은 규칙으로 바뀌어 남고, 운영 서버는 글을 쓰되 스키마·설정 변경은 막는다",
 	SCENARIO,
 	async () => {
 		const dev = await boot(BEFORE, { dev: true });
 		await evolveOnDev(dev, await seedBeforeChange(dev));
-		const prod = await bootProduction();
-		await useProduction(prod);
+		const old = await bootProduction();
+		const seeded = await seedBeforeChange(old);
+		const prod = await evolveProduction(old);
+		const existing = await expectExistingConverted(prod, seeded.published);
+		await useProduction(prod, seeded.memberId, existing);
 		const devTables = await collectionTables(dev.db);
 		expect(devTables.posts_data).toEqual(expect.arrayContaining(["category text[]", "code text", "new_col text"]));
 		expect(devTables.posts_rels).toEqual(expect.arrayContaining(["members_id uuid"]));
@@ -522,17 +572,25 @@ const BLOG_WITH_NOTES: Schema = {
 };
 const ROLLBACK = "묶음의 끝에서 실패";
 
-/** 실패하는 구독자 둘(동기·비동기)을 먼저 달고, 받은 이벤트를 차례로 기록하는 구독자를 단다. */
-function recordEvents(monti: CoreMonti): MontiEvent[] {
-	const events: MontiEvent[] = [];
-	monti.onEvent(() => {
+/** 구독자가 통지를 받은 그 순간에 본 것: 이벤트, 스키마 파일의 글자 그대로, 그 순간 부른 `schema.get`의 스키마. */
+interface Notice {
+	event: MontiEvent;
+	file: string;
+	schema: Promise<Schema>;
+}
+
+/** 실패하는 구독자 둘(동기·비동기)을 먼저 달고, 받은 이벤트를 그 순간의 스키마 파일·스키마와 함께 차례로 기록하는 구독자를 단다. */
+function recordEvents(stack: Stack): Notice[] {
+	const notices: Notice[] = [];
+	stack.monti.onEvent(() => {
 		throw new Error("구독자 오류");
 	});
-	monti.onEvent(() => Promise.reject(new Error("구독자 비동기 오류")));
-	monti.onEvent((event) => {
-		events.push(event);
+	stack.monti.onEvent(() => Promise.reject(new Error("구독자 비동기 오류")));
+	stack.monti.onEvent((event) => {
+		// 통지를 받은 그 순간을 남기려고 파일은 동기로 읽고, `schema.get`은 기다리지 않고 부른다: 읽기는 부른 순간의 스키마를 본다.
+		notices.push({ event, file: readFileSync(stack.schemaFile, "utf8"), schema: stack.monti.schema.get() });
 	});
-	return events;
+	return notices;
 }
 
 /** 폴더 만들기, 그 폴더에 글 만들기, 발행, `notes` 컬렉션을 더하는 스키마 변경을 한 묶음으로 실행한다. */
@@ -571,52 +629,59 @@ async function stateOf(stack: Stack) {
 const UNTOUCHED = { folders: 0, posts: 0, notes: false, schema: BLOG, file: schemaText(BLOG) };
 
 /** 묶음의 끝에서 오류가 나면 DB·스키마·파일이 모두 처음 그대로이고 아무 이벤트도 통지되지 않는다. */
-async function expectRolledBack(stack: Stack, events: MontiEvent[]) {
+async function expectRolledBack(stack: Stack, notices: Notice[]) {
 	await expect(stack.monti.transaction(failingBundle)).rejects.toThrow(ROLLBACK);
 	expect(await stateOf(stack)).toEqual(UNTOUCHED);
-	expect(events).toEqual([]);
+	expect(notices).toEqual([]);
 }
 
 /** 시험 실행은 결과를 실제처럼 돌려주지만 DB·스키마·파일에 아무것도 남기지 않고 아무 이벤트도 통지하지 않는다. */
-async function expectDryRun(stack: Stack, events: MontiEvent[]) {
+async function expectDryRun(stack: Stack, notices: Notice[]) {
 	const tried = await stack.monti.dryRun(writeBundle);
 	expect(tried).toMatchObject({ folder: { name: "묶음" }, entry: { slug: "bundle" }, schema: BLOG_WITH_NOTES });
 	expect(tried.published.published_at).toBeInstanceOf(Date);
 	expect(await stateOf(stack)).toEqual(UNTOUCHED);
-	expect(events).toEqual([]);
+	expect(notices).toEqual([]);
 }
 
-/** 커밋된 묶음은 DB·스키마·파일에 남고, 이벤트가 호출 순서대로 한 번씩 통지된다: 앞선 구독자의 실패는 영향이 없다. */
-async function expectCommitted(stack: Stack, events: MontiEvent[]) {
+/**
+ * 커밋된 묶음은 DB·스키마·파일에 남고, 이벤트가 호출 순서대로 한 번씩 통지된다: 앞선 구독자의 실패는 영향이 없다. 첫 통지를
+ * 받는 순간부터 스키마 파일과 엔진의 스키마가 이미 바뀌어 있다: 커밋하고 파일에 반영한 뒤에 통지한다.
+ */
+async function expectCommitted(stack: Stack, notices: Notice[]) {
 	const done = await stack.monti.transaction(writeBundle);
 	const schema = BLOG_WITH_NOTES;
 	expect(await stateOf(stack)).toEqual({ folders: 1, posts: 1, notes: true, schema, file: expect.any(String) });
 	expect(await schemaInFile(stack.schemaFile)).toEqual(schema);
 	expect(await stack.monti.entries.get({ id: done.entry.id })).toEqual(done.published);
+	const events = notices.map((notice) => notice.event);
 	const operations = ["folders.create", "entries.create", "entries.publish", "schema.update"];
 	expect(events.map((event) => event.operation)).toEqual(operations);
 	expect(events.map((event) => event.output)).toEqual([done.folder, done.entry, done.published, done.schema]);
+	const atEachNotice = operations.map(() => schema);
+	expect(notices.map((notice) => schemaOfText(notice.file))).toEqual(atEachNotice);
+	expect(await Promise.all(notices.map((notice) => notice.schema))).toEqual(atEachNotice);
 }
 
 /** 관리자·세션·키의 쓰기는 비밀번호·토큰·키가 새지 않도록 구독자에게 통지하지 않는다. */
-async function expectSilentWrites(stack: Stack, events: MontiEvent[]) {
+async function expectSilentWrites(stack: Stack, notices: Notice[]) {
 	const account = { email: "owner@example.com", password: "owner-password" };
 	await stack.monti.admin.create(account);
 	await stack.monti.session.create(account);
 	await stack.monti.keys.create({ service: "mail", name: "메일", secret: "mail-key-1234" });
-	expect(events).toHaveLength(4);
+	expect(notices).toHaveLength(4);
 }
 
 it(
-	"시나리오 3: 묶은 쓰기는 실패하면 모두 되돌리고, 시험 실행은 아무것도 남기지 않으며, 커밋된 쓰기만 순서대로 통지한다",
+	"시나리오 3: 묶은 쓰기는 실패하면 모두 되돌리고, 시험 실행은 아무것도 남기지 않으며, 커밋된 쓰기만 파일에 반영한 뒤 순서대로 통지한다",
 	SCENARIO,
 	async () => {
 		const stack = await boot(BLOG, { dev: true }, SECRET);
-		const events = recordEvents(stack.monti);
-		await expectRolledBack(stack, events);
-		await expectDryRun(stack, events);
-		await expectCommitted(stack, events);
-		await expectSilentWrites(stack, events);
+		const notices = recordEvents(stack);
+		await expectRolledBack(stack, notices);
+		await expectDryRun(stack, notices);
+		await expectCommitted(stack, notices);
+		await expectSilentWrites(stack, notices);
 	},
 );
 
@@ -688,15 +753,28 @@ function auditOf(monti: object): AuditClient {
 	return Reflect.get(monti, "audit");
 }
 
-/** 발행 이벤트를 받으면 `ctx.monti`로 플러그인의 쓰기 Operation을 불러 감사 기록을 남긴다. */
-async function auditPublish(event: MontiEvent, monti: Monti): Promise<void> {
+/** 훅이 받는 `ctx.monti`의 core `entries` Operation들: 플러그인이 받는 `Monti` 타입은 core 리소스를 모르므로 이름으로 꺼낸다. */
+function entriesOf(monti: object): CoreMonti["entries"] {
+	return Reflect.get(monti, "entries");
+}
+
+/** 플러그인이 테스트에 남기는 것: 키 확인 함수가 받은 비밀값, 끝나기를 기다릴 훅, 훅이 통지 시점에 `ctx.monti`로 읽은 발행본. */
+interface AuditProbe {
+	checked: string[];
+	hooks: Promise<void>[];
+	published: Entry[];
+}
+
+/** 발행 이벤트를 받으면 `ctx.monti`로 먼저 그 발행본을 읽어 `published`에 남기고, 플러그인의 쓰기 Operation을 불러 감사 기록을 남긴다. */
+async function auditPublish(event: MontiEvent, monti: Monti, published: Entry[]): Promise<void> {
 	if (event.operation !== "entries.publish") return;
 	const entry = event.output as { id: string; folder_id: string | null };
+	published.push(await entriesOf(monti).get({ id: entry.id, status: "published" }));
 	await auditOf(monti).record({ operation: event.operation, entry_id: entry.id, folder_id: entry.folder_id });
 }
 
-/** 감사 플러그인: 자체 테이블 마이그레이션, 읽기·쓰기 Operation, 키 확인 함수, 발행 이벤트 훅. 훅이 끝나는 것을 `hooks`에 모은다. */
-function auditPlugin(checked: string[], hooks: Promise<void>[]): Plugin {
+/** 감사 플러그인: 자체 테이블 마이그레이션, 읽기·쓰기 Operation, 키 확인 함수, 발행 이벤트 훅. 확인 함수와 훅이 본 것을 `probe`에 남긴다. */
+function auditPlugin(probe: AuditProbe): Plugin {
 	return {
 		name: "audit",
 		migrations: [{ name: "0001-plugin-audit", up: createAuditTable }],
@@ -710,13 +788,13 @@ function auditPlugin(checked: string[], hooks: Promise<void>[]): Plugin {
 			{
 				service: "audit-mail",
 				check: async (secret) => {
-					checked.push(secret);
+					probe.checked.push(secret);
 				},
 			},
 		],
 		onEvent: (event, ctx) => {
-			const hook = auditPublish(event, ctx.monti);
-			hooks.push(hook);
+			const hook = auditPublish(event, ctx.monti, probe.published);
+			probe.hooks.push(hook);
 			return hook;
 		},
 	};
@@ -732,18 +810,22 @@ async function signInAndOut(monti: CoreMonti) {
 	expect(await monti.session.get({ token })).toEqual({ admin: null });
 }
 
-/** 저장된 키로 연결을 확인하면 플러그인의 확인 함수가 복호화된 비밀값을 받는다. DB에는 암호문만 남는다. */
+/** 저장된 키로 연결을 확인하면 플러그인의 확인 함수가 복호화된 비밀값을 받는다. 돌려주는 키에는 비밀값이 없고 DB에는 암호문만 남는다. */
 async function checkStoredKey(stack: Stack, checked: string[]) {
 	const key = await stack.monti.keys.create({ service: "audit-mail", name: "감사 메일", secret: KEY_SECRET });
-	expect(key).toMatchObject({ service: "audit-mail", name: "감사 메일", last4: "5678" });
+	// 공개 필드만 있다: `toStrictEqual`은 값이 `undefined`인 `secret` 키가 붙어 있어도 실패한다.
+	expect(key).toStrictEqual({ id: expect.any(String), service: "audit-mail", name: "감사 메일", last4: "5678" });
 	expect(await stack.monti.keys.check({ id: key.id })).toEqual({ ok: true });
 	expect(checked).toEqual([KEY_SECRET]);
 	const stored = await stack.db.selectFrom("api_keys").select("secret").executeTakeFirstOrThrow();
 	expect(stored.secret).not.toContain(KEY_SECRET);
 }
 
-/** 폴더 안의 글을 발행하면 플러그인 훅이 감사 기록을 남기고, 플러그인의 읽기 Operation이 폴더 이름과 함께 돌려준다. */
-async function publishWithAudit(stack: Stack, hooks: Promise<void>[]) {
+/**
+ * 폴더 안의 글을 발행하면 플러그인 훅이 통지 시점에 `ctx.monti`로 그 발행본을 읽고 감사 기록을 남기며, 플러그인의 읽기
+ * Operation이 폴더 이름과 함께 돌려준다.
+ */
+async function publishWithAudit(stack: Stack, probe: AuditProbe) {
 	const folder = await stack.monti.folders.create({ scope: "posts", name: "보도자료" });
 	const fields = { title: "출시 소식" };
 	const post = await stack.monti.entries.create({
@@ -753,8 +835,10 @@ async function publishWithAudit(stack: Stack, hooks: Promise<void>[]) {
 		folder_id: folder.id,
 		fields,
 	});
-	await stack.monti.entries.publish({ id: post.id });
-	await Promise.all(hooks);
+	const published = await stack.monti.entries.publish({ id: post.id });
+	await Promise.all(probe.hooks);
+	// 훅이 통지를 받은 시점에 발행본이 이미 커밋되어 있어 `ctx.monti`로 읽힌다.
+	expect(probe.published).toEqual([published]);
 	const audits = stack.db.$extendTables<AuditTables>().selectFrom("plugin_audit");
 	const rows = await audits.select(["operation", "entry_id", "folder_id"]).execute();
 	expect(rows).toEqual([{ operation: "entries.publish", entry_id: post.id, folder_id: folder.id }]);
@@ -766,11 +850,10 @@ it(
 	"시나리오 4: 관리자 로그인, 저장된 키 확인, 플러그인의 테이블·Operation·이벤트 훅이 코어와 함께 동작한다",
 	SCENARIO,
 	async () => {
-		const checked: string[] = [];
-		const hooks: Promise<void>[] = [];
-		const stack = await boot(NEWS, { dev: true, plugins: [auditPlugin(checked, hooks)] }, SECRET);
+		const probe: AuditProbe = { checked: [], hooks: [], published: [] };
+		const stack = await boot(NEWS, { dev: true, plugins: [auditPlugin(probe)] }, SECRET);
 		await signInAndOut(stack.monti);
-		await checkStoredKey(stack, checked);
-		await publishWithAudit(stack, hooks);
+		await checkStoredKey(stack, probe.checked);
+		await publishWithAudit(stack, probe);
 	},
 );
