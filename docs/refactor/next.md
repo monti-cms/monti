@@ -1,6 +1,9 @@
 # `@monti-cms/next` 리팩토링 이관 기록
 
-상태: 이관 범위 합의, 상세 설계·구현 대기 (2026-11-18). [core.md](core.md)의 얇은 core 결정에 따라 HTTP·사이트·관리자 화면의 서버 연결을 받는다. 구현이 끝났다는 뜻이 아니다.
+상태: 책임 분리 확정 (2026-11-23).
+- 프레임워크 무관 HTTP·REST 입구(라우팅, `?dryRun=true`, 세션 쿠키 인증·설정·해제, `MontiError` HTTP 상태 변환)는 별도 패키지 `@monti-cms/http`([http.md](http.md))로 분리했다.
+- Next.js 전용 연결(`AdminPage`, `adminRoute` 래퍼, `draftMode` 미리보기, `onEvent` 기반 `revalidatePath`·`after` 캐시 갱신)은 `@monti-cms/admin/next`([admin.md](admin.md))로 이관하며, 별도 `@monti-cms/next` 패키지는 `admin` 작업 시 기존 `packages/next/` 코드를 참고해 옮긴 뒤 폐기한다.
+- 공개 페이지 메타데이터(`pageMetadata`) 등 SEO 성격의 도우미는 `@monti-cms/seo`([seo.md](seo.md)) 단계에서 검토한다.
 
 ## 1. 담당하는 일
 

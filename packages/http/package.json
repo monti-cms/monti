@@ -1,0 +1,33 @@
+{
+	"name": "@monti-cms/http",
+	"version": "0.1.0-next.0",
+	"private": true,
+	"description": "Monti HTTP: framework-agnostic Web Standard REST API handler and session cookie auth for @monti-cms/core",
+	"license": "MIT",
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"scripts": {
+		"lint:deps": "depcruise --config .dependency-cruiser.cjs src",
+		"lint:dup": "jscpd src",
+		"lint:unused": "knip --no-config-hints",
+		"typecheck": "tsc --noEmit -p .",
+		"test": "vitest run",
+		"test:mutation": "stryker run"
+	},
+	"peerDependencies": {
+		"@monti-cms/core": "workspace:*"
+	},
+	"devDependencies": {
+		"@monti-cms/core": "workspace:*",
+		"@stryker-mutator/core": "^10.1.1",
+		"@stryker-mutator/vitest-runner": "^10.1.1",
+		"@types/node": "^24.19.2",
+		"@types/pg": "^8.23.1",
+		"kysely": "^0.29.8",
+		"pg": "^8.23.1",
+		"vitest": "^5.1.0",
+		"zod": "^4.2.1"
+	}
+}
