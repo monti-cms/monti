@@ -26,21 +26,18 @@ const MAX_PROBLEMS = 40;
 const MAX_BUFFER = 256 * 1024 * 1024;
 
 // A worker may not change these; they define the task and the rules it is checked against.
-const PROTECTED_PREFIXES = ["docs/acceptance/", "agent-guard/", ".husky/", "packages/core/biome-plugins/"];
+const PROTECTED_PREFIXES = ["docs/acceptance/", "agent-guard/", ".husky/", "biome-plugins/"];
 const PROTECTED_FILES = new Set([
 	".claude/settings.json",
 	".codex/hooks.json",
 	".agents/hooks.json",
 	".gemini/settings.json",
-	"packages/core/biome.json",
-	"packages/core/.dependency-cruiser.cjs",
-	"packages/core/knip.jsonc",
-	"packages/core/.jscpd.json",
-	"packages/core/env.d.ts",
-	"packages/core/stryker.config.mjs",
-	"packages/core/vitest.config.ts",
 	".secretlintrc.json",
 ]);
+const PROTECTED_PACKAGE_PATTERNS = [
+	/^packages\/[^/]+\/(?:biome-plugins|tests)\//,
+	/^packages\/[^/]+\/(?:biome\.json|\.dependency-cruiser\.cjs|knip\.jsonc|\.jscpd\.json|env\.d\.ts|stryker\.config\.mjs|vitest\.config\.ts)$/,
+];
 
 // A change to one of these is what `pnpm lint` has to look at.
 const CODE_PREFIXES = ["packages/", "scripts/"];
@@ -50,7 +47,10 @@ const FIX_AND_RETRY = "Fix these and try to finish again.";
 const ESCALATION =
 	"The check failed 3 times in a row. Stop fixing. Report the failing check and its output to the PM, word for word, and do not commit or push. If an acceptance condition looks wrong, say so in the report; do not change anything to get around the check.";
 
-const isProtected = (file) => PROTECTED_FILES.has(file) || PROTECTED_PREFIXES.some((prefix) => file.startsWith(prefix));
+const isProtected = (file) =>
+	PROTECTED_FILES.has(file) ||
+	PROTECTED_PREFIXES.some((prefix) => file.startsWith(prefix)) ||
+	PROTECTED_PACKAGE_PATTERNS.some((pattern) => pattern.test(file));
 
 const isCode = (file) => {
 	const name = path.posix.basename(file);
@@ -398,9 +398,9 @@ async function preCommit() {
 		return 1;
 	}
 
-	// A commit that touches the core must keep its tests matching the acceptance conditions; the owner's commit of the conditions alone is not held to it.
-	const touchesCore = staged.some((file) => file.startsWith("packages/core/")) || (worker && staged.some(isCode));
-	if (!touchesCore) return 0;
+	// A commit that touches any package must keep its tests matching the acceptance conditions; the owner's commit of the conditions alone is not held to it.
+	const touchesPackages = staged.some((file) => file.startsWith("packages/")) || (worker && staged.some(isCode));
+	if (!touchesPackages) return 0;
 	const problems = await runFence(root);
 	if (problems.length > 0) process.stderr.write(`${fenceDetail(problems)}\n`);
 	return problems.length > 0 ? 1 : 0;

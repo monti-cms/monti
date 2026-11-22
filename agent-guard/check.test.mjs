@@ -190,6 +190,9 @@ describe("protected files", () => {
 		["the dependency rules", () => ["packages/core/.dependency-cruiser.cjs", "module.exports = { x: 1 };\n"]],
 		["a lint plugin", () => ["packages/core/biome-plugins/p.grit", "changed\n"]],
 		["a new lint plugin", () => ["packages/core/biome-plugins/q.grit", "new\n"]],
+		["a shared root lint plugin", () => ["biome-plugins/p.grit", "new\n"]],
+		["a cli lint config", () => ["packages/cli/biome.json", '{"x":1}\n']],
+		["a core integration test", () => ["packages/core/tests/integration.test.ts", "test();\n"]],
 	];
 
 	for (const [title, change] of cases) {

@@ -796,3 +796,44 @@ describe("finding TypeScript", () => {
 		assert.throws(() => checkFenceInDir(dir), /TypeScript was not found .*run pnpm install/);
 	});
 });
+
+describe("multi-package fence and integration tests", () => {
+	test("checks docs/acceptance/<pkg> against packages/<pkg>/src without requiring env.d.ts", () => {
+		const cliAc =
+			"<details>\n<summary><strong><code>CLI-1</code></strong> prints version</summary>\n- `CLI-1.1` outputs version\n</details>\n";
+		const cliTest = 'test("CLI-1 prints version", () => {\n\t// CLI-1.1\n\texpect(1).toBe(1);\n});\n';
+		passes({
+			"docs/acceptance/cli/cli.md": cliAc,
+			"packages/cli/src/bin.mjs": "const env = process.env;\nexport { env };\n",
+			"packages/cli/src/cli.test.ts": cliTest,
+		});
+		fails({ "docs/acceptance/cli/cli.md": cliAc }, /docs\/acceptance\/cli\/cli\.md:2: CLI-1 has no test/);
+	});
+
+	test("checks packages/<pkg>/tests for suppressions, fake DBs, skips, and empty tests without requiring AC numbers", () => {
+		passes({
+			"packages/core/tests/integration.test.ts": 'test("end to end lifecycle", () => {\n\texpect(1).toBe(1);\n});\n',
+		});
+		fails(
+			{
+				"packages/core/tests/integration.test.ts": 'test.skip("skipped", () => {\n\texpect(1).toBe(1);\n});\n',
+			},
+			/test\.skip is not allowed/,
+		);
+		fails(
+			{
+				"packages/core/tests/integration.test.ts":
+					'// biome-ignore lint/suspicious/noExplicitAny: x\ntest("empty", () => {});\n',
+			},
+			/suppression comment/,
+			/this test has no expect/,
+		);
+		fails(
+			{
+				"packages/core/tests/integration.test.ts":
+					'import { PGlite } from "@electric-sql/pglite";\ntest("fake", () => {\n\texpect(PGlite).toBeDefined();\n});\n',
+			},
+			/fake database/,
+		);
+	});
+});
