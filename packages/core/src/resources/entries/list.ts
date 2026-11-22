@@ -1,5 +1,5 @@
 import type { ReadContext } from "../../engine/types";
-import { collectionOf } from "./collection";
+import { collectionNames, collectionOf } from "../_shared/collection";
 import { copyQuery, entriesOf } from "./read";
 import type { Entry, Status } from "./types";
 
@@ -51,8 +51,7 @@ async function listIn(ctx: ReadContext, name: string, filter: ListFilter): Promi
 
 /** `filter`에 모두 맞는 활성 글들의 발행본, `status: "draft"`이면 작업본. */
 export async function listEntries(filter: ListFilter, ctx: ReadContext): Promise<Entry[]> {
-	const names = filter.collection === undefined ? Object.keys(ctx.schema.collections) : [filter.collection];
-	if (filter.collection !== undefined) collectionOf(ctx, filter.collection);
+	const names = collectionNames(ctx, filter.collection);
 	const lists = [];
 	for (const name of names) lists.push(await listIn(ctx, name, filter));
 	return lists.flat();

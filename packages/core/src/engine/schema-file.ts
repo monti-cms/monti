@@ -1,7 +1,7 @@
 import { writeFile } from "node:fs/promises";
 import { z } from "zod";
 import { MontiError } from "./errors";
-import type { Schema } from "./types";
+import type { FieldSchema, Schema, ValueFieldSchema } from "./types";
 
 const fieldMeta = {
 	required: z.boolean().optional(),
@@ -80,23 +80,38 @@ function hasCollectionKeys(collections: Record<string, unknown>): boolean {
 
 type Collections = Record<string, z.infer<typeof collection>>;
 
+type ConditionalField = Extract<FieldSchema, { type: "conditional" }>;
+
+/** 조건부 필드의 하위 필드 하나: 분기 이름, 하위 필드 키, 그 값 필드와 저장 열 이름 `<field>__<option>__<subfield>`. */
+interface Subfield {
+	option: string;
+	sub: string;
+	column: string;
+	field: ValueFieldSchema;
+}
+
+/** 조건부 필드 `key`의 모든 분기의 하위 필드를 저장 열 이름과 함께 펼친다. */
+export function subfieldsOf(key: string, field: ConditionalField): Subfield[] {
+	return Object.entries(field.options).flatMap(([option, branch]) =>
+		Object.entries(branch.fields).map(([sub, subfield]) => ({
+			option,
+			sub,
+			column: `${key}__${option}__${sub}`,
+			field: subfield,
+		})),
+	);
+}
+
 /** 값 필드 하나와 그 열 이름 바탕: 최상위 필드는 `<field>`, 조건부 하위 필드는 `<field>__<option>__<subfield>`. */
 interface NamedField {
 	column: string;
-	field: z.infer<typeof valueField>;
+	field: ValueFieldSchema;
 }
 
 /** 최상위 값 필드와 조건부 필드의 모든 하위 필드를 열 이름 바탕과 함께. */
 function namedFieldsOf(collectionFields: z.infer<typeof fields>): NamedField[] {
 	return Object.entries(collectionFields).flatMap(([key, field]): NamedField[] =>
-		field.type !== "conditional"
-			? [{ column: key, field }]
-			: Object.entries(field.options).flatMap(([option, branch]) =>
-					Object.entries(branch.fields).map(([sub, subfield]) => ({
-						column: `${key}__${option}__${sub}`,
-						field: subfield,
-					})),
-				),
+		field.type !== "conditional" ? [{ column: key, field }] : subfieldsOf(key, field),
 	);
 }
 

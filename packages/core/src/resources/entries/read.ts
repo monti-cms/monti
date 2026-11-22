@@ -1,7 +1,7 @@
 import { MontiError } from "../../engine/errors";
 import type { CollectionSchema, ReadContext } from "../../engine/types";
+import { collectionNames, collectionOf } from "../_shared/collection";
 import { foundOf, isIn, type References, referencesIn } from "./active";
-import { collectionOf } from "./collection";
 import { decodeData, everyTarget, type Stored } from "./decode";
 import { type Row, tablesOf } from "./tables";
 import type { Entry, EntryData, Status } from "./types";
@@ -77,8 +77,7 @@ export async function entriesOf(ctx: ReadContext, name: string, rows: Row[]): Pr
 
 /** `key`가 가리키는 글의 `status` 행. 없거나 휴지통에 있거나 그 언어가 없으면 거절한다. */
 export async function findEntry(ctx: ReadContext, key: EntryKey, status: Status): Promise<Entry> {
-	const names = "collection" in key ? [key.collection] : Object.keys(ctx.schema.collections);
-	if ("collection" in key) collectionOf(ctx, key.collection);
+	const names = collectionNames(ctx, "collection" in key ? key.collection : undefined);
 	for (const name of names) {
 		let query = copyQuery(ctx, name, status);
 		query = "id" in key ? query.where("e.id", "=", key.id) : query.where("d.slug", "=", key.slug);

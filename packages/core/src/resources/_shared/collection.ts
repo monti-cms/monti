@@ -13,3 +13,10 @@ export function collectionOf(ctx: ReadContext, name: string): CollectionSchema {
 export function rejectLocale(ctx: ReadContext, locale: string): void {
 	if (!ctx.schema.locales.includes(locale)) throw new MontiError("BAD_REQUEST", `"${locale}" 언어가 없다`);
 }
+
+/** 조회할 컬렉션 이름들. `name`을 주면 `collectionOf`로 검사한 그 이름 하나, 생략하면 스키마의 모든 컬렉션이다. */
+export function collectionNames(ctx: ReadContext, name?: string): string[] {
+	if (name === undefined) return Object.keys(ctx.schema.collections);
+	collectionOf(ctx, name);
+	return [name];
+}

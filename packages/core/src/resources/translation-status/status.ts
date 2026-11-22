@@ -1,7 +1,7 @@
 import { isDeepStrictEqual } from "node:util";
 import type { ReadContext } from "../../engine/types";
 import type { Block } from "../../rich-text/types";
-import { collectionOf } from "../entries/collection";
+import { collectionOf } from "../_shared/collection";
 import { type BlockSeen, seenOf, type TranslationRow } from "./rows";
 import { blockIds, bodyUnits } from "./units";
 

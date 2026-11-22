@@ -1,9 +1,9 @@
 import { z } from "zod";
 import { MontiError } from "../../engine/errors";
 import type { WriteContext } from "../../engine/types";
+import { collectionOf, rejectLocale } from "../_shared/collection";
 import { uuidInput } from "../_shared/input";
 import { recountEntryMediaUses } from "../media/uses";
-import { collectionOf, rejectLocale } from "./collection";
 import { saveCopy } from "./copies";
 import { dataShape, type entryLocaleInput, slugInput } from "./inputs";
 import { findEntry } from "./read";

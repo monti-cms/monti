@@ -1,8 +1,8 @@
 import { z } from "zod";
 import { MontiError } from "../../engine/errors";
 import type { WriteContext } from "../../engine/types";
+import { collectionOf } from "../_shared/collection";
 import { uuidInput } from "../_shared/input";
-import { collectionOf } from "../entries/collection";
 import { tablesOf } from "../entries/tables";
 import { type BlockSeen, findTranslation, type SeenRecord, seenOf, type TranslationRow } from "./rows";
 import { statusOf, type TranslationStatus } from "./status";

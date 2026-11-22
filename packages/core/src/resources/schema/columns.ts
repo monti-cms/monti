@@ -1,3 +1,4 @@
+import { subfieldsOf } from "../../engine/schema-file";
 import type { CollectionSchema, FieldSchema, ValueFieldSchema } from "../../engine/types";
 
 /** 스키마가 바라는 열 하나. `type`은 `format_type`이 돌려주는 표기와 같다. */
@@ -28,9 +29,7 @@ function valueColumns(name: string, field: ValueFieldSchema): ColumnSpec[] {
 /** 조건부 필드는 선택한 분기 열과 `<field>__<option>__<subfield>` 하위 열로 펼친다. */
 function fieldColumns(name: string, field: FieldSchema): ColumnSpec[] {
 	if (field.type !== "conditional") return valueColumns(name, field);
-	const branches = Object.entries(field.options).flatMap(([option, { fields }]) =>
-		Object.entries(fields).flatMap(([sub, subfield]) => valueColumns(`${name}__${option}__${sub}`, subfield)),
-	);
+	const branches = subfieldsOf(name, field).flatMap((subfield) => valueColumns(subfield.column, subfield.field));
 	return [{ name, type: "text" }, ...branches];
 }
 

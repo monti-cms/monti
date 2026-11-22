@@ -1,9 +1,9 @@
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import type { WriteContext } from "../../engine/types";
+import { collectionOf, rejectLocale } from "../_shared/collection";
 import { uuidInput } from "../_shared/input";
 import { recountEntryMediaUses } from "../media/uses";
-import { collectionOf, rejectLocale } from "./collection";
 import { saveCopy } from "./copies";
 import { dataShape, folderInput, slugInput } from "./inputs";
 import { findEntry } from "./read";

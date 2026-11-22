@@ -1,11 +1,9 @@
 import type { MediaUsesTable } from "../../db/types";
 import type { CollectionSchema, WriteContext } from "../../engine/types";
 import type { Doc } from "../../rich-text/types";
-import { mediaIdsOf } from "../_shared/doc";
-import { bodyReferences, rejectInactive } from "../entries/active";
+import { bodyReferences, type References, referencesIn, rejectInactive } from "../entries/active";
 import { decodeData, everyTarget } from "../entries/decode";
 import { copyQuery, storedOf } from "../entries/read";
-import { valuesOf } from "../entries/slots";
 
 /** `media_uses` 행을 쓰는 글이나 템플릿. */
 interface UseSource {
@@ -15,6 +13,13 @@ interface UseSource {
 
 /** `field_path`마다 참조하는 미디어 `id`들. 소문자로, 경로마다 한 번씩. */
 type UsesByPath = Map<string, Set<string>>;
+
+/** `refs`의 경로마다 그 미디어 `id`들. `refs`에는 미디어 필드와 본문 경로만 모은다. */
+function usesOf(refs: References): UsesByPath {
+	const uses: UsesByPath = new Map();
+	for (const [field_path, { ids }] of refs) uses.set(field_path, ids);
+	return uses;
+}
 
 /** 사용처가 참조하는 모든 미디어 `id`. 한 번씩. */
 function idsOf(uses: UsesByPath): string[] {
@@ -51,29 +56,20 @@ export async function replaceMediaUses(
 	doc: Doc,
 	kept?: Doc,
 ): Promise<void> {
-	await rejectInactive(ctx, bodyReferences(field_path, doc), bodyReferences(field_path, kept));
-	await writeUses(ctx, source, new Map([[field_path, mediaIdsOf(doc.blocks)]]));
-}
-
-/** `ids`를 `uses`의 `field_path` 칸에 소문자로 더한다. */
-function addUses(uses: UsesByPath, field_path: string, ids: Iterable<string>): void {
-	const pathIds = uses.get(field_path) ?? new Set<string>();
-	for (const id of ids) pathIds.add(id.toLowerCase());
-	uses.set(field_path, pathIds);
+	const refs = bodyReferences(field_path, doc);
+	await rejectInactive(ctx, refs, bodyReferences(field_path, kept));
+	await writeUses(ctx, source, usesOf(refs));
 }
 
 /** 컬렉션 `name`의 활성 글 `entryId`가 모든 언어 작업본의 미디어 필드와 본문에서 참조하는 미디어, 경로별로. */
 async function draftUses(ctx: WriteContext, name: string, collection: CollectionSchema, entryId: string) {
 	const rows = await copyQuery(ctx, name, "draft").where("e.id", "=", entryId).execute();
-	const uses: UsesByPath = new Map();
+	const refs: References = new Map();
 	for (const stored of await storedOf(ctx, name, rows)) {
 		const data = decodeData(collection, stored, everyTarget);
-		for (const { slot, value } of valuesOf(collection, data.fields)) {
-			if (slot.field.type === "media") addUses(uses, slot.path, [value].flat() as string[]);
-		}
-		if (data.body !== undefined) addUses(uses, "body", mediaIdsOf(data.body.blocks));
+		bodyReferences("body", data.body, referencesIn(collection, data.fields, refs, "media"));
 	}
-	return uses;
+	return usesOf(refs);
 }
 
 /**

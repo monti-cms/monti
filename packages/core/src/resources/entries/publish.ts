@@ -1,9 +1,9 @@
 import { z } from "zod";
 import { MontiError } from "../../engine/errors";
 import type { FieldSchema, WriteContext } from "../../engine/types";
+import { collectionOf } from "../_shared/collection";
 import { timestampInput, uuidInput } from "../_shared/input";
 import { referencesOf, rejectInactive } from "./active";
-import { collectionOf } from "./collection";
 import { saveCopy } from "./copies";
 import { findEntry } from "./read";
 import type { ConditionalValue } from "./slots";
