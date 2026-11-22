@@ -2,36 +2,33 @@
 	"name": "@monti-cms/storage-s3",
 	"version": "0.2.0-next.16",
 	"private": true,
-	"description": "Monti's media storage on S3 and what speaks its API (Cloudflare R2, MinIO): files go straight from the browser to the bucket.",
+	"description": "Monti's media storage adapter on S3 and S3-compatible object stores (AWS S3, Cloudflare R2, MinIO)",
 	"license": "MIT",
 	"type": "module",
 	"exports": {
 		".": "./src/index.ts"
 	},
-	"files": [
-		"dist",
-		"README.md"
-	],
 	"scripts": {
+		"lint:deps": "depcruise --config .dependency-cruiser.cjs src",
+		"lint:dup": "jscpd src",
+		"lint:unused": "knip --no-config-hints",
 		"typecheck": "tsc --noEmit -p .",
-		"build": "node ../../scripts/build-package.mjs"
+		"test": "vitest run",
+		"test:mutation": "stryker run"
+	},
+	"peerDependencies": {
+		"@monti-cms/core": "workspace:*"
 	},
 	"dependencies": {
 		"@aws-sdk/client-s3": "^3.1167.0",
-		"@aws-sdk/s3-request-presigner": "^3.1167.0",
-		"@monti-cms/core": "workspace:*"
+		"@aws-sdk/s3-request-presigner": "^3.1167.0"
 	},
 	"devDependencies": {
-		"@types/node": "^20",
-		"typescript": "^6.0.3"
+		"@monti-cms/core": "workspace:*",
+		"@stryker-mutator/core": "^10.1.1",
+		"@stryker-mutator/vitest-runner": "^10.1.1",
+		"@types/node": "^24.19.2",
+		"vitest": "^5.1.0"
 	},
-	"sideEffects": false,
-	"publishConfig": {
-		"exports": {
-			".": {
-				"types": "./dist/index.d.ts",
-				"default": "./dist/index.js"
-			}
-		}
-	}
+	"sideEffects": false
 }

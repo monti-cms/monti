@@ -2,84 +2,68 @@
 
 English | [한국어](README.ko.md)
 
-Monti's media files in S3, or in a storage that speaks its API: AWS S3, Cloudflare R2, MinIO.
+Monti's media `StorageAdapter` for S3 and S3-compatible object stores: AWS S3, Cloudflare R2, and MinIO.
 
 ```ts
 // monti.config.ts
-import { defineConfig, definePlugin } from "@monti-cms/core";
+import type { MontiConfig } from "@monti-cms/core";
 import { s3Storage } from "@monti-cms/storage-s3";
 
-export default defineConfig({
-	// …
-	plugins: [definePlugin({ name: "files", storage: s3Storage() })],
+export default {
+	name: "My Site",
+	storage: s3Storage(),
+} satisfies MontiConfig;
+```
+
+## Configuration
+
+Connection values are read lazily when the adapter is first used (so builds succeed without credentials). Each value can be passed directly to `s3Storage({ ... })` or provided via environment variables; direct options take precedence over environment variables.
+
+| Option | Env var | Required | Description |
+|---|---|---|---|
+| `bucket` | `S3_BUCKET` | Yes | Bucket name |
+| `accessKeyId` | `S3_ACCESS_KEY_ID` | Yes | Access key ID (static credentials) |
+| `secretAccessKey` | `S3_SECRET_ACCESS_KEY` | Yes | Secret access key |
+| `publicUrl` | `S3_PUBLIC_URL` | Yes | Public bucket or CDN base URL (`http:`/`https:`, no query/fragment/credentials). File URL is `<publicUrl>/<key>` |
+| `region` | `S3_REGION` | Conditional | AWS region. Defaults to `"auto"` when `endpoint` is set (Cloudflare R2) |
+| `endpoint` | `S3_ENDPOINT` | Conditional | Custom S3 API endpoint (R2, MinIO). At least one of `region` or `endpoint` is required |
+| `forcePathStyle` | `S3_FORCE_PATH_STYLE` | No | Put the bucket in the URL path instead of the host (`"true"` or `"1"` in env; needed for MinIO or buckets with dots in their name) |
+| `ticketSeconds` | — | No | Presigned `PUT` expiration in seconds (`1`–`3600`, default `600`, always shorter than core's 24-hour `loose_files` TTL) |
+| `allowedMimeTypes` | — | No | Allowed MIME types (non-empty array, case-insensitive, no parameters). Defaults to `DEFAULT_ALLOWED_MIME_TYPES` |
+| `maxSize` | — | No | Maximum upload size in bytes (`1`–`2_147_483_647`, default `10 * 1024 * 1024` / 10 MiB) |
+| `env` | — | No | Environment object to read from (defaults to `process.env`) |
+
+To extend the default MIME list:
+
+```ts
+import { DEFAULT_ALLOWED_MIME_TYPES, s3Storage } from "@monti-cms/storage-s3";
+
+export const storage = s3Storage({
+	allowedMimeTypes: [...DEFAULT_ALLOWED_MIME_TYPES, "image/heic"],
+	maxSize: 50 * 1024 * 1024,
 });
 ```
 
-`npx monti init --storage s3` writes this, and the names below into `.env.local`.
+## Security and Upload Flow
 
-## Values
+- **Direct browser uploads**: `media.startUpload` calls `storage.ticket(key, { mime, size })` to issue a presigned `PUT` URL bound to the key, `Content-Type`, `Content-Length`, `Cache-Control: public, max-age=31536000, immutable`, `If-None-Match: *` (prevents overwriting an existing key), and `Content-Disposition: attachment` for non-images and SVG.
+- **UUID-only keys**: All methods (`ticket`, `stat`, `url`, `remove`) only accept lowercase UUID keys matching `core`'s `media.startUpload`, protecting unrelated objects in a shared bucket.
+- **Default MIME policy**: Allows safe raster images (`jpeg`, `png`, `webp`, `gif`, `avif`), documents (`pdf`, `plain`, `csv`), video (`mp4`, `webm`), audio (`mpeg`, `wav`, `ogg`), and `zip`. Excludes `image/svg+xml` and `text/html` by default.
+- **Public origin isolation**: Use a dedicated bucket for Monti and serve files from a domain that does not share cookies with your site.
+- **Idempotent cleanup**: `remove(key)` succeeds on `204` or exact `NoSuchKey`, while propagating `NoSuchBucket`, permission (`403`), and network errors so `core`'s `removeLooseFiles` retains the queue row for retry.
+- **AWS S3 permissions**: Grant `s3:ListBucket` on the bucket in addition to `s3:GetObject`, `s3:PutObject`, and `s3:DeleteObject` so `HeadObject` on a missing key returns `404` (`null`) instead of `403`.
 
-Read from the environment when the storage is first used (a site builds without them); each can be given to `s3Storage({ … })` instead. A
-missing one is an error that names it.
+## Bucket CORS
 
-| Name | What it is |
-|---|---|
-| `S3_BUCKET` | The bucket |
-| `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` | The key the site reads and writes the bucket with |
-| `S3_PUBLIC_URL` | The start of the address files are read from: the public bucket, or the CDN in front of it. A file's address is `<this>/<key>` |
-| `S3_REGION` | The region, for AWS. Left out with an endpoint, it is `auto` (R2's) |
-| `S3_ENDPOINT` | The storage's own address, for one that is not AWS. R2: `https://<account>.r2.cloudflarestorage.com` |
-| `S3_FORCE_PATH_STYLE` | `true` to put the bucket in the path and not the host name (MinIO) |
-
-- Files are read by anyone who has the address. The bucket is public, or a CDN in front of it is. No file gets an ACL (R2 takes none): who
-  may read is the bucket's setting. A private bucket whose every read is signed is not supported.
-- A key is written once and never changed, so files go up with `Cache-Control: public, max-age=31536000, immutable`.
-- Anything that is not a picture is stored with `Content-Disposition: attachment`: opened at its address it is saved, not drawn. The
-  bucket serves files under its own address without the headers the site's own file route adds (`nosniff`, a sandbox), so a PDF or a text
-  file must not open there as a page. Pictures show in place; the library takes no SVG and no HTML, so none of them can run anything.
-- **Give the files an address that shares no cookies with the site**: the bucket's or CDN's own domain, not a subdomain of the site's
-  (`files.example.com` beside `example.com`). A CDN in front may add `X-Content-Type-Options: nosniff`; the bucket cannot.
-
-## Files go straight to the bucket
-
-A host may take smaller requests than the largest file Monti takes (10 MB; serverless functions often stop at 4.5 MB). So a file's bytes
-never pass through the site:
-
-1. The admin asks the site for a ticket, with the file's name, size and first bytes. The site checks them by the rule of the media library,
-   makes the key, and answers with an address signed for one `PUT` of that key, of that type and that size.
-2. The browser sends the file to that address.
-3. The admin tells the site. The site copies the file, inside the bucket, to a new key that no address was ever signed for, and looks at
-   the copy: its size must be the one the ticket was for, and its first bytes its type, by the same rule. A file that is not what the
-   ticket was for is deleted and refused. The library makes an item only from a key checked this way.
-
-The signed address works for ten minutes, and more than once: a second `PUT` to it is taken by the bucket. It writes the old key, which
-nothing names any more; the checked copy is not touched, and the clean-up removes what was written.
-
-A file that is sent and never becomes an item is removed by the clean-up, as on the other way up.
-
-## The bucket's CORS
-
-The bucket must take a `PUT` from each address the admin is opened at, `http://localhost:3000` in development too. `npx monti doctor
---origin https://your.site` asks the bucket as a browser does and, when it says no, prints the setting to paste:
+Configure the bucket to allow `PUT` from your admin origin(s) (on MinIO Community, configure CORS via the server-level `MINIO_API_CORS_ALLOW_ORIGIN` environment variable instead of per-bucket rules):
 
 ```json
 [
   {
     "AllowedOrigins": ["https://your.site"],
     "AllowedMethods": ["PUT"],
-    "AllowedHeaders": ["content-type", "cache-control", "content-disposition"],
+    "AllowedHeaders": ["content-type", "cache-control", "content-disposition", "if-none-match"],
     "MaxAgeSeconds": 3600
   }
 ]
 ```
-
-## What was tried
-
-The tests run against a stand-in bucket in this package (`src/__test__/fake-s3.ts`). It works every request's signature out again the way
-S3 documents it, refuses an address that has run out or carries a parameter it was not signed with, and takes a second `PUT` to a used
-address, as S3 does. On a real bucket it has been
-tried on Cloudflare R2 (2026-11-13, with `scripts/try-s3.mjs`): everything below held, the bucket's CORS answer included. AWS S3 and MinIO
-are untried, and so is an upload from a browser itself (the trial asks the bucket what a browser would ask first).
-
-`node scripts/try-s3.mjs` (in the repo) tries the same things against a real bucket, with the settings above from the environment and
-`TRY_S3_ORIGIN` for the CORS check. It prints no key and no signed address, and removes what it made.
