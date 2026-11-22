@@ -1,4 +1,4 @@
-import { type CoreMonti, MontiError } from "@monti-cms/core";
+import { type Monti, MontiError } from "@monti-cms/core";
 import { expiredCookie, sessionCookie } from "../protocol/cookie";
 import type { ResolvedCookie } from "../protocol/types";
 
@@ -28,7 +28,7 @@ interface Outcome {
 }
 
 /** 공개 Operation이 아니면 쿠키의 세션 토큰이 유효한 세션인지 확인한다. 토큰이 없거나 세션이 없으면 `UNAUTHORIZED`다. */
-export async function authorize(monti: CoreMonti, operation: string, token: string | undefined): Promise<void> {
+export async function authorize(monti: Monti, operation: string, token: string | undefined): Promise<void> {
 	if (PUBLIC_OPERATIONS.has(operation)) return;
 	if (token === undefined || (await monti.session.get({ token })).admin === null) {
 		throw new MontiError("UNAUTHORIZED", "로그인이 필요하다");

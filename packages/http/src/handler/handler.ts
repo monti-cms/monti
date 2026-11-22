@@ -1,4 +1,4 @@
-import { type CoreMonti, MontiError } from "@monti-cms/core";
+import { type Monti, MontiError } from "@monti-cms/core";
 import { readCookie, resolveCookie } from "../protocol/cookie";
 import { errorResponse, methodNotAllowedResponse, successResponse } from "../protocol/response";
 import type { HttpHandler, HttpHandlerOptions, ResolvedCookie, SuccessStatus } from "../protocol/types";
@@ -9,7 +9,7 @@ import { authorize, cookieOutcome, withToken } from "./auth";
 
 /** 한 핸들러가 모든 요청에 쓰는 것. */
 interface HandlerContext {
-	monti: CoreMonti;
+	monti: Monti;
 	table: RouteTable;
 	cookie: ResolvedCookie;
 }
@@ -18,7 +18,7 @@ interface HandlerContext {
  * `monti`의 모든 공개 Operation을 REST로 여는 표준 `(request) => Promise<Response>` 핸들러. 쿠키 옵션이 잘못되었으면
  * (`sameSite: "none"`과 `secure: false`) 만들 때 오류를 던진다.
  */
-export function createHttpHandler(monti: CoreMonti, options: HttpHandlerOptions = {}): HttpHandler {
+export function createHttpHandler(monti: Monti, options: HttpHandlerOptions = {}): HttpHandler {
 	const context: HandlerContext = {
 		monti,
 		table: createRouteTable(monti.spec(), options.basePath ?? "/api"),
@@ -55,7 +55,7 @@ async function run(context: HandlerContext, match: RouteMatch, request: Request)
 }
 
 /** 시험 실행이면 `monti.dryRun` 안에서, 아니면 바로 Operation을 부른다. */
-function execute(monti: CoreMonti, operation: RouteOperation, input: unknown, dryRun: boolean): Promise<unknown> {
+function execute(monti: Monti, operation: RouteOperation, input: unknown, dryRun: boolean): Promise<unknown> {
 	if (!dryRun) return call(monti, operation, input);
 	return monti.dryRun((tx) => call(tx, operation, input));
 }
