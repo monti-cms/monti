@@ -23,6 +23,9 @@ export async function printSpec(parsed: ParsedArgs, io: CliIo): Promise<void> {
  * 실행한다. core와 플러그인에 없는 리소스나 작업이면 사용법 오류다.
  */
 export async function runOperation(parsed: ParsedArgs, io: CliIo): Promise<void> {
+	if (parsed.positionals.length > 2) {
+		throw new CliUsageError(`알 수 없는 인자다: ${parsed.positionals.slice(2).join(" ")}`);
+	}
 	const project = await loadProject(parsed, io);
 	const specs = specOf(project.config.plugins);
 	const [resource, action] = parsed.positionals;

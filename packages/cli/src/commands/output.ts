@@ -9,10 +9,14 @@ export function writeJson(io: CliIo, value: unknown): void {
 	io.stdout(`${JSON.stringify(value, jsonSafe(), 2) ?? "null"}\n`);
 }
 
+function isObject(value: unknown): value is object {
+	return value !== null && typeof value === "object";
+}
+
 /**
- * `JSON.stringify`의 replacer: 지금 값의 원래 객체(`toJSON()`을 부르기 전)가 그 조상(뿌리에서 지금 값까지 거쳐 온 객체)의
- * 원래 객체 가운데 하나이면 빼서 순환을 끊고, `bigint`는 글자로 바꾼다. 원래 객체로 견주므로 `toJSON()`이 부를 때마다 새
- * 객체를 돌려줘도 순환을 알아본다.
+ * `JSON.stringify`의 replacer: 지금 값의 원래 객체(`toJSON()` 호출 전)나 변환 후 객체(`value`)가 그 조상 가운데
+ * 하나이면 빼서 순환을 끊고, `bigint`는 글자로 바꾼다. 두 쪽을 모두 보므로 `toJSON()`이 새 객체나 조상 객체를 돌려줘도
+ * 순환을 알아본다.
  */
 function jsonSafe(): (this: Record<string, unknown>, key: string, value: unknown) => unknown {
 	/** 뿌리에서 지금 값까지 거쳐 온 값(replacer가 돌려준 것). `this`가 몇 번째 조상인지 찾는 데 쓴다. */
@@ -25,7 +29,9 @@ function jsonSafe(): (this: Record<string, unknown>, key: string, value: unknown
 		holders.length = depth;
 		originals.length = depth;
 		const original = this[key];
-		if (originals.includes(original)) return undefined;
+		const seen = (target: unknown): boolean =>
+			isObject(target) && (originals.includes(target) || holders.includes(target));
+		if (seen(original) || seen(value)) return undefined;
 		const safe = typeof value === "bigint" ? value.toString() : value;
 		holders.push(safe);
 		originals.push(original);

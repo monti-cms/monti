@@ -1,11 +1,14 @@
 import { randomUUID } from "node:crypto";
 import { existsSync } from "node:fs";
-import { mkdir, readdir, readFile, rename, rm, writeFile } from "node:fs/promises";
+import { mkdir, open, readdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { planSchemaDiff, type Schema, type SchemaSnapshot, snapshotOf } from "@monti-cms/core";
 
 /** 직전 생성 시점의 컬렉션 테이블 스냅샷(core의 `snapshotOf` 결과)을 담는 파일. */
 const snapshotFile = "_snapshot.json";
+
+/** 같은 폴더에서 두 생성이 동시에 스냅샷을 읽지 못하게 직렬화하는 잠금 파일. */
+const lockFile = "_snapshot.lock";
 
 /** 이름을 생략했을 때 파일 이름에 쓰는 이름. */
 const defaultName = "schema_update";
@@ -31,14 +34,34 @@ interface GeneratedMigration {
  * 거절한다.
  */
 export async function generateMigration(options: GenerateOptions): Promise<GeneratedMigration | null> {
-	const { dir, schema } = options;
-	const snapshot = snapshotOf(schema);
-	const statements = planSchemaDiff(await readSnapshot(dir), schema);
+	const snapshot = snapshotOf(options.schema);
+	if (options.dryRun === true) return planMigration(options);
+	return withDirLock(options.dir, async () => {
+		const planned = await planMigration(options);
+		if (planned !== null) await writeMigration(options.dir, planned, snapshot);
+		return planned;
+	});
+}
+
+/** `dir`의 직전 스냅샷과 `options.schema`를 비교해 생성할 파일 이름과 SQL을 만든다. 변경이 없으면 `null`이다. */
+async function planMigration(options: GenerateOptions): Promise<GeneratedMigration | null> {
+	const statements = planSchemaDiff(await readSnapshot(options.dir), options.schema);
 	if (statements.length === 0) return null;
-	const filename = `${await nextNumber(dir)}_${slugOf(options.name ?? defaultName)}.sql`;
-	const sql = statements.map((statement) => `${statement};\n`).join("\n");
-	if (options.dryRun !== true) await writeMigration(dir, { filename, sql }, snapshot);
-	return { filename, sql };
+	const filename = `${await nextNumber(options.dir)}_${slugOf(options.name ?? defaultName)}.sql`;
+	return { filename, sql: statements.map((statement) => `${statement};\n`).join("\n") };
+}
+
+/** `dir`에 독점 잠금 파일을 잡아 스냅샷 읽기부터 교체까지 한 번에 한 실행만 진행하게 한다. */
+async function withDirLock<T>(dir: string, run: () => Promise<T>): Promise<T> {
+	await mkdir(dir, { recursive: true });
+	const lock = path.join(dir, lockFile);
+	const handle = await open(lock, "wx");
+	try {
+		return await run();
+	} finally {
+		await handle.close();
+		await rm(lock, { force: true });
+	}
 }
 
 /** `dir`의 `.sql` 마이그레이션 파일 이름을 오름차순으로 돌려준다. 폴더가 없으면 빈 배열이다. */
