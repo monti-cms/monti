@@ -19,6 +19,7 @@ function TagInput({
 	size = "default",
 	className,
 	"aria-label": ariaLabel,
+	"aria-invalid": ariaInvalid,
 }: {
 	items: readonly string[];
 	onChange: (items: string[]) => void;
@@ -33,6 +34,8 @@ function TagInput({
 	size?: "sm" | "md" | "default";
 	className?: string;
 	"aria-label"?: string;
+	/** The value is wrong: the underline is danger in every state, as any field's. */
+	"aria-invalid"?: boolean;
 }) {
 	const [input, setInput] = useState("");
 
@@ -77,6 +80,7 @@ function TagInput({
 					type="text"
 					value={input}
 					aria-label={ariaLabel}
+					aria-invalid={ariaInvalid || undefined}
 					placeholder={items.length === 0 ? placeholder : undefined}
 					onChange={(event) => setInput(event.target.value)}
 					onKeyDown={handleKeyDown}

@@ -151,7 +151,7 @@ function TableRow({
 				"group/row relative border-monti-muted border-b bg-(--row-ground) has-data-[slot=row-link]:cursor-pointer",
 				"not-data-selected:has-[[data-slot=row-actions]_[aria-expanded=true]]:[--row-ground:var(--monti-bg-muted)] not-data-selected:has-[[data-slot=row-link]:focus-visible]:[--row-ground:var(--monti-bg-muted)] has-data-[slot=row-link]:not-data-selected:hover:[--row-ground:var(--monti-bg-muted)] not-data-selected:data-popup-open:[--row-ground:var(--monti-bg-muted)]",
 				"data-selected:data-proposal:[--row-ground:var(--monti-bg-proposal-muted)] data-selected:[--row-ground:var(--monti-bg-selected)]",
-				"aria-disabled:pointer-events-none aria-disabled:opacity-45 data-selected:border-monti-default [&:has([data-slot=row-link])>td]:static data-selected:[&>td:first-child]:before:absolute data-selected:[&>td:first-child]:before:inset-y-0 data-selected:[&>td:first-child]:before:left-0 data-selected:[&>td:first-child]:before:w-[3px] data-selected:[&>td:first-child]:before:bg-(--monti-border-contrast) data-selected:[&>td:first-child]:before:content-['']",
+				"aria-disabled:pointer-events-none aria-disabled:opacity-45 data-selected:border-monti-default [&:has([data-slot=row-link])>td]:static",
 				// The cell that holds the row's ⋯ sticks to the right edge of the page area, so the ⋯ stays in reach when the table runs wider than its column
 				// (a panel open beside it, columns made wide). It paints the row's ground over the surface's (`--monti-ground`: the page's, or a tool panel's), so
 				// the cells under it do not show through and no other row turns white; a line on its left says the table runs under it.

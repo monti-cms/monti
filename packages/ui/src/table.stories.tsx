@@ -266,7 +266,7 @@ export const FolderNaming: Story = {
 	),
 };
 
-/** Picked rows: the selected ground, the rule between them a step darker, and a 3px ink bar at the left edge so a picked row reads apart from one under the pointer. */
+/** Picked rows: the selected ground, one step darker than a row under the pointer, and the rule between them a step darker. No bar at the left edge (2026-11-24 소유자). */
 export const Picked: Story = {
 	tags: ["visual"],
 	render: () => <Frame>{rows((id) => ({ selected: id !== "3" }))}</Frame>,

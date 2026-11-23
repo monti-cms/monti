@@ -42,7 +42,7 @@ const meta = {
 				".state-hover [data-slot=tile]",
 				".state-hover [data-slot=tile] > button",
 				".state-hover [data-slot=nav-link] > button",
-				".state-hover [data-slot=segmented] > :not([data-pressed])",
+				".state-hover [data-slot=segmented] > :first-child",
 			],
 			focus: [".state-focus input"],
 			focusVisible: [
@@ -53,7 +53,7 @@ const meta = {
 				".state-focus [data-slot=media-input] > button",
 				".state-focus [data-slot=tile] > button",
 				".state-focus [data-slot=nav-link] > button",
-				".state-focus [data-slot=segmented] > :not([data-pressed])",
+				".state-focus [data-slot=segmented] > :first-child",
 			],
 			focusWithin: [".state-focus > *"],
 			active: [".state-active > *", ".state-active [data-slot=chip] > button", ".state-active tr"],
@@ -177,7 +177,7 @@ export const OverAStateColour: Story = {
 	),
 };
 
-/** Underline fields: a flat tint and a darker rule under the pointer, the ink rule with focus. */
+/** Underline fields: no rule at rest, a flat tint and a darker rule under the pointer, the ink rule with focus. A wrong field keeps its danger rule in every state. */
 export const Fields: Story = {
 	render: () => (
 		<Sheet>
@@ -186,6 +186,39 @@ export const Fields: Story = {
 			</Row>
 			<Row name="Input · 오류" states={SHOWN}>
 				{() => <Input aria-label="대표 주소" defaultValue="monti.site/old" aria-invalid />}
+			</Row>
+			<Row name="Select · 오류" states={SHOWN}>
+				{() => (
+					<Select items={CATEGORIES} defaultValue="dev">
+						<SelectTrigger width="full" aria-invalid>
+							<SelectValue />
+						</SelectTrigger>
+					</Select>
+				)}
+			</Row>
+			<Row name="Combobox · 오류" states={SHOWN}>
+				{() => (
+					<Combobox items={["리액트"]}>
+						<ComboboxInput placeholder="태그 고르기" aria-invalid />
+					</Combobox>
+				)}
+			</Row>
+			<Row name="Affix · 오류" states={SHOWN}>
+				{() => <Affix aria-label="경로" prefix="/" defaultValue="preview" aria-invalid />}
+			</Row>
+			<Row name="Textarea · 오류" states={SHOWN}>
+				{() => <Textarea aria-label="요약" defaultValue="요약" rows={1} aria-invalid />}
+			</Row>
+			<Row name="TagInput · 오류" states={SHOWN}>
+				{() => (
+					<TagInput
+						aria-label="태그"
+						items={["리액트"]}
+						onChange={() => {}}
+						removeLabel={(item) => `${item} 빼기`}
+						aria-invalid
+					/>
+				)}
 			</Row>
 			<Row name="Input">{(disabled) => <Input aria-label="제목" defaultValue="첫 번째 글" disabled={disabled} />}</Row>
 			<Row name="Select">
