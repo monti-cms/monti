@@ -12,11 +12,11 @@ const MESSAGES: Record<string, string> = {
 	media_key_key: "같은 저장 키의 미디어가 이미 있다",
 	media_uses_pkey: "이 미디어 사용처가 이미 기록되어 있다",
 	loose_files_pkey: "이 저장 키의 파일이 이미 기록되어 있다",
-	admin_pkey: "이 `id`의 관리자가 이미 있다",
+	admin_pkey: "이 `id`의 관리자가 이미 있습니다",
 	admin_single_row: "관리자가 이미 있습니다",
-	session_pkey: "이 세션이 이미 있다",
-	api_keys_pkey: "이 `id`의 키가 이미 있다",
-	api_keys_name_key: "같은 이름의 키가 있다",
+	session_pkey: "이 세션이 이미 있습니다",
+	api_keys_pkey: "이 `id`의 키가 이미 있습니다",
+	api_keys_name_key: "같은 이름의 키가 있습니다",
 };
 
 /** 고유 제약 `constraint`를 어긴 쓰기의 `CONFLICT` 메시지. 위 목록에 없는 제약(컬렉션 테이블 등)은 일반 메시지다. */
