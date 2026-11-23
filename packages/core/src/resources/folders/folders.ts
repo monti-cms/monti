@@ -90,8 +90,8 @@ const updateInput = z.object({
 });
 
 /**
- * 활성 폴더의 이름을 바꾸거나 옮긴다. `parent_id`가 null이면 루트로 옮기고, 생략한 항목은 그대로 둔다. 이름을 늘 저장하므로
- * 바꿀 항목이 없으면 기존 폴더를 그대로 돌려준다. 옮긴 위치의 활성 폴더와 이름이 겹치면 DB 고유 색인이 `CONFLICT`로 막는다.
+ * 활성 폴더의 이름을 바꾸거나 옮긴다. `parent_id`가 null이면 루트로 옮기고, 생략한 항목은 쓰지 않는다. 바꿀 항목이
+ * 없으면 기존 폴더를 그대로 돌려준다. 옮긴 위치의 활성 폴더와 이름이 겹치면 DB 고유 색인이 `CONFLICT`로 막는다.
  */
 async function updateFolder(input: z.infer<typeof updateInput>, ctx: WriteContext): Promise<Folder> {
 	const target = await lockedTarget(ctx, input.id);
@@ -99,9 +99,10 @@ async function updateFolder(input: z.infer<typeof updateInput>, ctx: WriteContex
 		await rejectParent(ctx, input.parent_id, target.scope);
 		await rejectCycle(ctx, input.id, input.parent_id);
 	}
+	if (input.name === undefined && input.parent_id === undefined) return target;
 	return ctx.db
 		.updateTable("folders")
-		.set({ name: input.name ?? target.name, parent_id: input.parent_id })
+		.set({ name: input.name, parent_id: input.parent_id })
 		.where("id", "=", input.id)
 		.returning(SHOWN)
 		.executeTakeFirstOrThrow();
