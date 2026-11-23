@@ -192,7 +192,7 @@ DB는 **고정 도메인 테이블 8개**와 스키마의 컬렉션마다 생성
 | 콘텐츠 (고정) | `templates` | 재사용 본문 템플릿 |
 | 미디어·폴더 | `media` | 파일 정보(`key`, `filename`, `mime_type`, `size`, `width`, `height`) |
 | | `media_uses` | 글·템플릿의 미디어 사용처 색인 |
-| | `loose_files` | 저장소의 고아 파일 삭제 대기열(`key`, `remove_after`) |
+| | `loose_files` | 저장소의 업로드 티켓·삭제 대기 파일 목록(`key`, `kind`, `remove_after`) |
 | | `folders` | 글·미디어용 폴더 트리 |
 | 인증·키 | `admin` | 관리자 계정 |
 | | `session` | 로그인 세션(토큰 해시, 만료 시각) |
@@ -278,6 +278,7 @@ erDiagram
 
   loose_files {
     text key PK
+    text kind "upload | cleanup"
     timestamptz remove_after
   }
 

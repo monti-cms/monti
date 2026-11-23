@@ -98,7 +98,7 @@
   - `DB-SCH-1.2` `folders` 테이블에 `id`, `scope`, `parent_id`, `name`, `trashed_at` 열이 있다
   - `DB-SCH-1.3` `media` 테이블에 `id`, `folder_id`, `key`, `filename`, `mime_type`, `size`, `width`, `height`, `trashed_at` 열이 있다
   - `DB-SCH-1.4` `media_uses` 테이블에 `media_id`, `source_kind`, `source_id`, `field_path` 열이 있다
-  - `DB-SCH-1.5` `loose_files` 테이블에 `key`, `remove_after` 열이 있다
+  - `DB-SCH-1.5` `loose_files` 테이블에 `key`, `kind`, `remove_after` 열이 있다
   - `DB-SCH-1.6` `admin` 테이블에 `id`, `email`, `password_hash` 열이 있다
   - `DB-SCH-1.7` `session` 테이블에 `token_hash`, `admin_id`, `expires_at` 열이 있다
   - `DB-SCH-1.8` `api_keys` 테이블에 `id`, `service`, `name`, `secret`, `last4` 열이 있다
