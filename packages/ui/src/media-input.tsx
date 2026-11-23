@@ -9,7 +9,7 @@ import { Attachment, Close, Image as ImageIcon } from "./icons";
 import { Image } from "./image";
 import { useProposalDescription } from "./proposal-cue";
 
-const HEIGHT = { sm: "h-monti-control-sm", md: "h-monti-control-md", default: "h-monti-control-lg" } as const;
+const HEIGHT = { sm: "h-monti-control-sm", md: "h-monti-control-md", default: "h-monti-control-md" } as const;
 
 /**
  * A media field (a cover image, a file) drawn like every other field: an underline, the chosen file's name after a small thumbnail, or the faint
@@ -59,7 +59,7 @@ function MediaInput({
 	action?: React.ReactNode;
 }) {
 	const description = useProposalDescription(proposal);
-	const actionSize = FIELD_ACTION_BUTTON[size === "default" ? "lg" : size];
+	const actionSize = FIELD_ACTION_BUTTON[size === "default" ? "md" : size];
 	const line = cn(
 		"flex h-full min-w-0 grow items-center gap-monti-8 border-0 bg-transparent p-0 text-left outline-none",
 		size === "sm" ? "text-monti-note" : "text-monti-body",
@@ -83,10 +83,9 @@ function MediaInput({
 			role={readOnly ? "group" : undefined}
 			className={cn(
 				!readOnly && FIELD_HOVER,
-				"flex w-full min-w-0 items-center border-monti-strong border-b transition-colors focus-within:border-monti-contrast data-proposal:border-monti-proposal data-proposal:border-b-[1.5px]",
-				// A proposal's blue line stays under the keyboard's focus (a state's colour is not taken away), so the focus on the file's name is a
-				// ring around the whole field, outside the line, as a select's is. The × at the end has its own ring.
-				"data-proposal:has-[>button:focus-visible]:ring-2 data-proposal:has-[>button:focus-visible]:ring-monti-contrast/60",
+				"flex w-full min-w-0 items-center border-transparent border-b transition-colors focus-within:border-monti-contrast data-proposal:border-monti-proposal data-proposal:border-b-[1.5px]",
+				// The file's name has no caret, so under the keyboard's focus the line is 2px thick in its own colour (a 1px border plus an inset shadow, so the text does not move), as a select's is. The × at the end has its own ring.
+				"has-[>button:focus-visible]:shadow-[inset_0_-1px_0_var(--monti-border-contrast)] data-proposal:has-[>button:focus-visible]:shadow-[inset_0_-0.5px_0_var(--monti-fg-proposal)]",
 				FIELD_INSET,
 				HEIGHT[size],
 				className,

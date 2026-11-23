@@ -8,7 +8,7 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/** The open one on the current ground and semibold; one with an unsaved change has a dot after its name; with a handle it can be dragged. */
+/** 32px rows with `radius-md`. The open one on the selected ground at 500; one with an unsaved change has a dot after its name; with a handle it can be dragged. */
 export const Links: Story = {
 	render: () => (
 		<Stack as="nav" gap={2} width="sidebar" aria-label="컬렉션">

@@ -54,6 +54,7 @@ function AlertDialogContent({
 				initialFocus={initialFocus}
 				render={modalSurface}
 				data-slot="alert-dialog-content"
+				data-shape="square"
 				className={cn(DIALOG_SURFACE, ALERT_WIDTH[size], className)}
 				{...props}
 			/>

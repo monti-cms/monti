@@ -11,53 +11,58 @@ import { Spinner } from "./spinner";
 /**
  * A pill. One `primary` per screen or floating surface, then `secondary` for the one or two common side actions, `danger` only to confirm
  * something that cannot be undone, and `outline-danger` for a quieter version of it. The text is centered by the font (no padding nudge), and a
- * leading icon pulls 2px into the left padding so it centers visually. The filled pills have no border, so their text starts at the padding the
- * design system gives (18px, 16px for `secondary`, 12px for `sm`); only `outline-danger` draws a 1px line.
+ * leading icon pulls 2px into the left padding so it centers visually. The words are 500 in every variant. The side padding follows the height
+ * (half of it less 2px: 16px at `lg`, 14px at `md`, 12px at `sm`, 10px at `xs`; a `ghost` takes 10px, 8px when small); only `outline-danger` draws a 1px line.
+ * On the page ground it is a pill; inside a square surface (a dialog, a popover, a menu, a floating bar: an ancestor with `data-shape="square"`) it
+ * takes that surface's family, `radius-md`.
  * A button that is `loading` keeps its fill and its place: a spinner comes first, in place of the button's own leading icon, set by eye: 13px from the left edge at `md`
  * (2px more than from the top and bottom) and 10px at `sm`, with 7px to the words and a tighter right side (15px, 13px for `secondary`, 9px at `sm`). The caller changes the label to say what is happening ("Saving…", "Uploading 64%"); it cannot be pressed again, its cursor says so, and it is `aria-busy`. It keeps the keyboard's focus while it works.
  */
 const buttonVariants = cva(
-	"group/button inline-flex shrink-0 items-center justify-center gap-monti-6 rounded-monti-full whitespace-nowrap outline-none transition-colors select-none focus-visible:ring-2 focus-visible:ring-monti-contrast/60 cursor-pointer disabled:pointer-events-none disabled:opacity-45 aria-disabled:pointer-events-none aria-disabled:opacity-45 data-held:pointer-events-auto data-held:cursor-default data-loading:pointer-events-auto data-loading:cursor-default data-loading:opacity-100 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 [&>svg:first-child]:-ml-[2px] not-data-reserved:data-loading:gap-[7px] data-loading:[&>[data-slot=spinner]+svg]:hidden",
+	"group/button inline-flex shrink-0 items-center justify-center gap-monti-6 rounded-monti-full in-data-[shape=square]:rounded-monti-md whitespace-nowrap font-medium outline-none transition-colors select-none focus-visible:ring-2 focus-visible:ring-monti-contrast/60 cursor-pointer disabled:pointer-events-none disabled:opacity-45 aria-disabled:pointer-events-none aria-disabled:opacity-45 data-held:pointer-events-auto data-held:cursor-default data-loading:pointer-events-auto data-loading:cursor-default data-loading:opacity-100 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 [&>svg:first-child]:-ml-[2px] not-data-reserved:data-loading:gap-[7px] data-loading:[&>[data-slot=spinner]+svg]:hidden",
 	{
 		variants: {
 			variant: {
 				/** The one main action of a screen or a floating surface. */
 				primary:
-					"bg-monti-emphasis px-[18px] font-semibold text-monti-on-emphasis not-data-loading:not-disabled:hover:bg-monti-emphasis/90 not-data-loading:not-disabled:active:bg-monti-emphasis/80",
+					"bg-monti-emphasis text-monti-on-emphasis not-data-loading:not-disabled:hover:bg-monti-emphasis/90 not-data-loading:not-disabled:active:bg-monti-emphasis/80",
 				/** A common side action. */
 				secondary:
-					"bg-monti-muted px-monti-16 font-normal text-monti-muted not-data-loading:not-disabled:hover:bg-monti-selected not-data-loading:not-disabled:active:bg-monti-current not-data-loading:not-disabled:active:text-monti-default",
+					"bg-monti-muted text-monti-muted not-data-loading:not-disabled:hover:bg-monti-selected not-data-loading:not-disabled:active:bg-monti-current not-data-loading:not-disabled:active:text-monti-default",
 				/** Confirms something that cannot be undone. Only inside a confirmation. */
 				danger:
-					"bg-monti-danger-emphasis px-[18px] font-semibold text-monti-on-emphasis not-data-loading:not-disabled:hover:bg-monti-danger-emphasis/90 not-data-loading:not-disabled:active:bg-monti-danger-emphasis/80",
+					"bg-monti-danger-emphasis text-monti-on-emphasis not-data-loading:not-disabled:hover:bg-monti-danger-emphasis/90 not-data-loading:not-disabled:active:bg-monti-danger-emphasis/80",
 				/**
 				 * An action that stands on its own where a pill would be too heavy (undo all beside the save pill, a toolbar's upload, "+ add" under a
 				 * list): no ground at rest, the muted ground under the pointer and the selected one while pressed (and while it is on, `aria-pressed`, or
 				 * its menu is open), at the same heights as the pills.
 				 */
 				ghost:
-					"bg-transparent px-monti-12 font-normal text-monti-muted not-data-loading:not-disabled:hover:bg-monti-muted not-data-loading:not-disabled:hover:text-monti-default not-data-loading:not-disabled:active:bg-monti-selected not-data-loading:not-disabled:active:text-monti-default aria-pressed:bg-monti-selected aria-pressed:text-monti-default aria-expanded:bg-monti-selected aria-expanded:text-monti-default",
+					"bg-transparent text-monti-muted not-data-loading:not-disabled:hover:bg-monti-muted not-data-loading:not-disabled:hover:text-monti-default not-data-loading:not-disabled:active:bg-monti-selected not-data-loading:not-disabled:active:text-monti-default aria-pressed:bg-monti-selected aria-pressed:text-monti-default aria-expanded:bg-monti-selected aria-expanded:text-monti-default",
 				/** A `ghost` that deletes (a sheet foot's "delete", a question's risky way out): red words, the red wash under the pointer. Standing alone in a page head or a danger block it is `outline-danger`. */
 				"ghost-danger":
-					"bg-transparent px-monti-12 font-normal text-monti-danger not-data-loading:not-disabled:hover:bg-monti-danger-muted not-data-loading:not-disabled:active:bg-monti-danger-muted",
+					"bg-transparent text-monti-danger not-data-loading:not-disabled:hover:bg-monti-danger-muted not-data-loading:not-disabled:active:bg-monti-danger-muted",
 				/** The quiet version of `danger`: a deleting button outside a dialog that stands alone (empty the trash, delete the collection). */
 				"outline-danger":
-					"border border-monti-danger px-[18px] font-semibold text-monti-danger not-data-loading:not-disabled:hover:bg-monti-danger-muted",
+					"border border-monti-danger text-monti-danger not-data-loading:not-disabled:hover:bg-monti-danger-muted",
 			},
 			/**
-			 * The control heights: `lg` 36px (the default: page headers, forms, dialogs); `md` 32px (side panels); `sm` 28px inside cards and toolbars;
-			 * `xs` 24px where only a small one fits (a card's head, a chip row).
+			 * The control heights: `md` 32px (the default: page headers, forms, dialogs, panels); `lg` 36px where a page asks for a larger one; `sm` 28px
+			 * inside cards and toolbars; `xs` 24px where only a small one fits (a card's head, a chip row).
 			 */
 			size: {
-				lg: "h-monti-control-lg text-monti-body",
-				md: "h-monti-control-md px-[14px] text-monti-body",
-				sm: "h-monti-control-sm px-monti-12 text-monti-note",
-				xs: "h-monti-control-xs px-monti-8 text-monti-caption [&_svg:not([class*='size-'])]:size-3.5",
+				lg: "h-monti-control-lg px-monti-16 text-monti-body",
+				md: "h-monti-control-md px-[14px] text-monti-label",
+				sm: "h-monti-control-sm px-monti-12 text-monti-caption",
+				xs: "h-monti-control-xs px-monti-10 text-monti-caption [&_svg:not([class*='size-'])]:size-3.5",
 			},
 		},
 		// A loading pill pads by eye, not by a formula: the spinner sits 2px further from the left edge than from the top and bottom, and the right side is
 		// tighter than the resting padding, so the pill does not look empty on the right.
 		compoundVariants: [
+			// A ghost has no ground at rest, so its words stand nearer its edge.
+			{ size: ["lg", "md"], variant: ["ghost", "ghost-danger"], class: "px-monti-10" },
+			{ size: ["sm", "xs"], variant: ["ghost", "ghost-danger"], class: "px-monti-8" },
 			{
 				size: "lg",
 				variant: ["primary", "danger", "outline-danger"],
@@ -72,7 +77,7 @@ const buttonVariants = cva(
 			{ size: "sm", class: "not-data-reserved:data-loading:pr-[9px] not-data-reserved:data-loading:pl-[10px]" },
 			{ size: "xs", class: "not-data-reserved:data-loading:pr-[7px] not-data-reserved:data-loading:pl-[7px]" },
 		],
-		defaultVariants: { variant: "primary", size: "lg" },
+		defaultVariants: { variant: "primary", size: "md" },
 	},
 );
 

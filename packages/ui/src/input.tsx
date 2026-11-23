@@ -20,7 +20,8 @@ const INLINE_SIZE = {
 } as const;
 
 /**
- * A one-line field drawn as an underline, never a box. The underline turns ink on focus and danger when `aria-invalid`; the placeholder is
+ * A one-line field drawn as an underline, never a box. At rest it shows no line at all (the label and the value say it is a field); under the pointer it
+ * takes a flat tint and a `border-default` underline, on focus the underline turns ink, and it is danger when `aria-invalid` (in every state). The placeholder is
  * faint. `proposal` marks a value the assistant wrote and nobody has touched: blue text and a 1.5px blue underline. `action` is a control at the
  * end of the line (a button that makes the value again from the body); the underline then runs under it too, like a select's caret. A `readOnly`
  * one is a value to read (a read-only entry's picture settings): it keeps its line and its text as they are (under the pointer and the focus too), and takes the caret to select.
@@ -60,8 +61,7 @@ function Input({
 	action?: React.ReactNode;
 }) {
 	const inline = appearance === "inline" || size === "title" || size === "display" || size === "inherit";
-	const fieldHeight =
-		size === "sm" ? "h-monti-control-sm" : size === "md" ? "h-monti-control-md" : "h-monti-control-lg";
+	const fieldHeight = size === "sm" ? "h-monti-control-sm" : "h-monti-control-md";
 	const input = (
 		<InputPrimitive
 			type={type}
@@ -86,11 +86,11 @@ function Input({
 							!action && !props.readOnly && FIELD_HOVER,
 							// Read-only, the line stays as it is under the focus too: nothing is being written (field.md).
 							!props.readOnly && "focus-visible:border-monti-contrast",
-							"border-0 border-monti-strong border-b text-monti-default text-monti-reading aria-invalid:border-monti-danger data-proposal:border-monti-proposal data-proposal:border-b-[1.5px] data-proposal:text-monti-proposal md:text-monti-body",
+							"border-0 border-transparent border-b text-monti-default text-monti-reading aria-invalid:border-monti-danger data-proposal:border-monti-proposal data-proposal:border-b-[1.5px] data-proposal:text-monti-proposal md:text-monti-body",
 							!action && FIELD_INSET,
 						),
 				inline ? INLINE_SIZE[size] : size === "sm" && "md:text-monti-note",
-				// An underline field stands as high as a button of its size: 28px small, 32px medium (side panels), 36px otherwise, its rule inside. With an action the line around it holds the height.
+				// An underline field stands as high as a button of its size: 28px small, 32px otherwise (the one control height), its rule inside. With an action the line around it holds the height.
 				!inline && (action ? "h-full self-stretch py-0" : cn("py-0", fieldHeight)),
 				width === "short" && "w-monti-menu",
 				width === "number" && "w-24",
@@ -114,7 +114,7 @@ function Input({
 				cn(
 					!props.readOnly && FIELD_HOVER,
 					!props.readOnly && "focus-within:border-monti-contrast",
-					"flex w-full min-w-0 border-monti-strong border-b transition-colors has-[[aria-invalid=true]]:border-monti-danger has-data-proposal:border-monti-proposal has-data-proposal:border-b-[1.5px]",
+					"flex w-full min-w-0 border-transparent border-b transition-colors has-[[aria-invalid=true]]:border-monti-danger has-data-proposal:border-monti-proposal has-data-proposal:border-b-[1.5px]",
 					FIELD_INSET,
 				),
 				"items-center",
@@ -123,9 +123,7 @@ function Input({
 		>
 			{input}
 			<span className={FIELD_ACTION}>
-				<IconButtonContext value={FIELD_ACTION_BUTTON[size === "sm" ? "sm" : size === "md" ? "md" : "lg"]}>
-					{action}
-				</IconButtonContext>
+				<IconButtonContext value={FIELD_ACTION_BUTTON[size === "sm" ? "sm" : "md"]}>{action}</IconButtonContext>
 			</span>
 		</div>
 	);

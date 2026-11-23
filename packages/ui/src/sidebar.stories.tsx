@@ -29,7 +29,7 @@ import {
 
 /**
  * The left navigation on the cream tool ground: the site's name and the fold button, the content, and under a line the trash, the activity log, the tools and the settings.
- * The open row is on the current ground and semibold; a row under the pointer takes the selected ground. Folded (⌘B) it is a 48px rail of icons.
+ * Rows are 32px with `radius-md`. The open row is on the selected ground at 500; a row under the pointer takes the hover ground. Folded (⌘B) it is a 48px rail of icons.
  */
 type Folder = { name: string; count: string; depth: 0 | 1; active?: boolean };
 // The sidebar lists a collection's top-level folders; an open folder shows its own folders under it.

@@ -59,7 +59,7 @@ const EDITOR_BODY = cn(
 	"[&_table]:mb-monti-20 [&_table]:w-full [&_table]:table-fixed [&_table]:border-collapse [&_table]:text-monti-body [&_td]:relative [&_td]:border [&_td]:border-monti-emphasis [&_td]:px-monti-8 [&_td]:py-monti-6 [&_td]:align-top [&_th]:relative [&_th]:border [&_th]:border-monti-emphasis [&_th]:px-monti-8 [&_th]:py-monti-6 [&_th]:text-left [&_th]:align-top [&_th]:font-semibold",
 	// Cells picked by dragging across them.
 	"[&_.selectedCell]:bg-monti-selected [&_.selectedCell]:selection:bg-transparent! [&_.selectedCell_*]:selection:bg-transparent!",
-	"[&_hr]:mt-monti-8 [&_hr]:mb-monti-24 [&_hr]:border-0 [&_hr]:border-monti-emphasis [&_hr]:border-t",
+	"[&_hr]:mt-monti-8 [&_hr]:mb-monti-24 [&_hr]:border-0 [&_hr]:border-monti-default [&_hr]:border-t",
 	// Marks.
 	"[&_a]:underline [&_a]:decoration-monti-strong [&_a]:underline-offset-4",
 	"[&_:not(pre)>code]:rounded-monti-sm [&_:not(pre)>code]:bg-monti-muted [&_:not(pre)>code]:px-monti-4 [&_:not(pre)>code]:font-mono [&_:not(pre)>code]:text-monti-editor-code",

@@ -136,11 +136,11 @@ function SidebarProvider({
 }
 
 /**
- * The rail as the design draws it: the tool ground, 12px above (open or folded, so the head row stays put), 14px at the sides, 16px below, rows
- * 2px apart. Folded, 6px | 5px at the sides, so the 36px rows fill the 48px rail with its 1px edge and nothing scrolls sideways.
+ * The rail as the design draws it: the tool ground, 12px above (open or folded, so the head row stays put), 12px at the sides, 16px below, rows
+ * 2px apart. Folded, 8px | 7px at the sides, so the 32px rows fill the 48px rail with its 1px edge and nothing scrolls sideways.
  */
 const RAIL =
-	"flex flex-col gap-monti-2 bg-monti-tool px-[14px] pt-monti-12 pb-monti-16 text-monti-default data-rail:pr-[5px] data-rail:pl-[6px]";
+	"flex flex-col gap-monti-2 bg-monti-tool px-monti-12 pt-monti-12 pb-monti-16 text-monti-default data-rail:pr-[7px] data-rail:pl-monti-8";
 
 /**
  * The left navigation: a `nav` on the tool ground with a line down its right edge, a header with the site's name, the rows of the groups, and a
@@ -407,7 +407,7 @@ function SidebarFooter({ className, ...props }: React.ComponentProps<"div">) {
 		<div
 			data-slot="sidebar-footer"
 			data-sidebar="footer"
-			className={cn("mt-auto flex flex-col gap-monti-2 border-monti-emphasis border-t pt-monti-12", className)}
+			className={cn("mt-auto flex flex-col gap-monti-2 border-monti-default border-t pt-monti-12", className)}
 			{...props}
 		/>
 	);
@@ -470,7 +470,7 @@ function SidebarMenuItem({ className, ...props }: React.ComponentProps<"li">) {
 
 /**
  * One row of the rail ({@link NAV_ROW} on the cream ground): an icon, the name, and at the end a count ({@link SidebarMenuBadge}). The open one is on the
- * current ground (one step darker than the selected one) and semibold; there is no bar beside it. Pointing at any other row gives it the selected ground.
+ * selected ground, in ink at 500; there is no bar beside it. Pointing at any other row gives it the hover ground.
  * Put a `ChangeDot` after the name for an unsaved change; it sits 6px from it.
  */
 function SidebarMenuButton({
@@ -496,7 +496,7 @@ function SidebarMenuButton({
 			{
 				className: cn(
 					NAV_ROW,
-					"peer/menu-button group/menu-button text-monti-default group-has-data-[sidebar=menu-action]/menu-item:pr-monti-32 group-data-[rail]/rail:relative group-data-[rail]/rail:w-9 group-data-[rail]/rail:px-monti-10 group-data-[rail]/rail:[&>svg:first-child]:ml-0 group-data-[rail]/rail:[&>[data-slot=sidebar-menu-badge]]:hidden group-data-[rail]/rail:[&>span:not([data-slot])]:hidden [&>[data-slot=change-dot]]:-ml-monti-4 [&>span:not([data-slot])]:min-w-0 [&>span:not([data-slot])]:truncate [&_svg]:size-4 [&_svg]:shrink-0",
+					"peer/menu-button group/menu-button text-monti-default group-has-data-[sidebar=menu-action]/menu-item:pr-monti-32 group-data-[rail]/rail:relative group-data-[rail]/rail:w-8 group-data-[rail]/rail:px-monti-8 group-data-[rail]/rail:[&>[data-slot=sidebar-menu-badge]]:hidden group-data-[rail]/rail:[&>span:not([data-slot])]:hidden [&>[data-slot=change-dot]]:-ml-monti-4 [&>span:not([data-slot])]:min-w-0 [&>span:not([data-slot])]:truncate [&_svg]:size-4 [&_svg]:shrink-0",
 					className,
 				),
 				children: (
@@ -564,18 +564,11 @@ function SidebarMenuSub({ className, ...props }: React.ComponentProps<"ul">) {
 	);
 }
 
-const SUB_DEPTH = ["pl-[40px]", "pl-[62px]", "pl-[84px]", "pl-[106px]"] as const;
+/** A folder's name stands where a top row's name stands (8px + 16px icon + 8px), then 20px further in each level. */
+const SUB_DEPTH = ["pl-monti-32", "pl-[52px]", "pl-[72px]", "pl-[92px]"] as const;
 
 /**
- * The tree line of a folder row: a straight 1px rule down the side of a parent's folders, under the parent's icon (or its parent folder's words),
- * with 4px of air above the first folder, ending 4px above the bottom of the last one, as it starts 4px into the first (2026-11-05 owner). Every folder name stands 19px to 21px past its nearest rule and exactly where its parent's name stands, one 22px step in per level, so the names of a column line up.
- */
-const SUB_LINE_X = ["before:left-[21px]", "before:left-[41px]", "before:left-[63px]", "before:left-[85px]"] as const;
-/** Where each folder depth's rule runs, in px from the row's start: under the parent's icon, then under the parent folder's first letter. */
-const SUB_LINE_LEFT = [21, 41, 63, 85] as const;
-
-/**
- * The tree lines of a flat folder list, from each folder's depth: whether a folder is the first under its parent (its rule starts with some air),
+ * The place of each folder in a flat folder list, from its depth (kept for callers; no line is drawn from it any more): whether a folder is the first under its parent (its rule starts with some air),
  * whether it is the last at its depth under its parent (its rule ends at its middle), and which ancestors' rules run on past it (`through[d]`: the
  * parent at depth `d` has a later sibling).
  */
@@ -595,19 +588,19 @@ export function folderTree(depths: readonly number[]) {
 	});
 }
 
-const SUB_LINE =
-	"relative before:pointer-events-none before:absolute before:-z-10 before:-top-[2px] before:-bottom-[2px] before:border-monti-strong before:border-l before:content-['']";
+/** A folder row draws no tree line (its ground would cross it): the nesting shows by its indent alone. */
+const SUB_LINE = "relative";
 
 /**
- * A folder under a row: its name and, at the end, its count. The open one is ink and semibold, with no ground of its own; pointing at one gives it
- * the selected ground. A thin straight tree line runs down the side of the folders (`SUB_LINE`). A row's name starts 40px in from the edge, where a top row's name stands, and its count ends 16px from the edge like a top row's; `depth` indents a folder inside another by 22px a level; `dropTarget` is the ring while entries are dragged over it. A link by default; `render={<button type="button" />}` makes it a button.
+ * A folder under a row: 28px, `radius-md`, 13px words, its name and, at the end, its count. The open one is on the selected ground in ink at 500; pointing at
+ * one gives it the hover ground. No tree line runs beside the folders (`SUB_LINE`): the indent says the nesting. A row's name starts where a top row's name stands, and its count ends 8px from the row's edge like a top row's; `depth` indents a folder inside another by 20px a level; `dropTarget` is the ring while entries are dragged over it. A link by default; `render={<button type="button" />}` makes it a button.
  */
 function SidebarMenuSubButton({
 	render,
 	isActive = false,
 	depth = 0,
 	dropTarget = false,
-	tree,
+	tree: _tree,
 	className,
 	style,
 	children,
@@ -617,45 +610,21 @@ function SidebarMenuSubButton({
 		isActive?: boolean;
 		depth?: 0 | 1 | 2 | 3;
 		dropTarget?: boolean;
-		/** The row's place in the tree, from {@link folderTree}: whether its rule ends here, and which ancestors' rules run past it. */
+		/** The row's place in the tree, from {@link folderTree}. Accepted for callers; the indent alone shows the nesting now. */
 		tree?: { first: boolean; last: boolean; through: readonly boolean[] };
 	}) {
-	// The ancestors' rules that run on past this row: 1px lines at their depths' places, reaching 2px past the row like its own rule so the 4px
-	// gaps between rows do not break them.
-	const through = (tree?.through ?? []).flatMap((on, level) => (on ? [SUB_LINE_LEFT[level]] : []));
-	const lines = through.map((left) => (
-		<span
-			key={left}
-			aria-hidden
-			className="pointer-events-none absolute -top-[2px] -bottom-[2px] -z-10 w-px bg-(--monti-border-strong)"
-			style={{ left }} // design-allow: the rule sits under the icon of its depth, from SUB_LINE_LEFT
-		/>
-	));
 	const row = useRender({
 		defaultTagName: "a",
 		props: mergeProps<"a">(
 			{
 				className: cn(
-					"flex w-full cursor-pointer items-center justify-between gap-monti-8 min-h-monti-control-md rounded-monti-full border-0 bg-transparent py-monti-6 pr-monti-16 text-left no-underline outline-none hover:bg-monti-selected hover:text-monti-default focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-monti-contrast/60 data-active:font-semibold data-active:text-monti-default data-droptarget:ring-2 data-droptarget:ring-monti-contrast [&>span:not([data-slot])]:min-w-0 [&>span:not([data-slot])]:truncate",
+					"flex w-full cursor-pointer items-center justify-between gap-monti-8 min-h-monti-control-sm rounded-monti-md border-0 bg-transparent py-monti-4 pr-monti-8 text-left text-monti-note no-underline outline-none hover:bg-monti-muted hover:text-monti-default focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-monti-contrast/60 data-active:bg-monti-selected data-active:font-medium data-active:text-monti-default data-droptarget:ring-2 data-droptarget:ring-monti-contrast [&>span:not([data-slot])]:min-w-0 [&>span:not([data-slot])]:truncate",
 					SUB_DEPTH[depth],
 					SUB_LINE,
-					SUB_LINE_X[depth],
-					// Each rule reaches 2px past its row to bridge the 4px gaps; it starts 4px into the first folder and stops 4px short of the last one's bottom.
-					tree
-						? cn(tree.first && "before:top-monti-4", tree.last && "before:bottom-monti-4")
-						: "in-[li:first-child]:before:top-monti-4 in-[li:last-child]:before:bottom-monti-4",
 					className,
 				),
 				style,
-				children:
-					through.length > 0 ? (
-						<>
-							{lines}
-							{children}
-						</>
-					) : (
-						children
-					),
+				children,
 			},
 			props,
 		),

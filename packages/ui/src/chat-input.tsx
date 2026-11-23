@@ -80,7 +80,7 @@ export function ChatInput({
 			className={cn(
 				// 24px round: the 28px model pill and the 32px send button sit 8px from its edges, so their curves run with its own. The typed words,
 				// the queued ones and the model's name all start 18px in.
-				"rounded-[24px] border border-monti-emphasis bg-monti-page px-monti-12 pt-monti-10 pb-monti-8 has-[textarea:disabled]:opacity-45",
+				"rounded-[24px] border border-monti-default bg-monti-page px-monti-12 pt-monti-10 pb-monti-8 has-[textarea:disabled]:opacity-45",
 				queue && "relative",
 				className,
 			)}

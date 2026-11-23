@@ -59,19 +59,19 @@ function SelectValue({ className, ...props }: SelectPrimitive.Value.Props) {
 
 /**
  * The look of a closed pick-one field, shared by {@link SelectTrigger} and `MenuField`: an underline, the value, and a caret at the end. The line turns
- * ink while it has focus or its list is open. An error's red line and a proposal's blue line stay under the keyboard's focus, which is then a ring
- * around the trigger: a state's colour is never taken for the focus, and the focus never takes the state's colour away (it has no caret to show). `data-size` is `default` (body text) or `sm` (note text, 2px less above and below).
+ * ink while it has focus or its list is open, and never a box around it. The field has no caret, so under the keyboard's focus the line is 2px thick in its own colour (1px border plus a 1px inset shadow, so the text does not move) (ink, danger, or
+ * proposal blue), and no line at rest when valid (2026-11-24 owner). `data-size` is `default` (body text) or `sm` (note text, 2px less above and below).
  */
 export const SELECT_TRIGGER = cn(
 	FIELD_HOVER,
-	"flex items-center justify-between gap-monti-8 whitespace-nowrap rounded-none border-0 border-monti-strong border-b bg-transparent text-left text-monti-body text-monti-default outline-none transition-colors focus-visible:border-monti-contrast aria-expanded:border-monti-contrast disabled:cursor-default disabled:opacity-45 aria-readonly:cursor-default aria-readonly:select-text aria-readonly:focus-visible:border-monti-strong aria-readonly:focus-visible:ring-2 aria-readonly:focus-visible:ring-monti-contrast/60 aria-readonly:[&_[data-slot=select-icon]]:hidden aria-invalid:border-monti-danger aria-invalid:focus-visible:ring-2 aria-invalid:focus-visible:ring-monti-contrast/60 data-[size=default]:h-monti-control-lg data-[size=md]:h-monti-control-md data-[size=sm]:h-monti-control-sm data-[size=sm]:text-monti-note [&_svg]:pointer-events-none [&_svg]:shrink-0",
+	"flex items-center justify-between gap-monti-8 whitespace-nowrap rounded-none border-0 border-transparent border-b bg-transparent text-left text-monti-body text-monti-default outline-none transition-colors focus-visible:border-monti-contrast focus-visible:shadow-[inset_0_-1px_0_var(--monti-border-contrast)] aria-expanded:border-monti-contrast disabled:cursor-default disabled:opacity-45 aria-readonly:cursor-default aria-readonly:select-text aria-readonly:focus-visible:border-monti-contrast aria-readonly:[&_[data-slot=select-icon]]:hidden aria-invalid:border-monti-danger aria-invalid:focus-visible:shadow-[inset_0_-1px_0_var(--monti-fg-danger)] data-[size=default]:h-monti-control-md data-[size=md]:h-monti-control-md data-[size=sm]:h-monti-control-sm data-[size=sm]:text-monti-note [&_svg]:pointer-events-none [&_svg]:shrink-0",
 	FIELD_INSET,
 );
 
 /**
  * The closed select: an underline with a chevron at the end, like `Input`. With many choices (language codes, time zones) use a `Combobox`,
  * which can search. `proposal` marks a value the assistant picked and nobody has touched. In a `Select readOnly` it is the value to read, in
- * full ink: no caret at its end, no tint under the pointer, and its list does not open; the keyboard still stops on it, with the focus ring.
+ * full ink: no caret at its end, no tint under the pointer, and its list does not open; the keyboard still stops on it, with the 2px focus underline.
  */
 function SelectTrigger({
 	className,
@@ -96,7 +96,7 @@ function SelectTrigger({
 			aria-description={useProposalDescription(proposal)}
 			className={cn(
 				SELECT_TRIGGER,
-				"data-proposal:border-monti-proposal data-proposal:border-b-[1.5px] data-placeholder:text-monti-faint data-proposal:text-monti-proposal data-proposal:focus-visible:ring-2 data-proposal:focus-visible:ring-monti-contrast/60",
+				"data-proposal:border-monti-proposal data-proposal:border-b-[1.5px] data-placeholder:text-monti-faint data-proposal:text-monti-proposal data-proposal:focus-visible:shadow-[inset_0_-0.5px_0_var(--monti-fg-proposal)]",
 				width === "full" ? "w-full" : "w-fit",
 				className,
 			)}
@@ -142,7 +142,7 @@ function SelectContent({
 						MENU_MOTION,
 						"relative isolate z-50",
 						FIT_HEIGHT,
-						"w-max min-w-[max(var(--monti-width-menu),var(--anchor-width))] max-w-(--available-width) overflow-y-auto overflow-x-hidden p-monti-6 data-[align-trigger=true]:animate-none",
+						"w-max min-w-[max(var(--monti-width-menu),var(--anchor-width))] max-w-(--available-width) overflow-y-auto overflow-x-hidden p-monti-4 data-[align-trigger=true]:animate-none",
 						className,
 					)}
 					{...props}

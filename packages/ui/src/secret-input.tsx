@@ -73,7 +73,7 @@ function SavedValue({
 	return (
 		<span
 			data-slot="saved-value"
-			className="flex h-monti-control-lg items-center gap-monti-12 border-transparent border-b"
+			className="flex h-monti-control-md items-center gap-monti-12 border-transparent border-b"
 		>
 			<span className="min-w-0 flex-1 truncate font-mono text-monti-body">{children}</span>
 			<Button type="button" variant="ghost" size="sm" onClick={action.onClick}>

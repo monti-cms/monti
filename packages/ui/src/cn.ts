@@ -8,12 +8,21 @@ import { extendTailwindMerge } from "tailwind-merge";
 const SPACING = [2, 4, 6, 8, 10, 12, 16, 20, 24, 32, 40, 48].map((step) => `monti-${step}`);
 const CONTROLS = ["monti-control-lg", "monti-control-md", "monti-control-sm", "monti-control-xs"];
 const ICONS = ["monti-icon-xs", "monti-icon-sm", "monti-icon-md", "monti-icon-lg"];
-const BARS = ["monti-header", "monti-toolbar", "monti-panebar", "monti-statusbar"];
+const BARS = [
+	"monti-header",
+	"monti-toolbar",
+	"monti-panebar",
+	"monti-tabs",
+	"monti-row",
+	"monti-thead",
+	"monti-statusbar",
+];
 const COLUMNS = [
 	"monti-sidebar",
 	"monti-rail",
 	"monti-menu",
 	"monti-panel",
+	"monti-label",
 	"monti-side-panel",
 	"monti-assistant",
 	"monti-sheet",

@@ -10,19 +10,20 @@ import { letHeldKeyGo } from "./held-key";
 import { useUiLabels } from "./labels";
 
 /**
- * The look of a modal, shared by `Dialog` and `AlertDialog`: the page ground with an emphasis edge, the largest radius and the overlay shadow, 28px
- * around (22 below), 420px wide. The title is 20px with an ink rule under it, the text below it 16px lower, and the actions a row at the bottom right.
+ * The look of a modal, shared by `Dialog` and `AlertDialog`: the page ground with a `border-default` edge, `radius-lg` (10px) and the overlay shadow, 24px
+ * around (20 below), 420px wide. The title is 16px 600 with no rule under it (the ink rule belongs to page titles only), the text below it 16px lower,
+ * and the actions a row at the bottom right. Its buttons are of the square family (`data-shape="square"` on the popup).
  */
 export const DIALOG_SURFACE =
-	"data-open:fade-in-0 data-open:zoom-in-95 data-closed:fade-out-0 data-closed:zoom-out-95 fixed top-1/2 left-1/2 z-50 flex w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 flex-col gap-monti-24 rounded-monti-xl border border-monti-emphasis bg-monti-page px-monti-24 pt-monti-24 pb-monti-20 text-monti-body text-monti-default shadow-monti-overlay outline-none duration-(--monti-duration-fast) data-closed:animate-out data-open:animate-in sm:max-w-[420px]";
+	"data-open:fade-in-0 data-open:zoom-in-95 data-closed:fade-out-0 data-closed:zoom-out-95 fixed top-1/2 left-1/2 z-50 flex w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 flex-col gap-monti-24 rounded-monti-lg border border-monti-default bg-monti-page px-monti-24 pt-monti-24 pb-monti-20 text-monti-body text-monti-default shadow-monti-overlay outline-none duration-(--monti-duration-fast) data-closed:animate-out data-open:animate-in sm:max-w-[420px]";
 
 /** What sits behind a modal, a sheet or the narrow-screen sidebar: the backdrop color alone, no blur, fading in and out over 150ms. */
 export const BACKDROP =
 	"fixed inset-0 isolate z-50 bg-monti-backdrop transition-opacity duration-(--monti-duration-normal) data-ending-style:opacity-0 data-starting-style:opacity-0";
 
 /** The title and the text under it. */
-export const DIALOG_HEADER = "flex flex-col gap-monti-16";
-export const DIALOG_TITLE = "border-monti-contrast border-b pb-monti-12 text-monti-heading text-monti-default";
+export const DIALOG_HEADER = "flex flex-col gap-monti-6";
+export const DIALOG_TITLE = "text-monti-title text-monti-default";
 export const DIALOG_DESCRIPTION =
 	"text-monti-prose text-monti-muted *:[a]:underline *:[a]:underline-offset-3 *:[a]:hover:text-monti-default";
 
@@ -181,6 +182,7 @@ function DialogContent({
 				initialFocus={initialFocus}
 				render={modalSurface}
 				data-slot="dialog-content"
+				data-shape="square"
 				className={cn(
 					DIALOG_SURFACE,
 					DIALOG_WIDTH[size],

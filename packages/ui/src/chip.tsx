@@ -9,15 +9,18 @@ import { useUiLabels } from "./labels";
 import { ProposalNote } from "./proposal-cue";
 import { Spark } from "./spark";
 
-/** The pill of a chip, for parts that draw their own chip (a combobox's selected values). */
+/**
+ * The look of a chip, for parts that draw their own chip (a combobox's selected values): 24px, `radius-sm`, the selected ground, 13px words at 400, 8px
+ * at the sides (4px after a ×).
+ */
 export const CHIP =
-	"inline-flex h-monti-control-sm w-fit items-center gap-monti-6 rounded-monti-full bg-monti-selected px-monti-10 font-semibold text-monti-default text-monti-note whitespace-nowrap";
+	"inline-flex h-monti-control-xs w-fit items-center gap-monti-4 rounded-monti-sm bg-monti-selected px-monti-8 has-[>button]:pr-monti-4 font-normal text-monti-default text-monti-note whitespace-nowrap";
 
-/** The small chip, one step under {@link CHIP}: a value inside a field (a tag), so it sits in the field's line without crowding it. */
-export const CHIP_SM = "h-monti-control-xs gap-monti-4 px-monti-8 text-monti-caption";
+/** The small chip: the same 24px with 12px words and 6px at the sides, for a value inside a field (a tag), so it sits in the field's line without crowding it. */
+export const CHIP_SM = "h-monti-control-xs gap-monti-2 px-monti-6 text-monti-caption";
 
 /** What a chip's remove mark looks like: lighter than the text. */
-export const CHIP_REMOVE = `${HIT_AREA} flex shrink-0 cursor-pointer rounded-monti-full border-0 bg-transparent p-0 font-normal text-monti-subtle outline-none hover:text-monti-default focus-visible:ring-2 focus-visible:ring-monti-contrast/60`;
+export const CHIP_REMOVE = `${HIT_AREA} flex shrink-0 cursor-pointer rounded-monti-sm border-0 bg-transparent p-0 font-normal text-monti-faint outline-none hover:text-monti-default focus-visible:ring-2 focus-visible:ring-monti-contrast/60`;
 
 /**
  * A chip that can be taken off answers as a whole, as most systems' chips do: one step darker under the pointer, one more while its × is pressed. The ×
@@ -31,7 +34,7 @@ export const CHIP_REMOVABLE = "hover:bg-monti-current has-[>button:active]:bg-mo
  */
 export const CHIPS_FIELD = cn(
 	FIELD_HOVER,
-	"has-[[data-slot=chip]:hover,[data-slot=combobox-chip]:hover]:border-monti-strong! has-[[data-slot=chip]:hover,[data-slot=combobox-chip]:hover]:bg-transparent! flex min-h-monti-control-lg flex-wrap items-center gap-monti-6 border-0 border-monti-strong border-b bg-transparent py-monti-2 text-monti-body data-[size=md]:min-h-monti-control-md data-[size=sm]:min-h-monti-control-sm data-[size=sm]:py-px transition-colors focus-within:border-monti-contrast has-aria-invalid:border-monti-danger",
+	"has-[[data-slot=chip]:hover,[data-slot=combobox-chip]:hover]:border-transparent! has-[[data-slot=chip]:hover,[data-slot=combobox-chip]:hover]:bg-transparent! flex min-h-monti-control-md flex-wrap items-center gap-monti-6 border-0 border-transparent border-b bg-transparent py-monti-2 text-monti-body data-[size=md]:min-h-monti-control-md data-[size=sm]:min-h-monti-control-sm data-[size=sm]:py-px transition-colors focus-within:border-monti-contrast has-aria-invalid:border-monti-danger",
 	FIELD_INSET,
 );
 
@@ -41,8 +44,8 @@ export const CHIPS_INPUT =
 
 /**
  * A condition that is on, or a value that was picked ("tag: React ×"). With `onRemove` it ends in a × that takes it off. `proposal` marks one the
- * assistant set and nobody has touched: a spark first, the proposal colors, and a × in the same blue. `size="sm"` is the small chip (24px, 12px
- * text) for values inside a field, such as tags; a list's filters keep the default size.
+ * assistant set and nobody has touched: a spark first, the proposal colors, and a × in the same blue. Both sizes are 24px; `size="sm"` has 12px
+ * text for values inside a field, such as tags; a list's filters keep the default size.
  */
 function Chip({
 	onRemove,

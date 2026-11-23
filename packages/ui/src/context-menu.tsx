@@ -62,7 +62,7 @@ function ContextMenuContent({
 					data-slot="context-menu-content"
 					className={cn(
 						MENU_CARD,
-						"p-monti-6",
+						"p-monti-4",
 						MENU_MOTION,
 						"z-50",
 						FIT_HEIGHT,

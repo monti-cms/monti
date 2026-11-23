@@ -22,7 +22,7 @@ type Story = StoryObj<typeof meta>;
 
 export const Playground: Story = {};
 
-/** Placeholder, filled, disabled, read-only, invalid (the underline turns red), proposal (the assistant wrote it: blue), and the other input types. The underline is the strong line (3:1 on its ground, in light and dark), so an empty field is still a field. */
+/** Placeholder, filled, disabled, read-only, invalid (the underline turns red), proposal (the assistant wrote it: blue), and the other input types. At rest a field shows no line (its label and value say it is a field); the underline shows under the pointer (`border-default`, with the tint) and turns ink with the focus: see Foundations/States › Fields. An error's red and a proposal's blue stay in every state. */
 export const States: Story = {
 	tags: ["visual"],
 	render: () => (

@@ -2,7 +2,7 @@
 
 이 페이지는 값을 입력하거나 고르는 컨트롤을 다룬다. 입력란, 선택, 앞뒤가 고정된 필드, 검색 상자, 달력, 비밀 값, 그리고 필수 값과 읽기 전용 값의 규칙이다.
 
-모든 필드에는 밑줄이 하나 있다. 라벨은 위에 sans 12px로 두고, 오류는 아래에 한 줄로 둔다.
+모든 필드는 밑줄 하나로 그린다. 쉴 때는 밑줄이 보이지 않고, 가리키면 `bg-muted` 면과 `border-default` 밑줄, 포커스면 잉크 밑줄이 된다(2026-11-24 소유자). 오류의 빨간 밑줄과 제안의 파란 밑줄은 늘 보인다. 기본 높이는 32px(`height-control-md`)다. 라벨은 위에 sans 12px로 두고, 오류는 아래에 한 줄로 둔다.
 
 ## 한 줄
 
@@ -43,7 +43,7 @@
 
 ### 코드
 
-`Select`(`items` prop은 필수다. 모든 값과 그 라벨을 주어야 닫힌 트리거가 라벨을 보여 준다)와 `SelectTrigger`, `SelectValue`, `SelectContent`, `SelectGroup`, `SelectLabel`, `SelectItem`, `SelectSeparator`, `SelectScrollUpButton`, `SelectScrollDownButton`, 그리고 `Combobox`가 있다. `ComboboxInput`이 그 필드이고(`Input`처럼 밑줄이며, 끝에 여는 버튼이, 값이 생기면 지우는 버튼이 있다. 어시스턴트가 고른 값은 `Input`처럼 `proposal`이다), 이어서 `ComboboxTrigger`, `ComboboxValue`, `ComboboxContent`, `ComboboxList`, `ComboboxCollection`, `ComboboxGroup`, `ComboboxLabel`, `ComboboxItem`, `ComboboxSeparator`, `ComboboxEmpty`가 있다. `ComboboxChips`(`ComboboxChip`, `ComboboxChipsInput`과 함께)는 값을 여러 개 담는 콤보박스의 필드다. 끝에 `ComboboxInput`과 같은 여는 버튼(셰브런)이 첫 줄 끝에 있다: 값 하나를 고르는 필드와 여럿을 고르는 필드가 같은 부품으로 읽힌다(읽기만 하는 값에는 없다. PP-06, 만들며 정함 (2026-11-16)). 쓴 낱말이 어떤 값과도 맞지 않을 때 한 규칙이다(PP-04, 만들며 정함 (2026-11-16)): 새 값을 만들지 못하는 필드는 "맞는 값 없음" 한 줄만 보이고, 새 값을 만드는 필드(관계 필드의 `createMissing`)는 그 자리에 만드는 행만 보인다. 둘이 함께 보이거나 필드마다 다르게 서지 않는다. `ComboboxCreate`는 쓴 낱말로 새 값을 만드는 행이다("새로 만들기: 봄"). 목록의 맨 끝에서 `Add` 아이콘과 위의 구분선으로 값의 행과 달라 보인다(PP-33, 만들며 정함 (2026-11-16)). 관계 필드의 세 입력(하나, 여럿, 순서 있는 여럿)은 같은 행 목록(`relationRows`)을 쓴다. 꺼진(`Combobox disabled`) 필드는 `ComboboxInput`처럼 필드째 한 번 흐려지고 포인터에 답하지 않는다. 칩은 따로 다시 흐려지지 않고, ×가 있든 없든 같다. 읽기만 하는 값은 꺼진 필드가 아니라 `Combobox readOnly`다(위 `Input`의 `readOnly`. AT-29, 만들며 정함 (2026-11-16)). `proposal`은 어시스턴트가 고르고 아무도 건드리지 않은 값들이다: `Input proposal`과 같은 1.5px 파란 밑줄이고 칩마다 제안 색(옅은 파란 바탕, 파란 글자, ×도 같은 파랑. `Chip proposal`과 같다)이다. 반짝이는 붙지 않는다(누구의 값인지는 라벨 줄의 점이 말한다. 2026-11-13 만들며 정함, T86). `SelectTrigger`는 `width`를 받는다. 폼에서는 `full`, 툴바나 필터와 줄 끝(검토의 선택, 필드 시트의 규칙)에서는 `fit`이다. 줄 끝의 고르기는 줄과 같은 크기(`size="md"`)라서 행 높이를 바꾸지 않는다(만들며 정함 (2026-11-14). 전에 적힌 `choice`는 코드에 없었다). `proposal`은 어시스턴트가 고른 값을 표시한다. 오류나 제안 색의 밑줄은 가리킬 때도 키보드 포커스에서도 그 색 그대로이고, 그때 포커스는 `SelectTrigger` 둘레의 고리다(캐럿이 없어 밑줄만으로는 포커스가 보이지 않는다. tokens.md 상태).
+`Select`(`items` prop은 필수다. 모든 값과 그 라벨을 주어야 닫힌 트리거가 라벨을 보여 준다)와 `SelectTrigger`, `SelectValue`, `SelectContent`, `SelectGroup`, `SelectLabel`, `SelectItem`, `SelectSeparator`, `SelectScrollUpButton`, `SelectScrollDownButton`, 그리고 `Combobox`가 있다. `ComboboxInput`이 그 필드이고(`Input`처럼 밑줄이며, 끝에 여는 버튼이, 값이 생기면 지우는 버튼이 있다. 어시스턴트가 고른 값은 `Input`처럼 `proposal`이다), 이어서 `ComboboxTrigger`, `ComboboxValue`, `ComboboxContent`, `ComboboxList`, `ComboboxCollection`, `ComboboxGroup`, `ComboboxLabel`, `ComboboxItem`, `ComboboxSeparator`, `ComboboxEmpty`가 있다. `ComboboxChips`(`ComboboxChip`, `ComboboxChipsInput`과 함께)는 값을 여러 개 담는 콤보박스의 필드다. 끝에 `ComboboxInput`과 같은 여는 버튼(셰브런)이 첫 줄 끝에 있다: 값 하나를 고르는 필드와 여럿을 고르는 필드가 같은 부품으로 읽힌다(읽기만 하는 값에는 없다. PP-06, 만들며 정함 (2026-11-16)). 쓴 낱말이 어떤 값과도 맞지 않을 때 한 규칙이다(PP-04, 만들며 정함 (2026-11-16)): 새 값을 만들지 못하는 필드는 "맞는 값 없음" 한 줄만 보이고, 새 값을 만드는 필드(관계 필드의 `createMissing`)는 그 자리에 만드는 행만 보인다. 둘이 함께 보이거나 필드마다 다르게 서지 않는다. `ComboboxCreate`는 쓴 낱말로 새 값을 만드는 행이다("새로 만들기: 봄"). 목록의 맨 끝에서 `Add` 아이콘과 위의 구분선으로 값의 행과 달라 보인다(PP-33, 만들며 정함 (2026-11-16)). 관계 필드의 세 입력(하나, 여럿, 순서 있는 여럿)은 같은 행 목록(`relationRows`)을 쓴다. 꺼진(`Combobox disabled`) 필드는 `ComboboxInput`처럼 필드째 한 번 흐려지고 포인터에 답하지 않는다. 칩은 따로 다시 흐려지지 않고, ×가 있든 없든 같다. 읽기만 하는 값은 꺼진 필드가 아니라 `Combobox readOnly`다(위 `Input`의 `readOnly`. AT-29, 만들며 정함 (2026-11-16)). `proposal`은 어시스턴트가 고르고 아무도 건드리지 않은 값들이다: `Input proposal`과 같은 1.5px 파란 밑줄이고 칩마다 제안 색(옅은 파란 바탕, 파란 글자, ×도 같은 파랑. `Chip proposal`과 같다)이다. 반짝이는 붙지 않는다(누구의 값인지는 라벨 줄의 점이 말한다. 2026-11-13 만들며 정함, T86). `SelectTrigger`는 `width`를 받는다. 폼에서는 `full`, 툴바나 필터와 줄 끝(검토의 선택, 필드 시트의 규칙)에서는 `fit`이다. 줄 끝의 고르기는 줄과 같은 크기(`size="md"`)라서 행 높이를 바꾸지 않는다(만들며 정함 (2026-11-14). 전에 적힌 `choice`는 코드에 없었다). `proposal`은 어시스턴트가 고른 값을 표시한다. 캐럿이 없어 포커스는 둘레의 고리 없이 밑줄이 2px로 굵어지는 것이다: 색은 지금의 상태 색(잉크, 오류의 danger-11, 제안의 파랑)이고, 유효한 칸은 쉴 때 선이 없다. 읽기 전용 `Select`도 같다. `MenuField`는 같은 모습을 쓴다(2026-11-24 소유자. tokens.md 상태).
 
 ## 미디어 필드
 
@@ -51,15 +51,15 @@
 
 ### 코드
 
-`MediaInput`: `accept`("image" 기본 · "any". 빈 칸의 표시를 정한다: 그림, 아무 파일이나 받는 필드는 `Attachment`. 한 곳에서 정한다. PP-43, 만들며 정함 (2026-11-16)), `size`(`sm` · `md` · `default`, `Input`과 같은 높이), `value`(`name`, `thumbnail`. 이름 앞 20px 그림은 `Image size="thumb-sm"`이라 그림이 올 때까지 숨 쉬고, 그림이 없는 파일은 같은 크기의 빈 칸이다), `placeholder`, `onOpen`(고르기 열기), `onClear`와 `clearLabel`(×), `proposal`(AI가 고른 파일: 파란 글자와 밑줄), `following`(다른 값을 따르는 중인 파일: 흐린 글자. 번역의 대표 이미지), `readOnly`(보관 글과 휴지통 글: 값을 바꾸는 것이 없다. 줄은 누르는 것이 아니고 손 모양과 호버 바탕이 없으며, 끝의 ×와 그림 아이콘을 그리지 않는다. `action`은 남는다: 읽기 전용에서는 읽는 길이다(이미지의 설정 카드가 읽기 전용으로 열린다). 라벨의 `htmlFor`는 누르거나 쓰는 것만 가리키므로, 이때는 묶음(`role="group"`)이 되고 `aria-labelledby`에 라벨의 id를 줘서 이름을 붙인다. 2026-11-11 소유자), `action`(× 앞에 두는 그 파일의 도구. 이미지의 설정, 끊긴 파일의 다시 올리기. 안의 `IconButton`은 ×와 같은 크기가 된다). 줄에 딸린 카드는 `ref`로 이 줄을 `PopoverContent`의 `anchor`로 삼는다. 제안 색(파랑)의 밑줄은 가리킬 때도 키보드 포커스에서도 파랑 그대로이고, 그때 포커스는 `Select`처럼 칸 둘레의 고리다(밑줄 바깥이라 파란 선을 덮지 않는다).
+`MediaInput`: `accept`("image" 기본 · "any". 빈 칸의 표시를 정한다: 그림, 아무 파일이나 받는 필드는 `Attachment`. 한 곳에서 정한다. PP-43, 만들며 정함 (2026-11-16)), `size`(`sm` · `md` · `default`, `Input`과 같은 높이), `value`(`name`, `thumbnail`. 이름 앞 20px 그림은 `Image size="thumb-sm"`이라 그림이 올 때까지 숨 쉬고, 그림이 없는 파일은 같은 크기의 빈 칸이다), `placeholder`, `onOpen`(고르기 열기), `onClear`와 `clearLabel`(×), `proposal`(AI가 고른 파일: 파란 글자와 밑줄), `following`(다른 값을 따르는 중인 파일: 흐린 글자. 번역의 대표 이미지), `readOnly`(보관 글과 휴지통 글: 값을 바꾸는 것이 없다. 줄은 누르는 것이 아니고 손 모양과 호버 바탕이 없으며, 끝의 ×와 그림 아이콘을 그리지 않는다. `action`은 남는다: 읽기 전용에서는 읽는 길이다(이미지의 설정 카드가 읽기 전용으로 열린다). 라벨의 `htmlFor`는 누르거나 쓰는 것만 가리키므로, 이때는 묶음(`role="group"`)이 되고 `aria-labelledby`에 라벨의 id를 줘서 이름을 붙인다. 2026-11-11 소유자), `action`(× 앞에 두는 그 파일의 도구. 이미지의 설정, 끊긴 파일의 다시 올리기. 안의 `IconButton`은 ×와 같은 크기가 된다). 줄에 딸린 카드는 `ref`로 이 줄을 `PopoverContent`의 `anchor`로 삼는다. 제안 색(파랑)의 밑줄은 가리킬 때도 키보드 포커스에서도 파랑 그대로이고, 그때 포커스는 이름 줄을 누르는 단추에 닿으면 밑줄이 2px로 굵어지는 것이다(칸 둘레의 고리는 없다. 2026-11-24 소유자).
 
 ## 앞뒤가 고정된 필드 (`.mt-affix`)
 
 바꿀 수 있는 부분만 입력란이다. 양 끝은 흐린 mono 글자로 고정되어 있어서, 하나의 주소로 읽힌다.
 
-- 밑줄은 바꿀 수 있는 부분 아래에만 있다. 고정된 부분(`/`, `/:slug`)은 선 없는 흐린 글자다.
+- 필드는 고정 글자까지 한 모양이다. 가리킬 때의 바탕과 밑줄은 고정된 부분(`/`, `/:slug`)을 포함한 필드 전체에 걸친다. 고정된 부분은 흐린 글자로 남는다(2026-11-24 소유자: 바꿀 수 있는 부분에만 바탕이 깔려 두 모양으로 보였다. 앞의 "밑줄은 바꿀 수 있는 부분 아래에만"을 대신한다).
 - 필드 어디를 누르든(고정 글자든 빈 공간이든) 캐럿이 바꿀 수 있는 부분의 끝에 놓인다.
-- 포커스, 오류, 제안 색은 그 밑줄에만 적용된다(잉크, `fg-danger`, 파란 1.5px). 고정 글자는 색이 바뀌지 않는다.
+- 포커스, 오류, 제안 색은 필드 전체의 그 밑줄에 적용된다(잉크, `fg-danger`, 파란 1.5px). 오류의 빨간 밑줄은 쉴 때, 가리킬 때, 포커스에서 모두 보인다. 고정 글자는 색이 바뀌지 않는다.
 - 바꿀 수 있는 부분은 글자만큼만 넓다. 비어 있어도 세 글자 너비(`3ch`)를 유지해서, 누를 선이 남아 있다.
 - 공개 주소: `/` + `posts` + `/:slug`. `:slug`는 지울 수 없으므로 "`:slug`가 없음" 같은 오류는 생길 수 없다.
 - 페이지가 없는 컬렉션은 필드 위의 스위치로 이것을 끈다.
@@ -115,7 +115,7 @@ API 키처럼 가려서 입력하는 값을 위한 필드. 밑줄 하나 위에 
 
 다시 보여 주지 않는 값(저장된 키)을 바꾸는 자리. 필드 대신 지금 값의 흔적(`··· a1b2`, mono)과 끝에 텍스트 버튼 하나("바꾸기")를 보여 준다.
 
-- 높이가 입력란과 같아서(36px), "바꾸기"가 필드(`.mt-secret`)를 열어도 아래가 움직이지 않는다.
+- 높이가 입력란과 같아서(32px), "바꾸기"가 필드(`.mt-secret`)를 열어도 아래가 움직이지 않는다.
 - 열린 필드 끝의 조용한 "그대로"(`.mt-secret > .mt-text-btn`)는 이 행으로 돌아가고 값을 그대로 둔다. 창 아래의 "취소"와 겹치지 않도록 "취소"라고 부르지 않는다. 비워 두어도 값은 그대로다.
 - 값을 읽을 수 없으면 필드가 처음부터 열려 있다. 아래에 `.mt-note` 한 줄이 있고, "그대로"는 없다.
 

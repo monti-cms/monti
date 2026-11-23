@@ -73,13 +73,13 @@ function DropdownMenuContent({
 					data-slot="dropdown-menu-content"
 					className={cn(
 						MENU_CARD,
-						"p-monti-6",
+						"p-monti-4",
 						MENU_MOTION,
 						"z-50",
 						FIT_HEIGHT,
 						"overflow-y-auto overflow-x-hidden data-closed:overflow-hidden",
 						width === "panel"
-							? "w-monti-panel max-w-(--available-width)"
+							? "w-[300px] max-w-(--available-width)"
 							: "w-max min-w-monti-menu max-w-[min(20rem,var(--available-width))]",
 						className,
 					)}
