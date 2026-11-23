@@ -5,18 +5,22 @@ const JSON_TYPE = "application/json; charset=utf-8";
 const NO_STORE = "no-store";
 const FALLBACK_ERROR_BODY = '{"error":{"code":"INTERNAL_ERROR","message":"서버 내부 오류가 발생했다"}}';
 
-/** 코어 `ErrorCode`마다 HTTP 상태 코드. */
-const ERROR_STATUS: Record<ErrorCode, number> = {
+/** 상태 코드로 바꾸는 오류 코드: 코어 `ErrorCode`와, 요청 본문이 허용 크기를 넘을 때의 `PAYLOAD_TOO_LARGE`. */
+type MappedCode = ErrorCode | "PAYLOAD_TOO_LARGE";
+
+/** 오류 코드마다 HTTP 상태 코드. */
+const ERROR_STATUS: Record<MappedCode, number> = {
 	BAD_REQUEST: 400,
 	UNAUTHORIZED: 401,
 	FORBIDDEN: 403,
 	NOT_FOUND: 404,
 	CONFLICT: 409,
+	PAYLOAD_TOO_LARGE: 413,
 };
 
 /** 코어 오류의 모양. 다른 경계에서 만든 오류도 받도록 `instanceof` 대신 `code`·`message` 모양으로 알아본다. */
 interface CoreError {
-	code: ErrorCode;
+	code: MappedCode;
 	message: string;
 	details?: unknown;
 }
@@ -30,7 +34,7 @@ export function successResponse(status: SuccessStatus, data: unknown, setCookie?
 	return new Response(safeJson(data), { status, headers });
 }
 
-/** 던져진 값의 오류 응답. 코어 오류는 대응하는 상태로, 그 밖이나 직렬화 실패는 내부 상세를 숨긴 `500`으로 만든다. */
+/** 던져진 값의 오류 응답. 코어 오류와 본문 크기 초과는 대응하는 상태로, 그 밖이나 직렬화 실패는 내부 상세를 숨긴 `500`으로 만든다. */
 export function errorResponse(error: unknown): Response {
 	try {
 		if (!isCoreError(error)) return errorJson(500, { code: "INTERNAL_ERROR", message: "서버 내부 오류가 발생했다" });

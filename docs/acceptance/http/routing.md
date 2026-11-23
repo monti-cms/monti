@@ -5,7 +5,7 @@
 | 기능 | 하는 일 | 주요 거절 |
 |---|---|---|
 | 라우트 매칭 (`schema.ts`, `match.ts`) | `OperationSpec[]`의 JSON Schema를 읽어 단일 리소스·단건·다건·고유 액션 경로와 HTTP 메서드를 자동 매핑한다 | `basePath` 밖·경계 위반·없는 리소스·단일 리소스 `:id`·열린 메서드가 없는 경로는 `404`, 다른 메서드로 열린 경로의 메서드 불일치·표준 동사 액션 경로는 `405` + `Allow`, 잘못된 인코딩은 `400` |
-| 입력 조립 (`input.ts`) | 경로 `:id`, `GET` 쿼리(스칼라·`null`·배열·점 중첩 객체), `Content-Type`·JSON 본문, `?dryRun`을 해석해 Operation 입력을 만든다 | 읽기 `?dryRun=true`, 잘못된 `dryRun` 값, 쓰기 요청의 `dryRun` 외 쿼리 키, `application/json`이 아닌 본문·깨진/비객체 JSON 본문, 위험한 점 키(`__proto__` 등) 시 `400` |
+| 입력 조립 (`input.ts`) | 경로 `:id`, `GET` 쿼리(스칼라·`null`·배열·점 중첩 객체), `Content-Type`·JSON 본문(최대 1 MiB), `?dryRun`을 해석해 Operation 입력을 만든다 | 읽기 `?dryRun=true`, 잘못된 `dryRun` 값, 쓰기 요청의 `dryRun` 외 쿼리 키, `application/json`이 아닌 본문·깨진/비객체 JSON 본문, 위험한 점 키(`__proto__` 등) 시 `400`, 본문 1 MiB 초과 시 `PAYLOAD_TOO_LARGE` |
 
 ---
 
@@ -273,5 +273,16 @@
   - `HTTP-RUT-22.1` 위험 키 세 경우 모두 `BAD_REQUEST` 오류를 던진다
   - `HTTP-RUT-22.2` 상속 속성 쿼리는 예외 없이 자체 속성 객체로 조립되며 `Object.prototype.toString`에 속성이 추가되지 않는다
   - `HTTP-RUT-22.3` 스칼라와 중첩 객체가 겹치는 충돌 쿼리 두 순서 모두 `BAD_REQUEST` 오류를 던진다
+
+</details>
+
+<details>
+<summary><strong><code>HTTP-RUT-23</code></strong> 허용 크기(1 MiB)를 넘는 요청 본문은 거절하고 정확히 1 MiB인 JSON 본문은 조립한다</summary>
+
+- **전제**: `Content-Length` 헤더 없이 본문 스트림 크기가 정확히 `1_048_577`바이트(1 MiB + 1바이트)인 `application/json` 요청과, UTF-8 바이트 크기가 정확히 `1_048_576`바이트(1 MiB)인 유효한 JSON 요청이 있다
+- **행동**: 두 요청의 본문을 파싱해 입력을 조립한다
+- **결과**:
+  - `HTTP-RUT-23.1` 1 MiB를 1바이트 넘는 요청은 `code`가 `"PAYLOAD_TOO_LARGE"`인 오류를 던진다
+  - `HTTP-RUT-23.2` 정확히 1 MiB인 요청은 해당 JSON 객체로 조립된다
 
 </details>

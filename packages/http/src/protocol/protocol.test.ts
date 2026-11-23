@@ -150,6 +150,7 @@ it("HTTP-PRO-10 잘못된 쿠키 옵션 조합이나 유효하지 않은 이름�
 		{ name: "a b" },
 		{ path: "" },
 		{ path: "/;x" },
+		{ path: "/admin\r\nX-Injected: 1" },
 		{ maxAge: 0 },
 		{ maxAge: -1 },
 		{ maxAge: 1.5 },
