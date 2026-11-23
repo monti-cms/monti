@@ -1,12 +1,20 @@
 import type { Kysely } from "kysely";
-import { afterEach, beforeEach, expect, it } from "vitest";
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { createTestDatabase, type TestDatabase } from "../../__test__/database";
+import { codeOf, overlap } from "../../__test__/race";
 import { migrate } from "../../db/migrate";
 import { initial } from "../../db/migrations/0001-initial";
 import type { Database } from "../../db/types";
 import { createMonti } from "../../engine/engine";
 import { session } from "../session/session";
 import { admin } from "./admin";
+import { verifyPassword } from "./password";
+
+// 로그인이 관리자 행을 읽은 뒤 비밀번호를 확인하는 사이에 멈출 수 있도록, 실제 확인을 감싼 함수로 바꿔 둔다.
+vi.mock("./password", async (importOriginal) => {
+	const actual = await importOriginal<typeof import("./password")>();
+	return { ...actual, verifyPassword: vi.fn(actual.verifyPassword) };
+});
 
 let testDb: TestDatabase;
 let db: Kysely<Database>;
@@ -27,13 +35,6 @@ beforeEach(async () => {
 afterEach(async () => {
 	await testDb.drop();
 });
-
-async function codeOf(run: Promise<unknown>): Promise<string | null> {
-	return run.then(
-		() => null,
-		(error: { code: string }) => error.code,
-	);
-}
 
 const owner = { email: "owner@example.com", password: "correct horse battery staple" };
 
@@ -136,5 +137,86 @@ it("ADM-UPD-4 관리자 계정이 없으면 관리자 정보를 바꿀 수 없�
 	// ADM-UPD-4.1
 	await expect(monti.admin.update({ currentPassword: owner.password, ...changed })).rejects.toMatchObject({
 		code: "UNAUTHORIZED",
+	});
+});
+
+it("ADM-CRT-4 최초 관리자 생성을 동시에 두 번 실행하면 한 건만 성공하고 나머지는 거절된다", async () => {
+	const other = { email: "other@example.com", password: "another password" };
+
+	// 첫 생성을 커밋 직전에 멈춰 두고 두 번째 생성을 시작한다.
+	const [first, second] = await overlap(
+		db,
+		(hold) =>
+			monti.transaction(async (tx) => {
+				const created = await tx.admin.create(owner);
+				await hold();
+				return created;
+			}),
+		() => monti.admin.create(other),
+	);
+	const winner = first.value ?? second.value;
+
+	// ADM-CRT-4.1
+	expect([first.code, second.code].sort()).toEqual(["CONFLICT", null]);
+	// ADM-CRT-4.2
+	expect(await db.selectFrom("admin").select(["id", "email"]).execute()).toEqual([
+		{ id: winner?.id, email: winner?.email },
+	]);
+	// ADM-CRT-4.3
+	expect((await db.selectFrom("session").select("admin_id").execute()).map((row) => row.admin_id)).toEqual([
+		winner?.id,
+	]);
+});
+
+it("ADM-UPD-5 비밀번호를 바꾸는 동안 이전 비밀번호로 시도한 로그인은 변경 뒤 사용할 수 없다", async () => {
+	await monti.admin.create(owner);
+	await db.deleteFrom("session").execute();
+	const realVerify = (await vi.importActual<typeof import("./password")>("./password")).verifyPassword;
+
+	// 이전 비밀번호 로그인이 관리자 행을 읽고 비밀번호를 확인하는 사이에 멈춰 두고, 비밀번호 변경을 시작한다.
+	const [login, update] = await overlap(
+		db,
+		(hold) => {
+			vi.mocked(verifyPassword).mockImplementationOnce(async (password, stored) => {
+				await hold();
+				return realVerify(password, stored);
+			});
+			return monti.session.create(owner);
+		},
+		() => monti.admin.update({ currentPassword: owner.password, email: owner.email, password: "a new password" }),
+	);
+	const token = login.value?.token;
+
+	// ADM-UPD-5.1
+	expect(update.code).toBeNull();
+	// ADM-UPD-5.2
+	expect(await db.selectFrom("session").selectAll().execute()).toEqual([]);
+	// ADM-UPD-5.3
+	expect(token === undefined ? { admin: null } : await monti.session.get({ token })).toEqual({ admin: null });
+});
+
+it("ADM-UPD-6 같은 현재 비밀번호로 관리자 정보를 동시에 두 번 바꾸면 한 건만 성공하고 나머지는 거절된다", async () => {
+	await monti.admin.create(owner);
+	const firstChange = { currentPassword: owner.password, email: "first@example.com", password: "first new password" };
+	const secondChange = { currentPassword: owner.password, email: "second@example.com", password: "second password" };
+
+	// 첫 변경을 커밋 직전에 멈춰 두고 두 번째 변경을 시작한다.
+	const [first, second] = await overlap(
+		db,
+		(hold) =>
+			monti.transaction(async (tx) => {
+				const updated = await tx.admin.update(firstChange);
+				await hold();
+				return updated;
+			}),
+		() => monti.admin.update(secondChange),
+	);
+	const winner = first.code === null ? firstChange : secondChange;
+
+	// ADM-UPD-6.1
+	expect([first.code, second.code].sort()).toEqual(["UNAUTHORIZED", null]);
+	// ADM-UPD-6.2
+	expect(await monti.session.create({ email: winner.email, password: winner.password })).toEqual({
+		token: expect.any(String),
 	});
 });

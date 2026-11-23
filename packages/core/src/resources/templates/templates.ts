@@ -64,20 +64,29 @@ async function listTemplates(input: z.infer<typeof listInput>, ctx: ReadContext)
 
 const idInput = z.object({ id: uuidInput });
 
-async function getTemplate(input: z.infer<typeof idInput>, ctx: ReadContext): Promise<Template> {
-	const row = await ctx.db.selectFrom("templates").select(SHOWN).where("id", "=", input.id).executeTakeFirst();
-	if (row === undefined) throw new MontiError("NOT_FOUND", "No template has this id");
+function templateQuery(ctx: ReadContext, id: string) {
+	return ctx.db.selectFrom("templates").select(SHOWN).where("id", "=", id);
+}
+
+/** 찾은 템플릿 행. 없으면 `NOT_FOUND`다. */
+function found(row: Template | undefined): Template {
+	if (row === undefined) throw new MontiError("NOT_FOUND", "이 `id`의 템플릿이 없다");
 	return row;
+}
+
+async function getTemplate(input: z.infer<typeof idInput>, ctx: ReadContext): Promise<Template> {
+	return found(await templateQuery(ctx, input.id).executeTakeFirst());
 }
 
 const updateInput = z.object({ id: uuidInput, name: z.string().min(1).optional(), content: z.unknown().optional() });
 
 /**
  * 템플릿의 이름을 바꾸거나 본문을 교체한다. 새 본문은 `media_uses`를 갈아 끼우고, 기존 본문에 이미 있던 미디어는
- * 휴지통에 있어도 그대로 둘 수 있다. 본문을 생략하면 `media_uses`를 그대로 둔다.
+ * 휴지통에 있어도 그대로 둘 수 있다. 본문을 생략하면 `media_uses`를 그대로 둔다. 템플릿 행을 잠그고 읽어, 겹친 수정은 이
+ * 수정이 커밋된 뒤의 이름과 본문에서 이어 간다.
  */
 async function updateTemplate(input: z.infer<typeof updateInput>, ctx: WriteContext): Promise<Template> {
-	const existing = await getTemplate(input, ctx);
+	const existing = found(await templateQuery(ctx, input.id).forUpdate().executeTakeFirst());
 	const doc = input.content === undefined ? undefined : docOf(input.content, ctx);
 	const name = input.name ?? existing.name;
 	await rejectTaken(ctx, { ...existing, name });

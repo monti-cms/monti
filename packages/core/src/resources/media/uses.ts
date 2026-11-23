@@ -46,6 +46,17 @@ async function writeUses(ctx: WriteContext, source: UseSource, uses: UsesByPath)
 }
 
 /**
+ * `uses`가 참조하는 미디어 행을 이 트랜잭션이 끝날 때까지 영구 삭제되지 않게 잠근다. 이미 지우는 중인 행은 그 삭제가 끝날
+ * 때까지 기다려, 뒤이은 판정이 삭제된 뒤의 상태를 보게 한다.
+ */
+async function lockUsedMedia(ctx: WriteContext, uses: UsesByPath): Promise<void> {
+	const ids = idsOf(uses);
+	// `in ()`는 SQL이 아니다: 참조가 없으면 잠글 것도 없다.
+	if (ids.length === 0) return;
+	await ctx.db.selectFrom("media").select("id").where("id", "in", ids).forKeyShare().execute();
+}
+
+/**
  * 사용처의 `media_uses` 행을 `doc`이 `field_path`에서 참조하는 미디어로 바꾼다. 없는 미디어와 휴지통에 있는 미디어는
  * 거절하되, `kept`(고치기 전의 본문)에 이미 있던 미디어는 휴지통에 있어도 받는다.
  */
@@ -57,6 +68,7 @@ export async function replaceMediaUses(
 	kept?: Doc,
 ): Promise<void> {
 	const refs = bodyReferences(field_path, doc);
+	await lockUsedMedia(ctx, usesOf(refs));
 	await rejectInactive(ctx, refs, bodyReferences(field_path, kept));
 	await writeUses(ctx, source, usesOf(refs));
 }

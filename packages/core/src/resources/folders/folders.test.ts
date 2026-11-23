@@ -2,10 +2,14 @@ import { randomUUID } from "node:crypto";
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, expect, it } from "vitest";
 import { createTestDatabase, type TestDatabase } from "../../__test__/database";
+import { overlap } from "../../__test__/race";
 import { migrate } from "../../db/migrate";
 import { initial } from "../../db/migrations/0001-initial";
 import type { Database } from "../../db/types";
 import { createMonti } from "../../engine/engine";
+import type { Schema } from "../../engine/types";
+import { syncSchemaTables } from "../schema/sync-tables";
+import { trash } from "../trash/trash";
 import { folders } from "./folders";
 
 let testDb: TestDatabase;
@@ -14,9 +18,11 @@ let db: Kysely<Database>;
 const POSTS = "posts";
 const MEDIA = "media";
 
+const SCHEMA: Schema = { locales: ["ko"], collections: { [POSTS]: { fields: { title: { type: "text" } } } } };
+
 function montiOf() {
-	return createMonti(db, { folders }, [], {
-		schema: { locales: ["ko"], collections: { [POSTS]: { fields: { title: { type: "text" } } } } },
+	return createMonti(db, { folders, trash }, [], {
+		schema: SCHEMA,
 		config: { name: "Monti Blog", dev: false },
 		schemaFile: "unused-schema-file",
 		configFile: "unused-config-file",
@@ -286,4 +292,130 @@ it("FLD-UPD-11 같은 위치의 다른 활성 폴더와 같은 이름으로 바�
 	await expect(montiOf().folders.update({ id: second, name: "Drafts" })).rejects.toMatchObject({ code: "CONFLICT" });
 	// FLD-UPD-11.2
 	expect((await folderRow(second)).name).toBe("Archive");
+});
+
+it("FLD-CRT-8 루트에 같은 이름의 폴더를 동시에 두 번 만들면 한 건만 성공하고 나머지는 거절된다", async () => {
+	const monti = montiOf();
+	const folder = { scope: POSTS, name: "Drafts" };
+
+	// 첫 생성을 커밋 직전에 멈춰 두고 두 번째 생성을 시작한다.
+	const [first, second] = await overlap(
+		db,
+		(hold) =>
+			monti.transaction(async (tx) => {
+				const created = await tx.folders.create(folder);
+				await hold();
+				return created;
+			}),
+		() => monti.folders.create(folder),
+	);
+	const roots = (await folderRows()).filter((row) => row.name === folder.name && row.parent_id === null);
+
+	// FLD-CRT-8.1
+	expect([first.code, second.code].sort()).toEqual(["CONFLICT", null]);
+	// FLD-CRT-8.2
+	expect(roots.filter((row) => row.scope === POSTS && row.trashed_at === null)).toHaveLength(1);
+});
+
+it("FLD-UPD-12 같은 부모 아래의 두 폴더를 같은 이름으로 동시에 바꾸면 한 건만 성공하고 나머지는 거절된다", async () => {
+	const parent = await seedFolder({ name: "Parent" });
+	const [one, two] = [
+		await seedFolder({ name: "One", parent_id: parent }),
+		await seedFolder({ name: "Two", parent_id: parent }),
+	];
+	const monti = montiOf();
+
+	// 첫 수정을 커밋 직전에 멈춰 두고 두 번째 수정을 시작한다.
+	const [first, second] = await overlap(
+		db,
+		(hold) =>
+			monti.transaction(async (tx) => {
+				const updated = await tx.folders.update({ id: one, name: "Same" });
+				await hold();
+				return updated;
+			}),
+		() => monti.folders.update({ id: two, name: "Same" }),
+	);
+	const named = (await folderRows()).filter((row) => row.parent_id === parent && row.name === "Same");
+
+	// FLD-UPD-12.1
+	expect([first.code, second.code].sort()).toEqual(["CONFLICT", null]);
+	// FLD-UPD-12.2
+	expect(named.filter((row) => row.trashed_at === null)).toHaveLength(1);
+});
+
+it("FLD-UPD-13 두 폴더를 서로의 하위 폴더로 동시에 옮겨도 순환 구조가 생기지 않는다", async () => {
+	const [one, two] = [await seedFolder({ name: "One" }), await seedFolder({ name: "Two" })];
+	const monti = montiOf();
+
+	// 첫 이동을 커밋 직전에 멈춰 두고 두 번째 이동을 시작한다.
+	const [first, second] = await overlap(
+		db,
+		(hold) =>
+			monti.transaction(async (tx) => {
+				const moved = await tx.folders.update({ id: one, parent_id: two });
+				await hold();
+				return moved;
+			}),
+		() => monti.folders.update({ id: two, parent_id: one }),
+	);
+	const parents = [(await folderRow(one)).parent_id, (await folderRow(two)).parent_id];
+
+	// FLD-UPD-13.1
+	expect([first.code, second.code].sort()).toEqual(["BAD_REQUEST", null]);
+	// FLD-UPD-13.2
+	expect([
+		[two, null],
+		[null, one],
+	]).toContainEqual(parents);
+});
+
+it("FLD-UPD-14 폴더를 휴지통에 넣는 동안 그 폴더 아래로 다른 폴더를 옮겨도 휴지통 폴더 아래에 활성 폴더가 남지 않는다", async () => {
+	await syncSchemaTables(db, SCHEMA);
+	const [discarded, moving] = [await seedFolder({ name: "Discarded" }), await seedFolder({ name: "Moving" })];
+	const monti = montiOf();
+
+	// 휴지통 이동을 커밋 직전에 멈춰 두고 폴더 이동을 시작한다.
+	const [move] = await overlap(
+		db,
+		(hold) =>
+			monti.transaction(async (tx) => {
+				const moved = await tx.trash.move({ id: discarded });
+				await hold();
+				return moved;
+			}),
+		() => monti.folders.update({ id: moving, parent_id: discarded }),
+	);
+	const activeUnder = (await folderRows()).filter((row) => row.parent_id === discarded && row.trashed_at === null);
+
+	// FLD-UPD-14.1
+	expect({ code: move.code, trashed: (await folderRow(discarded)).trashed_at !== null }).toEqual({
+		code: null,
+		trashed: true,
+	});
+	// FLD-UPD-14.2
+	expect(activeUnder).toEqual([]);
+});
+
+it("FLD-UPD-15 같은 폴더의 이름과 부모를 동시에 각각 바꿔도 두 변경이 모두 남는다", async () => {
+	const [target, parent] = [await seedFolder({ name: "Target" }), await seedFolder({ name: "Parent" })];
+	const monti = montiOf();
+
+	// 이름 수정을 커밋 직전에 멈춰 두고 부모 수정을 시작한다.
+	const [rename, move] = await overlap(
+		db,
+		(hold) =>
+			monti.transaction(async (tx) => {
+				const renamed = await tx.folders.update({ id: target, name: "Renamed" });
+				await hold();
+				return renamed;
+			}),
+		() => monti.folders.update({ id: target, parent_id: parent }),
+	);
+	const row = await folderRow(target);
+
+	// FLD-UPD-15.1
+	expect([rename.code, move.code]).toEqual([null, null]);
+	// FLD-UPD-15.2
+	expect({ name: row.name, parent_id: row.parent_id }).toEqual({ name: "Renamed", parent_id: parent });
 });

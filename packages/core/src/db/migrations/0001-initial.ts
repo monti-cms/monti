@@ -1,4 +1,4 @@
-import type { Kysely } from "kysely";
+import { type Kysely, sql } from "kysely";
 import type { Migration } from "../types";
 
 // 각 테이블은 core.md 6절 그림 그대로다: 열, 기본 키, 외래 키. `media_uses.source_id`는 외래 키 없는 논리 참조다.
@@ -12,6 +12,27 @@ async function createFolders(db: Kysely<unknown>): Promise<void> {
 		.addColumn("name", "text", (column) => column.notNull())
 		.addColumn("trashed_at", "timestamptz")
 		.execute();
+	await createFolderNameIndexes(db);
+}
+
+/** 활성 폴더끼리는 같은 `scope`의 같은 위치(루트 또는 같은 부모 아래)에서 이름이 겹칠 수 없다. 휴지통 폴더는 빠진다. */
+async function createFolderNameIndexes(db: Kysely<unknown>): Promise<void> {
+	await db.schema
+		.createIndex("folders_active_root_name")
+		.unique()
+		.on("folders")
+		.columns(["scope", "name"])
+		.where(sql.ref("parent_id"), "is", null)
+		.where(sql.ref("trashed_at"), "is", null)
+		.execute();
+	await db.schema
+		.createIndex("folders_active_child_name")
+		.unique()
+		.on("folders")
+		.columns(["scope", "parent_id", "name"])
+		.where(sql.ref("parent_id"), "is not", null)
+		.where(sql.ref("trashed_at"), "is", null)
+		.execute();
 }
 
 async function createTemplates(db: Kysely<unknown>): Promise<void> {
@@ -21,6 +42,7 @@ async function createTemplates(db: Kysely<unknown>): Promise<void> {
 		.addColumn("collection", "text", (column) => column.notNull())
 		.addColumn("name", "text", (column) => column.notNull())
 		.addColumn("content", "jsonb", (column) => column.notNull())
+		.addUniqueConstraint("templates_collection_name_key", ["collection", "name"])
 		.execute();
 }
 
@@ -66,6 +88,8 @@ async function createAdminAndSession(db: Kysely<unknown>): Promise<void> {
 		.addColumn("email", "text", (column) => column.notNull())
 		.addColumn("password_hash", "text", (column) => column.notNull())
 		.execute();
+	// 관리자는 하나뿐이다: 모든 행이 같은 값(`true`)을 갖는 고유 색인이라 두 번째 행은 들어갈 수 없다.
+	await db.schema.createIndex("admin_single_row").unique().on("admin").expression(sql`(true)`).execute();
 	await db.schema
 		.createTable("session")
 		.addColumn("token_hash", "text", (column) => column.primaryKey())
@@ -82,6 +106,7 @@ async function createApiKeys(db: Kysely<unknown>): Promise<void> {
 		.addColumn("name", "text", (column) => column.notNull())
 		.addColumn("secret", "text", (column) => column.notNull())
 		.addColumn("last4", "text", (column) => column.notNull())
+		.addUniqueConstraint("api_keys_name_key", ["name"])
 		.execute();
 }
 

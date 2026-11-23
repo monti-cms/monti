@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
+import { lockFolderScope } from "../../db/locks";
 import { MontiError } from "../../engine/errors";
 import { defineRead, defineWrite } from "../../engine/operation";
 import type { ReadContext, WriteContext } from "../../engine/types";
@@ -98,13 +99,7 @@ const updateInput = z.object({
  * 부모를 늘 함께 저장하므로 바꿀 항목이 없으면 기존 폴더를 그대로 돌려준다.
  */
 async function updateFolder(input: z.infer<typeof updateInput>, ctx: WriteContext): Promise<Folder> {
-	const target = await ctx.db
-		.selectFrom("folders")
-		.select(SHOWN)
-		.where("id", "=", input.id)
-		.where("trashed_at", "is", null)
-		.executeTakeFirst();
-	if (target === undefined) throw new MontiError("NOT_FOUND", "이 `id`의 활성 폴더가 없다");
+	const target = await lockedTarget(ctx, input.id);
 	if (typeof input.parent_id === "string") {
 		await rejectParent(ctx, input.parent_id, target.scope);
 		await rejectCycle(ctx, input.id, input.parent_id);
@@ -118,6 +113,23 @@ async function updateFolder(input: z.infer<typeof updateInput>, ctx: WriteContex
 		.where("id", "=", input.id)
 		.returning(SHOWN)
 		.executeTakeFirstOrThrow();
+}
+
+/**
+ * 고칠 활성 폴더 `id`. 그 `scope`의 폴더 구조 잠금을 먼저 잡고 읽으므로, 겹친 이동·휴지통 이동이 커밋된 뒤의 이름과 부모를
+ * 본다. 활성 폴더가 아니면 `NOT_FOUND`다.
+ */
+async function lockedTarget(ctx: WriteContext, id: string): Promise<Folder> {
+	const found = await ctx.db.selectFrom("folders").select("scope").where("id", "=", id).executeTakeFirst();
+	if (found !== undefined) await lockFolderScope(ctx.db, found.scope);
+	const target = await ctx.db
+		.selectFrom("folders")
+		.select(SHOWN)
+		.where("id", "=", id)
+		.where("trashed_at", "is", null)
+		.executeTakeFirst();
+	if (target === undefined) throw new MontiError("NOT_FOUND", "이 `id`의 활성 폴더가 없다");
+	return target;
 }
 
 /** Rejects a move under the folder itself or one of its descendants: `id` among the new parent's ancestors, itself included. */
