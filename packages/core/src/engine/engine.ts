@@ -1,4 +1,13 @@
-import { type Kysely, sql, type Transaction } from "kysely";
+import {
+	type Kysely,
+	type PluginTransformQueryArgs,
+	type PluginTransformResultArgs,
+	type QueryResult,
+	type RootOperationNode,
+	sql,
+	type Transaction,
+	type UnknownRow,
+} from "kysely";
 import type { Database } from "../db/types";
 import { uniqueConflictMessage } from "../db/unique-conflicts";
 import { MontiError } from "./errors";
@@ -118,18 +127,44 @@ function callbackRunner(trx: Transaction<Database>, stage: Stage, queue: MontiEv
 
 /**
  * 콜백의 값, 또는 콜백의 쓰기가 낸 첫 DB 오류(고유 제약 위반은 `CONFLICT`). 콜백이 그 오류를 잡고 정상 반환해도, 잡은 뒤
- * 이어간 DB 호출이 중단된 트랜잭션 오류(`25P02`)로 실패해도 그 첫 오류로 실패한다. 콜백이 정상 반환했으면 `trx`가
- * 중단되지 않았는지도 확인한다.
+ * 이어간 DB 호출이 중단된 트랜잭션 오류(`25P02`)로 실패해도 그 첫 오류로 실패한다. 콜백의 Promise가 끝나면 곧바로 콜백의
+ * `trx`를 닫고(`close`), 콜백이 정상 반환했으면 `trx`가 중단되지 않았는지도 확인한다.
  */
-async function runSettled<T>(run: () => Promise<T>, aborts: unknown[], trx: Transaction<Database>): Promise<T> {
+async function runSettled<T>(
+	run: () => Promise<T>,
+	aborts: unknown[],
+	trx: Transaction<Database>,
+	close: () => void,
+): Promise<T> {
 	const result = await run().then(
 		(value) => ({ value }),
 		(error: unknown) => ({ error }),
 	);
+	close();
 	if (aborts.length > 0) throw aborts[0];
 	if ("error" in result) throw result.error;
 	await assertNotAborted(trx);
 	return result.value;
+}
+
+/**
+ * 콜백에 넘길 `trx`. `close()` 뒤에 시작한 쿼리는 실행 전에 던진다: 콜백이 기다리지 않았거나 바깥에 붙잡아 둔 `trx`·`tx`의
+ * 쿼리가 커밋 뒤 자동 커밋으로, 또는 같은 연결을 이어 쓴 다른 요청의 트랜잭션 안에서 실행되지 않게 한다. 엔진의 확인
+ * 조회와 커밋은 닫지 않은 원래 `trx`를 쓴다.
+ */
+function gateOf(trx: Transaction<Database>): { trx: Transaction<Database>; close: () => void } {
+	let closed = false;
+	function transformQuery({ node }: PluginTransformQueryArgs): RootOperationNode {
+		if (closed) throw new Error("콜백이 끝난 뒤에는 트랜잭션을 쓸 수 없다: 콜백 안의 쿼리는 모두 기다려야 한다");
+		return node;
+	}
+	async function transformResult({ result }: PluginTransformResultArgs): Promise<QueryResult<UnknownRow>> {
+		return result;
+	}
+	function close(): void {
+		closed = true;
+	}
+	return { trx: trx.withPlugin({ transformQuery, transformResult }), close };
 }
 
 /**
@@ -156,8 +191,9 @@ function transactionOf<R extends ResourceTree>(
 		const queue: MontiEvent[] = [];
 		const aborts: unknown[] = [];
 		const result = await committed(db, state, async (trx, stage) => {
-			const client = buildClient(tree, "", callbackRunner(trx, stage, queue, aborts), true);
-			return runSettled(() => fn(client as MontiClient<R>, trx), aborts, trx);
+			const gate = gateOf(trx);
+			const client = buildClient(tree, "", callbackRunner(gate.trx, stage, queue, aborts), true);
+			return runSettled(() => fn(client as MontiClient<R>, gate.trx), aborts, trx, gate.close);
 		});
 		for (const event of queue) emit(event);
 		return result;
@@ -179,8 +215,9 @@ function dryRunOf<R extends ResourceTree>(db: Kysely<Database>, state: State, tr
 		const outcome: { value?: T } = {};
 		try {
 			await db.transaction().execute(async (trx) => {
-				const client = buildClient(tree, "", callbackRunner(trx, stage, [], aborts), false);
-				outcome.value = await runSettled(() => fn(client as MontiWriteClient<R>, trx), aborts, trx);
+				const gate = gateOf(trx);
+				const client = buildClient(tree, "", callbackRunner(gate.trx, stage, [], aborts), false);
+				outcome.value = await runSettled(() => fn(client as MontiWriteClient<R>, gate.trx), aborts, trx, gate.close);
 				throw new DryRunRollback();
 			});
 		} catch (error) {

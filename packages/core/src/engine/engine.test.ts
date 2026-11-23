@@ -3,6 +3,7 @@ import type { Kysely, Transaction } from "kysely";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { z } from "zod";
 import { createTestDatabase, type TestDatabase } from "../__test__/database";
+import { gate, holdingAfter } from "../__test__/race";
 import { migrate } from "../db/migrate";
 import { initial } from "../db/migrations/0001-initial";
 import type { Database } from "../db/types";
@@ -463,24 +464,28 @@ it("ENG-EVT-3 구독자가 받은 이벤트 값을 고치려 해도 다른 구�
 	expect(received).toEqual({ id: input.id, name: "Photos" });
 });
 
-it("ENG-EVT-5 이벤트로 보낼 수 없는 결과를 돌려주는 쓰기는 저장되지 않고 오류가 난다", async () => {
-	const create = defineWrite({
+it("ENG-EVT-5 이벤트로 보낼 값을 복사할 수 없으면 쓰기가 저장되지 않는다", async () => {
+	const withFunctionOutput = defineWrite({
 		input: folderInput,
 		run: async (input, ctx) => ({ ...(await insertFolder(input, ctx)), format: () => input.name }),
 	});
-	const monti = createMonti(db, { folders: { create } });
-	const listener = vi.fn();
-	monti.onEvent(listener);
+	const withFunctionInput = defineWrite({
+		input: folderInput.extend({ format: z.custom<() => string>((value) => typeof value === "function") }),
+		run: insertFolder,
+	});
+	const monti = createMonti(db, { folders: { withFunctionOutput, withFunctionInput } });
 
-	const outcome = await monti.folders.create({ id: randomUUID(), name: "Photos" }).catch((error: unknown) => error);
-	await new Promise((resolve) => setTimeout(resolve, 0));
+	const outcomes = [
+		await monti.folders
+			.withFunctionInput({ id: randomUUID(), name: "Photos", format: () => "Photos" })
+			.catch((error: unknown) => error),
+		await monti.folders.withFunctionOutput({ id: randomUUID(), name: "Videos" }).catch((error: unknown) => error),
+	];
 
 	// ENG-EVT-5.1
-	expect(outcome).toBeInstanceOf(Error);
+	expect(outcomes).toEqual([expect.any(Error), expect.any(Error)]);
 	// ENG-EVT-5.2
 	expect(await folderNames()).toEqual([]);
-	// ENG-EVT-5.3
-	expect(listener).not.toHaveBeenCalled();
 });
 
 /** 정상 폴더 하나를 만든 뒤, 없는 부모를 가리켜 외래 키 오류가 나는 폴더 쓰기를 잡아 무시하고 정상 반환한다. */
@@ -520,9 +525,10 @@ it("ENG-TX-6 콜백 안에서 DB 쓰기가 실패하면 콜백이 그 오류를 
 	expect(listener).not.toHaveBeenCalled();
 });
 
-it("ENG-PLG-3 플러그인의 리소스 이름이 엔진의 기본 메서드 이름과 겹치면 엔진을 만들 수 없다", () => {
+it("ENG-PLG-3 서버가 이미 쓰는 이름은 플러그인 리소스 이름으로 쓸 수 없다", () => {
 	const create = defineWrite({ input: folderInput, run: insertFolder });
-	const codes = ["spec", "transaction"].map((resource) => {
+	const names = ["spec", "transaction", "dryRun", "onEvent", "withStoredKey"];
+	const codes = names.map((resource) => {
 		const plugin: Plugin = { name: "named-plugin", operations: { [resource]: { create } } };
 		try {
 			createMonti(db, { folders: { create } }, [plugin]);
@@ -533,7 +539,7 @@ it("ENG-PLG-3 플러그인의 리소스 이름이 엔진의 기본 메서드 이
 	});
 
 	// ENG-PLG-3.1
-	expect(codes).toEqual(["CONFLICT", "CONFLICT"]);
+	expect(codes).toEqual(names.map(() => "CONFLICT"));
 });
 
 /** 콜백이 받는 클라이언트 가운데 폴더 쓰기 `add` 하나. */
@@ -615,4 +621,34 @@ it("ENG-TX-10 콜백이 트랜잭션 DB에 직접 실행한 쿼리의 DB 오류�
 	expect(await folderNames()).toEqual([]);
 	// ENG-TX-10.3
 	expect(listener).not.toHaveBeenCalled();
+});
+
+it("ENG-TX-11 콜백이 끝난 뒤에는 그 콜백이 받은 트랜잭션으로 새 작업을 시작할 수 없다", async () => {
+	const add = defineWrite({ input: folderInput, run: insertFolder });
+	const runs = ["transaction", "dryRun"] as const;
+	const outcomes = [];
+	for (const run of runs) {
+		// 엔진은 콜백이 끝난 뒤 커밋·롤백 전에 `select 1`로 트랜잭션을 확인한다: 그 결과를 붙잡아 둔 동안 늦은 시도를 시작한다.
+		const held = gate();
+		const monti = createMonti(holdingAfter(db, /^select 1$/, held.pass), { folders: { add } });
+		const caught: Array<{ tx: FolderAdd; trx: Transaction<Database> }> = [];
+		const finished = monti[run](async (tx, trx) => {
+			caught.push({ tx, trx });
+			return "done";
+		});
+		await held.reached;
+		const late = await Promise.allSettled([
+			caught[0].trx.insertInto("folders").values({ id: randomUUID(), scope: "media", name: "Raw" }).execute(),
+			caught[0].tx.folders.add({ id: randomUUID(), name: "Operation" }),
+		]);
+		held.open();
+		outcomes.push({ run, late: late.map((result) => result.status), returned: await finished });
+	}
+
+	// ENG-TX-11.1
+	expect(outcomes.map(({ run, late }) => ({ run, late }))).toEqual(
+		runs.map((run) => ({ run, late: ["rejected", "rejected"] })),
+	);
+	// ENG-TX-11.2
+	expect({ returned: outcomes[0].returned, names: await folderNames() }).toEqual({ returned: "done", names: [] });
 });
