@@ -4,7 +4,7 @@
 
 | 기능 | 하는 일 | 주요 거절 |
 |---|---|---|
-| `runMigrations` | 운영 설정(`config.dev !== true`)에서 내장 마이그레이션과 미적용 프로젝트 `.sql` 파일(`source = "project"`)을 이름순으로 실행한다(`dryRun: true`이면 미적용 내장·프로젝트 단계 전체를 한 트랜잭션으로 시험 실행 후 롤백) | `config.dev === true` 시 실행 오류(`exitCode: 1`), 실패한 SQL 파일 롤백·중단 |
+| `runMigrations` | 운영 설정(`config.dev !== true`)에서 내장 마이그레이션과 미적용 프로젝트 `.sql` 파일(`source = "project"`)을 이름순으로 실행하고(동시 실행 시 각 호출은 자신이 실제 적용한 파일만 반환), `dryRun: true`이면 미적용 내장·프로젝트 단계 전체를 한 트랜잭션으로 시험 실행 후 롤백한다 | `config.dev === true`·문장 `COMMIT`/`ROLLBACK` 포함 SQL 실행 전 거절·디렉터리 밖 심볼릭 링크 `.sql` 시 실행 오류(`exitCode: 1`), 실패한 SQL 파일 롤백·중단 |
 | `getMigrationStatus` | DB를 변경하지 않고 `migrations` 테이블의 `source = "project"` 이력과 디렉터리의 `.sql` 파일을 대조해 적용 여부를 돌려준다 | 없음 |
 
 ---
@@ -96,6 +96,41 @@
   - `CLI-MGR-6.1` 실행 오류(`exitCode: 1`)를 던진다
   - `CLI-MGR-6.2` DB에 `posts` 테이블이 없다
   - `CLI-MGR-6.3` DB에 `migrations` 테이블이 없다
+
+</details>
+
+<details>
+<summary><strong><code>CLI-MGR-10</code></strong> 트랜잭션을 끝내는 `COMMIT`이나 `ROLLBACK` 문장이 들어 있는 SQL 파일은 실행 전에 거절한다</summary>
+
+- **전제**: 내장 마이그레이션 적용이 끝난 DB와, 각각 `COMMIT;` 문장과 `ROLLBACK;` 문장만 담은 `.sql` 파일이 디렉터리에 있다
+- **행동**: 각 디렉터리에서 `runMigrations({ db, project, dir, dryRun: true })`와 `runMigrations({ db, project, dir })`를 실행한다
+- **결과**:
+  - `CLI-MGR-10.1` 시험 실행과 본 실행 모두 DB 실행 전 거절로 `exitCode: 1` 오류를 던진다
+  - `CLI-MGR-10.2` `migrations` 테이블에 해당 프로젝트 파일이 기록되지 않는다
+
+</details>
+
+<details>
+<summary><strong><code>CLI-MGR-11</code></strong> 마이그레이션 디렉터리 밖을 가리키는 심볼릭 링크 `.sql` 파일은 실행할 수 없다</summary>
+
+- **전제**: 내장 마이그레이션 적용이 끝난 DB, 마이그레이션 디렉터리 바깥에 테이블을 만드는 SQL 파일, 디렉터리 안에 그 파일을 가리키는 심볼릭 링크 `0001_link.sql`이 있다
+- **행동**: `runMigrations({ db, project, dir })`를 실행한다
+- **결과**:
+  - `CLI-MGR-11.1` 실행 오류(`exitCode: 1`)를 던진다
+  - `CLI-MGR-11.2` 바깥 SQL 파일의 테이블이 만들어지지 않는다
+  - `CLI-MGR-11.3` `migrations` 테이블에 `("project", "0001_link.sql")`이 기록되지 않는다
+
+</details>
+
+<details>
+<summary><strong><code>CLI-MGR-12</code></strong> 같은 DB에 운영 마이그레이션을 동시에 두 번 실행해도 각 파일은 한 번만 적용되고 자신이 적용한 파일만 돌려준다</summary>
+
+- **전제**: 내장 마이그레이션 적용이 끝난 DB, `0001_init.sql`, 그 DB에 대한 독립 연결 둘이 있다
+- **행동**: 두 연결로 `runMigrations({ db, project, dir })`를, 첫 호출이 잠금을 잡고 적용하는 동안 두 번째 호출이 진입하도록 동시에 실행한다
+- **결과**:
+  - `CLI-MGR-12.1` 두 호출 모두 오류 없이 끝난다
+  - `CLI-MGR-12.2` 두 호출의 반환 목록을 정렬하면 `[[], ["0001_init.sql"]]`이다
+  - `CLI-MGR-12.3` `migrations` 테이블에 `("project", "0001_init.sql")`이 정확히 한 행만 기록된다
 
 </details>
 
