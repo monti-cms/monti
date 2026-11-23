@@ -463,6 +463,26 @@ it("ENG-EVT-3 구독자가 받은 이벤트 값을 고치려 해도 다른 구�
 	expect(received).toEqual({ id: input.id, name: "Photos" });
 });
 
+it("ENG-EVT-5 이벤트로 보낼 수 없는 결과를 돌려주는 쓰기는 저장되지 않고 오류가 난다", async () => {
+	const create = defineWrite({
+		input: folderInput,
+		run: async (input, ctx) => ({ ...(await insertFolder(input, ctx)), format: () => input.name }),
+	});
+	const monti = createMonti(db, { folders: { create } });
+	const listener = vi.fn();
+	monti.onEvent(listener);
+
+	const outcome = await monti.folders.create({ id: randomUUID(), name: "Photos" }).catch((error: unknown) => error);
+	await new Promise((resolve) => setTimeout(resolve, 0));
+
+	// ENG-EVT-5.1
+	expect(outcome).toBeInstanceOf(Error);
+	// ENG-EVT-5.2
+	expect(await folderNames()).toEqual([]);
+	// ENG-EVT-5.3
+	expect(listener).not.toHaveBeenCalled();
+});
+
 /** 정상 폴더 하나를 만든 뒤, 없는 부모를 가리켜 외래 키 오류가 나는 폴더 쓰기를 잡아 무시하고 정상 반환한다. */
 async function ignoreForeignKeyError(tx: Record<"folders", FolderWrites["folders"]>): Promise<string> {
 	await tx.folders.add({ id: randomUUID(), name: "Photos" });

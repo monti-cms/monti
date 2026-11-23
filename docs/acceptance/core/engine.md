@@ -103,6 +103,18 @@
 
 </details>
 
+<details>
+<summary><strong><code>ENG-EVT-5</code></strong> 이벤트로 보낼 수 없는 결과를 돌려주는 쓰기는 저장되지 않고 오류가 난다</summary>
+
+- **전제**: DB에 행을 추가하고 함수가 든 객체를 돌려주는 쓰기 Operation과 `onEvent` 구독자가 등록되어 있다
+- **행동**: 유효한 입력으로 해당 쓰기 Operation을 호출한다
+- **결과**:
+  - `ENG-EVT-5.1` 호출이 오류를 던진다
+  - `ENG-EVT-5.2` DB에 행이 남지 않는다
+  - `ENG-EVT-5.3` 구독자가 호출되지 않는다
+
+</details>
+
 ## 3. 트랜잭션 · 드라이런 (`transaction` · `dryRun`)
 
 ### 핵심 요구사항

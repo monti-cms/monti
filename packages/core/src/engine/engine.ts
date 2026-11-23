@@ -199,14 +199,35 @@ function isSilent(path: string): boolean {
 }
 
 /**
+ * 구독자마다 사본으로 보낼 이벤트가 복사되는지 확인한다. 함수처럼 복사할 수 없는 값이 들어 있으면 커밋 전에 오류를 던져,
+ * 이벤트가 조용히 빠지는 대신 쓰기를 만든 쪽이 바로 알게 한다.
+ */
+function assertCloneable(event: MontiEvent): void {
+	try {
+		structuredClone(event);
+	} catch (cause) {
+		throw new Error(`${event.operation}의 입력이나 결과에 복사할 수 없는 값(함수 등)이 있어 이벤트로 보낼 수 없다`, {
+			cause,
+		});
+	}
+}
+
+/**
  * 읽기는 러너의 DB에서 실행한다. 쓰기는 러너의 트랜잭션에서 실행하고 그 이벤트를 러너에 넘기되, `admin`·`session`·`keys`
- * 리소스의 쓰기와 `media.startUpload`는 이벤트를 넘기지 않는다.
+ * 리소스의 쓰기와 `media.startUpload`는 이벤트를 넘기지 않는다. 넘길 이벤트가 복사되지 않으면 커밋하지 않는다.
  */
 async function execute(operation: Operation, path: string, raw: unknown, runner: Runner): Promise<unknown> {
 	const input = parseInput(operation, raw);
 	if (operation.kind === "read") return operation.run(input, runner.context());
-	const output = await runner.write((ctx) => operation.run(input, ctx)).catch((error) => asAborted(error, runner));
-	if (!isSilent(path)) runner.emit({ operation: path, input, output });
+	const silent = isSilent(path);
+	const output = await runner
+		.write(async (ctx) => {
+			const result = await operation.run(input, ctx);
+			if (!silent) assertCloneable({ operation: path, input, output: result });
+			return result;
+		})
+		.catch((error) => asAborted(error, runner));
+	if (!silent) runner.emit({ operation: path, input, output });
 	return output;
 }
 
