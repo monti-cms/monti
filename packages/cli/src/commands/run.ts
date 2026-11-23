@@ -1,6 +1,5 @@
 import type { ErrorCode } from "@monti-cms/core";
 import packageJson from "../../package.json";
-import { loadEnv } from "../boot/env";
 import { type ParsedArgs, parseArgs } from "../parse/args";
 import { CliError } from "../parse/error";
 import { formatGlobalHelp } from "../parse/help";
@@ -94,22 +93,12 @@ function redact(message: string, io: CliIo): string {
 }
 
 /**
- * 오류 출력에 나가면 안 되는 비밀값: 명령이 읽는 환경 변수(`loadEnv`)의 `DATABASE_URL` 비밀번호(URL에 쓰인 그대로와 풀어 쓴
- * 것)와 `MONTI_SECRET`. 빈 값은 뺀다. `.env` 파일을 읽지 못하면 실행 환경 변수만 본다.
+ * 오류 출력에 나가면 안 되는 비밀값: 실행 환경 변수(`bin.mjs`가 `.env` 값까지 채운 것)의 `DATABASE_URL` 비밀번호(URL에 쓰인
+ * 그대로와 풀어 쓴 것)와 `MONTI_SECRET`. 빈 값은 뺀다.
  */
-function secretsOf(io: CliIo): string[] {
-	const env = envOf(io);
+function secretsOf({ env }: CliIo): string[] {
 	const password = URL.parse(env.DATABASE_URL ?? "")?.password ?? "";
 	return [password, decoded(password), env.MONTI_SECRET ?? ""].filter((secret) => secret !== "");
-}
-
-/** 명령이 읽는 환경 변수. 오류를 쓰는 중이므로, `.env` 파일을 읽지 못해도 던지지 않고 실행 환경 변수를 돌려준다. */
-function envOf(io: CliIo): Record<string, string | undefined> {
-	try {
-		return loadEnv(io.cwd, io.env);
-	} catch {
-		return io.env;
-	}
 }
 
 /** URL에 `%`로 적힌 글을 푼 것. 잘못 적혀 풀 수 없으면 그대로다. */
