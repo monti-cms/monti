@@ -6,6 +6,7 @@ import { uuidInput } from "../_shared/input";
 import { recountEntryMediaUses } from "../media/uses";
 import { saveCopy } from "./copies";
 import { dataShape, folderInput, slugInput } from "./inputs";
+import { findLockedEntry } from "./locks";
 import { findEntry } from "./read";
 import { tablesOf } from "./tables";
 import type { CopyKey, Entry, EntryData } from "./types";
@@ -53,10 +54,10 @@ function patchOf(input: DataInput, existing: EntryData): DataInput {
  * 활성 글의 `locale`(생략하면 원문 언어) 작업본의 슬러그와 필드·본문, 글 전체의 폴더를 바꾼다. `fields`를 주면 필드
  * 값 전체를, `body`를 주면 본문을 교체하고 생략한 쪽은 그대로 두며, 둘 중 하나라도 주면 모든 언어 기준으로 미디어
  * 사용처를 다시 센다. 그 작업본의 같은 경로에 이미 있던 참조는 대상이 휴지통에 있어도 그대로 둘 수 있다. 발행본은
- * 건드리지 않는다.
+ * 건드리지 않는다. 글을 잠근 뒤의 작업본에 덧붙여 쓰므로 겹친 다른 수정이 저장한 것을 잃지 않는다.
  */
 async function updateOne(input: z.infer<typeof updateOneInput>, ctx: WriteContext): Promise<Entry> {
-	const existing = await findEntry(ctx, { id: input.id, locale: input.locale }, "draft");
+	const existing = await findLockedEntry(ctx, { id: input.id, locale: input.locale }, "draft");
 	const { id, locale, collection: name } = existing;
 	const collection = collectionOf(ctx, name);
 	const replaces = input.fields !== undefined || input.body !== undefined;

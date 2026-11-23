@@ -131,7 +131,7 @@ it("DB-SCH-1 첫 마이그레이션이 8개 고정 도메인 테이블을 만든
 		["media_id", "source_kind", "source_id", "field_path"].sort(),
 	);
 	// DB-SCH-1.5
-	expect(await columnsOf(testDb.db, "loose_files")).toEqual(["key", "remove_after"].sort());
+	expect(await columnsOf(testDb.db, "loose_files")).toEqual(["key", "kind", "remove_after"].sort());
 	// DB-SCH-1.6
 	expect(await columnsOf(testDb.db, "admin")).toEqual(["id", "email", "password_hash"].sort());
 	// DB-SCH-1.7

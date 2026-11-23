@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { lockFolderScope } from "../../db/locks";
 import type { ReadContext, WriteContext } from "../../engine/types";
 import { uuidInput } from "../_shared/input";
 import { firstFree } from "../_shared/names";
@@ -34,9 +35,13 @@ async function copySlug(ctx: WriteContext, source: Entry): Promise<string | null
 	return freeSlug(ctx, source.collection, source.locale, `${source.slug}-copy`);
 }
 
-/** 활성 글의 원문 언어 작업본을 새 미발행 글로 복제한다. 생성과 같이 검사하고 기록하며, 다른 언어는 복제하지 않는다. */
+/**
+ * 활성 글의 원문 언어 작업본을 새 미발행 글로 복제한다. 생성과 같이 검사하고 기록하며, 다른 언어는 복제하지 않는다. 비어 있는
+ * 복제 슬러그는 컬렉션의 `scope` 잠금을 잡은 뒤에 골라, 겹친 복제가 커밋한 슬러그를 피한다.
+ */
 export async function duplicateEntry(input: z.infer<typeof duplicateInput>, ctx: WriteContext): Promise<Entry> {
 	const source = await findEntry(ctx, { id: input.id }, "draft");
+	await lockFolderScope(ctx.db, source.collection);
 	return createEntry(
 		{
 			__preset_id: input.__preset_id,

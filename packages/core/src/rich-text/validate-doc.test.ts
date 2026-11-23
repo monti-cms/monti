@@ -212,6 +212,23 @@ it("RT-BLK-6 허용된 자식 목록에 없는 하위 블록이 들어 있으면
 	expect(under(paths, "blocks[0].children[0]")).toEqual([]);
 });
 
+/** `quote` 블록이 최상위(1단계)부터 안쪽으로 `levels`단계 중첩된 문서. */
+function nestedQuotes(levels: number): Doc {
+	let block: Block = { id: `q${levels}`, type: "quote" };
+	for (let level = levels - 1; level >= 1; level -= 1) block = { id: `q${level}`, type: "quote", children: [block] };
+	return { blocks: [block] };
+}
+
+it("RT-BLK-7 블록 중첩이 최대 깊이인 32단계까지는 통과한다", () => {
+	// RT-BLK-7.1
+	expect(validateDoc(nestedQuotes(32))).toEqual([]);
+});
+
+it("RT-BLK-8 블록 중첩이 최대 깊이(32단계)를 넘으면 예외를 던지지 않고 초과 위치 경로의 문제로 돌려준다", () => {
+	// RT-BLK-8.1
+	expect(pathsOf(nestedQuotes(33))).toContain(`blocks[0]${".children[0]".repeat(32)}`);
+});
+
 it("RT-INL-1 인라인 노드가 객체가 아니거나 등록되지 않은 종류이거나 각주 참조 ID가 문자열이 아니면 문제를 돌려준다", () => {
 	const content = [null, { type: "emoji", name: "smile" }, { type: "footnoteRef" }];
 	const paths = pathsOf({ blocks: [{ id: "b0", type: "paragraph", content }] });
@@ -270,6 +287,28 @@ it("RT-INL-5 내장 마크와 같은 이름으로 마크를 등록하면 내장 
 	expect(paths).toContain("blocks[0].content[1].marks[0]");
 	// RT-INL-5.2
 	expect(under(paths, "blocks[0].content[0]")).toEqual([]);
+});
+
+it("RT-INL-6 내장 링크 마크의 주소에 허용되지 않은 스킴이나 스킴 없는 네트워크 경로가 들어 있으면 문제를 돌려준다", () => {
+	const hrefs = [
+		"https://example.com",
+		"http://example.com",
+		"mailto:a@example.com",
+		"/about",
+		"#top",
+		"javascript:alert(1)",
+		"JavaScript:alert(1)",
+		"data:text/html,<script>",
+		"//example.com",
+	];
+	const content = hrefs.map((href) => text(href, [{ type: "link", href }]));
+	const paths = pathsOf({ blocks: [{ id: "b0", type: "paragraph", content }] });
+	// RT-INL-6.1
+	expect([0, 1, 2].flatMap((n) => under(paths, `blocks[0].content[${n}]`))).toEqual([]);
+	// RT-INL-6.2
+	expect([3, 4].flatMap((n) => under(paths, `blocks[0].content[${n}]`))).toEqual([]);
+	// RT-INL-6.3
+	expect(paths).toEqual(expect.arrayContaining([5, 6, 7, 8].map((n) => `blocks[0].content[${n}].marks[0]`)));
 });
 
 it("RT-MED-1 블록의 단건 미디어 예약 속성이 유효한 UUID가 아니면 문제를 돌려준다", () => {

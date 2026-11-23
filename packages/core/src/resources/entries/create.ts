@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
+import { lockFolderScope } from "../../db/locks";
 import type { WriteContext } from "../../engine/types";
 import { collectionOf, rejectLocale } from "../_shared/collection";
 import { uuidInput } from "../_shared/input";
@@ -20,13 +21,17 @@ export const createInput = z.object({
 	...dataShape,
 });
 
-/** 새 글과 그 원문 언어(`locale`) 작업본을 만들고, 그 글이 참조하는 미디어를 사용처에 기록한다. */
+/**
+ * 새 글과 그 원문 언어(`locale`) 작업본을 만들고, 그 글이 참조하는 미디어를 사용처에 기록한다. 컬렉션의 `scope` 잠금 아래에서
+ * 폴더와 슬러그를 판정해, 겹친 생성·휴지통 이동이 커밋된 뒤의 상태를 본다.
+ */
 export async function createEntry(input: z.infer<typeof createInput>, ctx: WriteContext): Promise<Entry> {
 	const name = input.collection;
 	const collection = collectionOf(ctx, name);
 	rejectLocale(ctx, input.locale);
 	const data = await checkData(ctx, collection, input);
 	const folder_id = input.folder_id ?? null;
+	await lockFolderScope(ctx.db, name);
 	if (folder_id !== null) await rejectFolder(ctx, folder_id, name);
 	const id = input.__preset_id ?? randomUUID();
 	const slug = input.slug ?? null;

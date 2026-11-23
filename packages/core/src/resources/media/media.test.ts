@@ -77,11 +77,27 @@ async function seedMedia(seed: MediaSeed = {}) {
 	return row;
 }
 
+/** `key`를 `media.startUpload`가 발급한 업로드 티켓처럼 24시간 뒤 만료로 `loose_files`에 넣는다. */
 async function seedLooseFile(key: string): Promise<void> {
 	await db
 		.insertInto("loose_files")
-		.values({ key, remove_after: new Date(Date.now() + DAY_MS) })
+		.values({ key, kind: "upload", remove_after: new Date(Date.now() + DAY_MS) })
 		.execute();
+}
+
+/** `media.startUpload`로 발급받은 키. `file`을 주면 그 키로 파일을 올린다. */
+async function issuedKey(file?: { mime: string; size: number }): Promise<string> {
+	const { key } = await montiOf().media.startUpload({ mime_type: file?.mime ?? "image/png", size: file?.size ?? 10 });
+	if (file !== undefined) storage.seed(key, file);
+	return key;
+}
+
+/** 파일 교체로 삭제 대기 상태가 된 이전 키. 그 키의 파일은 저장소에 남아 있다. */
+async function replacedKey(): Promise<string> {
+	const row = await seedMedia();
+	storage.seed(row.key, { mime: "image/png", size: 1024 });
+	await montiOf().media.update({ id: row.id, key: await issuedKey({ mime: "image/png", size: 10 }) });
+	return row.key;
 }
 
 async function mediaRows() {
@@ -154,15 +170,15 @@ it("MED-UPL-2 rejects media.startUpload with BAD_REQUEST on an engine without st
 });
 
 it("MED-UPL-3 시험 실행(dryRun)에서는 업로드 티켓을 발급할 수 없고 등록 시험 실행은 DB를 남기지 않는다", async () => {
-	const key = randomUUID();
-	storage.seed(key, { mime: "image/png", size: 10 });
+	const key = await issuedKey({ mime: "image/png", size: 10 });
 	const monti = montiOf();
+	const before = { tickets: [...storage.tickets], loose: await looseKeys() };
 
 	const upload = monti.dryRun((tx) => tx.media.startUpload({ mime_type: "image/png", size: 10 }));
 	// MED-UPL-3.1
 	await expect(upload).rejects.toMatchObject({ code: "BAD_REQUEST" });
 	// MED-UPL-3.1
-	expect({ tickets: storage.tickets, loose: await looseKeys() }).toEqual({ tickets: [], loose: [] });
+	expect({ tickets: storage.tickets, loose: await looseKeys() }).toEqual(before);
 
 	const output = await monti.dryRun((tx) => tx.media.create({ key }));
 	// MED-UPL-3.2
@@ -239,8 +255,10 @@ it("MED-CRT-1 스토리지 파일을 확인해 미디어로 등록하고 임시 
 });
 
 it("MED-CRT-3 rejects media.create with BAD_REQUEST for a key not in the storage", async () => {
+	const key = await issuedKey();
+
 	// MED-CRT-3.1
-	await expect(montiOf().media.create({ key: randomUUID() })).rejects.toMatchObject({ code: "BAD_REQUEST" });
+	await expect(montiOf().media.create({ key })).rejects.toMatchObject({ code: "BAD_REQUEST" });
 	// MED-CRT-3.2
 	expect(await mediaRows()).toEqual([]);
 });
@@ -257,8 +275,7 @@ it("MED-CRT-4 rejects media.create with CONFLICT for a key already in media, tra
 });
 
 it("MED-CRT-5 rejects media.create with BAD_REQUEST for a folder outside the media scope", async () => {
-	const key = randomUUID();
-	storage.seed(key, { mime: "image/png", size: 10 });
+	const key = await issuedKey({ mime: "image/png", size: 10 });
 	const folder = await seedFolder(POSTS);
 
 	// MED-CRT-5.1
@@ -268,8 +285,7 @@ it("MED-CRT-5 rejects media.create with BAD_REQUEST for a folder outside the med
 });
 
 it("MED-CRT-6 빈 파일 이름으로는 미디어를 등록할 수 없다", async () => {
-	const key = randomUUID();
-	storage.seed(key, { mime: "image/png", size: 10 });
+	const key = await issuedKey({ mime: "image/png", size: 10 });
 
 	// MED-CRT-6.1
 	await expect(montiOf().media.create({ key, filename: "" })).rejects.toMatchObject({ code: "BAD_REQUEST" });
@@ -278,8 +294,7 @@ it("MED-CRT-6 빈 파일 이름으로는 미디어를 등록할 수 없다", asy
 });
 
 it("MED-CRT-7 같은 파일 키로 동시에 미디어를 등록하면 한 건만 성공하고 나머지는 충돌로 거절된다", async () => {
-	const key = randomUUID();
-	storage.seed(key, { mime: "image/png", size: 10 });
+	const key = await issuedKey({ mime: "image/png", size: 10 });
 	const monti = montiOf();
 
 	const codes = await Promise.all([codeOf(monti.media.create({ key })), codeOf(monti.media.create({ key }))]);
@@ -291,9 +306,10 @@ it("MED-CRT-7 같은 파일 키로 동시에 미디어를 등록하면 한 건�
 });
 
 it("MED-CRT-8 파일 크기가 DB 허용 범위를 벗어나면 업로드를 시작하거나 미디어를 등록할 수 없다", async () => {
-	const key = randomUUID();
+	const key = await issuedKey({ mime: "video/mp4", size: 1024 });
 	storage.seed(key, { mime: "video/mp4", size: 2_147_483_648 });
 	const monti = montiOf();
+	const loose = await looseKeys();
 
 	const codes = [
 		await codeOf(monti.media.startUpload({ mime_type: "video/mp4", size: 2_147_483_648 })),
@@ -303,7 +319,44 @@ it("MED-CRT-8 파일 크기가 DB 허용 범위를 벗어나면 업로드를 시
 	// MED-CRT-8.1
 	expect(codes).toEqual(["BAD_REQUEST", "BAD_REQUEST"]);
 	// MED-CRT-8.2
-	expect({ media: await mediaRows(), loose: await looseKeys() }).toEqual({ media: [], loose: [] });
+	expect({ media: await mediaRows(), loose: await looseKeys() }).toEqual({ media: [], loose });
+});
+
+it("MED-CRT-9 업로드 시작을 통해 발급받지 않은 키나 삭제 대기 중인 이전 키로는 미디어를 등록할 수 없다", async () => {
+	const arbitrary = randomUUID();
+	storage.seed(arbitrary, { mime: "image/png", size: 10 });
+	const replaced = await replacedKey();
+	const before = await mediaRows();
+	const monti = montiOf();
+
+	const codes = [
+		await codeOf(monti.media.create({ key: arbitrary })),
+		await codeOf(monti.media.create({ key: replaced })),
+	];
+
+	// MED-CRT-9.1
+	expect(codes).toEqual(["BAD_REQUEST", "BAD_REQUEST"]);
+	// MED-CRT-9.2
+	expect(await mediaRows()).toEqual(before);
+});
+
+it("MED-CRT-10 미디어 등록에서 이미지 가로·세로 크기는 DB 정수 최대치까지 허용되고 이를 넘으면 거절된다", async () => {
+	const file = { mime: "image/png", size: 10 };
+	const [wide, tall, largest] = [await issuedKey(file), await issuedKey(file), await issuedKey(file)];
+	const monti = montiOf();
+
+	const codes = [
+		await codeOf(monti.media.create({ key: wide, width: 2_147_483_648 })),
+		await codeOf(monti.media.create({ key: tall, height: 2_147_483_648 })),
+	];
+	await monti.media.create({ key: largest, width: 2_147_483_647, height: 2_147_483_647 });
+
+	// MED-CRT-10.1
+	expect(codes).toEqual(["BAD_REQUEST", "BAD_REQUEST"]);
+	// MED-CRT-10.2
+	expect((await mediaRows()).map(({ key, width, height }) => ({ key, width, height }))).toEqual([
+		{ key: largest, width: 2_147_483_647, height: 2_147_483_647 },
+	]);
 });
 
 it("MED-READ-1 lists only the media directly in the given folder", async () => {
@@ -493,9 +546,8 @@ it("MED-UPD-7 미디어 수정에서 미디어 범위가 아닌 폴더로 옮길
 
 it("MED-UPD-8 같은 미디어의 파일을 동시에 교체해도 먼저 교체된 중간 파일 키가 임시 목록에서 빠지지 않는다", async () => {
 	const row = await seedMedia();
-	const [first, second] = [randomUUID(), randomUUID()];
-	storage.seed(first, { mime: "image/png", size: 10 });
-	storage.seed(second, { mime: "image/png", size: 20 });
+	const first = await issuedKey({ mime: "image/png", size: 10 });
+	const second = await issuedKey({ mime: "image/png", size: 20 });
 	const held = gate();
 	const monti = montiWith(gatedStorage({ stat: { key: first, gate: held } }));
 
@@ -518,10 +570,44 @@ it("MED-UPD-8 같은 미디어의 파일을 동시에 교체해도 먼저 교체
 	}
 });
 
+it("MED-UPD-9 업로드 시작을 통해 발급받지 않은 키나 삭제 대기 중인 이전 키로는 미디어 파일을 교체할 수 없다", async () => {
+	const row = await seedMedia();
+	const arbitrary = randomUUID();
+	storage.seed(arbitrary, { mime: "image/png", size: 10 });
+	const replaced = await replacedKey();
+	const monti = montiOf();
+
+	const codes = [
+		await codeOf(monti.media.update({ id: row.id, key: arbitrary })),
+		await codeOf(monti.media.update({ id: row.id, key: replaced })),
+	];
+
+	// MED-UPD-9.1
+	expect(codes).toEqual(["BAD_REQUEST", "BAD_REQUEST"]);
+	// MED-UPD-9.2
+	expect((await mediaRow(row.id)).key).toBe(row.key);
+});
+
+it("MED-UPD-10 미디어 수정에서 이미지 가로·세로 크기는 DB 정수 최대치까지 허용되고 이를 넘으면 거절된다", async () => {
+	const row = await seedMedia({ width: 100, height: 50 });
+	const monti = montiOf();
+
+	const codes = [
+		await codeOf(monti.media.update({ id: row.id, width: 2_147_483_648 })),
+		await codeOf(monti.media.update({ id: row.id, height: 2_147_483_648 })),
+	];
+	await monti.media.update({ id: row.id, width: 2_147_483_647, height: 2_147_483_647 });
+	const stored = await mediaRow(row.id);
+
+	// MED-UPD-10.1
+	expect(codes).toEqual(["BAD_REQUEST", "BAD_REQUEST"]);
+	// MED-UPD-10.2
+	expect({ width: stored.width, height: stored.height }).toEqual({ width: 2_147_483_647, height: 2_147_483_647 });
+});
+
 it("MED-CRT-2 registers the media with the given __preset_id", async () => {
 	const id = randomUUID();
-	const key = randomUUID();
-	storage.seed(key, { mime: "image/png", size: 1024 });
+	const key = await issuedKey({ mime: "image/png", size: 1024 });
 
 	const output = await montiOf().media.create({ __preset_id: id, key });
 
@@ -535,11 +621,11 @@ function byId(a: { id: string }, b: { id: string }): number {
 	return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
 }
 
-/** Puts `key` in loose_files with `remove_after` an hour before or after now. */
-async function seedLooseFileAt(key: string, hours: number): Promise<void> {
+/** `key`를 `remove_after`가 지금보다 `hours`시간 뒤(음수면 앞)인 `loose_files` 행으로 넣는다. `kind`를 생략하면 DB 기본값이다. */
+async function seedLooseFileAt(key: string, hours: number, kind?: "upload" | "cleanup"): Promise<void> {
 	await db
 		.insertInto("loose_files")
-		.values({ key, remove_after: new Date(Date.now() + hours * 60 * 60 * 1000) })
+		.values({ key, kind, remove_after: new Date(Date.now() + hours * 60 * 60 * 1000) })
 		.execute();
 }
 
@@ -593,8 +679,8 @@ it("MED-CLN-3 임시 파일 정리와 미디어 등록이 같은 키로 동시�
 	const [keyA, keyB] = [randomUUID(), randomUUID()];
 	storage.seed(keyA, { mime: "image/png", size: 10 });
 	storage.seed(keyB, { mime: "image/png", size: 20 });
-	await seedLooseFileAt(keyA, -1);
-	await seedLooseFileAt(keyB, -1);
+	await seedLooseFileAt(keyA, -1, "upload");
+	await seedLooseFileAt(keyB, -1, "upload");
 	const [removing, statting] = [gate(), gate()];
 	const gated = gatedStorage({ remove: { key: keyA, gate: removing }, stat: { key: keyB, gate: statting } });
 	const monti = montiWith(gated);

@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, expect, it } from "vitest";
 import { createTestDatabase, type TestDatabase } from "../../__test__/database";
+import { holdingAfter, overlap } from "../../__test__/race";
 import { migrate } from "../../db/migrate";
 import { initial } from "../../db/migrations/0001-initial";
 import type { Database } from "../../db/types";
@@ -42,6 +43,16 @@ const CONFIG: MontiConfig = { name: "Monti Blog", dev: false };
 
 /** `posts`·`notes` 원문의 필드 값. */
 const FIELDS = { title: "제목", summary: "요약" };
+
+/** SQL이 `pattern`에 맞는 첫 문장을 실행한 직후 `hold`가 끝날 때까지 멈추는 엔진. */
+function heldMonti(pattern: RegExp, hold: () => Promise<void>) {
+	return createMonti(holdingAfter(db, pattern, hold), { entries, translationStatus }, [], {
+		schema: SCHEMA,
+		config: CONFIG,
+		schemaFile: "unused-schema-file",
+		configFile: "unused-config-file",
+	});
+}
 
 function montiOf(schema: Schema = SCHEMA) {
 	return createMonti(db, { entries, translationStatus }, [], {
@@ -515,4 +526,53 @@ it("TST-UPD-14 휴지통에 있는 글의 번역 상태는 수정할 수 없다"
 	await expect(
 		montiOf().translationStatus.update({ id: entry.id, locale: "en", fields: { title: true } }),
 	).rejects.toMatchObject({ code: "NOT_FOUND" });
+});
+
+it("TST-UPD-15 같은 번역 언어에서 서로 다른 두 필드를 동시에 확인해도 두 확인 기록이 모두 남는다", async () => {
+	const entry = await createEntry({ fields: FIELDS });
+	await addLocale(entry.id, "en");
+
+	// 첫 확인이 `translation_seen`을 읽은 직후 멈춘 동안 두 번째 확인이 읽고 저장한다.
+	const [title, summary] = await overlap(
+		db,
+		(hold) =>
+			heldMonti(/"d"\."locale" <> "e"\."source_locale"/, hold).translationStatus.update({
+				id: entry.id,
+				locale: "en",
+				fields: { title: true },
+			}),
+		() => montiOf().translationStatus.update({ id: entry.id, locale: "en", fields: { summary: true } }),
+	);
+	const output = await montiOf().translationStatus.get({ id: entry.id, locale: "en" });
+
+	// TST-UPD-15.1
+	expect([title.code, summary.code]).toEqual([null, null]);
+	// TST-UPD-15.2
+	expect([output.fields.title?.status, output.fields.summary?.status]).toEqual(["seen", "seen"]);
+});
+
+it("TST-UPD-16 원문 언어를 바꾸는 동안 번역 상태 확인이 겹쳐도 이전 원문 기준 기록이 남지 않는다", async () => {
+	const entry = await createEntry({ fields: { title: "한국어 제목" } });
+	await addLocale(entry.id, "en", { fields: { title: "English title" } });
+	await addLocale(entry.id, "ja");
+
+	// `ja` 확인이 `"ko"` 원문 값을 읽은 직후 멈춘 동안 원문 언어 변경이 커밋된다.
+	const [, source] = await overlap(
+		db,
+		(hold) =>
+			heldMonti(/"d"\."locale" = "e"\."source_locale" and "e"\."id" in \(/, hold).translationStatus.update({
+				id: entry.id,
+				locale: "ja",
+				fields: { title: true },
+			}),
+		() => montiOf().entries.setSourceLocale({ id: entry.id, locale: "en" }),
+		{ commits: true },
+	);
+	const output = await montiOf().translationStatus.get({ id: entry.id, locale: "ja" });
+	const stored = await tables.selectFrom(POSTS).select("source_locale").where("id", "=", entry.id).executeTakeFirst();
+
+	// TST-UPD-16.1
+	expect({ code: source.code, source_locale: stored?.source_locale }).toEqual({ code: null, source_locale: "en" });
+	// TST-UPD-16.2
+	expect(output.fields.title?.seen_value).toBe("English title");
 });

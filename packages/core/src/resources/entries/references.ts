@@ -1,8 +1,10 @@
+import { sql } from "kysely";
 import { z } from "zod";
+import { lockFolderScope } from "../../db/locks";
 import { MontiError } from "../../engine/errors";
 import type { WriteContext } from "../../engine/types";
 import { uuidInput } from "../_shared/input";
-import { isMany, slotsOf } from "./slots";
+import { isMany, type Slot, slotsOf } from "./slots";
 import { type Row, tablesOf } from "./tables";
 
 export const replaceInput = z.object({ from_id: uuidInput, into_id: uuidInput });
@@ -56,56 +58,91 @@ async function swapColumn(ctx: WriteContext, name: string, column: string, swap:
 	return rows.map((row) => String(row.entry_id));
 }
 
-/** 한 언어·상태(`group`)의 다건 관계 `path` 행들을 바꾼 목록으로 다시 쓴다. `position`은 0부터 다시 매긴다. */
+/**
+ * 다건 관계 `path`에서 `swap.from`을 가리키는 언어·상태 묶음들. 그 묶음들의 목록을 잠그기 전에 한 번에 읽어 바꿀 묶음을
+ * 고른다.
+ */
+async function referringGroups(ctx: WriteContext, name: string, path: string, swap: Swap): Promise<Row[]> {
+	const db = tablesOf(ctx.db);
+	const column = `${swap.to}_id`;
+	const referring = db
+		.selectFrom(`${name}_rels`)
+		.select(["entry_id", "locale", "status"])
+		.where("path", "=", path)
+		.where(column, "=", swap.from);
+	const rows = await db
+		.selectFrom(`${name}_rels`)
+		.select(["entry_id", "locale", "status", column])
+		.where("path", "=", path)
+		.where(sql<boolean>`(entry_id, locale, status) in (${referring})`)
+		.orderBy("position")
+		.execute();
+	const groups = rows.map(({ entry_id, locale, status }) => ({ entry_id, locale, status }));
+	return groups.filter((group, index) => groups.findIndex((other) => sameGroup(other, group)) === index);
+}
+
+function sameGroup(a: Row, b: Row): boolean {
+	return a.entry_id === b.entry_id && a.locale === b.locale && a.status === b.status;
+}
+
+/**
+ * 한 언어·상태(`group`)의 다건 관계 `path` 행들을 바꾼 목록으로 다시 쓴다. 지우면서 돌려받은 지금 목록을 바꾸므로, 잠그기
+ * 전에 다른 수정이 커밋한 항목도 남는다. `position`은 0부터 다시 매긴다.
+ */
 async function rewriteGroup(ctx: WriteContext, name: string, group: Row, path: string, swap: Swap): Promise<void> {
 	const db = tablesOf(ctx.db);
 	const column = `${swap.to}_id`;
-	const current = db
-		.selectFrom(`${name}_rels`)
-		.where("entry_id", "=", group.entry_id)
-		.where("locale", "=", group.locale)
-		.where("status", "=", group.status)
-		.where("path", "=", path);
-	const ids = (await current.select(column).orderBy("position").execute()).map((row) => row[column]);
-	await db
+	const current = await db
 		.deleteFrom(`${name}_rels`)
 		.where("entry_id", "=", group.entry_id)
 		.where("locale", "=", group.locale)
 		.where("status", "=", group.status)
 		.where("path", "=", path)
+		.returning([column, "position"])
 		.execute();
+	const ids = current.sort((a, b) => Number(a.position) - Number(b.position)).map((row) => row[column]);
 	const rows = swapIds(ids, swap).map((id, position) => ({ ...group, path, position, [column]: id }));
-	await db.insertInto(`${name}_rels`).values(rows).execute();
+	// 빈 `values`는 SQL이 아니다: 그사이 목록이 비었으면 넣을 행도 없다.
+	if (rows.length > 0) await db.insertInto(`${name}_rels`).values(rows).execute();
 }
 
-/** 다건 관계 `path`에서 바꾸고, 바뀐 글의 `id`들을 돌려준다. */
-async function swapRels(ctx: WriteContext, name: string, path: string, swap: Swap): Promise<string[]> {
-	const groups = await tablesOf(ctx.db)
-		.selectFrom(`${name}_rels`)
-		.select(["entry_id", "locale", "status"])
-		.distinct()
-		.where("path", "=", path)
-		.where(`${swap.to}_id`, "=", swap.from)
-		.execute();
-	for (const group of groups) await rewriteGroup(ctx, name, group, path, swap);
-	return groups.map((group) => String(group.entry_id));
+/** 바꿀 관계 하나: 컬렉션 `name`의 관계 자리와, 다건이면 잠그기 전에 고른 바꿀 묶음들. */
+interface Change {
+	name: string;
+	slot: Slot;
+	groups: Row[];
+}
+
+/** `swap.to`를 가리키는 모든 관계 자리(조건부 하위, 여러 개 선택 포함)와 다건 자리의 바꿀 묶음들. 잠그지 않고 읽는다. */
+async function changesOf(ctx: WriteContext, swap: Swap): Promise<Change[]> {
+	const changes: Change[] = [];
+	for (const [name, collection] of Object.entries(ctx.schema.collections)) {
+		for (const slot of slotsOf(collection)) {
+			if (slot.field.type !== "relation" || slot.field.to !== swap.to) continue;
+			const groups = isMany(slot.field) ? await referringGroups(ctx, name, slot.path, swap) : [];
+			changes.push({ name, slot, groups });
+		}
+	}
+	return changes;
+}
+
+/** 관계 하나를 바꾸고 바뀐 글의 `id`들을 돌려준다. */
+async function applyChange(ctx: WriteContext, change: Change, swap: Swap): Promise<string[]> {
+	if (!isMany(change.slot.field)) return swapColumn(ctx, change.name, change.slot.column, swap);
+	for (const group of change.groups) await rewriteGroup(ctx, change.name, group, change.slot.path, swap);
+	return change.groups.map((group) => String(group.entry_id));
 }
 
 /**
  * `from_id`를 가리키던 모든 관계(조건부 하위, 여러 개 선택 포함)가 `into_id`를 가리키게 한다. 모든 언어의 작업본과
- * 발행본, 휴지통 글까지 고치고 `from_id`는 그대로 둔다. `updated_ids`에는 바뀐 글이 한 번씩 든다.
+ * 발행본, 휴지통 글까지 고치고 `from_id`는 그대로 둔다. `updated_ids`에는 바뀐 글이 한 번씩 든다. 바꿀 묶음을 고른 뒤
+ * 관계가 있는 컬렉션들의 `scope` 잠금을 이름 순으로 잡고 바꿔, 진행 중인 글 수정이 끝난 뒤의 목록을 고친다.
  */
 export async function replaceReferences(input: z.infer<typeof replaceInput>, ctx: WriteContext) {
 	const swap = { to: await collectionOfBoth(ctx, input), from: input.from_id, into: input.into_id };
+	const changes = await changesOf(ctx, swap);
+	for (const name of [...new Set(changes.map((change) => change.name))].sort()) await lockFolderScope(ctx.db, name);
 	const updated = new Set<string>();
-	for (const [name, collection] of Object.entries(ctx.schema.collections)) {
-		for (const slot of slotsOf(collection)) {
-			if (slot.field.type !== "relation" || slot.field.to !== swap.to) continue;
-			const ids = isMany(slot.field)
-				? await swapRels(ctx, name, slot.path, swap)
-				: await swapColumn(ctx, name, slot.column, swap);
-			for (const id of ids) updated.add(id);
-		}
-	}
+	for (const change of changes) for (const id of await applyChange(ctx, change, swap)) updated.add(id);
 	return { from_id: input.from_id, into_id: input.into_id, updated_ids: [...updated] };
 }

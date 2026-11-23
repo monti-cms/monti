@@ -13,10 +13,20 @@ async function clock(ctx: WriteContext): Promise<string> {
 	return rows[0].now;
 }
 
+/** `table`의 `ids` 가운데 아직 활성인 행만 `trashed_at` 시각으로 휴지통에 보낸다. 먼저 따로 버린 행의 시각은 그대로 둔다. */
+async function trashRows(ctx: WriteContext, table: string, ids: string[], trashed_at: string): Promise<void> {
+	await tablesOf(ctx.db)
+		.updateTable(table)
+		.set({ trashed_at })
+		.where("id", "=", anyOf(ids))
+		.where("trashed_at", "is", null)
+		.execute();
+}
+
 /**
  * 활성 글·폴더·미디어를 휴지통에 보낸다. 폴더는 그 아래의 활성 하위 폴더·글·미디어를 같은 시각으로 함께 보낸다. 다른
- * 글의 참조 값과 미디어 사용처 기록은 되살릴 때를 위해 그대로 둔다. 함께 보낼 항목은 그 `scope`의 폴더 구조 잠금을 잡은
- * 뒤에 모아, 겹친 폴더 이동·폴더 만들기가 커밋된 뒤의 트리를 본다.
+ * 글의 참조 값과 미디어 사용처 기록은 되살릴 때를 위해 그대로 둔다. 함께 보낼 항목은 그 `scope`의 잠금을 잡은 뒤에 모아,
+ * 겹친 폴더 이동·폴더에 넣는 쓰기가 커밋된 뒤의 트리를 본다.
  */
 export async function moveItem(input: z.infer<typeof idInput>, ctx: WriteContext): Promise<TrashRef> {
 	const { scope } = await findActive(ctx, input.id);
@@ -26,10 +36,8 @@ export async function moveItem(input: z.infer<typeof idInput>, ctx: WriteContext
 	const tree = await itemsOf(ctx, { kind, id, scope });
 	const trashed_at = await clock(ctx);
 	const table = entryTable(ctx, tree.scope);
-	if (table !== undefined) {
-		await tablesOf(ctx.db).updateTable(table).set({ trashed_at }).where("id", "=", anyOf(tree.entries)).execute();
-	}
-	await ctx.db.updateTable("media").set({ trashed_at }).where("id", "=", anyOf(tree.media)).execute();
-	await ctx.db.updateTable("folders").set({ trashed_at }).where("id", "=", anyOf(tree.folders)).execute();
+	if (table !== undefined) await trashRows(ctx, table, tree.entries, trashed_at);
+	await trashRows(ctx, "media", tree.media, trashed_at);
+	await trashRows(ctx, "folders", tree.folders, trashed_at);
 	return { kind, id };
 }
