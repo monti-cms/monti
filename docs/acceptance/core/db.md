@@ -3,7 +3,7 @@
 | 대상 | 하는 일 | 주요 거절 |
 |---|---|---|
 | `migrate` | 코어·플러그인 마이그레이션을 출처별(`(source, name)`)로 순서대로 한 번씩 실행하고(동시 실행 안전) 실패 시 해당 단계를 롤백한다 | 배열 내 중복 단계 이름 거절 |
-| `0001-initial` | 고정 도메인 테이블 8개(`templates`, `folders`, `media`, `media_uses`, `loose_files`, `admin`, `session`, `api_keys`)를 생성한다 | 같은 `media_uses` 행 중복 저장 금지 |
+| `0001-initial` | 고정 도메인 테이블 8개(`templates`, `folders`, `media`, `media_uses`, `loose_files`, `admin`, `session`, `api_keys`)를 생성한다 | `media_uses` 중복·`admin` 다중 행·`api_keys` 이름 중복·활성 `folders` 위치별 이름 중복·`templates` 컬렉션별 이름 중복 저장 금지 |
 
 ---
 
@@ -116,5 +116,28 @@
 - **결과**:
   - `DB-SCH-2.1` DB 고유 제약 오류(`23505`)로 실패한다
   - `DB-SCH-2.2` `media_uses` 테이블에 해당 조합의 행이 하나만 남는다
+
+</details>
+
+<details>
+<summary><strong><code>DB-SCH-3</code></strong> 관리자 테이블에는 한 명을 초과하는 행을 저장할 수 없고, 키 테이블에는 같은 이름의 키를 두 번 저장할 수 없다</summary>
+
+- **전제**: `0001-initial`이 적용된 DB에 `admin` 행 하나와 `api_keys` 행 하나가 있다
+- **행동**: 다른 이메일로 `admin`에 두 번째 행을 직접 삽입하고, 이미 있는 `name`과 다른 `id`로 `api_keys`에 두 번째 행을 직접 삽입한다
+- **결과**:
+  - `DB-SCH-3.1` 두 번째 `admin` 삽입은 DB 고유 제약 오류(`23505`)로 실패하고 `admin` 테이블에 행이 하나만 남는다
+  - `DB-SCH-3.2` 같은 `name`의 `api_keys` 삽입은 DB 고유 제약 오류(`23505`)로 실패하고 `api_keys` 테이블에 행이 하나만 남는다
+
+</details>
+
+<details>
+<summary><strong><code>DB-SCH-4</code></strong> 폴더 테이블의 활성 이름과 템플릿 테이블의 컬렉션별 이름은 DB 수준에서 중복 저장을 막는다</summary>
+
+- **전제**: `0001-initial`이 적용된 DB에 활성 루트 폴더 하나, 그 아래 활성 하위 폴더 하나, 템플릿 하나가 있다
+- **행동**: 같은 `scope`·`name`의 활성 루트 폴더(`parent_id`가 `null`), 같은 부모 아래 같은 `name`의 활성 하위 폴더, 같은 `(collection, name)`의 템플릿을 각각 직접 삽입한다
+- **결과**:
+  - `DB-SCH-4.1` 중복 활성 루트 폴더 삽입은 DB 고유 제약 오류(`23505`)로 실패한다
+  - `DB-SCH-4.2` 중복 활성 하위 폴더 삽입은 DB 고유 제약 오류(`23505`)로 실패한다
+  - `DB-SCH-4.3` 중복 템플릿 삽입은 DB 고유 제약 오류(`23505`)로 실패한다
 
 </details>
