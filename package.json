@@ -3,6 +3,8 @@
 	"private": true,
 	"license": "MIT",
 	"scripts": {
+		"test": "pnpm --filter @monti-cms/core --filter @monti-cms/cli --filter @monti-cms/http --filter @monti-cms/storage-s3 --fail-if-no-match test",
+		"typecheck": "pnpm --filter @monti-cms/core --filter @monti-cms/cli --filter @monti-cms/http --filter @monti-cms/storage-s3 --fail-if-no-match exec tsc --noEmit",
 		"lint": "pnpm exec biome check . && pnpm lint:secrets && pnpm lint:deps && pnpm lint:unused && pnpm lint:dup",
 		"lint:secrets": "secretlint \"packages/**\" \"scripts/**\"",
 		"lint:deps": "pnpm --filter @monti-cms/core --filter @monti-cms/cli --filter @monti-cms/http --filter @monti-cms/storage-s3 --fail-if-no-match lint:deps",

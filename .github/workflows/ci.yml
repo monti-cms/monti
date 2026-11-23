@@ -1,4 +1,4 @@
-# Automated checks. On every push: lint (Biome and the core's import rules), the core's tests against the acceptance conditions, and the core's suppression check.
+# Automated checks. On every push: lint + acceptance fence + agent-guard tests, real PostgreSQL Vitest + typecheck, and production dependency audit.
 name: CI
 
 # Runs on push only (the PR page shows the result of that commit). Also triggering on PRs would run the same checks twice.
@@ -27,20 +27,62 @@ jobs:
           node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      # Check only; nothing is fixed. `pnpm lint`, then the core's tests against docs/acceptance/core (one test per condition, result numbers, no skips,
+      # Check only; nothing is fixed. `pnpm lint`, then every package's tests against docs/acceptance/<pkg> (one test per condition, result numbers, no skips,
       # no fake database, no suppression comment).
       - run: node agent-guard/check.mjs
-      # The core is fixed, not silenced: the pushed commits add no `biome-ignore`, `@ts-expect-error`, `@ts-nocheck` or `eslint-disable` under
-      # packages/core. A new branch (an all-zero `before`) or a `before` that is gone (after a force push) is compared with where it left main.
-      - name: no new suppression in the core
+      - run: node --test agent-guard/*.test.mjs
+      # Managed packages are fixed, not silenced: the pushed commits add no `biome-ignore`, `@ts-expect-error`, `@ts-nocheck` or `eslint-disable`.
+      # A new branch (an all-zero `before`) or a `before` that is gone (after a force push) is compared with where it left main.
+      - name: no new suppression in packages
         env:
           BEFORE: ${{ github.event.before }}
         run: |
           base="$BEFORE"
           if [ -z "${base//0/}" ] || ! git cat-file -e "$base^{commit}" 2>/dev/null; then
-            base=$(git merge-base origin/main "$GITHUB_SHA" 2>/dev/null || git rev-list --max-parents=0 "$GITHUB_SHA" | tail -n 1)
+            base=$(git merge-base origin/dev "$GITHUB_SHA" 2>/dev/null || git merge-base origin/main "$GITHUB_SHA" 2>/dev/null || git rev-list --max-parents=0 "$GITHUB_SHA" | tail -n 1)
           fi
-          if git diff -U0 "$base" "$GITHUB_SHA" -- packages/core | grep -E '^\+' | grep -vE '^\+\+\+ ' | grep -E 'biome-ignore|@ts-expect-error|@ts-nocheck|eslint-disable'; then
-            echo "::error::A suppression was added under packages/core: fix the code instead."
+          if git diff -U0 "$base" "$GITHUB_SHA" -- packages/core packages/cli packages/http packages/storage-s3 | grep -E '^\+' | grep -vE '^\+\+\+ ' | grep -E 'biome-ignore|@ts-expect-error|@ts-nocheck|eslint-disable'; then
+            echo "::error::A suppression was added under managed packages: fix the code instead."
             exit 1
           fi
+
+  test:
+    name: test
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - run: pnpm test
+        env:
+          TEST_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/postgres
+
+  audit:
+    name: audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+      - run: pnpm audit --prod --audit-level=high
