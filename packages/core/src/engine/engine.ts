@@ -1,4 +1,6 @@
 import {
+	type AbortableQueryOptions,
+	type CompiledQuery,
 	type Kysely,
 	type PluginTransformQueryArgs,
 	type PluginTransformResultArgs,
@@ -41,6 +43,8 @@ interface Runner {
 	write(run: (ctx: WriteContext) => Promise<unknown>): Promise<unknown>;
 	/** Takes a write's event: sent at once after a direct call's commit, queued inside a callback. */
 	emit(event: MontiEvent): void;
+	/** Operation 호출 하나를 실행한다: 콜백 안에서는 콜백이 끝난 뒤 시작하면 거절하고, 끝날 때 남아 있었는지 센다. */
+	call<T>(work: () => Promise<T>): Promise<T>;
 	/** 트랜잭션을 중단시킨 DB 오류(고유 제약 위반은 `CONFLICT`로 바꾼 것)를 받는다: 콜백이 잡아도 호출 전체를 실패시킨다. */
 	abort?(error: unknown): void;
 }
@@ -78,18 +82,20 @@ export function createMonti<R extends ResourceTree>(
 
 /**
  * `fn`을 자기 단계를 가진 새 트랜잭션에서 실행한다. 커밋 전에 단계의 파일 변경을 임시 파일로 준비해, 쓸 수 없으면
- * 트랜잭션째 롤백한다. 커밋한 뒤 파일을 바꾸고 공유 상태에 반영한다.
+ * 트랜잭션째 롤백한다. `beforeCommit`은 그 뒤 커밋 직전에 불러, 던지면 롤백한다. 커밋한 뒤 파일을 바꾸고 공유 상태에 반영한다.
  */
 async function committed<T>(
 	db: Kysely<Database>,
 	state: State,
 	fn: (trx: Transaction<Database>, stage: Stage) => Promise<T>,
+	beforeCommit?: () => void,
 ): Promise<T> {
 	const stage = state.stage();
 	try {
 		const result = await db.transaction().execute(async (trx) => {
 			const value = await fn(trx, stage);
 			await stage.prepare();
+			beforeCommit?.();
 			return value;
 		});
 		await stage.commit();
@@ -106,10 +112,19 @@ function directRunner(db: Kysely<Database>, state: State, emit: (event: MontiEve
 	function write(run: (ctx: WriteContext) => Promise<unknown>): Promise<unknown> {
 		return committed(db, state, (trx, stage) => run(stage.context(trx)));
 	}
-	return { context, write, emit };
+	function call<T>(work: () => Promise<T>): Promise<T> {
+		return work();
+	}
+	return { context, write, emit, call };
 }
 
-function callbackRunner(trx: Transaction<Database>, stage: Stage, queue: MontiEvent[], aborts: unknown[]): Runner {
+function callbackRunner(
+	trx: Transaction<Database>,
+	stage: Stage,
+	queue: MontiEvent[],
+	aborts: unknown[],
+	work: CallbackWork,
+): Runner {
 	function context(): ReadContext {
 		return stage.context(trx);
 	}
@@ -122,25 +137,77 @@ function callbackRunner(trx: Transaction<Database>, stage: Stage, queue: MontiEv
 	function abort(error: unknown): void {
 		aborts.push(error);
 	}
-	return { context, write, emit, abort };
+	async function call<T>(run: () => Promise<T>): Promise<T> {
+		work.open();
+		return work.track(run);
+	}
+	return { context, write, emit, abort, call };
+}
+
+/** 콜백이 기다리지 않은 작업이 있어 호출 전체를 실패시킬 때 던지는 오류의 메시지. */
+const UNAWAITED = "콜백이 기다리지 않은 작업이 있어 아무것도 저장하지 않았다: 콜백 안의 작업은 모두 기다려야 한다";
+
+/** 콜백이 시작한 작업(`tx`의 Operation 호출과 `trx`의 쿼리)의 상태. */
+interface CallbackWork {
+	/** 콜백이 끝났으면 기다리지 않은 작업으로 기록하고 던진다. 작업을 시작하기 직전에 부른다. */
+	open(): void;
+	/** 작업 하나를 실행하는 동안 진행 중으로 센다. 성공하든 실패하든 끝나면 뺀다. */
+	track<T>(run: () => Promise<T>): Promise<T>;
+	/** 콜백의 Promise가 끝났다: 이때 진행 중인 작업이 있으면 기다리지 않은 것이다. 이 뒤의 `open`은 던진다. */
+	settle(): void;
+	/** 기다리지 않은 작업이 있었으면 던진다. 커밋·롤백 직전에 부른다. */
+	assertAwaited(): void;
+}
+
+/**
+ * 콜백이 기다리지 않은 작업을 찾는다. 콜백의 Promise가 끝날 때 진행 중인 작업이 있거나, 그 뒤 커밋·롤백 전에 작업이
+ * 시작되면 그 작업은 콜백이 기다리지 않은 것이다. 이때 호출 전체를 실패시켜, 쓰기 Operation이 여러 문장 가운데 일부만
+ * 저장되거나 콜백이 끝난 뒤의 쿼리가 함께 커밋되지 않게 한다.
+ */
+function callbackWork(): CallbackWork {
+	let running = 0;
+	let settled = false;
+	let unawaited = false;
+	function open(): void {
+		if (!settled) return;
+		unawaited = true;
+		throw new Error("콜백이 끝난 뒤에는 트랜잭션을 쓸 수 없다: 콜백 안의 작업은 모두 기다려야 한다");
+	}
+	async function track<T>(run: () => Promise<T>): Promise<T> {
+		running += 1;
+		try {
+			return await run();
+		} finally {
+			running -= 1;
+		}
+	}
+	function settle(): void {
+		settled = true;
+		if (running > 0) unawaited = true;
+	}
+	function assertAwaited(): void {
+		if (unawaited) throw new Error(UNAWAITED);
+	}
+	return { open, track, settle, assertAwaited };
 }
 
 /**
  * 콜백의 값, 또는 콜백의 쓰기가 낸 첫 DB 오류(고유 제약 위반은 `CONFLICT`). 콜백이 그 오류를 잡고 정상 반환해도, 잡은 뒤
  * 이어간 DB 호출이 중단된 트랜잭션 오류(`25P02`)로 실패해도 그 첫 오류로 실패한다. 콜백의 Promise가 끝나면 곧바로 콜백의
- * `trx`를 닫고(`close`), 콜백이 정상 반환했으면 `trx`가 중단되지 않았는지도 확인한다.
+ * 작업을 마감하고(`settle`), 콜백이 정상 반환했으면 `trx`가 중단되지 않았는지도 확인한다. 기다리지 않은 작업은 호출한
+ * 쪽이 커밋·롤백 직전에 확인한다.
  */
 async function runSettled<T>(
 	run: () => Promise<T>,
 	aborts: unknown[],
 	trx: Transaction<Database>,
-	close: () => void,
+	work: CallbackWork,
 ): Promise<T> {
 	const result = await run().then(
 		(value) => ({ value }),
 		(error: unknown) => ({ error }),
 	);
-	close();
+	work.settle();
 	if (aborts.length > 0) throw aborts[0];
 	if ("error" in result) throw result.error;
 	await assertNotAborted(trx);
@@ -148,23 +215,26 @@ async function runSettled<T>(
 }
 
 /**
- * 콜백에 넘길 `trx`. `close()` 뒤에 시작한 쿼리는 실행 전에 던진다: 콜백이 기다리지 않았거나 바깥에 붙잡아 둔 `trx`·`tx`의
- * 쿼리가 커밋 뒤 자동 커밋으로, 또는 같은 연결을 이어 쓴 다른 요청의 트랜잭션 안에서 실행되지 않게 한다. 엔진의 확인
- * 조회와 커밋은 닫지 않은 원래 `trx`를 쓴다.
+ * 콜백에 넘길 `trx`. 콜백이 끝난 뒤 시작한 쿼리는 실행 전에 던지고 기다리지 않은 작업으로 기록한다: 콜백이 기다리지
+ * 않았거나 바깥에 붙잡아 둔 `trx`·`tx`의 쿼리가 확인 조회와 커밋 사이에, 커밋 뒤 자동 커밋으로, 또는 같은 연결을 이어 쓴
+ * 다른 요청의 트랜잭션 안에서 실행되지 않게 한다. 실행 중인 쿼리는 성공하든 실패하든 끝날 때까지 센다: Kysely 플러그인의
+ * `transformResult`는 실패한 쿼리에 불리지 않으므로, 플러그인을 더해 갈라진 이 `trx`의 실행기에서 `executeQuery`를 감싼다.
+ * 엔진의 확인 조회와 커밋은 원래 `trx`를 쓴다.
  */
-function gateOf(trx: Transaction<Database>): { trx: Transaction<Database>; close: () => void } {
-	let closed = false;
+function trackedTrx(trx: Transaction<Database>, work: CallbackWork): Transaction<Database> {
 	function transformQuery({ node }: PluginTransformQueryArgs): RootOperationNode {
-		if (closed) throw new Error("콜백이 끝난 뒤에는 트랜잭션을 쓸 수 없다: 콜백 안의 쿼리는 모두 기다려야 한다");
+		work.open();
 		return node;
 	}
 	async function transformResult({ result }: PluginTransformResultArgs): Promise<QueryResult<UnknownRow>> {
 		return result;
 	}
-	function close(): void {
-		closed = true;
-	}
-	return { trx: trx.withPlugin({ transformQuery, transformResult }), close };
+	const tracked = trx.withPlugin({ transformQuery, transformResult });
+	const executor = tracked.getExecutor();
+	const executeQuery = executor.executeQuery.bind(executor);
+	executor.executeQuery = <R>(query: CompiledQuery<R>, options?: AbortableQueryOptions) =>
+		work.track(() => executeQuery(query, options));
+	return tracked;
 }
 
 /**
@@ -190,11 +260,17 @@ function transactionOf<R extends ResourceTree>(
 	return async function transaction<T>(fn: (tx: MontiClient<R>, trx: Transaction<Database>) => Promise<T>): Promise<T> {
 		const queue: MontiEvent[] = [];
 		const aborts: unknown[] = [];
-		const result = await committed(db, state, async (trx, stage) => {
-			const gate = gateOf(trx);
-			const client = buildClient(tree, "", callbackRunner(gate.trx, stage, queue, aborts), true);
-			return runSettled(() => fn(client as MontiClient<R>, gate.trx), aborts, trx, gate.close);
-		});
+		const work = callbackWork();
+		const result = await committed(
+			db,
+			state,
+			async (trx, stage) => {
+				const tracked = trackedTrx(trx, work);
+				const client = buildClient(tree, "", callbackRunner(tracked, stage, queue, aborts, work), true);
+				return runSettled(() => fn(client as MontiClient<R>, tracked), aborts, trx, work);
+			},
+			work.assertAwaited,
+		);
 		for (const event of queue) emit(event);
 		return result;
 	};
@@ -212,12 +288,14 @@ function dryRunOf<R extends ResourceTree>(db: Kysely<Database>, state: State, tr
 	return async function dryRun<T>(fn: (tx: MontiWriteClient<R>, trx: Transaction<Database>) => Promise<T>): Promise<T> {
 		const stage = state.stage(true);
 		const aborts: unknown[] = [];
+		const work = callbackWork();
 		const outcome: { value?: T } = {};
 		try {
 			await db.transaction().execute(async (trx) => {
-				const gate = gateOf(trx);
-				const client = buildClient(tree, "", callbackRunner(gate.trx, stage, [], aborts), false);
-				outcome.value = await runSettled(() => fn(client as MontiWriteClient<R>, gate.trx), aborts, trx, gate.close);
+				const tracked = trackedTrx(trx, work);
+				const client = buildClient(tree, "", callbackRunner(tracked, stage, [], aborts, work), false);
+				outcome.value = await runSettled(() => fn(client as MontiWriteClient<R>, tracked), aborts, trx, work);
+				work.assertAwaited();
 				throw new DryRunRollback();
 			});
 		} catch (error) {
@@ -242,7 +320,7 @@ function buildClient(tree: ResourceTree, prefix: string, runner: Runner, reads: 
 
 function bind(operation: Operation, path: string, runner: Runner): (input: unknown) => Promise<unknown> {
 	return function call(input) {
-		return execute(operation, path, input, runner);
+		return runner.call(() => execute(operation, path, input, runner));
 	};
 }
 

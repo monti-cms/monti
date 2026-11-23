@@ -623,32 +623,126 @@ it("ENG-TX-10 콜백이 트랜잭션 DB에 직접 실행한 쿼리의 DB 오류�
 	expect(listener).not.toHaveBeenCalled();
 });
 
-it("ENG-TX-11 콜백이 끝난 뒤에는 그 콜백이 받은 트랜잭션으로 새 작업을 시작할 수 없다", async () => {
+/** 콜백이 받는 클라이언트: 폴더 하나를 넣는 `add`와, 두 폴더를 넣되 그 사이에 멈출 수 있는 `addTwo`. */
+type LateWrites = Record<"folders", Record<"add" | "addTwo", (input: z.infer<typeof folderInput>) => Promise<unknown>>>;
+
+/** 기다리지 않는 작업을 시작할 때 쓰는 것들: 콜백이 받은 `tx`·`trx`와, 시작한 작업을 맡겨 끝까지 지켜볼 `start`. */
+interface LateTools {
+	tx: LateWrites;
+	trx: Transaction<Database>;
+	start: (work: Promise<unknown>) => void;
+	/** `addTwo`가 두 문장 사이에 닿으면 풀린다. */
+	parked: Promise<void>;
+}
+
+/** 기다리지 않는 작업 하나. `inside`는 콜백 안에서, `beforeCommit`은 콜백이 끝난 뒤 엔진의 확인 조회가 멈춘 동안 실행한다. */
+interface LateCase {
+	name: string;
+	inside?: (tools: LateTools) => Promise<void>;
+	beforeCommit?: (tools: LateTools) => void;
+}
+
+/** 이름이 겹치지 않는 폴더 행: 앞선 입력의 행이 남아 있어도 다음 입력이 이름 충돌로 실패하지 않는다. */
+function row(name: string): { id: string; name: string } {
+	return { id: randomUUID(), name: `${name} ${randomUUID()}` };
+}
+
+function insertLate(trx: Transaction<Database>): Promise<unknown> {
+	return trx
+		.insertInto("folders")
+		.values({ ...row("Late"), scope: "media" })
+		.execute();
+}
+
+const lateCases: LateCase[] = [
+	{
+		name: "두 문장 사이에 멈춘 Operation",
+		inside: async ({ tx, start, parked }) => {
+			const work = tx.folders.addTwo(row("Late"));
+			start(work);
+			await Promise.race([parked, work]);
+		},
+	},
+	{
+		name: "실행 중인 trx 쿼리",
+		inside: async ({ trx, start }) => {
+			start(insertLate(trx));
+		},
+	},
+	{
+		name: "마이크로태스크로 시작한 Operation",
+		inside: async ({ tx, start }) => {
+			queueMicrotask(() => start(tx.folders.add(row("Late"))));
+		},
+	},
+	{
+		name: "마이크로태스크로 시작한 trx 쿼리",
+		inside: async ({ trx, start }) => {
+			queueMicrotask(() => start(insertLate(trx)));
+		},
+	},
+	{
+		name: "커밋 전에 붙잡아 둔 tx로 시작한 Operation",
+		beforeCommit: ({ tx, start }) => start(tx.folders.add(row("Late"))),
+	},
+	{ name: "커밋 전에 붙잡아 둔 trx로 시작한 쿼리", beforeCommit: ({ trx, start }) => start(insertLate(trx)) },
+];
+
+/**
+ * `run`의 콜백에서 행 하나를 기다려 저장한 뒤 `late`의 작업을 기다리지 않고 반환한다. 호출이 던졌는지를 돌려주고, 돌려주기
+ * 전에 멈춘 작업을 모두 풀어 끝까지 실행시킨다.
+ */
+async function runWithLate(run: "transaction" | "dryRun", late: LateCase): Promise<boolean> {
+	// 엔진은 콜백이 끝난 뒤 커밋·롤백 전에 `select 1`로 트랜잭션을 확인한다: 그 결과를 붙잡아 둔 동안 늦은 작업을 시작한다.
+	const held = gate();
+	const parked = gate();
 	const add = defineWrite({ input: folderInput, run: insertFolder });
+	const addTwo = defineWrite({
+		input: folderInput,
+		run: async (input, ctx) => {
+			await insertFolder(input, ctx);
+			await parked.pass();
+			return insertFolder(row("Late"), ctx);
+		},
+	});
+	const monti = createMonti(holdingAfter(db, /^select 1$/, held.pass), { folders: { add, addTwo } });
+	// 거절된 늦은 작업이 처리되지 않은 거절로 남지 않게, 시작하자마자 결과를 받아 둔다.
+	const started: Promise<unknown>[] = [];
+	const start = (work: Promise<unknown>) => started.push(work.catch(() => undefined));
+	const stash: LateTools[] = [];
+	const call = monti[run](async (tx, trx) => {
+		const tools = { tx, trx, start, parked: parked.reached };
+		stash.push(tools);
+		await tx.folders.add(row("First"));
+		await late.inside?.(tools);
+		return "done";
+	});
+	try {
+		if (late.beforeCommit !== undefined) {
+			await held.reached;
+			late.beforeCommit(stash[0]);
+		}
+		held.open();
+		return await call.then(
+			() => false,
+			() => true,
+		);
+	} finally {
+		held.open();
+		parked.open();
+		await Promise.allSettled([call, ...started]);
+	}
+}
+
+it("ENG-TX-11 콜백이 기다리지 않은 쓰기가 있으면 트랜잭션은 실패하고 아무것도 저장하지 않는다", async () => {
 	const runs = ["transaction", "dryRun"] as const;
 	const outcomes = [];
 	for (const run of runs) {
-		// 엔진은 콜백이 끝난 뒤 커밋·롤백 전에 `select 1`로 트랜잭션을 확인한다: 그 결과를 붙잡아 둔 동안 늦은 시도를 시작한다.
-		const held = gate();
-		const monti = createMonti(holdingAfter(db, /^select 1$/, held.pass), { folders: { add } });
-		const caught: Array<{ tx: FolderAdd; trx: Transaction<Database> }> = [];
-		const finished = monti[run](async (tx, trx) => {
-			caught.push({ tx, trx });
-			return "done";
-		});
-		await held.reached;
-		const late = await Promise.allSettled([
-			caught[0].trx.insertInto("folders").values({ id: randomUUID(), scope: "media", name: "Raw" }).execute(),
-			caught[0].tx.folders.add({ id: randomUUID(), name: "Operation" }),
-		]);
-		held.open();
-		outcomes.push({ run, late: late.map((result) => result.status), returned: await finished });
+		for (const late of lateCases) outcomes.push({ run, late: late.name, threw: await runWithLate(run, late) });
 	}
 
 	// ENG-TX-11.1
-	expect(outcomes.map(({ run, late }) => ({ run, late }))).toEqual(
-		runs.map((run) => ({ run, late: ["rejected", "rejected"] })),
-	);
+	expect(outcomes).toEqual(runs.flatMap((run) => lateCases.map((late) => ({ run, late: late.name, threw: true }))));
 	// ENG-TX-11.2
-	expect({ returned: outcomes[0].returned, names: await folderNames() }).toEqual({ returned: "done", names: [] });
+	expect(await folderNames()).toEqual([]);
 });
