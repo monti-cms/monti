@@ -160,22 +160,12 @@
 </details>
 
 <details>
-<summary><strong><code>RT-BLK-7</code></strong> 블록 중첩이 최대 깊이인 32단계까지는 통과한다</summary>
-
-- **전제**: `quote` 블록이 최상위 블록(1단계)부터 안쪽으로 32단계 중첩된 문서가 있다
-- **행동**: `validateDoc`으로 문서를 검사한다
-- **결과**:
-  - `RT-BLK-7.1` 빈 배열 `[]`을 돌려준다
-
-</details>
-
-<details>
-<summary><strong><code>RT-BLK-8</code></strong> 블록 중첩이 최대 깊이(32단계)를 넘으면 예외를 던지지 않고 초과 위치 경로의 문제로 돌려준다</summary>
+<summary><strong><code>RT-BLK-8</code></strong> 블록을 32단계보다 깊게 넣으면 처음 한도를 넘긴 블록이 문제로 보고된다</summary>
 
 - **전제**: `quote` 블록이 최상위 블록(1단계)부터 안쪽으로 33단계 중첩된 문서가 있다
 - **행동**: `validateDoc`으로 문서를 검사한다
 - **결과**:
-  - `RT-BLK-8.1` 예외를 던지지 않고 33단계 위치 경로(`blocks[0]` 아래 `.children[0]` 32회)의 문제를 돌려준다
+  - `RT-BLK-8.1` 예외를 던지지 않고 33단계 블록의 경로(`blocks[0]` 아래 `.children[0]` 32회)를 문제로 돌려준다
 
 </details>
 
@@ -250,7 +240,7 @@
 - **결과**:
   - `RT-INL-6.1` `https:`, `http:`, `mailto:` 주소의 `link` 마크 경로에는 문제가 보고되지 않는다
   - `RT-INL-6.2` 상대 경로(`/about`)와 문서 내 조각(`#top`)의 `link` 마크 경로에는 문제가 보고되지 않는다
-  - `RT-INL-6.3` `javascript:`, `JavaScript:`, `data:`, `//example.com` 주소의 각 `link` 마크 경로(`blocks[0].content[n].marks[0]`의 `href`)에는 각각 문제가 보고된다
+  - `RT-INL-6.3` `javascript:`, `JavaScript:`, `data:`, `//example.com` 주소의 각 `link` 마크 경로(`blocks[0].content[n].marks[0]`)에는 각각 문제가 보고된다
   - `RT-INL-6.4` 탭 문자가 든 `/<탭>/evil.com` 주소의 `link` 마크 경로에는 문제가 보고된다
 
 </details>

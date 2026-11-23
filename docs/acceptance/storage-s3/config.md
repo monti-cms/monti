@@ -95,7 +95,7 @@
 <details>
 <summary><strong><code>S3-CFG-8</code></strong> 공개 주소가 올바른 HTTP(S) 주소가 아니거나 쿼리·프래그먼트·계정 정보가 들어 있으면 설정을 거절한다</summary>
 
-- **전제**: 나머지 필수 환경 변수는 유효하고 `publicUrl`이 각각 `"http://localhost:9000/"`, `"cdn.example.com"`, `"ftp://cdn.example.com"`, `"https://cdn.example.com?a=1"`, `"https://cdn.example.com?"`, `"https://cdn.example.com#top"`, `"https://cdn.example.com#"`, `"https://user@cdn.example.com"`인 입력이 있다
+- **전제**: 나머지 필수 환경 변수는 유효하고 `publicUrl`이 각각 `"http://localhost:9000/"`, `"cdn.example.com"`, `"ftp://cdn.example.com"`, `"https://cdn.example.com?a=1"`, `"https://cdn.example.com?"`, `"https://cdn.example.com#top"`, `"https://cdn.example.com#"`, `"https://deploy-bot:s3cret@cdn.example.com"`, 그리고 주소로 해석되지 않는 `"https://deploy-bot:s3cret@"`인 입력이 있다
 - **행동**: 각 입력으로 `resolveS3Config`를 실행한다
 - **결과**:
   - `S3-CFG-8.1` `http://` 주소는 정상 통과해 `"http://localhost:9000"`을 돌려준다
@@ -103,6 +103,7 @@
   - `S3-CFG-8.3` 쿼리(`?a=1`, 빈 `?`)가 붙은 주소가 `Error`를 던진다
   - `S3-CFG-8.4` 프래그먼트(`#top`, 빈 `#`)가 붙은 주소가 `Error`를 던진다
   - `S3-CFG-8.5` 계정 정보가 들어간 주소가 `Error`를 던진다
+  - `S3-CFG-8.6` 계정 정보가 든 두 주소(해석되는 주소와 해석되지 않는 주소)를 거절한 오류의 `message`, `input`, `cause` 사슬 어디에도 주소 원문, 사용자 이름 `deploy-bot`, 비밀번호 `s3cret`이 없다
 
 </details>
 
@@ -141,17 +142,5 @@
   - `S3-CFG-11.1` 빈 배열 `[]` 호출이 `Error`를 던진다
   - `S3-CFG-11.2` 빈 문자열이 든 배열 `[""]` 호출이 `Error`를 던진다
   - `S3-CFG-11.3` 파라미터나 앞쪽 잘못된 문자가 붙은 항목이 `Error`를 던진다
-
-</details>
-
-<details>
-<summary><strong><code>S3-CFG-12</code></strong> 공개 주소가 거절될 때 오류 메시지와 오류 객체에 계정 정보나 주소 원문이 노출되지 않는다</summary>
-
-- **전제**: 나머지 필수 환경 변수는 유효하다. `S3_PUBLIC_URL`이 `"https://user:s3cret@cdn.example.com"`인 입력과, 파싱되지 않는 `"https://user:s3cret@"`인 입력이 있다
-- **행동**: 각 입력으로 `resolveS3Config`를 실행한다
-- **결과**:
-  - `S3-CFG-12.1` 계정 정보가 있는 주소는 `S3_PUBLIC_URL`을 포함한 `Error`를 던진다
-  - `S3-CFG-12.2` 파싱되지 않는 주소도 `S3_PUBLIC_URL`을 포함한 `Error`를 던진다
-  - `S3-CFG-12.3` 두 오류의 `message`, `input`, `cause` 체인에 `"s3cret"`과 입력 URL 원문이 없다
 
 </details>

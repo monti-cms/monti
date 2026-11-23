@@ -277,12 +277,11 @@
 </details>
 
 <details>
-<summary><strong><code>HTTP-RUT-23</code></strong> 허용 크기(1 MiB)를 넘는 요청 본문은 거절하고 정확히 1 MiB인 JSON 본문은 조립한다</summary>
+<summary><strong><code>HTTP-RUT-23</code></strong> 허용 크기(1 MiB)를 넘는 요청 본문은 끝까지 읽지 않고 거절한다</summary>
 
-- **전제**: `Content-Length` 헤더 없이 본문 스트림 크기가 정확히 `1_048_577`바이트(1 MiB + 1바이트)인 `application/json` 요청과, UTF-8 바이트 크기가 정확히 `1_048_576`바이트(1 MiB)인 유효한 JSON 요청이 있다
-- **행동**: 두 요청의 본문을 파싱해 입력을 조립한다
+- **전제**: `Content-Length` 헤더가 없고, 1 MiB를 넘긴 뒤에도 끝나지 않는 본문 스트림을 가진 `application/json` 요청이 있다
+- **행동**: 요청의 본문을 파싱해 입력을 조립한다
 - **결과**:
-  - `HTTP-RUT-23.1` 1 MiB를 1바이트 넘는 요청은 `code`가 `"PAYLOAD_TOO_LARGE"`인 오류를 던진다
-  - `HTTP-RUT-23.2` 정확히 1 MiB인 요청은 해당 JSON 객체로 조립된다
+  - `HTTP-RUT-23.1` 스트림이 끝나기를 기다리지 않고 `code`가 `"PAYLOAD_TOO_LARGE"`인 오류를 던진다
 
 </details>

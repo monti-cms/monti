@@ -4,7 +4,7 @@
 
 | 기능 | 하는 일 | 주요 거절 |
 |---|---|---|
-| 쿠키 파싱·헤더 생성 (`cookie.ts`) | `Cookie` 헤더에서 세션 토큰을 읽고, 쿠키 옵션을 검증해 `HttpOnly` 세션 발급·만료 삭제 `Set-Cookie` 헤더를 만든다 | 헤더 없음·이름 미일치 시 빈 결과 반환, `sameSite: "none"` + `secure: false` 조합 시 설정 오류 |
+| 쿠키 파싱·헤더 생성 (`cookie.ts`) | `Cookie` 헤더에서 세션 토큰을 읽고, 쿠키 옵션을 검증해 `HttpOnly` 세션 발급·만료 삭제 `Set-Cookie` 헤더를 만든다 | 헤더 없음·이름 미일치 시 빈 결과 반환, `sameSite: "none"` + `secure: false` 조합·잘못된 쿠키 이름·경로·수명 시 설정 오류 |
 | 응답·오류 변환 (`response.ts`) | 성공(`200`·`201`·`204`), 안전 JSON 직렬화, 코어 `MontiError`(`400`·`401`·`403`·`404`·`409`), `405`(`Allow`), `500` JSON 응답을 만든다 | 예기치 않은 오류는 내부 상세를 숨기고 `500` 반환 |
 
 ---
@@ -116,12 +116,42 @@
 </details>
 
 <details>
-<summary><strong><code>HTTP-PRO-10</code></strong> 잘못된 쿠키 옵션 조합이나 유효하지 않은 이름·경로·수명은 설정 오류로 거절한다</summary>
+<summary><strong><code>HTTP-PRO-10</code></strong> `SameSite=None` 쿠키는 `Secure`를 끈 채로 설정할 수 없다</summary>
 
-- **전제**: `{ sameSite: "none", secure: false }`, 빈 이름·세미콜론 포함 이름(`""`, `"a;b"`, `"a b"`), 빈 경로·세미콜론·제어문자 포함 경로(`""`, `"/;x"`, `"/admin\r\nX-Injected: 1"`), 양의 정수가 아닌 수명(`0`, `-1`, `1.5`, `NaN`) 옵션들이 있다
-- **행동**: 각 쿠키 옵션을 해석한다
+- **전제**: `{ sameSite: "none", secure: false }` 쿠키 옵션이 있다
+- **행동**: 그 쿠키 옵션을 해석한다
 - **결과**:
-  - `HTTP-PRO-10.1` 모든 잘못된 옵션이 쿠키 설정 오류를 던진다
+  - `HTTP-PRO-10.1` 쿠키 설정 오류를 던진다
+
+</details>
+
+<details>
+<summary><strong><code>HTTP-PRO-13</code></strong> 쿠키 이름이 비어 있거나 구분자(`;`, `=`, 공백)나 제어 문자가 들어 있으면 설정할 수 없다</summary>
+
+- **전제**: `name`이 비어 있거나 `;`, `=`, 공백, 줄바꿈 같은 제어 문자 중 하나가 들어 있는 쿠키 옵션이 있다
+- **행동**: 그 쿠키 옵션을 해석한다
+- **결과**:
+  - `HTTP-PRO-13.1` 쿠키 설정 오류를 던진다
+
+</details>
+
+<details>
+<summary><strong><code>HTTP-PRO-14</code></strong> 쿠키 경로가 비어 있거나 `;`나 제어 문자가 들어 있으면 설정할 수 없다</summary>
+
+- **전제**: `path`가 비어 있거나 `;` 또는 줄바꿈 같은 제어 문자가 들어 있는 쿠키 옵션이 있다
+- **행동**: 그 쿠키 옵션을 해석한다
+- **결과**:
+  - `HTTP-PRO-14.1` 쿠키 설정 오류를 던진다
+
+</details>
+
+<details>
+<summary><strong><code>HTTP-PRO-15</code></strong> 쿠키 수명이 양의 정수가 아니면 설정할 수 없다</summary>
+
+- **전제**: `maxAge`가 양의 정수가 아닌 쿠키 옵션이 있다
+- **행동**: 그 쿠키 옵션을 해석한다
+- **결과**:
+  - `HTTP-PRO-15.1` 쿠키 설정 오류를 던진다
 
 </details>
 

@@ -4,7 +4,7 @@
 
 | 기능 | 하는 일 | 주요 거절 |
 |---|---|---|
-| `generateMigration` | `migrations/_snapshot.json`과 현재 스키마의 차이를 `core`의 `planSchemaDiff`로 계산해 다음 4자리 번호 `.sql` 파일을 만들고 `_snapshot.json`을 원자적으로 갱신한다(동시 생성 시 완성된 파일 하나만 남음, `--dry-run`이면 디스크에 쓰지 않고 SQL만 반환) | 잘못된 스키마·이전 스냅샷의 허용되지 않은 식별자 시 `BAD_REQUEST`(파일 유지) |
+| `generateMigration` | `migrations/_snapshot.json`과 현재 스키마의 차이를 `core`의 `planSchemaDiff`로 계산해 다음 4자리 번호 `.sql` 파일을 만들고 `_snapshot.json`을 원자적으로 갱신한다(같은 변경을 동시에 생성해도 새 SQL 파일 하나만 추가되고 스냅샷은 그 변경에 맞춰 갱신, `--dry-run`이면 디스크에 쓰지 않고 SQL만 반환) | 잘못된 스키마·이전 스냅샷의 허용되지 않은 식별자 시 `BAD_REQUEST`(파일 유지) |
 | `listMigrationFiles` | `migrations/*.sql` 파일 목록을 파일명 오름차순으로 돌려준다(폴더가 없으면 빈 배열) | 없음 |
 
 ---
@@ -85,13 +85,12 @@
 </details>
 
 <details>
-<summary><strong><code>CLI-MGF-7</code></strong> 같은 디렉터리에서 마이그레이션 파일 생성이 겹치면 완성된 파일 하나만 남는다</summary>
+<summary><strong><code>CLI-MGF-7</code></strong> 같은 변경을 동시에 생성해도 새 SQL 파일 하나가 추가되고 스냅샷은 그 변경에 맞춰 갱신된다</summary>
 
 - **전제**: 기존 `0001_init.sql`과 `_snapshot.json`이 있고, 새 `.sql`이 생기도록 스키마가 바뀌어 있다
-- **행동**: 같은 디렉터리로 `generateMigration` 두 건을 동시에 실행한다
+- **행동**: 같은 디렉터리와 그 스키마로 `generateMigration` 두 건을 동시에 실행한다
 - **결과**:
-  - `CLI-MGF-7.1` 한 호출만 새 파일 정보를 돌려주고, 나머지 한 호출은 오류로 끝난다
-  - `CLI-MGF-7.2` 디렉터리에 `0002_*.sql` 파일이 정확히 하나 있고 그 내용이 성공한 호출의 `sql`과 같다
-  - `CLI-MGF-7.3` `_snapshot.json`이 성공한 호출의 스키마 스냅샷과 같고 임시(`.tmp`) 파일이 남아 있지 않는다
+  - `CLI-MGF-7.2` 디렉터리에 새 `0002_*.sql` 파일이 정확히 하나 있고 그 내용이 그 변경의 SQL과 같다
+  - `CLI-MGF-7.3` `_snapshot.json`이 새 스키마의 스냅샷과 같고 임시(`.tmp`) 파일이 남아 있지 않다
 
 </details>

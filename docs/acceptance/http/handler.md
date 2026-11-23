@@ -4,7 +4,7 @@
 
 | 기능 | 하는 일 | 주요 거절 |
 |---|---|---|
-| 세션 인증·쿠키 (`auth.ts`) | 최초 관리자 생성(동시 생성 시 1건만 성공)·로그인 시 `HttpOnly` 쿠키를 발급하고 토큰을 본문에서 숨기며, `GET /session` 조회, `DELETE /session`·`PATCH /admin` 쿠키 만료 삭제, 그 외 모든 요청의 세션 검증을 수행한다 | 쿠키 없음·만료·위조 토큰 시 `401`(DB 미변경), 중복 관리자 시 `409`(`set-cookie` 없음), 잘못된 로그인 시 `401`(`set-cookie` 없음), 계정 변경 실패 시 쿠키 유지 |
+| 세션 인증·쿠키 (`auth.ts`) | 최초 관리자 생성(동시에 요청해도 관리자가 하나만 생기는 것은 core의 `ADM-CRT-4`가 보장)·로그인 시 `HttpOnly` 쿠키를 발급하고 토큰을 본문에서 숨기며, `GET /session` 조회, `DELETE /session`·`PATCH /admin` 쿠키 만료 삭제, 그 외 모든 요청의 세션 검증을 수행한다 | 쿠키 없음·만료·위조 토큰 시 `401`(DB 미변경), 중복 관리자 시 `409`(`set-cookie` 없음), 잘못된 로그인 시 `401`(`set-cookie` 없음), 계정 변경 실패 시 쿠키 유지 |
 | 요청 파이프라인 (`handler.ts`, `index.ts`) | 경로 매칭→인증→입력 해석→실행 순서로 표준 CRUD·쿼리 필터·다건 수정·단일 리소스·플러그인 Operation·`?dryRun=true`·공개 옵션(`basePath`, `cookie`)을 처리하고 오류를 HTTP 응답으로 매핑한다 | 경로 오류 `404`/`405`(+`Allow`), 코어 오류 5종 → `400`·`401`·`403`·`404`·`409`, 본문 1 MiB 초과(공개 요청 포함) → `413` `PAYLOAD_TOO_LARGE`, 내부 예외 → 상세 숨김 `500` |
 
 ---
@@ -77,28 +77,7 @@
 
 ### 경계 · 방어 검증
 
-<details>
-<summary><strong><code>HTTP-HDL-20</code></strong> 로그인 실패나 중복 관리자 생성이 거절될 때 세션 쿠키를 설정하지 않는다</summary>
-
-- **전제**: 관리자가 이미 생성되어 있다
-- **행동**: 틀린 비밀번호로 `POST /api/session`을 호출하고, 새 이메일로 `POST /api/admin`을 호출한다
-- **결과**:
-  - `HTTP-HDL-20.1` `POST /api/session` 응답이 `401`이고 `set-cookie` 헤더가 없다
-  - `HTTP-HDL-20.2` `POST /api/admin` 응답이 `409`이고 `set-cookie` 헤더가 없다
-
-</details>
-
-<details>
-<summary><strong><code>HTTP-HDL-21</code></strong> 최초 관리자 생성 요청을 동시에 두 번 보내면 하나만 성공하고 세션 쿠키를 받는다</summary>
-
-- **전제**: 관리자가 아직 없는 DB로 `createHttpHandler(monti)`를 만들었다
-- **행동**: 쿠키 없이 서로 다른 이메일의 `POST /api/admin` 요청 두 건을 동시에 보낸다
-- **결과**:
-  - `HTTP-HDL-21.1` 두 응답 중 하나는 `201`이며 `set-cookie` 헤더를 받고, 나머지 하나는 `409`(`CONFLICT`)이며 `set-cookie` 헤더가 없다
-  - `HTTP-HDL-21.2` DB `admin` 테이블에 행이 정확히 하나만 남는다
-  - `HTTP-HDL-21.3` DB `session` 테이블에 행이 정확히 하나만 남는다
-
-</details>
+거절된 로그인과 중복 관리자 생성 응답에 세션 쿠키가 없다는 확인은 `HTTP-HDL-16`에 있다. 최초 관리자 생성을 동시에 요청해도 관리자가 하나만 생긴다는 보장은 core의 `ADM-CRT-4`에 있다.
 
 ---
 
@@ -228,10 +207,10 @@
 - **행동**: 잘못된 본문의 `POST /api/templates`, 틀린 비밀번호의 `POST /api/session`, 운영 서버의 `PATCH /api/config`, 없는 UUID의 `GET /api/templates/:id`, 중복 관리자 생성 `POST /api/admin`, 그리고 잘못된 경로 `:id`로 다건 이동·슬러그 조회를 시도하는 `PATCH /api/entries/invalid-id`·`GET /api/entries/invalid-id?collection=posts&locale=ko&slug=...`를 각각 호출한다
 - **결과**:
   - `HTTP-HDL-16.1` 잘못된 본문의 `POST /api/templates`는 `400`과 `error.code === "BAD_REQUEST"`이다
-  - `HTTP-HDL-16.2` 틀린 비밀번호의 `POST /api/session`은 `401`과 `error.code === "UNAUTHORIZED"`이다
+  - `HTTP-HDL-16.2` 틀린 비밀번호의 `POST /api/session`은 `401`과 `error.code === "UNAUTHORIZED"`이고 `set-cookie` 헤더가 없다
   - `HTTP-HDL-16.3` 운영 서버의 `PATCH /api/config`는 `403`과 `error.code === "FORBIDDEN"`이다
   - `HTTP-HDL-16.4` 없는 UUID의 `GET /api/templates/:id`는 `404`과 `error.code === "NOT_FOUND"`이다
-  - `HTTP-HDL-16.5` 중복 관리자 생성 `POST /api/admin`은 `409`와 `error.code === "CONFLICT"`이다
+  - `HTTP-HDL-16.5` 중복 관리자 생성 `POST /api/admin`은 `409`와 `error.code === "CONFLICT"`이고 `set-cookie` 헤더가 없다
   - `HTTP-HDL-16.6` 잘못된 경로 `:id`의 단건 `PATCH`·`GET`은 다건/슬러그 분기로 넘어가지 않고 모두 `400`(`BAD_REQUEST`)으로 거절된다
 
 </details>
@@ -259,13 +238,25 @@
 </details>
 
 <details>
-<summary><strong><code>HTTP-HDL-19</code></strong> 허용 크기를 넘는 본문은 로그인하지 않은 공개 요청에서도 작업을 실행하지 않고 거절한다</summary>
+<summary><strong><code>HTTP-HDL-19</code></strong> 허용 크기를 넘는 본문으로는 로그인할 수 없다</summary>
 
-- **전제**: 1 MiB를 1바이트 넘는 `application/json` 본문의 `POST /api/session`과 `POST /api/admin` 요청이 있다
-- **행동**: 쿠키 없이 두 요청을 핸들러로 보낸다
+- **전제**: 관리자가 이미 생성되어 있고, 그 관리자의 올바른 `email`·`password`가 들어 있으면서 1 MiB를 넘는 `application/json` 본문이 있다
+- **행동**: 쿠키 없이 그 본문으로 `POST /api/session`을 호출한다
 - **결과**:
-  - `HTTP-HDL-19.1` 두 응답 모두 상태 `413`, `content-type`이 `application/json; charset=utf-8`, `cache-control`이 `no-store`, `error.code`가 `"PAYLOAD_TOO_LARGE"`이다
-  - `HTTP-HDL-19.2` 두 응답 모두 `set-cookie` 헤더가 없다
-  - `HTTP-HDL-19.3` `admin`과 `session` 테이블의 행 수가 그대로이다
+  - `HTTP-HDL-19.1` 응답이 상태 `413`, `content-type`이 `application/json; charset=utf-8`, `cache-control`이 `no-store`, `error.code`가 `"PAYLOAD_TOO_LARGE"`이다
+  - `HTTP-HDL-19.2` 응답에 `set-cookie` 헤더가 없다
+  - `HTTP-HDL-19.3` `session` 테이블의 행 수가 그대로이다
+
+</details>
+
+<details>
+<summary><strong><code>HTTP-HDL-23</code></strong> 허용 크기를 넘는 본문으로는 최초 관리자를 만들 수 없다</summary>
+
+- **전제**: 관리자가 아직 없고, 올바른 `email`·`password`가 들어 있으면서 1 MiB를 넘는 `application/json` 본문이 있다
+- **행동**: 쿠키 없이 그 본문으로 `POST /api/admin`을 호출한다
+- **결과**:
+  - `HTTP-HDL-23.1` 응답이 상태 `413`, `content-type`이 `application/json; charset=utf-8`, `cache-control`이 `no-store`, `error.code`가 `"PAYLOAD_TOO_LARGE"`이다
+  - `HTTP-HDL-23.2` 응답에 `set-cookie` 헤더가 없다
+  - `HTTP-HDL-23.3` `admin`과 `session` 테이블이 비어 있다
 
 </details>

@@ -7,6 +7,8 @@
 | `--help` · `--version` · `spec` | DB 연결 없이 도움말(인자 없는 실행 포함)·버전·`specOf(plugins)` JSON을 `stdout`에 출력한다 | 알 수 없는 리소스·작업의 `--help` 시 사용법 오류(`2`) |
 | `monti <resource> <action>` | 코어·플러그인 작업을 실행해 안전한 JSON(반환값 없으면 `null`)을 `stdout`에 출력하고, 쓰기 `--dry-run`과 대화형 필수 민감 필드 숨김 입력을 처리한다 | 읽기 `--dry-run`·알 수 없는 명령·잘못된 플래그 조합 시 `2`, 비대화형 필수 민감 필드 누락·코어 오류 시 `[코드] 메시지`를 `stderr`에 출력하고 `1` |
 
+> **공통 계약**: 어떤 명령이든 오류 출력(`stderr`)에는 `DATABASE_URL`의 연결 비밀번호와 `MONTI_SECRET` 원문이 나오지 않는다([`commands-tools.md`](commands-tools.md)의 `CLI-TLS-17`).
+
 ---
 
 ## 1. 도움말 · 버전 · 명세 (`--help` · `--version` · `spec`)

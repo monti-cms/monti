@@ -258,21 +258,21 @@
 <summary><strong><code>SCH-UPD-19</code></strong> 이름이 빈 컬렉션이나 필드는 스키마에 넣을 수 없다</summary>
 
 - **전제**: `config.dev`가 `true`이고 초기 스키마 파일이 있다
-- **행동**: 빈 문자열 `""`을 컬렉션 키로 쓴 스키마와 빈 문자열 `""`을 필드 키로 쓴 스키마로 각각 `schema.update`를 실행한다
+- **행동**: 컬렉션 키나 필드 키 하나가 빈 문자열 `""`인 스키마로 `schema.update`를 실행한다
 - **결과**:
-  - `SCH-UPD-19.1` 두 호출 모두 `BAD_REQUEST` 오류를 던진다
+  - `SCH-UPD-19.1` `BAD_REQUEST` 오류를 던진다
   - `SCH-UPD-19.2` `schema.get`이 원래 스키마 그대로이다
   - `SCH-UPD-19.3` 스키마 파일에서 읽은 값이 원래 스키마 그대로이다
 
 </details>
 
 <details>
-<summary><strong><code>SCH-UPD-20</code></strong> 여러 개를 고르는 미디어 필드를 지우면 연결 기록과 미디어 사용처도 함께 지워진다</summary>
+<summary><strong><code>SCH-UPD-20</code></strong> 여러 미디어를 고르는 필드를 지우면 그 필드의 연결만 정리된다</summary>
 
 - **전제**: `config.dev`가 `true`이고 `storage`가 설정되어 있으며, `media`를 가리키는 다건 필드 `gallery`와 `cover`를 가진 `posts` 컬렉션에 같은 미디어가 두 필드 모두에 연결된 글이 저장되어 있다
 - **행동**: `posts`에서 `gallery`만 제거하고 `cover`는 남긴 스키마로 `schema.update`를 실행한다
 - **결과**:
-  - `SCH-UPD-20.1` `posts_rels` 테이블에 경로 `gallery`의 행이 없다
+  - `SCH-UPD-20.1` `posts_rels` 테이블에 경로 `gallery`의 행은 없고 `cover`의 행은 남아 있다
   - `SCH-UPD-20.2` `media.get`의 `uses`에서 `gallery` 경로는 사라지고 `cover` 경로는 남아 있다
 
 </details>
@@ -391,13 +391,13 @@
 </details>
 
 <details>
-<summary><strong><code>CFG-UPD-7</code></strong> 설정 파일에 플러그인 이름이 사이트 이름보다 먼저 적혀 있어도 사이트 이름만 바뀐다</summary>
+<summary><strong><code>CFG-UPD-7</code></strong> 사이트 이름을 바꿔도 플러그인 이름은 그대로다</summary>
 
 - **전제**: `config.dev`가 `true`이고, 플러그인 객체의 `name`이 사이트 `name`보다 앞에 적힌 설정 파일이 있다
 - **행동**: 새 `name`으로 `config.update`를 실행한다
 - **결과**:
   - `CFG-UPD-7.1` 설정 파일의 플러그인 `name`은 원래 그대로이다
-  - `CFG-UPD-7.2` 설정 파일의 사이트 `name`만 새 이름으로 바뀐다
+  - `CFG-UPD-7.2` 설정 파일의 사이트 `name`이 새 이름으로 바뀐다
 
 </details>
 

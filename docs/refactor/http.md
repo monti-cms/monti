@@ -29,9 +29,9 @@
 export type SameSite = "lax" | "strict" | "none";
 
 export interface CookieOptions {
-	/** 세션 쿠키 이름 (기본: `"monti_session"`). 빈 문자열·공백·`;`·`=`는 허용하지 않는다. */
+	/** 세션 쿠키 이름 (기본: `"monti_session"`). 빈 문자열·공백·`;`·`=`는 허용하지 않는다. ASCII 제어 문자는 허용하지 않는다. */
 	name?: string;
-	/** 쿠키 `Path` 속성 (기본: `"/"`). 빈 문자열·`;`는 허용하지 않는다. */
+	/** 쿠키 `Path` 속성 (기본: `"/"`). 빈 문자열·`;`는 허용하지 않는다. ASCII 제어 문자는 허용하지 않는다. */
 	path?: string;
 	/** 쿠키 `SameSite` 속성 (기본: `"lax"`). `"none"`이면 `Secure`를 자동으로 강제한다. */
 	sameSite?: SameSite;

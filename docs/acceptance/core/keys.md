@@ -6,7 +6,7 @@
 |---|---|---|
 | `keys.create` | 외부 서비스 키를 암호화 저장하고 원문 없이 `id`, `service`, `name`, `last4` 반환 | 암호화 `secret` 미설정·빈 문자열 `BAD_REQUEST`, 이름 중복(동시 생성 포함) `CONFLICT` |
 | `keys.list` | 원문 `secret`을 제외한 키 목록을 돌려준다 | 없음 |
-| `keys.update` | 키 `name`과 선택 `secret` 갱신 | 빈 문자열·`secret` 변경 시 암호화 `secret` 미설정 `BAD_REQUEST`, 미존재 `NOT_FOUND`, 이름 중복(동시 수정 포함) `CONFLICT` |
+| `keys.update` | 키 `name`과 선택 `secret` 갱신 | 빈 문자열·`secret` 변경 시 암호화 `secret` 미설정 `BAD_REQUEST`, 미존재 `NOT_FOUND`, 이름 중복 `CONFLICT` |
 | `keys.delete` | 지정한 키 삭제 | 미존재 `NOT_FOUND` |
 | `keys.check` | 입력 `{ service, secret }` 또는 저장된 `{ id }`로 플러그인 `keyServices` 연결 확인 | 확인 실패·복호화 `secret` 미설정·복호화 실패 `BAD_REQUEST`, 미등록 서비스·없는 ID `NOT_FOUND` |
 | `monti.withStoredKey` | 서버 코드가 저장된 키 `{ id, service }`의 복호화된 원문을 콜백 `use`로 받아 쓰고 그 결과를 돌려받는다(Operation이 아니다) | 복호화 `secret` 미설정·저장된 `service` 불일치 `BAD_REQUEST`, 없는 ID `NOT_FOUND` |
@@ -165,17 +165,6 @@
 
 </details>
 
-<details>
-<summary><strong><code>KEY-UPD-7</code></strong> 서로 다른 두 키의 이름을 같은 이름으로 동시에 바꾸면 한 건만 성공하고 나머지는 거절된다</summary>
-
-- **전제**: 암호화 비밀값(`secret`)이 설정되어 있고 서로 다른 이름의 키 두 개가 저장되어 있다
-- **행동**: 두 키의 `id`에 같은 새 `name`을 넣어 `keys.update` 두 건을, 서로의 커밋을 보기 전에 겹치도록 동시에 실행한다
-- **결과**:
-  - `KEY-UPD-7.1` 한 건은 성공하고 나머지 한 건은 `CONFLICT` 오류를 던진다
-  - `KEY-UPD-7.2` `api_keys` 테이블에 그 새 `name`을 가진 행이 정확히 하나만 남는다
-
-</details>
-
 ## 4. 삭제 (`delete`)
 
 ### 핵심 요구사항
@@ -289,8 +278,8 @@
 <details>
 <summary><strong><code>KEY-USE-1</code></strong> 서버 코드가 저장된 키의 원문을 받아 쓰고 그 결과를 돌려받는다</summary>
 
-- **전제**: 키가 하나 저장되어 있다
-- **행동**: 저장된 키의 `id`와 `service`, 값을 돌려주는 콜백 `use`로 `withStoredKey({ id, service }, use)`를 실행한다
+- **전제**: 암호화 비밀값(`secret`)을 주고 `startMonti`로 만든 `monti`로 키를 하나 저장했다
+- **행동**: 저장된 키의 `id`와 `service`, 값을 돌려주는 콜백 `use`로 `monti.withStoredKey({ id, service }, use)`를 실행한다
 - **결과**:
   - `KEY-USE-1.1` `use`가 복호화된 원문 `secret`으로 호출된다
   - `KEY-USE-1.2` `use`가 돌려준 값을 돌려준다

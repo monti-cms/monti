@@ -120,24 +120,51 @@
 </details>
 
 <details>
-<summary><strong><code>DB-SCH-3</code></strong> 관리자 테이블에는 한 명을 초과하는 행을 저장할 수 없고, 키 테이블에는 같은 이름의 키를 두 번 저장할 수 없다</summary>
+<summary><strong><code>DB-SCH-3</code></strong> 관리자 계정은 하나만 저장할 수 있다</summary>
 
-- **전제**: `0001-initial`이 적용된 DB에 `admin` 행 하나와 `api_keys` 행 하나가 있다
-- **행동**: 다른 이메일로 `admin`에 두 번째 행을 직접 삽입하고, 이미 있는 `name`과 다른 `id`로 `api_keys`에 두 번째 행을 직접 삽입한다
+- **전제**: `0001-initial`이 적용된 DB에 `admin` 행 하나가 있다
+- **행동**: 다른 이메일로 `admin`에 두 번째 행을 직접 삽입한다
 - **결과**:
-  - `DB-SCH-3.1` 두 번째 `admin` 삽입은 DB 고유 제약 오류(`23505`)로 실패하고 `admin` 테이블에 행이 하나만 남는다
-  - `DB-SCH-3.2` 같은 `name`의 `api_keys` 삽입은 DB 고유 제약 오류(`23505`)로 실패하고 `api_keys` 테이블에 행이 하나만 남는다
+  - `DB-SCH-3.1` DB 고유 제약 오류(`23505`)로 실패하고 `admin` 테이블에 행이 하나만 남는다
 
 </details>
 
 <details>
-<summary><strong><code>DB-SCH-4</code></strong> 폴더 테이블의 활성 이름과 템플릿 테이블의 컬렉션별 이름은 DB 수준에서 중복 저장을 막는다</summary>
+<summary><strong><code>DB-SCH-5</code></strong> 같은 이름의 키를 두 번 저장할 수 없다</summary>
 
-- **전제**: `0001-initial`이 적용된 DB에 활성 루트 폴더 하나, 그 아래 활성 하위 폴더 하나, 템플릿 하나가 있다
-- **행동**: 같은 `scope`·`name`의 활성 루트 폴더(`parent_id`가 `null`), 같은 부모 아래 같은 `name`의 활성 하위 폴더, 같은 `(collection, name)`의 템플릿을 각각 직접 삽입한다
+- **전제**: `0001-initial`이 적용된 DB에 `api_keys` 행 하나가 있다
+- **행동**: 이미 있는 `name`과 다른 `id`로 `api_keys`에 두 번째 행을 직접 삽입한다
 - **결과**:
-  - `DB-SCH-4.1` 중복 활성 루트 폴더 삽입은 DB 고유 제약 오류(`23505`)로 실패한다
-  - `DB-SCH-4.2` 중복 활성 하위 폴더 삽입은 DB 고유 제약 오류(`23505`)로 실패한다
-  - `DB-SCH-4.3` 중복 템플릿 삽입은 DB 고유 제약 오류(`23505`)로 실패한다
+  - `DB-SCH-5.1` DB 고유 제약 오류(`23505`)로 실패하고 `api_keys` 테이블에 행이 하나만 남는다
+
+</details>
+
+<details>
+<summary><strong><code>DB-SCH-4</code></strong> 같은 컬렉션이나 미디어의 최상위에 같은 이름의 활성 폴더를 두 번 저장할 수 없다</summary>
+
+- **전제**: `0001-initial`이 적용된 DB에 활성 루트 폴더(`parent_id`가 `null`) 하나가 있다
+- **행동**: 같은 `scope`·`name`의 활성 루트 폴더를 직접 삽입한다
+- **결과**:
+  - `DB-SCH-4.1` DB 고유 제약 오류(`23505`)로 실패한다
+
+</details>
+
+<details>
+<summary><strong><code>DB-SCH-6</code></strong> 같은 부모 폴더 아래에 같은 이름의 활성 폴더를 두 번 저장할 수 없다</summary>
+
+- **전제**: `0001-initial`이 적용된 DB에 활성 루트 폴더 하나와 그 아래 활성 하위 폴더 하나가 있다
+- **행동**: 같은 부모 아래에 같은 `name`의 활성 하위 폴더를 직접 삽입한다
+- **결과**:
+  - `DB-SCH-6.1` DB 고유 제약 오류(`23505`)로 실패한다
+
+</details>
+
+<details>
+<summary><strong><code>DB-SCH-7</code></strong> 같은 컬렉션에 같은 이름의 템플릿을 두 번 저장할 수 없다</summary>
+
+- **전제**: `0001-initial`이 적용된 DB에 템플릿 하나가 있다
+- **행동**: 같은 `(collection, name)`의 템플릿을 직접 삽입한다
+- **결과**:
+  - `DB-SCH-7.1` DB 고유 제약 오류(`23505`)로 실패한다
 
 </details>

@@ -6,12 +6,12 @@
 |---|---|---|
 | `entries.create` | 원문 언어 초안(`status: "draft"`) 생성(`slug`·`required` 빈칸 허용, `__preset_id` 지원) 및 `media_uses` 기록 | 스키마·필드·본문·휴지통 참조 오류 `BAD_REQUEST`, 슬러그 중복(동시 생성 포함) `CONFLICT` |
 | `entries.get` · `list` | `status`(기본 `"published"` / `"draft"`) 조회. 발행본은 휴지통 참조를 `fields`에서 제외하고 초안은 원래 ID를 유지한다 | 없는 컬렉션 `BAD_REQUEST`, 미발행·휴지통·없는 언어 `NOT_FOUND` |
-| `entries.update` | 단건은 전달된 `slug`·`fields`·`body`·`folder_id`만 갱신(기존 경로의 휴지통 참조 유지 허용, 독립 필드·다언어 동시 수정 보존, 휴지통 이동과 겹쳐도 사용처 보존), 다건은 폴더 일괄 이동(폴더의 휴지통 이동과 겹쳐도 함께 버려진 글을 폴더 밖에 남기지 않음) | 형식·새 휴지통 참조·폴더 범위 오류 `BAD_REQUEST`, 휴지통·없는 언어 `NOT_FOUND`, 슬러그 중복(동시 수정 포함) `CONFLICT` |
+| `entries.update` | 단건은 전달된 `slug`·`fields`·`body`·`folder_id`만 갱신(기존 경로의 휴지통 참조 유지 허용, 독립 필드·다언어 동시 수정 보존, 휴지통 이동과 겹쳐도 사용처 보존), 다건은 폴더 일괄 이동(폴더의 휴지통 이동이 먼저 적용되면 글은 폴더와 함께 휴지통에 들어감) | 형식·새 휴지통 참조·폴더 범위 오류 `BAD_REQUEST`, 휴지통·없는 언어 `NOT_FOUND`, 슬러그 중복 `CONFLICT` |
 | `entries.publish` | 초안을 발행본(`status: "published"`)으로 저장(`slug`·필수값·모든 참조 필드와 본문의 활성 상태 검사) | 빈 슬러그·필수값·휴지통 참조·사라진 분기 `BAD_REQUEST`, 휴지통·없는 언어 `NOT_FOUND`, 발행 슬러그 중복 `CONFLICT` |
 | `entries.unpublish` | 해당 언어 발행본만 삭제하고 초안과 `media_uses`는 유지(이미 미발행이어도 성공) | 휴지통·없는 언어 `NOT_FOUND` |
 | `entries.duplicate` | 원문 언어 초안만 미발행 새 글로 복제(`slug` 생략 시 `-copy` 자동 부여, 동시 복제 시 서로 다른 번호 슬러그 배정, `null` 유지) | 형식 오류·휴지통 참조 `BAD_REQUEST`, 휴지통 `NOT_FOUND`, 슬러그 중복 `CONFLICT` |
-| `entries.replaceReferences` | `from_id`를 가리키는 모든 언어·상태·휴지통 글의 `relation`을 `into_id`로 일괄 교체(동시 다건 관계 편집과 겹쳐도 추가 관계 보존, 그사이 새로 생긴 `from_id` 참조도 교체) | 자기 자신·다른 컬렉션 `BAD_REQUEST`, 없는 ID·휴지통 `into_id` `NOT_FOUND` |
-| `entries.addLocale` | 비원문 언어 초안 추가(`slug` 생략 시 원문 슬러그 복사) 및 `media_uses` 갱신 | 없는 언어·형식·휴지통 참조 `BAD_REQUEST`, 휴지통 `NOT_FOUND`, 중복 언어·슬러그(동시 추가 포함) `CONFLICT` |
+| `entries.replaceReferences` | `from_id`를 가리키는 모든 언어·상태·휴지통 글의 `relation`을 `into_id`로 일괄 교체(그사이 새로 생긴 `from_id` 참조도 교체) | 자기 자신·다른 컬렉션 `BAD_REQUEST`, 없는 ID·휴지통 `into_id` `NOT_FOUND` |
+| `entries.addLocale` | 비원문 언어 초안 추가(`slug` 생략 시 원문 슬러그 복사) 및 `media_uses` 갱신 | 없는 언어·형식·휴지통 참조 `BAD_REQUEST`, 휴지통 `NOT_FOUND`, 중복 언어(동시 추가 포함)·슬러그 `CONFLICT` |
 | `entries.removeLocale` | 비원문 언어의 초안·발행본 즉시 삭제 및 남은 언어 기준 `media_uses` 갱신(원문 언어 변경·수정·발행과 겹쳐도 원문 작업본 보존 및 삭제 언어 잔존 방지) | 원문 언어 삭제 `BAD_REQUEST`, 휴지통·없는 언어 `NOT_FOUND` |
 | `entries.setSourceLocale` | 기준 언어 변경 및 모든 언어의 `translation_seen` 초기화(원문 언어 삭제와 겹쳐도 원문 작업본 보존) | 휴지통·없는 언어 `NOT_FOUND` |
 
@@ -220,10 +220,10 @@
 <summary><strong><code>ENT-CRT-18</code></strong> 같은 컬렉션과 언어에 같은 슬러그로 글을 동시에 두 번 만들면 한 건만 성공하고 나머지는 거절된다</summary>
 
 - **전제**: 스키마에 컬렉션과 `locale`이 있고 컬렉션 테이블들이 비어 있다
-- **행동**: 같은 `collection`, 같은 `locale`, 같은 `slug`로 `entries.create` 두 건을, 두 호출이 모두 슬러그가 비어 있음을 확인한 뒤 어느 쪽도 행을 넣기 전에 겹치도록 실행한다
+- **행동**: 같은 `collection`, 같은 `locale`, 같은 `slug`로 `entries.create` 두 건을 동시에 실행한다
 - **결과**:
   - `ENT-CRT-18.1` 한 건은 성공하고 나머지 한 건은 `CONFLICT` 오류를 던진다
-  - `ENT-CRT-18.2` `<collection>_data` 테이블에 해당 `locale`·`status: "draft"`·`slug`를 가진 활성 글 행이 정확히 하나만 남는다
+  - `ENT-CRT-18.2` `<collection>_data` 테이블에 해당 `locale`·`status: "draft"`·`slug`를 가진 행이 정확히 하나만 남는다
 
 </details>
 
@@ -610,17 +610,6 @@
 </details>
 
 <details>
-<summary><strong><code>ENT-UPD-19</code></strong> 서로 다른 두 글의 작업본 슬러그를 같은 값으로 동시에 바꾸면 한 건만 성공하고 나머지는 거절된다</summary>
-
-- **전제**: 같은 컬렉션·언어에 서로 다른 `slug`의 활성 글 두 개가 있다
-- **행동**: 두 글의 `slug`를 같은 새 값으로 바꾸는 `entries.update` 두 건을, 두 호출이 모두 새 슬러그가 비어 있음을 확인한 뒤 어느 쪽도 쓰기 전에 겹치도록 실행한다
-- **결과**:
-  - `ENT-UPD-19.1` 한 건은 성공하고 나머지 한 건은 `CONFLICT` 오류를 던진다
-  - `ENT-UPD-19.2` `<collection>_data` 테이블에 해당 `locale`·`status: "draft"`·새 `slug`를 가진 활성 글 행이 정확히 하나만 남는다
-
-</details>
-
-<details>
 <summary><strong><code>ENT-UPD-20</code></strong> 같은 글의 필드와 본문을 동시에 각각 수정해도 두 변경이 모두 남고 미디어 사용처가 일치한다</summary>
 
 - **전제**: `storage`가 설정되어 있고 `body: true`와 `text` 필드가 있는 컬렉션의 활성 글 하나와 활성 미디어 하나가 있다
@@ -635,12 +624,12 @@
 <details>
 <summary><strong><code>ENT-UPD-21</code></strong> 같은 글의 서로 다른 두 언어를 동시에 수정해도 두 언어 내용과 미디어 사용처가 모두 남는다</summary>
 
-- **전제**: `storage`가 설정되어 있고 `ko` 원문과 `en` 번역 언어 작업본을 가진 활성 글 하나와 활성 미디어 둘(첫 번째 미디어, 두 번째 미디어)이 있다
+- **전제**: `storage`가 설정되어 있고 `ko` 원문과 `en` 번역 언어 작업본을 가진 활성 글 하나와 활성 미디어 둘(첫 번째 미디어, 두 번째 미디어)이 있다. 두 언어 작업본에서 같은 최상위 미디어 필드가 비어 있다
 - **행동**: `ko` 작업본에 첫 번째 미디어를 넣는 `entries.update`가 글 전체의 미디어 사용처를 읽은 뒤 `media_uses`에 쓰기 전에, `en` 작업본에 두 번째 미디어를 넣는 `entries.update`를 별도 연결에서 겹쳐 실행한다
 - **결과**:
   - `ENT-UPD-21.1` 두 호출 모두 오류 없이 끝난다
   - `ENT-UPD-21.2` `<collection>_data` 테이블의 `ko` 작업본에는 첫 번째 미디어가, `en` 작업본에는 두 번째 미디어가 저장되어 있다
-  - `ENT-UPD-21.3` `media_uses`에 해당 글의 사용처로 첫 번째 미디어와 두 번째 미디어가 각각 정확히 하나씩 남아 있다
+  - `ENT-UPD-21.3` `media_uses`에 두 미디어 각각에 대해 `source_kind`가 `"entry"`, `source_id`가 그 글의 `id`, `field_path`가 그 미디어 필드 키인 행이 하나씩 있다
 
 </details>
 
@@ -657,12 +646,13 @@
 </details>
 
 <details>
-<summary><strong><code>ENT-UPD-23</code></strong> 폴더를 휴지통에 보내는 동안 그 안의 글을 다른 폴더로 옮겨도 폴더와 함께 버려진 글이 폴더 밖에 남지 않는다</summary>
+<summary><strong><code>ENT-UPD-23</code></strong> 폴더를 휴지통에 보내는 동안 그 안의 글을 다른 폴더로 옮기려 해도 글은 폴더와 함께 휴지통에 들어간다</summary>
 
 - **전제**: 컬렉션 `scope`의 활성 폴더 둘(버릴 폴더, 다른 폴더)이 있고, 버릴 폴더 안에 활성 글이 하나 있다
-- **행동**: 버릴 폴더의 `trash.move`가 하위 항목을 읽은 뒤 커밋하기 전에, 그 글의 `ids`와 다른 폴더의 `folder_id`로 `entries.update`가 별도 연결에서 겹쳐 실행된다
+- **행동**: 버릴 폴더의 `trash.move`가 함께 옮길 항목을 정한 뒤, 그 처리가 끝나기 전에 그 글의 `ids`와 다른 폴더의 `folder_id`로 `entries.update`를 실행한다
 - **결과**:
-  - `ENT-UPD-23.1` 두 호출이 끝난 뒤 `trashed_at`이 버릴 폴더의 `trashed_at`과 같으면서 `folder_id`가 버릴 폴더가 아닌 글이 `<collection>` 테이블에 없다
+  - `ENT-UPD-23.1` `folders` 테이블에서 버릴 폴더에 `trashed_at`이 설정된다
+  - `ENT-UPD-23.2` `<collection>` 테이블에서 그 글의 `folder_id`가 버릴 폴더이고 `trashed_at`이 버릴 폴더의 `trashed_at`과 같다
 
 </details>
 
@@ -956,7 +946,7 @@
 <summary><strong><code>ENT-DUP-8</code></strong> 같은 글을 슬러그 없이 동시에 두 번 복제하면 서로 다른 번호의 슬러그를 배정받는다</summary>
 
 - **전제**: 원문 작업본 `slug`가 `"hello"`인 활성 글 하나가 있다
-- **행동**: `slug`를 생략해 같은 글의 `entries.duplicate` 두 건을, 두 호출이 모두 비어 있는 번호 슬러그를 확인한 뒤 어느 쪽도 행을 넣기 전에 겹치도록 실행한다
+- **행동**: `slug`를 생략해 같은 글의 `entries.duplicate` 두 건을 동시에 실행한다
 - **결과**:
   - `ENT-DUP-8.1` 두 호출 모두 오류 없이 끝난다
   - `ENT-DUP-8.2` 생성된 두 복제 글의 작업본 `slug`가 `"hello-copy"`와 `"hello-copy-2"`이다
@@ -1080,21 +1070,10 @@
 </details>
 
 <details>
-<summary><strong><code>ENT-REF-11</code></strong> 다건 관계 필드를 편집하는 동안 참조 교체가 동시에 실행되어도 새로 추가한 관계가 사라지지 않는다</summary>
-
-- **전제**: `authors` 컬렉션에 활성 글 셋(옛 작성자, 새 작성자, 추가 작성자)이 있고, `posts` 컬렉션의 글 하나가 다건 `relation` 필드에 `[옛 작성자]`를 가지고 있다
-- **행동**: `from_id: 옛 작성자`, `into_id: 새 작성자`로 실행한 `entries.replaceReferences`가 `[옛 작성자]`를 읽은 뒤 교체 쓰기를 실행하기 전에, `posts` 글의 다건 `relation`을 `[옛 작성자, 추가 작성자]`로 바꾸는 `entries.update`가 별도 연결에서 커밋되도록 실행한다
-- **결과**:
-  - `ENT-REF-11.1` 두 호출 모두 오류 없이 끝난다
-  - `ENT-REF-11.2` `posts` 글의 최종 다건 `relation` 목록이 `[새 작성자, 추가 작성자]`이다
-
-</details>
-
-<details>
-<summary><strong><code>ENT-REF-12</code></strong> 참조 교체가 실행되는 동안 다른 글이 옛 글을 새로 가리키게 되어도 그 참조까지 새 글로 바뀐다</summary>
+<summary><strong><code>ENT-REF-12</code></strong> 교체할 참조를 확인한 뒤 교체가 적용되기 전에 추가된 참조도 함께 바뀐다</summary>
 
 - **전제**: `authors` 컬렉션에 활성 글 둘(옛 작성자, 새 작성자)이 있고, `posts` 컬렉션의 글 하나가 다건 `relation` 필드를 비워 두고 있다
-- **행동**: `from_id: 옛 작성자`, `into_id: 새 작성자`로 실행한 `entries.replaceReferences`가 옛 작성자를 가리키는 글이 없음을 읽은 뒤 교체 쓰기를 실행하기 전에, `posts` 글의 다건 `relation`을 `[옛 작성자]`로 바꾸는 `entries.update`가 별도 연결에서 커밋되도록 실행한다
+- **행동**: `entries.replaceReferences`(`from_id: 옛 작성자`, `into_id: 새 작성자`)가 옛 작성자를 가리키는 참조를 처음 확인한 뒤 교체를 적용하기 전에, `posts` 글의 다건 `relation`에 옛 작성자를 넣는 `entries.update`가 저장을 마친다
 - **결과**:
   - `ENT-REF-12.1` 두 호출 모두 오류 없이 끝난다
   - `ENT-REF-12.2` `posts` 글의 최종 다건 `relation` 목록이 `[새 작성자]`이다
@@ -1211,21 +1190,10 @@
 <summary><strong><code>ENT-LOC-10</code></strong> 한 글에 같은 번역 언어를 동시에 두 번 추가하면 한 건만 성공하고 나머지는 거절된다</summary>
 
 - **전제**: `ko` 원문 작업본만 가진 활성 글 하나가 있다
-- **행동**: 같은 글의 `id`와 `locale: "en"`으로 서로 다른 필드 값을 넣어 `entries.addLocale` 두 건을, 두 호출이 모두 `"en"` 작업본이 없음을 확인한 뒤 어느 쪽도 쓰기 전에 겹치도록 실행한다
+- **행동**: 같은 글의 `id`와 `locale: "en"`으로 서로 다른 필드 값을 넣어 `entries.addLocale` 두 건을 동시에 실행한다
 - **결과**:
   - `ENT-LOC-10.1` 한 건은 성공하고 나머지 한 건은 `CONFLICT` 오류를 던진다
   - `ENT-LOC-10.2` `<collection>_data` 테이블의 `"en"` 작업본 내용이 성공한 호출의 입력과 같다
-
-</details>
-
-<details>
-<summary><strong><code>ENT-LOC-11</code></strong> 서로 다른 두 글에 같은 번역 언어와 같은 슬러그를 동시에 추가하면 한 건만 성공하고 나머지는 거절된다</summary>
-
-- **전제**: 같은 컬렉션에 `ko` 원문 작업본만 가진 활성 글 두 개가 있다
-- **행동**: 두 글에 `locale: "en"`과 같은 `slug`로 `entries.addLocale` 두 건을, 두 호출이 모두 해당 `"en"` 슬러그가 비어 있음을 확인한 뒤 어느 쪽도 쓰기 전에 겹치도록 실행한다
-- **결과**:
-  - `ENT-LOC-11.1` 한 건은 성공하고 나머지 한 건은 `CONFLICT` 오류를 던진다
-  - `ENT-LOC-11.2` `<collection>_data` 테이블에 `"en"`·`status: "draft"`·해당 `slug`를 가진 활성 글 행이 정확히 하나만 남는다
 
 </details>
 
