@@ -15,19 +15,24 @@ function readValue(
 	return trimmed || undefined;
 }
 
-/** 공개 URL이 쿼리·프래그먼트·계정 정보 없는 HTTP(S) 절대 주소인지 검사하고 끝 `/`를 제거한다. */
+/**
+ * 공개 URL이 쿼리·프래그먼트·계정 정보 없는 HTTP(S) 절대 주소인지 검사하고 끝 `/`를 제거한다.
+ * 거절 오류에는 주소 원문·계정 정보를 담지 않는다. `new URL`의 `TypeError`는 `input`에 원문을 실으므로
+ * 던지지 않는 `URL.parse`로 읽는다.
+ */
 function validatePublicUrl(raw: string): string {
-	const parsed = new URL(raw);
-	const validProtocol = parsed.protocol === "http:" || parsed.protocol === "https:";
-	const hasExtra =
-		parsed.username !== "" ||
-		parsed.password !== "" ||
-		parsed.search !== "" ||
-		parsed.hash !== "" ||
-		raw.includes("?") ||
-		raw.includes("#");
-	if (!validProtocol || hasExtra) {
-		throw new Error(`S3_PUBLIC_URL은 쿼리·프래그먼트·계정 정보 없는 HTTP(S) 주소여야 한다: ${raw}`);
+	const parsed = URL.parse(raw);
+	const valid =
+		parsed !== null &&
+		(parsed.protocol === "http:" || parsed.protocol === "https:") &&
+		parsed.username === "" &&
+		parsed.password === "" &&
+		parsed.search === "" &&
+		parsed.hash === "" &&
+		!raw.includes("?") &&
+		!raw.includes("#");
+	if (!valid) {
+		throw new Error("S3_PUBLIC_URL은 쿼리·프래그먼트·계정 정보 없는 HTTP(S) 주소여야 한다");
 	}
 	return `${parsed.origin}${parsed.pathname}`.replace(/\/+$/, "");
 }

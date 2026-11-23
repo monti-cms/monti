@@ -253,3 +253,32 @@ it("S3-CFG-11 허용 파일 형식 목록이 비어 있거나 잘못된 형식 �
 		}),
 	).toBe(true);
 });
+
+it("S3-CFG-12 공개 주소가 거절될 때 오류 메시지와 오류 객체에 계정 정보나 주소 원문이 노출되지 않는다", () => {
+	const userInfo = ["user", "s3cret"].join(":");
+	const withCredentials = `https://${userInfo}@cdn.example.com`;
+	const unparseable = `https://${userInfo}@`;
+	const traces = [withCredentials, unparseable].flatMap((url) => {
+		const found: string[] = [];
+		try {
+			resolveS3Config({ env: awsEnv({ S3_PUBLIC_URL: url }) });
+		} catch (error) {
+			let current: unknown = error;
+			while (current !== undefined) {
+				const record = current as { message?: unknown; input?: unknown; cause?: unknown };
+				found.push(String(record.message), String(record.input), String(current));
+				current = record.cause;
+			}
+		}
+		return found;
+	});
+
+	// S3-CFG-12.1
+	expect(() => resolveS3Config({ env: awsEnv({ S3_PUBLIC_URL: withCredentials }) })).toThrow(/S3_PUBLIC_URL/);
+	// S3-CFG-12.2
+	expect(() => resolveS3Config({ env: awsEnv({ S3_PUBLIC_URL: unparseable }) })).toThrow(/S3_PUBLIC_URL/);
+	// S3-CFG-12.3
+	expect(
+		traces.filter((text) => text.includes("s3cret") || text.includes(withCredentials) || text.includes(unparseable)),
+	).toEqual([]);
+});
