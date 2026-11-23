@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { lockFolderScope } from "../../db/locks";
 import { MontiError } from "../../engine/errors";
 import type { WriteContext } from "../../engine/types";
 import { collectionOf } from "../_shared/collection";
@@ -94,11 +95,16 @@ async function activeOwners(ctx: WriteContext, ids: string[]): Promise<Map<strin
 	return owners;
 }
 
-/** 활성 글들을 그 컬렉션의 활성 폴더 하나로, `folder_id: null`이면 루트로 옮긴다. */
+/**
+ * 활성 글들을 그 컬렉션의 활성 폴더 하나로, `folder_id: null`이면 루트로 옮긴다. 컬렉션마다 이름 순으로 `scope` 잠금을
+ * 잡아 폴더 수정·휴지통 이동과 서로 기다리다 멈추지 않는다.
+ */
 async function moveEntries(input: z.infer<typeof moveInput>, ctx: WriteContext) {
 	const owners = await activeOwners(ctx, [...new Set(input.ids)]);
 	const moved = [];
-	for (const [name, ids] of owners) {
+	for (const name of [...owners.keys()].sort()) {
+		await lockFolderScope(ctx.db, name);
+		const ids = owners.get(name) as string[];
 		if (input.folder_id !== null) await rejectFolder(ctx, input.folder_id, name);
 		const rows = await tablesOf(ctx.db)
 			.updateTable(name)
