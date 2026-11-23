@@ -1,5 +1,6 @@
 import type { Kysely, Transaction } from "kysely";
 import type { Database } from "../db/types";
+import { uniqueConflictMessage } from "../db/unique-conflicts";
 import { MontiError } from "./errors";
 import { createEvents } from "./events";
 import { isOperation } from "./operation";
@@ -235,19 +236,18 @@ async function execute(operation: Operation, path: string, raw: unknown, runner:
 const SQLSTATE = /^[0-9A-Z]{5}$/;
 
 /** PostgreSQL이 보낸 오류인지: SQLSTATE `code`와 `severity`를 함께 가진다. `EPERM` 같은 Node 오류에는 `severity`가 없다. */
-function isDatabaseError(error: unknown): error is { code: string } {
+function isDatabaseError(error: unknown): error is { code: string; constraint?: unknown } {
 	if (typeof error !== "object" || error === null || !("code" in error) || !("severity" in error)) return false;
 	return typeof error.code === "string" && SQLSTATE.test(error.code);
 }
 
 /**
- * PostgreSQL 오류는 트랜잭션을 중단시키므로 러너에 넘긴다. 고유 제약 위반(`23505`)은 `CONFLICT`로 바꿔 넘기고 던진다.
- * 그 밖의 오류는 그대로 던진다: 리소스가 직접 던진 `CONFLICT`를 포함해 아무것도 중단시키지 않는다.
+ * PostgreSQL 오류는 트랜잭션을 중단시키므로 러너에 넘긴다. 고유 제약 위반(`23505`)은 어긴 제약의 이름에 맞는 메시지의
+ * `CONFLICT`로 바꿔 넘기고 던진다. 그 밖의 오류는 그대로 던진다: 리소스가 직접 던진 `CONFLICT`를 포함해 아무것도 중단시키지 않는다.
  */
 function asAborted(error: unknown, runner: Runner): never {
 	if (!isDatabaseError(error)) throw error;
-	const aborted =
-		error.code === "23505" ? new MontiError("CONFLICT", "The write would duplicate a unique value") : error;
+	const aborted = error.code === "23505" ? new MontiError("CONFLICT", uniqueConflictMessage(error.constraint)) : error;
 	runner.abort?.(aborted);
 	throw aborted;
 }
