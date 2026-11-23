@@ -123,7 +123,7 @@ const CATEGORIES = [{ value: "dev", label: "개발" }];
 
 /**
  * A state's colour under the pointer and the focus (tokens.md, the states section; 2026-11-12, decided while building): the error's red, the proposal's blue and a
- * picked tile's ring stay where they are, and the focus is added to them. A select and a file field keep their line and take a ring around;
+ * picked tile's ring stay where they are, and the focus is added to them. A select keeps its line and shows no ring (2026-11-24 owner); a file field keeps its line and takes a ring around;
  * a wrong check keeps its red line and ring and takes a line around outside them; a picked tile's ring steps 2px off the picture in its own
  * colour.
  */
