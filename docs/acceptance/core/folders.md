@@ -107,6 +107,16 @@
 
 </details>
 
+<details>
+<summary><strong><code>FLD-CRT-9</code></strong> 폴더를 휴지통에 보내는 동안 그 아래에 새 폴더를 만들어도 휴지통 폴더 아래에 활성 폴더가 남지 않는다</summary>
+
+- **전제**: 스키마에 컬렉션이 하나 있고 그 `scope`에 활성 루트 폴더(버릴 부모 폴더)가 하나 있다. `trash.move`가 버릴 부모 폴더의 하위 구조를 읽었지만 아직 커밋하지 않았다
+- **행동**: 버릴 부모 폴더를 `parent_id`로 하는 `folders.create`를 별도 연결에서 실행한다
+- **결과**:
+  - `FLD-CRT-9.1` 두 호출이 끝난 뒤 `folders` 테이블에 `trashed_at`이 `null`이면서 부모 폴더의 `trashed_at`이 설정된 행이 없다
+
+</details>
+
 ## 2. 목록 (`list`)
 
 <details>

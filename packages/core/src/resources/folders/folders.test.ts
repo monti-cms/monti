@@ -317,6 +317,31 @@ it("FLD-CRT-8 루트에 같은 이름의 폴더를 동시에 두 번 만들면 �
 	expect(roots.filter((row) => row.scope === POSTS && row.trashed_at === null)).toHaveLength(1);
 });
 
+it("FLD-CRT-9 폴더를 휴지통에 보내는 동안 그 아래에 새 폴더를 만들어도 휴지통 폴더 아래에 활성 폴더가 남지 않는다", async () => {
+	await syncSchemaTables(db, SCHEMA);
+	const discarded = await seedFolder({ name: "Discarded" });
+	const monti = montiOf();
+
+	// 휴지통 이동을 커밋 직전에 멈춰 두고 그 폴더 아래에 폴더 생성을 시작한다.
+	await overlap(
+		db,
+		(hold) =>
+			monti.transaction(async (tx) => {
+				const moved = await tx.trash.move({ id: discarded });
+				await hold();
+				return moved;
+			}),
+		() => monti.folders.create({ scope: POSTS, name: "Child", parent_id: discarded }),
+	);
+	const rows = await folderRows();
+	const trashed = new Set(rows.filter((row) => row.trashed_at !== null).map((row) => row.id));
+
+	// FLD-CRT-9.1
+	expect(rows.filter((row) => row.trashed_at === null && row.parent_id !== null && trashed.has(row.parent_id))).toEqual(
+		[],
+	);
+});
+
 it("FLD-UPD-12 같은 부모 아래의 두 폴더를 같은 이름으로 동시에 바꾸면 한 건만 성공하고 나머지는 거절된다", async () => {
 	const parent = await seedFolder({ name: "Parent" });
 	const [one, two] = [
