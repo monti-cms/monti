@@ -4,7 +4,7 @@
 |---|---|---|
 | 직접 호출 | 읽기는 트랜잭션 없이, 쓰기는 트랜잭션·커밋·`onEvent` 통지 순으로 실행한다 | 입력 스키마 불일치 `BAD_REQUEST` |
 | `onEvent` | 커밋된 쓰기 이벤트를 구독자마다 독립된 값으로 비동기 격리 통지한다(해제 가능) | 구독자 오류가 커밋을 막지 않음, 이벤트로 보낼 입력·결과를 복사할 수 없으면 저장하지 않고 오류 |
-| `transaction` · `dryRun` | 여러 호출을 한 트랜잭션으로 묶거나(`transaction`), 쓰기만 시험 실행 후 롤백(`dryRun`)한다. 콜백은 두 번째 인자로 그 트랜잭션의 DB(`trx`)를 받는다 | DB 고유 제약 위반(`23505`) `CONFLICT`, 콜백이 잡아도 DB 오류면 실패(`trx`로 직접 실행한 쿼리의 오류 포함), 콜백이 끝난 뒤 `tx`·`trx`로 시작한 쿼리는 실패 |
+| `transaction` · `dryRun` | 여러 호출을 한 트랜잭션으로 묶거나(`transaction`), 쓰기만 시험 실행 후 롤백(`dryRun`)한다. 콜백은 두 번째 인자로 그 트랜잭션의 DB(`trx`)를 받는다 | DB 고유 제약 위반(`23505`) `CONFLICT`, 콜백이 잡아도 DB 오류면 실패(`trx`로 직접 실행한 쿼리의 오류 포함), 콜백이 기다리지 않은 쓰기가 있으면 실패하고 아무것도 저장하지 않음 |
 | `plugins` · `spec` | 플러그인 작업·이벤트를 연결하고 모든 Operation의 이름·종류·JSON Schema를 반환한다 | 중복 경로·`monti` 최상위 메서드 이름(`spec`, `transaction`, `dryRun`, `onEvent`, `withStoredKey`) 충돌 시 `CONFLICT` |
 
 ---
@@ -241,13 +241,13 @@
 </details>
 
 <details>
-<summary><strong><code>ENG-TX-11</code></strong> 콜백이 끝난 뒤에는 그 콜백이 받은 트랜잭션으로 새 작업을 시작할 수 없다</summary>
+<summary><strong><code>ENG-TX-11</code></strong> 콜백이 기다리지 않은 쓰기가 있으면 트랜잭션은 실패하고 아무것도 저장하지 않는다</summary>
 
 - **전제**: DB에 행을 추가하는 쓰기 Operation이 등록되어 있다
-- **행동**: `monti.transaction`이나 `monti.dryRun`에서, 콜백의 프로미스가 완료된 뒤 커밋이나 롤백이 시작되기 전에, 콜백이 붙잡아 둔 `trx`로 행을 추가하고 붙잡아 둔 `tx`로 쓰기 Operation을 실행한다
+- **행동**: `monti.transaction` 콜백에서 행 하나를 저장한 뒤, 다른 행을 추가하는 작업을 기다리지 않고 반환한다
 - **결과**:
-  - `ENG-TX-11.1` 늦게 시작한 두 시도가 각각 오류를 던진다
-  - `ENG-TX-11.2` `transaction`은 정상 반환하고, 늦게 추가하려던 두 행이 DB에 없다
+  - `ENG-TX-11.1` 오류를 던진다
+  - `ENG-TX-11.2` 두 행 모두 DB에 없다
 
 </details>
 
