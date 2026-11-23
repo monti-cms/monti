@@ -39,7 +39,7 @@ async function createMedia(db: Kysely<unknown>): Promise<void> {
 		.execute();
 }
 
-/** 미디어를 영구 삭제하면 그 사용처 행도 함께 지워진다. */
+/** 미디어를 영구 삭제하면 그 사용처 행도 함께 지워진다. 같은 사용처의 같은 위치에는 같은 미디어가 한 번만 기록된다. */
 async function createMediaUses(db: Kysely<unknown>): Promise<void> {
 	await db.schema
 		.createTable("media_uses")
@@ -47,6 +47,7 @@ async function createMediaUses(db: Kysely<unknown>): Promise<void> {
 		.addColumn("source_kind", "text", (column) => column.notNull())
 		.addColumn("source_id", "uuid", (column) => column.notNull())
 		.addColumn("field_path", "text", (column) => column.notNull())
+		.addPrimaryKeyConstraint("media_uses_pkey", ["media_id", "source_kind", "source_id", "field_path"])
 		.execute();
 }
 

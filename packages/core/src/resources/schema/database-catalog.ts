@@ -11,12 +11,12 @@ interface CatalogColumn {
 	references: NonNullable<ColumnSpec["references"]> | null;
 }
 
-/** `public` 스키마에서 컬렉션 주석이 달린 테이블 이름들. */
+/** 연결의 현재 스키마(`current_schema()`)에서 컬렉션 주석이 달린 테이블 이름들. */
 async function collectionsInDatabase(db: QueryExecutorProvider): Promise<string[]> {
 	const { rows } = await sql<{ name: string }>`
 		select c.relname as name
 		from pg_class c join pg_namespace n on n.oid = c.relnamespace
-		where n.nspname = 'public' and c.relkind = 'r' and obj_description(c.oid, 'pg_class') = ${collectionMarker}
+		where n.nspname = current_schema() and c.relkind = 'r' and obj_description(c.oid, 'pg_class') = ${collectionMarker}
 	`.execute(db);
 	return rows.map((row) => row.name);
 }
@@ -25,7 +25,7 @@ function columnOf({ name, type, references }: CatalogColumn): ColumnSpec {
 	return references === null ? { name, type } : { name, type, references };
 }
 
-/** `public` 스키마의 테이블 하나가 가진 열 중 `fixed`가 아닌 열들. */
+/** 현재 스키마의 테이블 하나가 가진 열 중 `fixed`가 아닌 열들. */
 async function columnsInDatabase(
 	db: QueryExecutorProvider,
 	table: string,
@@ -44,7 +44,7 @@ async function columnsInDatabase(
 			from pg_constraint k join pg_class t on t.oid = k.confrelid
 			where k.conrelid = c.oid and k.contype = 'f' and k.conkey = array[a.attnum]
 		) fk on true
-		where n.nspname = 'public' and c.relname = ${table} and a.attnum > 0 and not a.attisdropped
+		where n.nspname = current_schema() and c.relname = ${table} and a.attnum > 0 and not a.attisdropped
 	`.execute(db);
 	return rows.filter((row) => !fixed.includes(row.name)).map(columnOf);
 }

@@ -130,17 +130,23 @@ export interface ReadContext {
 /** What a write's `run` gets: a write always runs inside a transaction. */
 export interface WriteContext extends ReadContext {
 	db: Transaction<Database>;
-	/** Changes the transaction's copy of the schema; written to the shared state and the file after the commit. */
-	setSchema: (schema: Schema) => void;
-	/** Changes the transaction's copy of the site name; written to the shared state and the file after the commit. */
-	setConfig: (config: Pick<MontiConfig, "name">) => void;
+	/**
+	 * 트랜잭션의 스키마 사본을 바꾼다. 다른 스키마·설정 변경과 차례를 지키며, 커밋 뒤 공유 상태와 파일에 반영된다.
+	 */
+	setSchema: (schema: Schema) => Promise<void>;
+	/** 트랜잭션의 사이트 이름 사본을 바꾼다. 다른 스키마·설정 변경과 차례를 지키며, 커밋 뒤 공유 상태와 파일에 반영된다. */
+	setConfig: (config: Pick<MontiConfig, "name">) => Promise<void>;
 }
 
 /** One transaction's copy of the schema and config: its changes reach the shared state and the files only on `commit`. */
 export interface Stage {
 	context(db: Transaction<Database>): WriteContext;
-	/** Writes the copy's changes to the shared state and the files, in the order they were made. */
+	/** 커밋 전에 바뀐 파일의 자리를 확인하고 새 내용을 임시 파일로 써 둔다. 쓸 수 없으면 던져 트랜잭션을 롤백시킨다. */
+	prepare(): Promise<void>;
+	/** 커밋 뒤 임시 파일을 제자리로 바꾸고 사본의 변경을 공유 상태에 반영한다. 바꾼 순서대로. */
 	commit(): Promise<void>;
+	/** 남은 임시 파일을 지우고 차례를 넘긴다. 커밋·롤백·`dryRun`과 상관없이 끝에 부른다. */
+	release(): Promise<void>;
 }
 
 export interface ReadOperation<TInput, TOutput> {

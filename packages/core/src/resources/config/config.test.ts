@@ -65,6 +65,19 @@ it("CFG-GET-1 현재 사이트 설정을 돌려준다", async () => {
 	expect(await monti.config.get({})).toEqual({ name: "Monti Blog", dev: false });
 });
 
+it("CFG-GET-2 조회해서 받은 설정을 고쳐도 운영 서버가 개발 모드로 바뀌지 않는다", async () => {
+	const monti = montiOf(false);
+	const received = await monti.config.get({});
+	received.dev = true;
+
+	const update = monti.config.update({ name: newName });
+
+	// CFG-GET-2.1
+	await expect(update).rejects.toMatchObject({ code: "FORBIDDEN" });
+	// CFG-GET-2.2
+	expect((await monti.config.get({})).dev).toBe(false);
+});
+
 it("CFG-UPD-1 개발 서버에서 사이트 이름을 바꾸고 설정 파일에 기록한다", async () => {
 	const monti = montiOf(true);
 
@@ -140,4 +153,58 @@ it("CFG-UPD-6 사이트 이름을 빈 문자열로 바꿀 수 없다", async () 
 	await expect(monti.config.update({ name: "" })).rejects.toMatchObject({ code: "BAD_REQUEST" });
 	// CFG-UPD-6.2
 	expect(await monti.config.get({})).toEqual({ name: "Monti Blog", dev: true });
+});
+
+it("CFG-UPD-7 설정 파일에 플러그인 이름이 사이트 이름보다 먼저 적혀 있어도 사이트 이름만 바뀐다", async () => {
+	await writeFile(
+		configFile,
+		`export default {
+	plugins: [{ name: "monti-plugin-search" }],
+	name: "Monti Blog", dev: true,
+};
+`,
+	);
+	const monti = montiOf(true);
+
+	await monti.config.update({ name: newName });
+	const module: { default: MontiConfig & { plugins: { name: string }[] } } = await import(configFile);
+
+	// CFG-UPD-7.1
+	expect(module.default.plugins[0]?.name).toBe("monti-plugin-search");
+	// CFG-UPD-7.2
+	expect(module.default.name).toBe(newName);
+});
+
+it("CFG-UPD-8 개발 서버에서 사이트 이름을 동시에 두 번 바꿔도 설정 파일이 깨지지 않고 조회 결과와 일치한다", async () => {
+	const monti = montiOf(true);
+
+	const runs = await Promise.allSettled([
+		monti.config.update({ name: "가 사이트" }),
+		monti.config.update({ name: "나 사이트" }),
+	]);
+	const { name } = await monti.config.get({});
+
+	// CFG-UPD-8.1
+	expect(runs.map((run) => run.status)).toEqual(["fulfilled", "fulfilled"]);
+	// CFG-UPD-8.2
+	expect(["가 사이트", "나 사이트"]).toContain(name);
+	// CFG-UPD-8.3
+	expect(await readFile(configFile, "utf8")).toBe(originalText.replace('"Monti Blog"', JSON.stringify(name)));
+});
+
+it("CFG-UPD-9 설정 파일에 사이트 이름이 글자 그대로 적혀 있지 않으면 이름을 바꿀 수 없다", async () => {
+	const variableText = `const siteName = "Monti Blog";
+export default { name: siteName, dev: true };
+`;
+	await writeFile(configFile, variableText);
+	const monti = montiOf(true);
+
+	const update = monti.config.update({ name: newName });
+
+	// CFG-UPD-9.1
+	await expect(update).rejects.toMatchObject({ code: "BAD_REQUEST" });
+	// CFG-UPD-9.2
+	expect(await monti.config.get({})).toEqual({ name: "Monti Blog", dev: true });
+	// CFG-UPD-9.3
+	expect(await readFile(configFile, "utf8")).toBe(variableText);
 });

@@ -2,7 +2,8 @@ import { randomUUID } from "node:crypto";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { type Kysely, sql } from "kysely";
+import { Kysely, PostgresDialect, sql } from "kysely";
+import pg from "pg";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { z } from "zod";
 import {
@@ -11,6 +12,7 @@ import {
 	recordedMigrations,
 	type TestDatabase,
 	tableExists,
+	testServer,
 } from "./__test__/database";
 import { initial } from "./db/migrations/0001-initial";
 import type { Database, Migration } from "./db/types";
@@ -23,6 +25,7 @@ import {
 	type Plugin,
 	planSchemaDiff,
 	type Schema,
+	type SchemaSnapshot,
 	snapshotOf,
 	specOf,
 	startMonti,
@@ -439,4 +442,101 @@ it("START-12 스키마 변경 SQL은 열 추가·타입 변환·외래 키 대�
 		author: ["text", null],
 		writer: ["uuid references members", null],
 	});
+});
+
+it("START-15 개발 서버를 동시에 두 번 띄워도 컬렉션 테이블 준비가 둘 다 성공한다", async () => {
+	const runs = await Promise.allSettled([prepare([], schema, { dev: true }), prepare([], schema, { dev: true })]);
+
+	// START-15.1
+	expect(runs.map((run) => run.status)).toEqual(["fulfilled", "fulfilled"]);
+	// START-15.2
+	expect([await tableExists(testDb.db, "posts"), await tableExists(testDb.db, "posts_data")]).toEqual([true, true]);
+});
+
+it("START-16 이름이 같은 플러그인이 둘 이상 있으면 마이그레이션을 시작할 수 없다", async () => {
+	const migrated = prepare([{ name: "albums" }, { name: "albums" }]);
+
+	// START-16.1
+	await expect(migrated).rejects.toMatchObject({ code: "CONFLICT" });
+	// START-16.2
+	expect(await tableExists(testDb.db, "migrations")).toBe(false);
+});
+
+it("START-17 예약된 출처 이름의 플러그인으로는 마이그레이션을 시작할 수 없다", async () => {
+	const codes: unknown[] = [];
+	for (const name of ["@monti-cms/core", "project"]) {
+		codes.push(await prepare([{ name }]).catch((error: { code: string }) => error.code));
+	}
+
+	// START-17.1
+	expect(codes).toEqual(["BAD_REQUEST", "BAD_REQUEST"]);
+	// START-17.2
+	expect(await tableExists(testDb.db, "migrations")).toBe(false);
+});
+
+it("START-18 허용되지 않은 식별자가 들어 있는 이전 스냅샷으로는 스키마 변경 SQL을 만들 수 없다", () => {
+	const column = (name: string) => ({ data: [{ name, type: "text" }], rels: [] });
+	const snapshots: SchemaSnapshot[] = [
+		{ collections: { 'po"sts': column("title") } },
+		{ collections: { "po.sts": column("title") } },
+		{ collections: { "": column("title") } },
+		{ collections: { ["c".repeat(64)]: column("title") } },
+		{ collections: { posts: column('ti"tle') } },
+		{ collections: { posts: column("ti.tle") } },
+		{ collections: { posts: column("") } },
+		{ collections: { posts: column("가".repeat(22)) } },
+	];
+
+	const codes = snapshots.map((prev) => {
+		try {
+			planSchemaDiff(prev, schema);
+			return null;
+		} catch (error) {
+			return (error as { code: string }).code;
+		}
+	});
+
+	// START-18.1
+	expect(codes).toEqual(snapshots.map(() => "BAD_REQUEST"));
+});
+
+/** `search_path`가 `app` 스키마인 연결로 같은 테스트 DB를 여는 Kysely. */
+async function appSchemaDb(): Promise<Kysely<Database>> {
+	await sql`create schema app`.execute(db);
+	const { rows } = await sql<{ name: string }>`select current_database() as name`.execute(db);
+	const pool = new pg.Pool({ ...testServer(rows[0]?.name), options: "-c search_path=app", max: 2 });
+	return new Kysely<Database>({ dialect: new PostgresDialect({ pool }) });
+}
+
+it("START-19 기본 DB 스키마가 `public`이 아니어도 개발 서버 동기화가 같은 스키마에서 동작한다", async () => {
+	const appDb = await appSchemaDb();
+	const config = { name: "Monti Blog", dev: true };
+	const withSummary: Schema = {
+		locales: ["ko"],
+		collections: { posts: { fields: { title: { type: "text" }, summary: { type: "text" } } } },
+	};
+	try {
+		await migrateMonti({ db: appDb, schema, config });
+
+		await migrateMonti({ db: appDb, schema: withSummary, config });
+	} finally {
+		await appDb.destroy();
+	}
+	const { rows } = await sql<{ name: string }>`
+		select column_name as name from information_schema.columns
+		where table_schema = 'app' and table_name = 'posts_data' and column_name = 'summary'
+	`.execute(db);
+
+	// START-19.1
+	expect(rows).toEqual([{ name: "summary" }]);
+	// START-19.2
+	expect(await tableExists(testDb.db, "posts")).toBe(false);
+});
+
+it("START-20 DB 없이 명세를 만들 때도 엔진 기본 메서드 이름을 플러그인 리소스 이름으로 쓸 수 없다", () => {
+	const tag = defineWrite({ input: z.object({ name: z.string() }), run: tagRun });
+	const plugin: Plugin = { name: "albums", operations: { spec: { tag } } };
+
+	// START-20.1
+	expect(() => specOf([plugin])).toThrow(expect.objectContaining({ code: "CONFLICT" }));
 });

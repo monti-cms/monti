@@ -4,12 +4,13 @@ import type { MontiConfig, ReadContext, WriteContext } from "../../engine/types"
 
 const nameInput = z.object({ name: z.string().min(1) });
 
+/** 설정의 사본: 받은 쪽이 고쳐도 엔진의 설정은 그대로다. 저장소·플러그인은 함수를 가진 객체라 그대로 가리킨다. */
 async function getConfig(_input: unknown, ctx: ReadContext): Promise<MontiConfig> {
-	return ctx.config;
+	return { ...ctx.config };
 }
 
 async function updateConfig(input: z.infer<typeof nameInput>, ctx: WriteContext): Promise<{ name: string }> {
-	ctx.setConfig(input);
+	await ctx.setConfig(input);
 	return input;
 }
 

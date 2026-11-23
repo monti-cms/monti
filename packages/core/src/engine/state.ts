@@ -1,50 +1,112 @@
+import { readFile } from "node:fs/promises";
 import type { Kysely, Transaction } from "kysely";
+import { lockSchemaChanges } from "../db/locks";
 import type { Database } from "../db/types";
-import { writeConfigName } from "./config-file";
+import { configWithName } from "./config-file";
 import { MontiError } from "./errors";
-import { writeSchemaFile } from "./schema-file";
+import { type FileChange, fileChanges } from "./file-swap";
+import { schemaText } from "./schema-file";
 import type { MontiConfig, MontiState, ReadContext, Schema, Stage, StorageAdapter, WriteContext } from "./types";
+
+/** 차례를 기다려 받는 잠금: 받은 함수를 부르면 다음 차례로 넘어간다. */
+type Acquire = () => Promise<() => void>;
+
+/** 한 엔진 안의 차례 줄: 먼저 받은 쪽이 풀어야 다음 쪽이 받는다. */
+function createQueue(): Acquire {
+	let tail: Promise<void> = Promise.resolve();
+	return function acquire() {
+		let unlock = (): void => {};
+		const turn = new Promise<void>((resolve) => {
+			unlock = resolve;
+		});
+		const ready = tail.then(() => unlock);
+		tail = tail.then(() => turn);
+		return ready;
+	};
+}
 
 /** 공유하는 스키마와 설정: 읽기는 이것을 보고, 트랜잭션마다 자기 단계(stage)에서 바꾼다. */
 export function createState(initial: MontiState) {
 	const shared = { ...initial };
+	const acquire = createQueue();
 	function readContext(db: Kysely<Database>): ReadContext {
 		return { db, schema: shared.schema, config: shared.config, storage: shared.config?.storage };
 	}
 	/** 트랜잭션 하나의 단계. `dryRun`이면 그 단계의 저장소는 되돌릴 수 없는 티켓 발급과 삭제를 거절한다. */
 	function stage(dryRun = false): Stage {
-		return stageOf(shared, dryRun);
+		return stageOf(shared, acquire, dryRun);
 	}
 	return { readContext, stage };
 }
 
-function stageOf(shared: MontiState, dryRun: boolean): Stage {
-	const copy = { schema: shared.schema, config: dryRun ? dryRunConfig(shared.config) : shared.config };
-	const effects: (() => Promise<void>)[] = [];
-	function setSchema(schema: Schema): void {
-		allowChanges(copy.config);
-		copy.schema = schema;
-		effects.push(async () => {
-			await writeSchemaFile(shared.schemaFile, schema);
-			shared.schema = schema;
-		});
+/**
+ * 스키마·설정을 바꾸는 단계의 잠금. DB 잠금을 먼저 잡고 엔진의 차례 줄을 받는다: 앞 단계가 DB 잠금을 쥔 채 기다리면
+ * PostgreSQL이 교착을 알아챈다. 차례는 커밋 뒤 파일 교체까지 쥐고 있다가 `release`에서 넘긴다. 같은 단계는 한 번만 받는다.
+ */
+function changeLock(acquire: Acquire) {
+	let held: Promise<() => void> | undefined;
+	async function hold(db: Transaction<Database>): Promise<void> {
+		held ??= lockSchemaChanges(db).then(acquire);
+		await held;
 	}
-	function setConfig(config: Pick<MontiConfig, "name">): void {
+	function release(): void {
+		held?.then((unlock) => unlock(), ignore);
+	}
+	return { hold, release };
+}
+
+function ignore(): void {}
+
+/** 스키마 파일의 변경: 새 스키마의 글자로 바꾸고 공유 스키마에 반영한다. */
+function schemaChange(shared: MontiState, schema: Schema): FileChange {
+	async function text(): Promise<string> {
+		return schemaText(schema);
+	}
+	function apply(): void {
+		shared.schema = schema;
+	}
+	return { file: shared.schemaFile, text, apply };
+}
+
+/** 설정 파일의 변경: 준비할 때 파일을 읽어 사이트 이름 자리만 바꾸고 공유 설정에 반영한다. */
+function configChange(shared: MontiState, changed: MontiConfig): FileChange {
+	async function text(): Promise<string> {
+		return configWithName(await readFile(shared.configFile, "utf8"), changed.name);
+	}
+	function apply(): void {
+		shared.config = changed;
+	}
+	return { file: shared.configFile, text, apply };
+}
+
+function stageOf(shared: MontiState, acquire: Acquire, dryRun: boolean): Stage {
+	const copy = { schema: shared.schema, config: dryRun ? dryRunConfig(shared.config) : shared.config };
+	const files = fileChanges();
+	const lock = changeLock(acquire);
+	async function setSchema(db: Transaction<Database>, schema: Schema): Promise<void> {
 		allowChanges(copy.config);
-		const changed = { ...copy.config, name: config.name };
-		copy.config = changed;
-		effects.push(async () => {
-			await writeConfigName(shared.configFile, changed.name);
-			shared.config = changed;
-		});
+		await lock.hold(db);
+		copy.schema = schema;
+		files.add(schemaChange(shared, schema));
+	}
+	async function setConfig(db: Transaction<Database>, config: Pick<MontiConfig, "name">): Promise<void> {
+		allowChanges(copy.config);
+		await lock.hold(db);
+		copy.config = { ...copy.config, name: config.name };
+		files.add(configChange(shared, copy.config));
 	}
 	function context(db: Transaction<Database>): WriteContext {
-		return { db, schema: copy.schema, config: copy.config, storage: copy.config?.storage, setSchema, setConfig };
+		const changes: Pick<WriteContext, "setSchema" | "setConfig"> = {
+			setSchema: setSchema.bind(null, db),
+			setConfig: setConfig.bind(null, db),
+		};
+		return { db, schema: copy.schema, config: copy.config, storage: copy.config?.storage, ...changes };
 	}
-	async function commit(): Promise<void> {
-		for (const effect of effects) await effect();
+	async function release(): Promise<void> {
+		await files.discard();
+		lock.release();
 	}
-	return { context, commit };
+	return { context, prepare: files.prepare, commit: files.commit, release };
 }
 
 /** Only a dev server changes the schema and the config. */

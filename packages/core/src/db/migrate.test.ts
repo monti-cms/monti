@@ -1,4 +1,5 @@
-import type { Kysely } from "kysely";
+import { randomUUID } from "node:crypto";
+import { type Kysely, sql } from "kysely";
 import { afterEach, beforeEach, expect, it } from "vitest";
 import {
 	columnsOf,
@@ -138,4 +139,66 @@ it("DB-SCH-1 첫 마이그레이션이 8개 고정 도메인 테이블을 만든
 	expect(await columnsOf(testDb.db, "api_keys")).toEqual(["id", "service", "name", "secret", "last4"].sort());
 	// DB-SCH-1.9
 	expect(await recordedMigrations(testDb.db)).toEqual([["@monti-cms/core", "0001-initial"]]);
+});
+
+/** 실행될 때마다 `counts`에 자기 이름의 횟수를 하나 올리고 `table`을 만드는 마이그레이션. */
+function counting(name: string, table: string, counts: Map<string, number>): Migration {
+	async function up(db: Kysely<unknown>): Promise<void> {
+		counts.set(name, (counts.get(name) ?? 0) + 1);
+		await db.schema.createTable(table).addColumn("id", "integer").execute();
+	}
+	return { name, up };
+}
+
+it("DB-MIG-5 같은 DB에 마이그레이션을 동시에 두 번 실행해도 각 단계는 한 번만 실행되고 둘 다 성공한다", async () => {
+	const counts = new Map<string, number>();
+	const steps = [counting("first", "first_table", counts), counting("second", "second_table", counts)];
+
+	const runs = await Promise.allSettled([
+		migrate(testDb.db, "@monti-cms/core", steps),
+		migrate(testDb.db, "@monti-cms/core", steps),
+	]);
+
+	// DB-MIG-5.1
+	expect(runs.map((run) => run.status)).toEqual(["fulfilled", "fulfilled"]);
+	// DB-MIG-5.2
+	expect(Object.fromEntries(counts)).toEqual({ first: 1, second: 1 });
+	// DB-MIG-5.3
+	expect(await recordedMigrations(testDb.db)).toEqual([
+		["@monti-cms/core", "first"],
+		["@monti-cms/core", "second"],
+	]);
+});
+
+it("DB-MIG-6 이름이 같은 마이그레이션 단계가 중복으로 들어 있으면 실행할 수 없다", async () => {
+	await migrate(testDb.db, "@monti-cms/core", []);
+	const log: string[] = [];
+
+	const run = migrate(testDb.db, "@monti-cms/core", [logged("same", log), logged("same", log)]);
+
+	// DB-MIG-6.1
+	await expect(run).rejects.toThrow();
+	// DB-MIG-6.2
+	expect(log).toEqual([]);
+	// DB-MIG-6.3
+	expect(await recordedMigrations(testDb.db)).toEqual([]);
+});
+
+it("DB-SCH-2 같은 글이나 템플릿의 같은 위치에 같은 미디어 사용 기록을 두 번 남길 수 없다", async () => {
+	await migrate(testDb.db, "@monti-cms/core", [initial]);
+	const [media, source] = [randomUUID(), randomUUID()];
+	await sql`insert into media (id, key, filename, mime_type, size) values (${media}, ${media}, 'a.png', 'image/png', 1)`.execute(
+		testDb.db,
+	);
+	const insertUse = sql`insert into media_uses (media_id, source_kind, source_id, field_path)
+		values (${media}, 'entry', ${source}, 'cover')`;
+	await insertUse.execute(testDb.db);
+
+	const duplicate = insertUse.execute(testDb.db);
+
+	// DB-SCH-2.1
+	await expect(duplicate).rejects.toMatchObject({ code: "23505" });
+	const { rows } = await sql<{ count: string }>`select count(*) as count from media_uses`.execute(testDb.db);
+	// DB-SCH-2.2
+	expect(rows).toEqual([{ count: "1" }]);
 });

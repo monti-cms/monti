@@ -3,7 +3,7 @@ import { migrate } from "./db/migrate";
 import { initial } from "./db/migrations/0001-initial";
 import type { Database, Migration } from "./db/types";
 import { createMonti } from "./engine/engine";
-import { keyServicesOf, withPlugins } from "./engine/plugins";
+import { checkPluginNames, keyServicesOf, withPlugins } from "./engine/plugins";
 import { validSchema } from "./engine/schema-file";
 import { specsOf } from "./engine/spec";
 import type {
@@ -109,13 +109,15 @@ export function startMonti(options: StartOptions): Monti {
 
 /**
  * DB를 준비한다: 스키마를 검사하고, core 마이그레이션과 각 플러그인의 마이그레이션을 `config.plugins` 순서로 실행한다.
- * 개발 서버(`config.dev: true`)이면 스키마의 컬렉션 테이블을 DB에 맞춘다. 스키마가 올바르다고 확인되기 전에는 DB를
- * 건드리지 않는다.
+ * 개발 서버(`config.dev: true`)이면 스키마의 컬렉션 테이블을 DB에 맞춘다. 스키마와 플러그인 이름이 올바르다고 확인되기
+ * 전에는 DB를 건드리지 않는다.
  */
 export async function migrateMonti(options: MigrateOptions): Promise<void> {
 	const { db } = options;
+	const plugins = options.config.plugins ?? [];
 	const checked = validSchema(options.schema);
-	await migrateAll(db, options.config.plugins ?? []);
+	checkPluginNames(plugins);
+	await migrateAll(db, plugins);
 	if (options.config.dev === true) await db.transaction().execute((tx) => syncSchemaTables(tx, checked));
 }
 

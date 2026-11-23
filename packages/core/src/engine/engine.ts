@@ -31,8 +31,8 @@ interface Runner {
 	write(run: (ctx: WriteContext) => Promise<unknown>): Promise<unknown>;
 	/** Takes a write's event: sent at once after a direct call's commit, queued inside a callback. */
 	emit(event: MontiEvent): void;
-	/** Takes the `CONFLICT` made of a unique violation: a callback keeps it to fail the whole call even when the callback caught it. */
-	conflict?(error: MontiError): void;
+	/** 트랜잭션을 중단시킨 DB 오류(고유 제약 위반은 `CONFLICT`로 바꾼 것)를 받는다: 콜백이 잡아도 호출 전체를 실패시킨다. */
+	abort?(error: unknown): void;
 }
 
 /**
@@ -66,16 +66,27 @@ export function createMonti<R extends ResourceTree>(
 	return monti;
 }
 
-/** Runs `fn` in a new transaction with a stage of its own; the stage's changes are applied once it commits. */
+/**
+ * `fn`을 자기 단계를 가진 새 트랜잭션에서 실행한다. 커밋 전에 단계의 파일 변경을 임시 파일로 준비해, 쓸 수 없으면
+ * 트랜잭션째 롤백한다. 커밋한 뒤 파일을 바꾸고 공유 상태에 반영한다.
+ */
 async function committed<T>(
 	db: Kysely<Database>,
 	state: State,
 	fn: (trx: Transaction<Database>, stage: Stage) => Promise<T>,
 ): Promise<T> {
 	const stage = state.stage();
-	const result = await db.transaction().execute((trx) => fn(trx, stage));
-	await stage.commit();
-	return result;
+	try {
+		const result = await db.transaction().execute(async (trx) => {
+			const value = await fn(trx, stage);
+			await stage.prepare();
+			return value;
+		});
+		await stage.commit();
+		return result;
+	} finally {
+		await stage.release();
+	}
 }
 
 function directRunner(db: Kysely<Database>, state: State, emit: (event: MontiEvent) => void): Runner {
@@ -88,12 +99,7 @@ function directRunner(db: Kysely<Database>, state: State, emit: (event: MontiEve
 	return { context, write, emit };
 }
 
-function callbackRunner(
-	trx: Transaction<Database>,
-	stage: Stage,
-	queue: MontiEvent[],
-	conflicts: MontiError[],
-): Runner {
+function callbackRunner(trx: Transaction<Database>, stage: Stage, queue: MontiEvent[], aborts: unknown[]): Runner {
 	function context(): ReadContext {
 		return stage.context(trx);
 	}
@@ -103,23 +109,22 @@ function callbackRunner(
 	function emit(event: MontiEvent): void {
 		queue.push(event);
 	}
-	function conflict(error: MontiError): void {
-		conflicts.push(error);
+	function abort(error: unknown): void {
+		aborts.push(error);
 	}
-	return { context, write, emit, conflict };
+	return { context, write, emit, abort };
 }
 
 /**
- * 콜백의 값, 또는 콜백의 쓰기가 낸 첫 고유 제약 위반. 콜백이 그 오류를 잡고 정상 반환해도, 잡은 뒤 이어간 DB 호출이
- * 중단된 트랜잭션 오류(`25P02`)로 실패해도 그 `CONFLICT`로 실패한다.
+ * 콜백의 값, 또는 콜백의 쓰기가 낸 첫 DB 오류(고유 제약 위반은 `CONFLICT`). 콜백이 그 오류를 잡고 정상 반환해도, 잡은 뒤
+ * 이어간 DB 호출이 중단된 트랜잭션 오류(`25P02`)로 실패해도 그 첫 오류로 실패한다.
  */
-async function runSettled<T>(run: () => Promise<T>, conflicts: MontiError[]): Promise<T> {
+async function runSettled<T>(run: () => Promise<T>, aborts: unknown[]): Promise<T> {
 	const result = await run().then(
 		(value) => ({ value }),
 		(error: unknown) => ({ error }),
 	);
-	const [first] = conflicts;
-	if (first !== undefined) throw first;
+	if (aborts.length > 0) throw aborts[0];
 	if ("error" in result) throw result.error;
 	return result.value;
 }
@@ -133,10 +138,10 @@ function transactionOf<R extends ResourceTree>(
 ) {
 	return async function transaction<T>(fn: (tx: MontiClient<R>) => Promise<T>): Promise<T> {
 		const queue: MontiEvent[] = [];
-		const conflicts: MontiError[] = [];
+		const aborts: unknown[] = [];
 		const result = await committed(db, state, async (trx, stage) => {
-			const client = buildClient(tree, "", callbackRunner(trx, stage, queue, conflicts), true);
-			return runSettled(() => fn(client as MontiClient<R>), conflicts);
+			const client = buildClient(tree, "", callbackRunner(trx, stage, queue, aborts), true);
+			return runSettled(() => fn(client as MontiClient<R>), aborts);
 		});
 		for (const event of queue) emit(event);
 		return result;
@@ -150,12 +155,14 @@ function transactionOf<R extends ResourceTree>(
 function dryRunOf<R extends ResourceTree>(db: Kysely<Database>, state: State, tree: ResourceTree) {
 	return async function dryRun<T>(fn: (tx: MontiWriteClient<R>) => Promise<T>): Promise<T> {
 		const trx = await db.startTransaction().execute();
-		const conflicts: MontiError[] = [];
+		const stage = state.stage(true);
+		const aborts: unknown[] = [];
 		try {
-			const client = buildClient(tree, "", callbackRunner(trx, state.stage(true), [], conflicts), false);
-			return await runSettled(() => fn(client as MontiWriteClient<R>), conflicts);
+			const client = buildClient(tree, "", callbackRunner(trx, stage, [], aborts), false);
+			return await runSettled(() => fn(client as MontiWriteClient<R>), aborts);
 		} finally {
 			await trx.rollback().execute();
+			await stage.release();
 		}
 	};
 }
@@ -180,34 +187,45 @@ function bind(operation: Operation, path: string, runner: Runner): (input: unkno
 /** 비밀번호·세션 토큰·외부 API 키 원문이 오가는 리소스: 이 리소스들의 쓰기는 구독자에게 통지하지 않는다. */
 const SILENT_RESOURCES = ["admin", "session", "keys"];
 
-/** `path`의 Operation이 통지하지 않는 리소스에 속하는지. */
+/** 서명된 업로드 URL·헤더를 돌려주는 쓰기: 구독자에게 통지하지 않는다. */
+const SILENT_OPERATIONS = ["media.startUpload"];
+
+/** `path`의 Operation이 통지하지 않는 리소스에 속하거나 통지하지 않는 쓰기인지. */
 function isSilent(path: string): boolean {
-	return SILENT_RESOURCES.includes(path.split(".")[0]);
+	return SILENT_RESOURCES.includes(path.split(".")[0]) || SILENT_OPERATIONS.includes(path);
 }
 
 /**
  * 읽기는 러너의 DB에서 실행한다. 쓰기는 러너의 트랜잭션에서 실행하고 그 이벤트를 러너에 넘기되, `admin`·`session`·`keys`
- * 리소스의 쓰기는 이벤트를 넘기지 않는다.
+ * 리소스의 쓰기와 `media.startUpload`는 이벤트를 넘기지 않는다.
  */
 async function execute(operation: Operation, path: string, raw: unknown, runner: Runner): Promise<unknown> {
 	const input = parseInput(operation, raw);
 	if (operation.kind === "read") return operation.run(input, runner.context());
-	const output = await runner.write((ctx) => operation.run(input, ctx)).catch((error) => asConflict(error, runner));
+	const output = await runner.write((ctx) => operation.run(input, ctx)).catch((error) => asAborted(error, runner));
 	if (!isSilent(path)) runner.emit({ operation: path, input, output });
 	return output;
 }
 
+/** PostgreSQL 오류의 SQLSTATE: 다섯 글자의 숫자·대문자. */
+const SQLSTATE = /^[0-9A-Z]{5}$/;
+
+/** PostgreSQL이 보낸 오류인지: SQLSTATE `code`와 `severity`를 함께 가진다. `EPERM` 같은 Node 오류에는 `severity`가 없다. */
+function isDatabaseError(error: unknown): error is { code: string } {
+	if (typeof error !== "object" || error === null || !("code" in error) || !("severity" in error)) return false;
+	return typeof error.code === "string" && SQLSTATE.test(error.code);
+}
+
 /**
- * A PostgreSQL unique violation (`23505`) becomes `CONFLICT` and is handed to the runner, as it leaves the transaction
- * aborted. Any other error is thrown as it is, a `CONFLICT` a resource throws itself included: it aborts nothing.
+ * PostgreSQL 오류는 트랜잭션을 중단시키므로 러너에 넘긴다. 고유 제약 위반(`23505`)은 `CONFLICT`로 바꿔 넘기고 던진다.
+ * 그 밖의 오류는 그대로 던진다: 리소스가 직접 던진 `CONFLICT`를 포함해 아무것도 중단시키지 않는다.
  */
-function asConflict(error: unknown, runner: Runner): never {
-	if (typeof error === "object" && error !== null && "code" in error && error.code === "23505") {
-		const conflict = new MontiError("CONFLICT", "The write would duplicate a unique value");
-		runner.conflict?.(conflict);
-		throw conflict;
-	}
-	throw error;
+function asAborted(error: unknown, runner: Runner): never {
+	if (!isDatabaseError(error)) throw error;
+	const aborted =
+		error.code === "23505" ? new MontiError("CONFLICT", "The write would duplicate a unique value") : error;
+	runner.abort?.(aborted);
+	throw aborted;
 }
 
 /** A call without an input is parsed as given first, then as `{}` when the schema does not accept `undefined`. */
