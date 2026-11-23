@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { TabLink, TabLinks, Tabs, TabsContent, TabsList, TabsTrigger, Text } from "./index";
 
-/** Underlined text tabs that switch the view in place: language, status, a panel's parts. The picked one is ink at 600 with a 1.5px rule. */
+/** Underlined text tabs that switch the view in place: language, status, a panel's parts. The words are 13px 500; the picked one is ink with a 2px rule. */
 const meta = {
 	title: "Controls/Tabs/Tabs",
 	component: Tabs,
@@ -47,7 +47,7 @@ export const CountsAndDots: Story = {
 	),
 };
 
-/** `bar`: the tab row at the top of a pane, 44px, its underline on the pane's own rule. */
+/** `bar`: the tab row at the top of a pane, 48px, its underline on the pane's own rule. */
 export const Bar: Story = {
 	render: () => (
 		<Tabs defaultValue="props">

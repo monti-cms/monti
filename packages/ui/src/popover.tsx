@@ -16,7 +16,7 @@ function PopoverTrigger({ ...props }: PopoverPrimitive.Trigger.Props) {
 
 const POPOVER_WIDTH = {
 	sm: "w-monti-menu",
-	md: "w-monti-panel",
+	md: "w-[300px]",
 	lg: "w-monti-assistant",
 	dialog: "w-[420px] max-w-(--available-width)",
 	auto: "w-auto",
@@ -55,13 +55,14 @@ function PopoverContent({
 			>
 				<PopoverPrimitive.Popup
 					data-slot="popover-content"
+					data-shape="square"
 					className={cn(
 						MENU_CARD,
 						MENU_MOTION,
 						"z-50 gap-monti-12",
 						POPOVER_WIDTH[width],
 						padding === "default" && "px-monti-16 pt-monti-12 pb-monti-16",
-						padding === "menu" && "gap-0 p-monti-6",
+						padding === "menu" && "gap-0 p-monti-4",
 						FIT_HEIGHT,
 						"overflow-y-auto",
 						className,

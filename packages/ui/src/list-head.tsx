@@ -359,10 +359,7 @@ function ListHead({
 							}}
 						>
 							{index === 0 && selectAll && !drag && (
-								<span
-									data-slot="select-all"
-									className="absolute top-1/2 -left-[26px] z-1 flex -translate-y-1/2 opacity-0 pointer-coarse:opacity-100 focus-within:opacity-100 group-hover/head:opacity-100"
-								>
+								<span data-slot="select-all" className="absolute top-1/2 -left-[26px] z-1 flex -translate-y-1/2">
 									<Checkbox
 										checked={selectAll.state === "all"}
 										indeterminate={selectAll.state === "some"}

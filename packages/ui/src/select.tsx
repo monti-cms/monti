@@ -64,7 +64,7 @@ function SelectValue({ className, ...props }: SelectPrimitive.Value.Props) {
  */
 export const SELECT_TRIGGER = cn(
 	FIELD_HOVER,
-	"flex items-center justify-between gap-monti-8 whitespace-nowrap rounded-none border-0 border-monti-strong border-b bg-transparent text-left text-monti-body text-monti-default outline-none transition-colors focus-visible:border-monti-contrast aria-expanded:border-monti-contrast disabled:cursor-default disabled:opacity-45 aria-readonly:cursor-default aria-readonly:select-text aria-readonly:focus-visible:border-monti-strong aria-readonly:focus-visible:ring-2 aria-readonly:focus-visible:ring-monti-contrast/60 aria-readonly:[&_[data-slot=select-icon]]:hidden aria-invalid:border-monti-danger aria-invalid:focus-visible:ring-2 aria-invalid:focus-visible:ring-monti-contrast/60 data-[size=default]:h-monti-control-lg data-[size=md]:h-monti-control-md data-[size=sm]:h-monti-control-sm data-[size=sm]:text-monti-note [&_svg]:pointer-events-none [&_svg]:shrink-0",
+	"flex items-center justify-between gap-monti-8 whitespace-nowrap rounded-none border-0 border-transparent border-b bg-transparent text-left text-monti-body text-monti-default outline-none transition-colors focus-visible:border-monti-contrast aria-expanded:border-monti-contrast disabled:cursor-default disabled:opacity-45 aria-readonly:cursor-default aria-readonly:select-text aria-readonly:focus-visible:border-transparent aria-readonly:focus-visible:ring-2 aria-readonly:focus-visible:ring-monti-contrast/60 aria-readonly:[&_[data-slot=select-icon]]:hidden aria-invalid:border-monti-danger aria-invalid:focus-visible:ring-2 aria-invalid:focus-visible:ring-monti-contrast/60 data-[size=default]:h-monti-control-md data-[size=md]:h-monti-control-md data-[size=sm]:h-monti-control-sm data-[size=sm]:text-monti-note [&_svg]:pointer-events-none [&_svg]:shrink-0",
 	FIELD_INSET,
 );
 
@@ -142,7 +142,7 @@ function SelectContent({
 						MENU_MOTION,
 						"relative isolate z-50",
 						FIT_HEIGHT,
-						"w-max min-w-[max(var(--monti-width-menu),var(--anchor-width))] max-w-(--available-width) overflow-y-auto overflow-x-hidden p-monti-6 data-[align-trigger=true]:animate-none",
+						"w-max min-w-[max(var(--monti-width-menu),var(--anchor-width))] max-w-(--available-width) overflow-y-auto overflow-x-hidden p-monti-4 data-[align-trigger=true]:animate-none",
 						className,
 					)}
 					{...props}

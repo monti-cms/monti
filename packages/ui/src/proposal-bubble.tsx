@@ -59,7 +59,7 @@ function ProposalBubble({
 			data-slot="proposal-bubble"
 			role="group"
 			className={cn(
-				"inline-flex h-11 max-w-full items-center gap-monti-12 whitespace-nowrap rounded-monti-full border border-monti-emphasis bg-monti-page pr-monti-6 pl-monti-16 text-monti-body text-monti-default shadow-monti-floating",
+				"inline-flex h-11 max-w-full items-center gap-monti-12 whitespace-nowrap rounded-monti-full border border-monti-default bg-monti-page pr-monti-6 pl-monti-16 text-monti-body text-monti-default shadow-monti-floating",
 				className,
 			)}
 			{...props}

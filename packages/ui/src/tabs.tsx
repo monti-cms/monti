@@ -31,8 +31,8 @@ const BAR_INSET = { page: "px-monti-32", panel: "px-monti-24", none: "" } as con
 
 /**
  * The list of tabs: switches the view in the same place (language, status, a screen's sections, a panel's parts).
- * - `line` (default): underlined tabs, the picked one in ink at 600 with a 1.5px ink rule.
- * - `bar`: the tab row at the top of a pane, 44px with a rule under it that the picked tab's underline sits on; `inset` lines its first tab
+ * - `line` (default): underlined tabs, 13px 500 in `fg-subtle`, the picked one in ink with a 2px ink rule.
+ * - `bar`: the tab row at the top of a pane, 48px with a rule under it that the picked tab's underline sits on; `inset` lines its first tab
  *   up with the content's side padding.
  * - `toolbar`: the tabs under a page title, in the filter row: 14px, the picked one bold, no underline (the title's rule is the only heavy line).
  */
@@ -50,7 +50,7 @@ function TabsList({
 			data-slot="tabs-list"
 			data-variant={variant}
 			className={cn(
-				"group/tabs-list flex w-fit gap-monti-20 text-monti-note",
+				"group/tabs-list flex w-fit gap-monti-20 text-monti-label",
 				variant === "line" && "items-end",
 				variant === "toolbar" && "items-baseline text-monti-body",
 				variant === "bar" &&
@@ -63,7 +63,7 @@ function TabsList({
 }
 
 /** The look of one tab, shared by the tab of a tab list and the link of a link list. */
-const TAB = `${HIT_AREA} inline-flex cursor-pointer items-baseline gap-monti-4 whitespace-nowrap border-0 border-transparent border-b-[1.5px] bg-transparent px-0 pt-monti-4 pb-[3px] text-monti-subtle no-underline outline-none transition-colors not-disabled:hover:text-monti-default focus-visible:rounded-monti-sm focus-visible:ring-2 focus-visible:ring-monti-contrast/60 disabled:pointer-events-none disabled:opacity-45 aria-disabled:pointer-events-none aria-disabled:opacity-45 aria-[current=page]:cursor-default data-active:border-monti-contrast data-active:font-semibold data-active:text-monti-default [&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg]:self-center group-data-[variant=toolbar]/tabs-list:border-b-0 group-data-[variant=toolbar]/tabs-list:p-0 group-data-[variant=toolbar]/tabs-list:data-active:font-bold group-data-[variant=bar]/tabs-list:-mb-px group-data-[variant=bar]/tabs-list:items-center group-data-[variant=bar]/tabs-list:gap-monti-6 group-data-[variant=bar]/tabs-list:pb-monti-12`;
+const TAB = `${HIT_AREA} inline-flex cursor-pointer items-baseline gap-monti-4 whitespace-nowrap border-0 border-transparent border-b-2 bg-transparent px-0 pt-monti-4 pb-monti-2 text-monti-subtle no-underline outline-none transition-colors not-disabled:hover:text-monti-default focus-visible:rounded-monti-sm focus-visible:ring-2 focus-visible:ring-monti-contrast/60 disabled:pointer-events-none disabled:opacity-45 aria-disabled:pointer-events-none aria-disabled:opacity-45 aria-[current=page]:cursor-default data-active:border-monti-contrast data-active:font-medium data-active:text-monti-default [&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg]:self-center group-data-[variant=toolbar]/tabs-list:border-b-0 group-data-[variant=toolbar]/tabs-list:p-0 group-data-[variant=toolbar]/tabs-list:data-active:font-bold group-data-[variant=bar]/tabs-list:-mb-px group-data-[variant=bar]/tabs-list:items-center group-data-[variant=bar]/tabs-list:gap-monti-6 group-data-[variant=bar]/tabs-list:pb-monti-12`;
 
 type TabExtras = {
 	count?: React.ReactNode;
@@ -133,7 +133,7 @@ function TabLinks({
 			data-variant={variant}
 			className={cn(
 				"group/tabs-list flex w-fit gap-monti-20",
-				variant === "line" ? "items-end text-monti-note" : "items-baseline text-monti-body",
+				variant === "line" ? "items-end text-monti-label" : "items-baseline text-monti-body",
 				className,
 			)}
 			{...props}

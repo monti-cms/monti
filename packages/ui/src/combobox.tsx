@@ -96,10 +96,10 @@ function ComboboxInput({
 			className={cn(
 				cn(
 					FIELD_HOVER,
-					"group/combobox-input flex w-full min-w-0 items-center gap-monti-4 border-monti-strong border-b transition-colors focus-within:border-monti-contrast has-[input[readonly]]:has-focus-visible:ring-2 has-[input[readonly]]:has-focus-visible:ring-monti-contrast/60 has-[input:disabled]:pointer-events-none has-[[aria-invalid=true]]:border-monti-danger has-data-proposal:border-monti-proposal has-data-proposal:border-b-[1.5px] has-[input:disabled]:opacity-45 has-[input[readonly]]:focus-within:border-monti-strong",
+					"group/combobox-input flex w-full min-w-0 items-center gap-monti-4 border-transparent border-b transition-colors focus-within:border-monti-contrast has-[input[readonly]]:has-focus-visible:ring-2 has-[input[readonly]]:has-focus-visible:ring-monti-contrast/60 has-[input:disabled]:pointer-events-none has-[[aria-invalid=true]]:border-monti-danger has-data-proposal:border-monti-proposal has-data-proposal:border-b-[1.5px] has-[input:disabled]:opacity-45 has-[input[readonly]]:focus-within:border-transparent",
 					FIELD_INSET,
 				),
-				size === "sm" ? "h-monti-control-sm" : size === "md" ? "h-monti-control-md" : "h-monti-control-lg",
+				size === "sm" ? "h-monti-control-sm" : "h-monti-control-md",
 				className,
 			)}
 		>
@@ -187,7 +187,7 @@ function ComboboxList({ className, ...props }: ComboboxPrimitive.List.Props) {
 		<ComboboxPrimitive.List
 			data-slot="combobox-list"
 			className={cn(
-				"no-scrollbar scroll-py-1 overflow-y-auto overscroll-contain p-monti-6 data-empty:p-0",
+				"no-scrollbar scroll-py-1 overflow-y-auto overscroll-contain p-monti-4 data-empty:p-0",
 				FIT_LIST,
 				className,
 			)}
@@ -311,7 +311,7 @@ function ComboboxChipsField({
 				// A field that is off looks off, as `ComboboxInput` does: dimmed once, chips and all, and nothing in it answers the pointer.
 				"has-[input:disabled]:pointer-events-none has-[input:disabled]:cursor-default has-[input:disabled]:opacity-45",
 				// Read only: the values in full ink with no × on them, and the keyboard's focus is a ring (nothing is typed, so no caret shows it).
-				"has-[input[readonly]]:has-focus-visible:ring-2 has-[input[readonly]]:has-focus-visible:ring-monti-contrast/60 has-[input[readonly]]:focus-within:border-monti-strong has-[input[readonly]]:**:data-[slot=combobox-chip-remove]:hidden",
+				"has-[input[readonly]]:has-focus-visible:ring-2 has-[input[readonly]]:has-focus-visible:ring-monti-contrast/60 has-[input[readonly]]:focus-within:border-transparent has-[input[readonly]]:**:data-[slot=combobox-chip-remove]:hidden",
 				// The proposal's line keeps its color under the pointer and with the focus, as a proposed `Input`'s does.
 				"data-proposal:border-monti-proposal! data-proposal:border-b-[1.5px] data-proposal:**:data-[slot=combobox-chip]:bg-monti-proposal-muted data-proposal:**:data-[slot=combobox-chip-remove]:text-monti-proposal data-proposal:**:data-[slot=combobox-chip]:text-monti-proposal",
 				// The open button stands at the first line's end whatever the chips do: the room for it is the field's own padding.
@@ -322,7 +322,7 @@ function ComboboxChipsField({
 		>
 			{children}
 			{/* The open button of every combobox, a field of one value or of many: at the end of the first line. Nothing opens a list that is only read. */}
-			<span className="pointer-events-none absolute top-0 right-monti-4 flex h-monti-control-lg items-center group-has-[input[readonly]]/chips:hidden group-data-[size=md]/chips:h-monti-control-md group-data-[size=sm]/chips:h-monti-control-sm">
+			<span className="pointer-events-none absolute top-0 right-monti-4 flex h-monti-control-md items-center group-has-[input[readonly]]/chips:hidden group-data-[size=md]/chips:h-monti-control-md group-data-[size=sm]/chips:h-monti-control-sm">
 				<ComboboxTrigger className="pointer-events-auto size-monti-control-xs disabled:opacity-100" />
 			</span>
 		</ComboboxPrimitive.Chips>

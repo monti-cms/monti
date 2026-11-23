@@ -65,7 +65,7 @@ function StatusBarList({
 							MENU_MOTION,
 							"z-50",
 							FIT_HEIGHT,
-							"w-85 overflow-y-auto p-monti-6 text-left outline-none",
+							"w-85 overflow-y-auto p-monti-4 text-left outline-none",
 						)}
 					>
 						<div data-slot="status-bar-list-head" className={MENU_LABEL}>

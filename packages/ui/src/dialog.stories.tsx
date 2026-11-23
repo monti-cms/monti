@@ -13,7 +13,7 @@ import {
 } from "./index";
 
 /**
- * A modal with a small form (one or two inputs): page ground, an emphasis edge, 420px, the title over an ink rule, Cancel and one pill at the
+ * A modal with a small form (one or two inputs): page ground, a `border-default` edge, `radius-lg`, 420px, a 16px title with no rule under it, Cancel and one pill at the
  * bottom right. Focus goes to the first text field. More inputs belong in a sheet.
  */
 const meta = {

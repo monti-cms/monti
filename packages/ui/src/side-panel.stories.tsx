@@ -17,7 +17,7 @@ import {
 	Text,
 } from "./index";
 
-/** A panel beside a screen, for what is looked at with it: cream ground, a line down its left edge, a 60px head with the title and ×. */
+/** A panel beside a screen, for what is looked at with it: cream ground, a line down its left edge, a 48px head with the title and ×. */
 const meta = {
 	title: "Controls/Overlay/SidePanel",
 	component: SidePanel,

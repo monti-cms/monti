@@ -40,7 +40,7 @@ export const AllVariants: Story = {
 	),
 };
 
-/** `ghost` and `ghost-danger`: an action that stands on its own where a pill is too heavy, at every height (lg 36, md 32, sm 28, xs 24), then disabled. */
+/** `ghost` and `ghost-danger`: an action that stands on its own where a pill is too heavy, at every height (lg 36, md 32 the default, sm 28, xs 24), then disabled. */
 export const Ghost: Story = {
 	render: () => (
 		<Stack gap={16}>

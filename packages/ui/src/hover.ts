@@ -1,11 +1,11 @@
 /**
  * The pointer over an underline field (an input, a select, a combobox, an affix, a textarea, a tag field): the whole field takes a flat tint
- * (`bg-muted`, no rounded corners) and its rule turns a step darker. Once the field has focus the ink rule says so instead, so the tint goes;
+ * (`bg-muted`, no rounded corners) and its underline shows (`border-default`; at rest a field has none). Once the field has focus the ink rule says so instead, so the tint goes;
  * a field that is off (or holds a part that is off) takes none, and neither does one that is only read (`readOnly`): nothing is typed in it. A rule that says a state (an error's red, a proposal's blue, on the field or on
  * the input in it) keeps its colour under the pointer: only the tint comes.
  */
 export const FIELD_HOVER =
-	"hover:not-focus-within:not-disabled:not-data-disabled:not-has-[:disabled]:not-aria-readonly:not-has-[[readonly]]:bg-monti-muted hover:not-focus-within:not-disabled:not-data-disabled:not-has-[:disabled]:not-aria-readonly:not-has-[[readonly]]:not-aria-invalid:not-has-[[aria-invalid=true]]:not-data-proposal:not-has-data-proposal:border-monti-strong";
+	"hover:not-focus-within:not-disabled:not-data-disabled:not-has-[:disabled]:not-aria-readonly:not-has-[[readonly]]:bg-monti-muted hover:not-focus-within:not-disabled:not-data-disabled:not-has-[:disabled]:not-aria-readonly:not-has-[[readonly]]:not-aria-invalid:not-has-[[aria-invalid=true]]:not-data-proposal:not-has-data-proposal:border-monti-default";
 
 /**
  * An underline field's room for that tint: 8px inside at each side. The field starts where its label starts; the words sit 8px in from both.
@@ -27,18 +27,18 @@ export const TEXT_HOVER =
 	"hover:not-disabled:not-aria-disabled:bg-monti-muted hover:not-disabled:not-aria-disabled:shadow-[-4px_0_0_4px_var(--monti-bg-muted),4px_0_0_4px_var(--monti-bg-muted)] active:not-disabled:not-aria-disabled:bg-monti-selected active:not-disabled:not-aria-disabled:shadow-[-4px_0_0_4px_var(--monti-bg-selected),4px_0_0_4px_var(--monti-bg-selected)] focus-visible:shadow-[-4px_0_0_4px_var(--monti-bg-page),4px_0_0_4px_var(--monti-bg-page),-4px_0_0_6px_color-mix(in_srgb,var(--monti-border-contrast)_60%,var(--monti-bg-page)),4px_0_0_6px_color-mix(in_srgb,var(--monti-border-contrast)_60%,var(--monti-bg-page))]";
 
 /**
- * The control at an underline field's end (a regenerate button, a combobox's caret, the eye of a secret): one size under the field, so its round
- * ground stays inside the field's tint with 2px to spare above, below and at the end (a 36px field holds a 32px button, 32px a 28px one, 28px a
- * 24px one). It is pulled 6px into the field's 8px padding.
+ * The control at an underline field's end (a regenerate button, a combobox's caret, the eye of a secret): 24px in a 32px field (28px in a 36px one,
+ * 24px in a 28px one), so its ground stays inside the field's tint, and 4px from the field's end (pulled 4px into the field's 8px padding): every
+ * trailing icon of a panel stands on one vertical line.
  */
-export const FIELD_ACTION = "-mr-monti-6 shrink-0";
+export const FIELD_ACTION = "-mr-monti-4 shrink-0";
 
 /**
  * The icon button size under each field size, for {@link FIELD_ACTION}: the field gives it to the buttons in its end control (`IconButtonContext`), so a
  * caller passes a plain `IconButton`.
  */
 export const FIELD_ACTION_BUTTON = {
-	lg: {},
-	md: { size: "sm" },
+	lg: { size: "sm" },
+	md: { size: "xs" },
 	sm: { size: "xs" },
 } as const;

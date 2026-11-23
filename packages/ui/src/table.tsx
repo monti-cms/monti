@@ -56,7 +56,7 @@ function Table({
 					// What the keyboard comes to in a row is scrolled out from under the stuck header, not left behind it: the head's 40px and the row's
 					// own room over its words. (The scroll box's own 8px only clears its edge, which the header covers.)
 					(stickyHeader ?? container === "none") &&
-						"[&_tbody_:is(a,button,input,[tabindex])]:scroll-mt-14 [&_thead_th]:sticky [&_thead_th]:top-0 [&_thead_th]:z-10 [&_thead_th]:bg-monti-page [&_thead_th]:shadow-[inset_0_-1px_0_var(--monti-border-muted)] [&_thead_tr]:border-b-transparent",
+						"[&_tbody_:is(a,button,input,[tabindex])]:scroll-mt-14 [&_thead_th]:sticky [&_thead_th]:top-0 [&_thead_th]:z-10 [&_thead_th]:bg-monti-page [&_thead_th]:shadow-[inset_0_-1px_0_var(--monti-border-default)] [&_thead_tr]:border-b-transparent",
 					// The head of the ⋯ column sticks with the ⋯ below it, so the head's + lines up with it.
 					"[&:has([data-slot=row-actions])_thead_th:last-child]:sticky [&:has([data-slot=row-actions])_thead_th:last-child]:right-0 [&:has([data-slot=row-actions])_thead_th:last-child]:z-11 [&:has([data-slot=row-actions])_thead_th:last-child]:bg-[var(--monti-ground,var(--monti-bg-page))] [[data-clipping]_&:has([data-slot=row-actions])_thead_th:last-child]:shadow-[inset_1px_0_0_var(--monti-border-muted)]",
 					className,
@@ -84,7 +84,11 @@ function Table({
 
 function TableHeader({ className, ...props }: React.ComponentProps<"thead">) {
 	return (
-		<thead data-slot="table-header" className={cn("[&_tr]:border-monti-muted [&_tr]:border-b", className)} {...props} />
+		<thead
+			data-slot="table-header"
+			className={cn("[&_tr]:border-monti-default [&_tr]:border-b", className)}
+			{...props}
+		/>
 	);
 }
 
@@ -237,14 +241,9 @@ function pass(link: HTMLElement, keys: MouseEventInit) {
 }
 
 /**
- * What shows only while the pointer or the keyboard is on the row, or the row is picked, or its menu is open: the check in the left margin. On a
- * touch screen it is always shown.
- */
-const ON_ROW =
-	"opacity-0 group-hover/row:opacity-100 group-data-selected/row:opacity-100 focus-within:opacity-100 has-aria-expanded:opacity-100 pointer-coarse:opacity-100";
 
 /**
- * The check of a row. It hangs 26px outside the table's left edge, on the same vertical line as the select-all of the {@link PageToolbar}, so the
+ * The check of a row, always shown (a faint empty box at rest, so a list reads as one you can pick from). It hangs 26px outside the table's left edge, on the same vertical line as the select-all of the {@link PageToolbar}, so the
  * first letters of the rows stay in one column. Put it in the row's first cell; the table must not scroll itself (`container="none"`).
  */
 function RowCheck({
@@ -262,7 +261,7 @@ function RowCheck({
 	proposal?: boolean;
 }) {
 	return (
-		<span data-slot="row-check" className={cn("absolute top-1/2 -left-[26px] z-1 flex -translate-y-1/2", ON_ROW)}>
+		<span data-slot="row-check" className="absolute top-1/2 -left-[26px] z-1 flex -translate-y-1/2">
 			<Checkbox
 				checked={checked}
 				onCheckedChange={(next) => onCheckedChange?.(next === true)}
@@ -507,7 +506,7 @@ function TableHead({
 			data-slot="table-head"
 			data-truncate={truncate || undefined}
 			className={cn(
-				"h-10 whitespace-nowrap px-monti-10 align-middle font-normal text-monti-caption text-monti-subtle first:pl-monti-12 last:pr-monti-12 [&:has([role=checkbox])]:pr-0",
+				"h-monti-thead whitespace-nowrap px-monti-10 align-middle font-medium text-monti-caption text-monti-faint first:pl-monti-12 last:pr-monti-12 [&:has([role=checkbox])]:pr-0",
 				ALIGN[align],
 				truncate && "max-w-0 truncate has-[[data-slot=row-check]]:overflow-visible",
 				width && COLUMN_WIDTH[width],
@@ -552,10 +551,10 @@ function TableCell({
 			data-truncate={truncate || undefined}
 			className={cn(
 				// Its pieces sit on the middle of the line, not on their letters' baselines: pieces of two sizes on one baseline (a chip, a title) would
-				// make the line taller than either. The middle still leaves a line a fraction taller than the 20px one (a 42.28px row), so a cell is 41px
-				// high by its own height, not by its padding and its line: the row is 41px with its rule, whatever the pieces are (measured in
+				// make the line taller than either. The middle still leaves a line a fraction taller than the 20px one (a 42.28px row), so a cell is 40px (`height-row`)
+				// high by its own height, not by its padding and its line: the row is 40px with its rule, whatever the pieces are (measured in
 				// `layout.browser.test.tsx`). A cell that holds a picture or wraps over lines takes its height from them and keeps the 10px above and below.
-				"relative h-[41px] whitespace-nowrap px-monti-10 py-0 align-middle *:align-middle first:pl-monti-12 last:pr-monti-12 has-[[data-slot=row-thumb]]:h-auto has-[[data-slot=row-thumb]]:py-monti-10 [&:has([role=checkbox])]:pr-0",
+				"relative h-monti-row whitespace-nowrap px-monti-10 py-0 align-middle *:align-middle first:pl-monti-12 last:pr-monti-12 has-[[data-slot=row-thumb]]:h-auto has-[[data-slot=row-thumb]]:py-monti-10 [&:has([role=checkbox])]:pr-0",
 				ALIGN[align],
 				// The row's check hangs in the left margin, so its cell does not clip. In a row with a link the cells are static and the check stands on the row
 				// itself: there the cell clips as any other, and a first column dragged narrow keeps its words in.

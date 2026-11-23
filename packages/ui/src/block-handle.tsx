@@ -77,7 +77,7 @@ function PickBox() {
 		<div
 			data-slot="pick-box"
 			aria-hidden="true"
-			className="pointer-events-none size-full rounded-monti-sm border border-monti-emphasis"
+			className="pointer-events-none size-full rounded-monti-sm border border-monti-default"
 		/>
 	);
 }

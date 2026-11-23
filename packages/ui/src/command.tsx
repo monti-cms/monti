@@ -71,7 +71,7 @@ function CommandGroup({ className, ...props }: React.ComponentProps<typeof Comma
 		<CommandPrimitive.Group
 			data-slot="command-group"
 			className={cn(
-				"**:[[cmdk-group-heading]]:px-[9px] **:[[cmdk-group-heading]]:pt-monti-6 **:[[cmdk-group-heading]]:pb-[3px] **:[[cmdk-group-heading]]:text-monti-micro **:[[cmdk-group-heading]]:text-monti-subtle",
+				"**:[[cmdk-group-heading]]:px-monti-8 **:[[cmdk-group-heading]]:pt-monti-8 **:[[cmdk-group-heading]]:pb-monti-4 **:[[cmdk-group-heading]]:text-monti-faint **:[[cmdk-group-heading]]:text-monti-micro",
 				className,
 			)}
 			{...props}

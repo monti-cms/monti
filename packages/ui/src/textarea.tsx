@@ -44,16 +44,16 @@ function Textarea({
 					!action && !props.readOnly && FIELD_HOVER,
 					// A read-only one is a value to read, as `Input readOnly`: nothing to type, so no tint and the rule stays as it is with the focus.
 					!props.readOnly && "focus-visible:border-monti-contrast",
-					"field-sizing-content flex w-full resize-none rounded-none border-0 border-monti-strong border-b bg-transparent text-monti-default outline-none transition-colors placeholder:text-monti-faint disabled:pointer-events-none disabled:cursor-default disabled:opacity-45 aria-invalid:border-monti-danger data-proposal:border-monti-proposal data-proposal:border-b-[1.5px] data-proposal:text-monti-proposal",
+					"field-sizing-content flex w-full resize-none rounded-none border-0 border-transparent border-b bg-transparent text-monti-default outline-none transition-colors placeholder:text-monti-faint disabled:pointer-events-none disabled:cursor-default disabled:opacity-45 aria-invalid:border-monti-danger data-proposal:border-monti-proposal data-proposal:border-b-[1.5px] data-proposal:text-monti-proposal",
 					!action && FIELD_INSET,
 				),
 				// The design system's textarea sets lines 1.6 times its size; the type role's own line height comes first, so the rule follows it.
-				// One line stands as high as an `Input` of its size (28px small, 32px medium, 36px otherwise); more lines grow it downward.
+				// One line stands as high as an `Input` of its size (28px small, 32px otherwise); more lines grow it downward.
 				size === "sm"
 					? "min-h-monti-control-sm py-[3px] text-monti-note"
 					: size === "md"
 						? "min-h-monti-control-md py-monti-4 text-monti-reading md:text-monti-prose"
-						: "min-h-monti-control-lg py-monti-6 text-monti-reading md:text-monti-prose",
+						: "min-h-monti-control-md py-monti-4 text-monti-reading md:text-monti-prose",
 				// What is typed is a value, in mono; the placeholder is words, and stays in the sans face (tokens.md).
 				mono && "font-mono placeholder:font-sans",
 				tall && "min-h-[52px]",
@@ -65,7 +65,7 @@ function Textarea({
 							? "min-h-[calc(var(--monti-height-control-sm)-1px)]"
 							: size === "md"
 								? "min-h-[calc(var(--monti-height-control-md)-1px)]"
-								: "min-h-[calc(var(--monti-height-control-lg)-1px)]",
+								: "min-h-[calc(var(--monti-height-control-md)-1px)]",
 					),
 				className,
 			)}
@@ -89,7 +89,7 @@ function Textarea({
 			className={cn(
 				cn(
 					FIELD_HOVER,
-					"flex w-full min-w-0 border-monti-strong border-b transition-colors focus-within:border-monti-contrast has-[[aria-invalid=true]]:border-monti-danger has-data-proposal:border-monti-proposal has-data-proposal:border-b-[1.5px]",
+					"flex w-full min-w-0 border-transparent border-b transition-colors focus-within:border-monti-contrast has-[[aria-invalid=true]]:border-monti-danger has-data-proposal:border-monti-proposal has-data-proposal:border-b-[1.5px]",
 					FIELD_INSET,
 				),
 				"items-start",
@@ -97,10 +97,8 @@ function Textarea({
 		>
 			{textarea}
 			{/* A 32px button over a 28px or 32px line reaches past it above and below, as at a small `Input`, and does not grow the line. */}
-			<span className={cn(FIELD_ACTION, "mt-monti-2")}>
-				<IconButtonContext value={FIELD_ACTION_BUTTON[size === "sm" ? "sm" : size === "md" ? "md" : "lg"]}>
-					{action}
-				</IconButtonContext>
+			<span className={cn(FIELD_ACTION, "mt-monti-4")}>
+				<IconButtonContext value={FIELD_ACTION_BUTTON[size === "sm" ? "sm" : "md"]}>{action}</IconButtonContext>
 			</span>
 		</div>
 	);

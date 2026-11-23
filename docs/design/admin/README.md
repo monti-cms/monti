@@ -7,7 +7,7 @@
 ## 원칙
 
 1. **종이와 크림, 두 층.** 내용(목록, 편집기 본문, 설정, 대화상자, 메뉴)은 종이 바탕 `bg-page` 위에 있다. 도구(사이드바, 속성 패널과 어시스턴트 패널, 시트, 원문 패널, 상태 표시줄)는 크림 바탕 `bg-tool` 위에 있다. 어두운 테마에서는 도구 쪽이 더 어둡다.
-2. **잉크 선은 한 곳에만 있다.** 내용 페이지 제목 아래에 1px `border-contrast`가 있다. 도구 면의 머리는 `height-header`(60px)이고, 얇은 `border-default` 선이 하나 있다.
+2. **잉크 선은 한 곳에만 있다.** 내용 페이지 제목 아래에 1px `border-contrast`가 있다. 도구 면의 머리는 `height-panebar`(48px)이고, 얇은 `border-default` 선이 하나 있다.
 3. **카드와 상자 대신 선과 여백.** 상자 테두리는 떠 있는 것에만 쓴다. 메뉴, 대화상자, 시트, 말풍선이다.
 4. **화면이나 떠 있는 면마다 검은 알약은 하나.** 곁 동작은 회색 알약 한두 개, 섹션 안에서 추가하고 고치는 것은 텍스트 버튼이고, 나머지는 ⋯ 안에 둔다.
 5. **색은 상태에만 쓴다.** 그 밖의 강조는 굵기와 잉크 색으로 한다. 파란 연필 `fg-proposal`은 아직 받아들이지 않은 AI 제안에만 쓴다.
@@ -86,7 +86,7 @@
 | 무엇 | 어디 |
 |---|---|
 | 규칙: 부품을 언제 쓰는지, 어떻게 동작하는지, 어떤 상태가 있는지 | 이 문서 |
-| 토큰 값(이름, 밝은 테마와 어두운 테마) | `packages/ui/tokens/tokens.json`. `pnpm gen:tokens`가 이 파일에서 `packages/ui/styles/tokens.css`를 만든다. CSS는 손으로 고치지 않는다 |
+| 토큰 값(이름, 밝은 테마와 어두운 테마) | `packages/ui/tokens/tokens.json`. 생성기가 없어서 `packages/ui/styles/tokens.css`와 `theme.css`를 같은 커밋에서 손으로 함께 고친다 |
 | 각 화면과 흐름이 어떻게 보이는지 | `packages/ui/src/screens/reference`의 시안 이야기(Storybook의 Screens/Reference). 캔버스는 흐름의 순서를 보는 곳이다 |
 | 부품을 어떻게 만드는지 | `packages/ui/src`와 그 스토리. 부품은 토큰 유틸리티로 스스로 스타일을 입힌다. `packages/ui/styles/admin.css`에는 문서 전체의 기본 규칙(포털로 띄운 팝업, 기본 테두리 색, 스크롤바)만 있다. `packages/admin/styles/index.css`는 `@monti-cms/admin/styles.css`를 만드는 입구다(`scripts/build-styles.mjs`). 층 순서, `@import`, `@source` 줄만 있고 규칙은 하나도 없다 |
 

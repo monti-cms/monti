@@ -4,7 +4,7 @@ import { Grid, List } from "./icons";
 import { Segmented } from "./segmented";
 import { Stack } from "./stack";
 
-/** A short choice of one among a few. The picked cell is on the selected background at 600. */
+/** A short choice of one among a few. A muted frame (`radius-md`); the picked cell is lifted onto the page ground with a line, in ink at 500. */
 const meta = { title: "Controls/Choice/Segmented", component: Segmented } satisfies Meta<typeof Segmented>;
 export default meta;
 type Story = StoryObj<typeof meta>;

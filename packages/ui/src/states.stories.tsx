@@ -12,7 +12,9 @@ import { Settings } from "./icons";
 import { Input } from "./input";
 import { ListSection, ListSectionRow } from "./list-section";
 import { MediaInput } from "./media-input";
+import { NavLink } from "./nav-link";
 import { Option } from "./option";
+import { Segmented } from "./segmented";
 import { Select, SelectTrigger, SelectValue } from "./select";
 import { StoryCaption } from "./story-caption";
 import { Switch } from "./switch";
@@ -39,6 +41,8 @@ const meta = {
 				".state-hover [data-slot=checkbox]",
 				".state-hover [data-slot=tile]",
 				".state-hover [data-slot=tile] > button",
+				".state-hover [data-slot=nav-link] > button",
+				".state-hover [data-slot=segmented] > :not([data-pressed])",
 			],
 			focus: [".state-focus input"],
 			focusVisible: [
@@ -48,6 +52,8 @@ const meta = {
 				".state-focus [data-slot=row-link]",
 				".state-focus [data-slot=media-input] > button",
 				".state-focus [data-slot=tile] > button",
+				".state-focus [data-slot=nav-link] > button",
+				".state-focus [data-slot=segmented] > :not([data-pressed])",
 			],
 			focusWithin: [".state-focus > *"],
 			active: [".state-active > *", ".state-active [data-slot=chip] > button", ".state-active tr"],
@@ -175,6 +181,12 @@ export const OverAStateColour: Story = {
 export const Fields: Story = {
 	render: () => (
 		<Sheet>
+			<Row name="Input · 빈 칸">
+				{(disabled) => <Input aria-label="부제" placeholder="부제 쓰기" disabled={disabled} />}
+			</Row>
+			<Row name="Input · 오류" states={SHOWN}>
+				{() => <Input aria-label="대표 주소" defaultValue="monti.site/old" aria-invalid />}
+			</Row>
 			<Row name="Input">{(disabled) => <Input aria-label="제목" defaultValue="첫 번째 글" disabled={disabled} />}</Row>
 			<Row name="Select">
 				{(disabled) => (
@@ -252,9 +264,30 @@ export const Buttons: Story = {
 					</Button>
 				)}
 			</Row>
+			<Row name="Button sm">
+				{(disabled) => (
+					<Button size="sm" variant="secondary" disabled={disabled}>
+						다시 보내기
+					</Button>
+				)}
+			</Row>
 			<Row name="IconButton">
 				{(disabled) => (
 					<IconButton label="설정" disabled={disabled}>
+						<Settings />
+					</IconButton>
+				)}
+			</Row>
+			<Row name="IconButton 켜짐">
+				{(disabled) => (
+					<IconButton label="설정" pressed disabled={disabled}>
+						<Settings />
+					</IconButton>
+				)}
+			</Row>
+			<Row name="IconButton xs">
+				{(disabled) => (
+					<IconButton label="설정" size="xs" disabled={disabled}>
 						<Settings />
 					</IconButton>
 				)}
@@ -278,6 +311,66 @@ export const Buttons: Story = {
 	),
 };
 
+/**
+ * Buttons inside a square surface (a dialog, a popover, a menu, a floating bar: an ancestor with `data-shape="square"`): the same buttons take
+ * `radius-md` instead of the pill, so a container and its buttons share one shape family.
+ */
+export const ButtonsInASquareSurface: Story = {
+	render: () => (
+		<div data-shape="square">
+			<Sheet>
+				<Row name="Button 주">{(disabled) => <Button disabled={disabled}>모두 받기</Button>}</Row>
+				<Row name="Button 보조">
+					{(disabled) => (
+						<Button variant="secondary" disabled={disabled}>
+							취소
+						</Button>
+					)}
+				</Row>
+				<Row name="IconButton">
+					{(disabled) => (
+						<IconButton label="설정" disabled={disabled}>
+							<Settings />
+						</IconButton>
+					)}
+				</Row>
+			</Sheet>
+		</div>
+	),
+};
+
+/** Navigation: a sidebar or page link (32px, `radius-md`, the open one on the selected ground at 500) and a segmented choice. */
+export const Navigation: Story = {
+	render: () => (
+		<Sheet states={SHOWN}>
+			<Row name="NavLink" states={SHOWN}>
+				{() => <NavLink note="12">글</NavLink>}
+			</Row>
+			<Row name="NavLink 열림" states={SHOWN}>
+				{() => (
+					<NavLink active note="3">
+						아주 긴 컬렉션 이름이 사이드바 폭을 넘어 끝에서 잘리는 경우
+					</NavLink>
+				)}
+			</Row>
+			<Row name="Segmented" states={SHOWN}>
+				{() => (
+					<Segmented
+						aria-label="보기"
+						value="fields"
+						onValueChange={() => {}}
+						options={[
+							{ value: "basic", label: "기본" },
+							{ value: "fields", label: "필드" },
+							{ value: "editor", label: "편집기" },
+						]}
+					/>
+				)}
+			</Row>
+		</Sheet>
+	),
+};
+
 /** Rows: a row that can be picked takes the tint and shows its check; a row that only shows stays still. */
 export const Rows: Story = {
 	render: () => (
@@ -290,6 +383,20 @@ export const Rows: Story = {
 								<TableCell>
 									<RowCheck checked={false} label="고르기" />
 									<RowLink render={<button type="button" disabled={disabled} />}>첫 번째 글</RowLink>
+								</TableCell>
+							</TableRow>
+						</TableBody>
+					</Table>
+				)}
+			</Row>
+			<Row name="표 행 · 고름" states={SHOWN}>
+				{() => (
+					<Table container="none">
+						<TableBody>
+							<TableRow selected>
+								<TableCell>
+									<RowCheck checked label="고르기" />
+									<RowLink render={<button type="button" />}>선택된 글</RowLink>
 								</TableCell>
 							</TableRow>
 						</TableBody>

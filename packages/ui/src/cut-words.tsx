@@ -301,7 +301,7 @@ function CutWords({
 					}}
 				>
 					{/* Words can be long: they wrap in the tooltip instead of running off the window. */}
-					<TooltipContent anchor={box} align="start" className="max-w-monti-panel whitespace-normal break-words">
+					<TooltipContent anchor={box} align="start" className="max-w-[300px] whitespace-normal break-words">
 						{words}
 					</TooltipContent>
 				</Tooltip>

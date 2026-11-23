@@ -6,9 +6,9 @@ import { cn } from "./cn";
 import type { ShortcutKeys } from "./shortcut";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./tooltip";
 
-/** The floating row (`.mt-block-bar`, `.mt-format-bar`): 3px inside, 2px between buttons, an emphasis border, the floating shadow. */
+/** The floating row (`.mt-block-bar`, `.mt-format-bar`): `radius-lg`, 3px inside, 2px between buttons, a `border-default` line, the floating shadow. Its buttons are `radius-md`. */
 export const BAR =
-	"inline-flex items-center gap-monti-2 rounded-monti-lg border border-monti-emphasis bg-monti-page p-[3px] shadow-monti-floating";
+	"inline-flex items-center gap-monti-2 rounded-monti-lg border border-monti-default bg-monti-page p-[3px] shadow-monti-floating";
 
 /**
  * A 28px button of a bar; the width is the bar's part to set. Pointed at it takes `bg-muted` (a ghost button's ground), while pressed and while on
@@ -22,7 +22,15 @@ export const BAR_BUTTON =
  * that has settings (an image: align, settings, crop). One row that does not wrap; the editor places it.
  */
 function FloatingBar({ className, ...props }: ComponentProps<"div">) {
-	return <div data-slot="floating-bar" role="toolbar" className={cn(BAR, "whitespace-nowrap", className)} {...props} />;
+	return (
+		<div
+			data-slot="floating-bar"
+			data-shape="square"
+			role="toolbar"
+			className={cn(BAR, "whitespace-nowrap", className)}
+			{...props}
+		/>
+	);
 }
 
 /**

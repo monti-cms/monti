@@ -60,9 +60,9 @@ function Affix({
 				),
 				// The fixed text before the input has the field's inset; with none, the input's own is the only one, as in any other field.
 				prefix && "pl-monti-8",
-				size === "md" ? "h-monti-control-md" : "h-monti-control-lg",
+				"h-monti-control-md",
 				bare &&
-					"border-monti-strong border-b transition-colors focus-within:border-monti-contrast has-[[aria-invalid=true]]:border-monti-danger data-proposal:border-monti-proposal data-proposal:border-b-[1.5px]",
+					"border-transparent border-b transition-colors focus-within:border-monti-contrast has-[[aria-invalid=true]]:border-monti-danger data-proposal:border-monti-proposal data-proposal:border-b-[1.5px]",
 				className,
 			)}
 		>
@@ -71,7 +71,7 @@ function Affix({
 				data-slot="affix-input"
 				aria-description={useProposalDescription(proposal)}
 				className={cn(
-					"h-full min-w-[3ch] rounded-none border-0 border-monti-strong border-b bg-transparent px-monti-8 py-0 text-monti-default outline-none transition-colors placeholder:text-monti-faint focus:border-monti-contrast group-hover/affix:not-focus:not-disabled:border-monti-strong group-hover/affix:not-focus:not-disabled:bg-monti-muted aria-[invalid=true]:border-monti-danger group-data-proposal/affix:border-monti-proposal group-data-proposal/affix:border-b-[1.5px] group-data-proposal/affix:text-monti-proposal",
+					"h-full min-w-[3ch] rounded-none border-0 border-transparent border-b bg-transparent px-monti-8 py-0 text-monti-default outline-none transition-colors placeholder:text-monti-faint focus:border-monti-contrast group-hover/affix:not-focus:not-disabled:border-monti-default group-hover/affix:not-focus:not-disabled:bg-monti-muted aria-[invalid=true]:border-monti-danger group-data-proposal/affix:border-monti-proposal group-data-proposal/affix:border-b-[1.5px] group-data-proposal/affix:text-monti-proposal",
 					width === "fit" ? "field-sizing-content flex-initial" : "flex-1",
 					bare && "min-w-0 border-b-0 group-data-proposal/affix:border-b-0",
 				)}

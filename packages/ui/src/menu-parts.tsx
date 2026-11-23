@@ -4,17 +4,18 @@ import { Checkmark } from "./icons";
 import { Shortcut, type ShortcutKeys } from "./shortcut";
 
 /**
- * The floating card every menu, picker list and popover is drawn on: paper, an emphasis border, the largest radius and the floating shadow. A list card adds 6px inside (`p-monti-6`); the parts below are what goes in it.
+ * The floating card every menu, picker list and popover is drawn on: paper, a `border-default` line, `radius-lg` (10px) and the floating shadow. A list card adds 4px inside (`p-monti-4`); the parts below are what goes in it.
+ * Its rows and buttons are of the square family (`radius-md`): a card that holds buttons says so with `data-shape="square"`.
  */
 export const MENU_CARD =
-	"flex flex-col rounded-monti-xl border border-monti-emphasis bg-monti-page text-monti-body text-monti-default shadow-monti-floating outline-none";
+	"flex flex-col rounded-monti-lg border border-monti-default bg-monti-page text-monti-body text-monti-default shadow-monti-floating outline-none";
 
 /**
- * Where a second level starts, measured from the row that opens it: the row sits 7px inside its card (6 padding, 1 border), so 7 + 4 puts the
- * second card 4px clear of the parent's edge. Its first row lines up with the parent row when the card is raised by the same 7px.
+ * Where a second level starts, measured from the row that opens it: the row sits 5px inside its card (4 padding, 1 border), so 5 + 4 puts the
+ * second card 4px clear of the parent's edge. Its first row lines up with the parent row when the card is raised by the same 5px.
  */
-export const SUB_SIDE_OFFSET = 11;
-export const SUB_ALIGN_OFFSET = -7;
+export const SUB_SIDE_OFFSET = 9;
+export const SUB_ALIGN_OFFSET = -5;
 
 /** How a card opens and closes, whichever side it opens to. */
 export const MENU_MOTION =
@@ -25,28 +26,28 @@ export const MENU_MOTION =
  * control height (32px), the same as a medium field or button, with no padding of its own above or below: the words sit in the middle.
  */
 export const MENU_ROW =
-	"flex min-h-monti-control-md min-w-0 cursor-default select-none items-center gap-monti-10 rounded-monti-md px-[9px] text-monti-body text-monti-muted outline-hidden [&>svg]:size-4 [&>svg]:shrink-0 [&>svg]:text-monti-subtle";
+	"flex min-h-monti-control-md min-w-0 cursor-default select-none items-center gap-monti-8 rounded-monti-md px-monti-8 text-monti-body text-monti-muted outline-hidden [&>svg]:size-4 [&>svg]:shrink-0 [&>svg]:text-monti-subtle";
 
 /**
- * One row of a menu or picker list (Base UI: menu, select, combobox). The row the pointer or the keyboard is on, and the row whose second
- * level is open, take the selected background. A row that is the current value of a pick-one list does not: it ends in a {@link MenuTick}.
+ * One row of a menu or picker list (Base UI: menu, select, combobox). The row the pointer or the keyboard is on takes the hover ground (`bg-muted`),
+ * and the row whose second level is open the selected one. A row that is the current value of a pick-one list does not: it ends in a {@link MenuTick}.
  */
 export const MENU_ITEM = cn(
 	MENU_ROW,
-	"data-highlighted:bg-monti-selected data-highlighted:text-monti-default data-popup-open:bg-monti-selected data-popup-open:text-monti-default data-disabled:pointer-events-none data-disabled:text-monti-faint data-disabled:[&>svg]:text-monti-faint data-[variant=danger]:text-monti-danger data-[variant=danger]:data-highlighted:text-monti-danger data-[variant=danger]:[&>svg]:text-monti-danger",
+	"data-highlighted:bg-monti-muted data-highlighted:text-monti-default data-popup-open:bg-monti-selected data-popup-open:text-monti-default data-disabled:pointer-events-none data-disabled:text-monti-faint data-disabled:[&>svg]:text-monti-faint data-[variant=danger]:text-monti-danger data-[variant=danger]:data-highlighted:text-monti-danger data-[variant=danger]:[&>svg]:text-monti-danger",
 );
 
 /** The same row inside a searchable list (cmdk marks the row it is on with `data-selected`). */
 export const COMMAND_ITEM = cn(
 	MENU_ROW,
-	"data-[selected=true]:bg-monti-selected data-[selected=true]:text-monti-default data-[disabled=true]:pointer-events-none data-[disabled=true]:text-monti-faint data-[variant=danger]:text-monti-danger data-[variant=danger]:data-[selected=true]:text-monti-danger data-[variant=danger]:[&>svg]:text-monti-danger",
+	"data-[selected=true]:bg-monti-muted data-[selected=true]:text-monti-default data-[disabled=true]:pointer-events-none data-[disabled=true]:text-monti-faint data-[variant=danger]:text-monti-danger data-[variant=danger]:data-[selected=true]:text-monti-danger data-[variant=danger]:[&>svg]:text-monti-danger",
 );
 
-/** A group's name: mono, small, with room at the end for a count. */
-export const MENU_LABEL = "flex justify-between px-[9px] pt-monti-6 pb-[3px] text-monti-micro text-monti-subtle";
+/** A group's name: 11px 500, faint, with room at the end for a count. */
+export const MENU_LABEL = "flex justify-between px-monti-8 pt-monti-8 pb-monti-4 text-monti-micro text-monti-faint";
 
-/** The rule between two groups. */
-export const MENU_SEPARATOR = "mx-[2px] my-[5px] h-px shrink-0 bg-monti-divider";
+/** The rule between two groups: edge to edge of the card, 4px above and below. */
+export const MENU_SEPARATOR = "-mx-monti-4 my-monti-4 h-px shrink-0 bg-monti-divider";
 
 /** The current value of a pick-one list: a ✓ at the end of the row. */
 export const MENU_TICK =
@@ -57,7 +58,7 @@ export const MENU_SUB_MARK = "ml-auto [[data-slot=menu-value]+&]:ml-monti-4";
 
 /** The search row on top of a list card (a searchable list, a long menu): a magnifier and the words, then a rule, 4px above the first row. It is one medium control high (32px, rule included) like the rows under it, whatever menu it is in. */
 export const MENU_SEARCH_ROW =
-	"mb-monti-4 flex min-h-monti-control-md items-center gap-monti-8 border-monti-muted border-b px-[9px] text-monti-default";
+	"mb-monti-4 flex min-h-monti-control-md items-center gap-monti-8 border-monti-muted border-b px-monti-8 text-monti-default";
 
 /** The magnifier of a {@link MENU_SEARCH_ROW}. */
 export const MENU_SEARCH_ICON = "size-3.5 shrink-0 text-monti-subtle";
@@ -67,7 +68,7 @@ export const MENU_SEARCH_FIELD =
 	"min-w-0 flex-1 border-0 bg-transparent p-0 text-monti-body text-monti-default outline-hidden placeholder:text-monti-faint disabled:cursor-default disabled:opacity-45";
 
 /** The line a list card shows when nothing matches: centered, subtle, with room above and below. */
-export const MENU_EMPTY = "px-[9px] py-monti-12 text-center text-monti-body text-monti-subtle";
+export const MENU_EMPTY = "px-monti-8 py-monti-12 text-center text-monti-body text-monti-subtle";
 
 /** A long list: one column, 320px high at most, scrolling inside. */
 /**
