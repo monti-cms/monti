@@ -4,7 +4,7 @@
 
 | 액션 / 함수 | 하는 일 | 주요 거절 |
 |---|---|---|
-| `media.startUpload` | 새 UUID `key`로 `storage.ticket` 발급 및 `loose_files` 24시간 만료 등록 | `storage` 미설정·`dryRun` 실행·크기 범위 초과 시 `BAD_REQUEST` |
+| `media.startUpload` | 새 UUID `key`로 `storage.ticket` 발급 및 `loose_files` 24시간 만료 등록(`onEvent` 미통지) | `storage` 미설정·`dryRun` 실행·크기 범위 초과 시 `BAD_REQUEST` |
 | `media.create` | `storage.stat` 확인 후 미디어 등록(`filename` 생략 시 `key`) 및 `loose_files` 제거 | `storage` 없음·없는 파일·크기 범위 초과·빈 `filename`·잘못된 폴더 `BAD_REQUEST`, 중복 `key`(동시 등록 포함) `CONFLICT` |
 | `media.list` · `get` | 활성 미디어를 `url`과 함께 조회(`get`은 `uses` 포함, `folder_id` 생략=전체·`null`=루트) | 휴지통·미존재 `NOT_FOUND` |
 | `media.update` | 단건 메타 수정·폴더 이동·파일 교체(동시 교체 시에도 이전 `key` 24시간 대기 등록), 다건 폴더 일괄 이동 | 빈 `filename`·잘못된 폴더 `BAD_REQUEST`, 휴지통 포함 시 전체 롤백 `NOT_FOUND` |
@@ -51,6 +51,16 @@
 - **결과**:
   - `MED-UPL-3.1` `media.startUpload`는 `BAD_REQUEST` 오류를 던지고 `storage.ticket`이 호출되지 않으며 `loose_files`가 비어 있다
   - `MED-UPL-3.2` `media.create`는 `storage.stat`·`url`로 계산한 결과를 돌려주고 `media` 테이블은 비어 있다
+
+</details>
+
+<details>
+<summary><strong><code>MED-UPL-4</code></strong> 업로드 티켓 발급은 이벤트 구독자에게 통지하지 않는다</summary>
+
+- **전제**: `storage`가 설정된 엔진에 `onEvent` 구독자가 등록되어 있다
+- **행동**: 유효한 `mime_type`과 `size`로 `media.startUpload`를 실행한다
+- **결과**:
+  - `MED-UPL-4.1` `onEvent` 구독자가 호출되지 않는다
 
 </details>
 

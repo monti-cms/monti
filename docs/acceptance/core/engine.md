@@ -3,9 +3,9 @@
 | 기능 | 하는 일 | 주요 거절 |
 |---|---|---|
 | 직접 호출 | 읽기는 트랜잭션 없이, 쓰기는 트랜잭션·커밋·`onEvent` 통지 순으로 실행한다 | 입력 스키마 불일치 `BAD_REQUEST` |
-| `onEvent` | 커밋된 쓰기 이벤트를 비동기 격리 통지한다(해제 가능) | 구독자 오류가 커밋을 막지 않음 |
-| `transaction` · `dryRun` | 여러 호출을 한 트랜잭션으로 묶거나(`transaction`), 쓰기만 시험 실행 후 롤백(`dryRun`)한다 | DB 고유 제약 위반(`23505`) `CONFLICT` |
-| `plugins` · `spec` | 플러그인 작업·이벤트를 연결하고 모든 Operation의 이름·종류·JSON Schema를 반환한다 | 중복 경로 시 엔진 생성 거절 |
+| `onEvent` | 커밋된 쓰기 이벤트를 구독자마다 독립된 값으로 비동기 격리 통지한다(해제 가능) | 구독자 오류가 커밋을 막지 않음 |
+| `transaction` · `dryRun` | 여러 호출을 한 트랜잭션으로 묶거나(`transaction`), 쓰기만 시험 실행 후 롤백(`dryRun`)한다 | DB 고유 제약 위반(`23505`) `CONFLICT`, 콜백이 잡아도 DB 오류면 실패 |
+| `plugins` · `spec` | 플러그인 작업·이벤트를 연결하고 모든 Operation의 이름·종류·JSON Schema를 반환한다 | 중복 경로·엔진 기본 메서드 이름 충돌 시 `CONFLICT` |
 
 ---
 
@@ -66,6 +66,8 @@
 
 ## 2. 이벤트 구독 (`onEvent`)
 
+### 핵심 요구사항
+
 <details>
 <summary><strong><code>ENG-EVT-1</code></strong> 이벤트 구독자의 오류가 쓰기 결과와 다른 구독자의 통지를 막지 않는다</summary>
 
@@ -85,6 +87,19 @@
 - **행동**: 쓰기 Operation을 호출한다
 - **결과**:
   - `ENG-EVT-2.1` 해제한 구독자가 호출되지 않는다
+
+</details>
+
+### 경계 · 방어 검증
+
+<details>
+<summary><strong><code>ENG-EVT-3</code></strong> 구독자가 받은 이벤트 값을 고치려 해도 다른 구독자와 호출자의 반환값은 바뀌지 않는다</summary>
+
+- **전제**: 객체를 돌려주는 쓰기 Operation과, 받은 `event.output`의 속성을 바꾸려 하는 첫 번째 구독자, 받은 값을 기록하는 두 번째 구독자가 순서대로 등록되어 있다
+- **행동**: 해당 쓰기 Operation을 호출한다
+- **결과**:
+  - `ENG-EVT-3.1` 호출자가 돌려받은 반환값은 원래 값 그대로이다
+  - `ENG-EVT-3.2` 두 번째 구독자가 받은 `event.output`도 원래 값 그대로이다
 
 </details>
 
@@ -157,6 +172,18 @@
 
 </details>
 
+<details>
+<summary><strong><code>ENG-TX-6</code></strong> 콜백 안에서 DB 쓰기가 실패하면 콜백이 그 오류를 잡아도 트랜잭션과 드라이런은 실패한다</summary>
+
+- **전제**: 정상 쓰기 Operation 하나, 존재하지 않는 외래 키를 참조해 DB 외래 키 오류(`23503`)를 내는 쓰기 Operation 하나, `onEvent` 구독자가 등록되어 있다
+- **행동**: `monti.transaction`과 `monti.dryRun` 각각에 콜백을 넘겨 정상 쓰기를 먼저 실행한 뒤 외래 키 오류가 나는 쓰기를 호출해 `try/catch`로 잡고 정상 값을 반환한다
+- **결과**:
+  - `ENG-TX-6.1` `transaction`과 `dryRun` 모두 그 DB 오류를 던지고 성공 값을 돌려주지 않는다
+  - `ENG-TX-6.2` 먼저 실행한 정상 쓰기의 행이 롤백되어 DB에 남아 있지 않는다
+  - `ENG-TX-6.3` `onEvent` 구독자가 호출되지 않는다
+
+</details>
+
 ## 4. 플러그인 (`plugins`)
 
 ### 핵심 요구사항
@@ -181,6 +208,16 @@
 - **행동**: 엔진을 생성한다
 - **결과**:
   - `ENG-PLG-2.1` 오류가 던져진다
+
+</details>
+
+<details>
+<summary><strong><code>ENG-PLG-3</code></strong> 플러그인의 리소스 이름이 엔진의 기본 메서드 이름과 겹치면 엔진을 만들 수 없다</summary>
+
+- **전제**: 리소스 이름이 `spec` 또는 `transaction`인 Operation을 가진 플러그인이 주어진다
+- **행동**: 해당 플러그인으로 `createMonti`를 호출한다
+- **결과**:
+  - `ENG-PLG-3.1` `CONFLICT` 오류를 던진다
 
 </details>
 
