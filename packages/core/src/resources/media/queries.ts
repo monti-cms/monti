@@ -19,8 +19,8 @@ export interface MediaItem {
 
 export const SHOWN = ["id", "folder_id", "key", "filename", "mime_type", "size", "width", "height"] as const;
 
-/** 미디어 파일 크기의 상한: `media.size` 열인 PostgreSQL `integer`의 최대값. */
-export const MAX_MEDIA_SIZE = 2_147_483_647;
+/** 미디어의 정수 열(`size`, `width`, `height`)이 담을 수 있는 가장 큰 값: PostgreSQL `integer`의 최대값. */
+export const MAX_INTEGER = 2_147_483_647;
 
 /** How long a file nothing uses waits in `loose_files` before it is removed. */
 const LOOSE_FOR_MS = 24 * 60 * 60 * 1000;
@@ -35,11 +35,11 @@ export function itemOf(row: Omit<Selectable<MediaTable>, "trashed_at">, storage:
 	return { ...row, url: storage.url(row.key) };
 }
 
-/** 올라간 `key`의 파일. 파일이 없거나 크기가 `0` 이상 `MAX_MEDIA_SIZE` 이하의 정수가 아니면 거절한다. */
+/** 올라간 `key`의 파일. 파일이 없거나 크기가 `0` 이상 `MAX_INTEGER` 이하의 정수가 아니면 거절한다. */
 export async function statOf(storage: StorageAdapter, key: string): Promise<{ mime: string; size: number }> {
 	const stat = await storage.stat(key);
 	if (stat === null) throw new MontiError("BAD_REQUEST", "No uploaded file has this key");
-	if (!Number.isInteger(stat.size) || stat.size < 0 || stat.size > MAX_MEDIA_SIZE) {
+	if (!Number.isInteger(stat.size) || stat.size < 0 || stat.size > MAX_INTEGER) {
 		throw new MontiError("BAD_REQUEST", "파일 크기가 허용 범위를 벗어났다");
 	}
 	return stat;
@@ -81,14 +81,31 @@ export async function rejectFolder(ctx: WriteContext, folderId: string): Promise
 	}
 }
 
-/** Puts `key` in `loose_files`, to be removed in 24 hours. */
-export async function addLooseFile(ctx: WriteContext, key: string): Promise<void> {
+/** `key`를 `kind`(업로드 티켓 `"upload"` 또는 더는 쓰지 않는 파일 `"cleanup"`)로 `loose_files`에 올려 24시간 뒤 지우게 한다. */
+export async function addLooseFile(ctx: WriteContext, key: string, kind: "upload" | "cleanup"): Promise<void> {
 	const remove_after = new Date(Date.now() + LOOSE_FOR_MS);
 	await ctx.db
 		.insertInto("loose_files")
-		.values({ key, remove_after })
-		.onConflict((conflict) => conflict.column("key").doUpdateSet({ remove_after }))
+		.values({ key, kind, remove_after })
+		.onConflict((conflict) => conflict.column("key").doUpdateSet({ kind, remove_after }))
 		.execute();
+}
+
+/** 이미 미디어(휴지통 포함)로 등록된 `key`면 거절한다. */
+export async function rejectRegisteredKey(ctx: WriteContext, key: string): Promise<void> {
+	const row = await ctx.db.selectFrom("media").select("id").where("key", "=", key).executeTakeFirst();
+	if (row !== undefined) throw new MontiError("CONFLICT", "이미 등록된 파일 키다");
+}
+
+/** `media.startUpload`가 발급해 아직 등록되지 않은 업로드 티켓 키가 아니면 거절한다. 삭제 대기 중인 이전 키도 거절한다. */
+export async function rejectUnissuedKey(ctx: WriteContext, key: string): Promise<void> {
+	const ticket = await ctx.db
+		.selectFrom("loose_files")
+		.select("key")
+		.where("key", "=", key)
+		.where("kind", "=", "upload")
+		.executeTakeFirst();
+	if (ticket === undefined) throw new MontiError("BAD_REQUEST", "업로드 시작으로 발급받은 파일 키가 아니다");
 }
 
 /** Takes `key` out of `loose_files`: something uses its file now. */
@@ -99,10 +116,10 @@ export async function removeLooseFile(ctx: WriteContext, key: string): Promise<v
 /** `keys`를 지금 지울 임시 파일로 `loose_files`에 올린다. 이미 있는 키는 지울 시각을 지금으로 맞춘다. */
 export async function queueLooseFilesNow(ctx: WriteContext, keys: string[]): Promise<void> {
 	if (keys.length === 0) return;
-	const rows = [...keys].sort().map((key) => ({ key, remove_after: sql<Date>`now()` }));
+	const rows = [...keys].sort().map((key) => ({ key, kind: "cleanup" as const, remove_after: sql<Date>`now()` }));
 	await ctx.db
 		.insertInto("loose_files")
 		.values(rows)
-		.onConflict((conflict) => conflict.column("key").doUpdateSet({ remove_after: sql<Date>`now()` }))
+		.onConflict((conflict) => conflict.column("key").doUpdateSet({ kind: "cleanup", remove_after: sql<Date>`now()` }))
 		.execute();
 }

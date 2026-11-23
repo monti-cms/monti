@@ -3,6 +3,7 @@ import { MontiError } from "../../engine/errors";
 import type { WriteContext } from "../../engine/types";
 import { collectionOf } from "../_shared/collection";
 import { uuidInput } from "../_shared/input";
+import { lockEntry } from "../entries/locks";
 import { tablesOf } from "../entries/tables";
 import { type BlockSeen, findTranslation, type SeenRecord, seenOf, type TranslationRow } from "./rows";
 import { statusOf, type TranslationStatus } from "./status";
@@ -25,9 +26,11 @@ type UpdateInput = z.infer<typeof updateInput>;
 
 /**
  * 번역 언어 작업본에서 원문 필드를 확인(`true`)하거나 기록을 지우고(`null`), 원문 본문 블록을 연결·번역 제외하거나
- * 기록을 지운다. 요청 전체를 검사한 뒤에 `translation_seen`만 쓴다: 다른 기록과 슬러그·필드·본문은 그대로이다.
+ * 기록을 지운다. 요청 전체를 검사한 뒤에 `translation_seen`만 쓴다: 다른 기록과 슬러그·필드·본문은 그대로이다. 글을 잠근 뒤
+ * 다시 읽은 기록과 원문에 덧붙여, 겹친 다른 확인과 원문 언어 변경이 커밋한 것을 잃거나 이전 원문으로 기록하지 않는다.
  */
 export async function updateStatus(input: UpdateInput, ctx: WriteContext): Promise<TranslationStatus> {
+	await lockEntry(ctx, (await findTranslation(ctx, input)).collection, input.id);
 	const row = await findTranslation(ctx, input);
 	const seen = seenOf(row);
 	confirmFields(ctx, seen, input.fields ?? {}, row);

@@ -73,10 +73,12 @@ async function createMediaUses(db: Kysely<unknown>): Promise<void> {
 		.execute();
 }
 
+/** 업로드 티켓(`"upload"`)과 더는 쓰지 않는 파일(`"cleanup"`)을 `kind`로 가른다. 적지 않으면 더는 쓰지 않는 파일이다. */
 async function createLooseFiles(db: Kysely<unknown>): Promise<void> {
 	await db.schema
 		.createTable("loose_files")
 		.addColumn("key", "text", (column) => column.primaryKey())
+		.addColumn("kind", "text", (column) => column.notNull().defaultTo("cleanup"))
 		.addColumn("remove_after", "timestamptz", (column) => column.notNull())
 		.execute();
 }

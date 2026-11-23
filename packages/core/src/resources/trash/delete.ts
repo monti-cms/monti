@@ -1,5 +1,6 @@
 import { sql } from "kysely";
 import type { z } from "zod";
+import { lockFolderScope } from "../../db/locks";
 import type { WriteContext } from "../../engine/types";
 import { tablesOf } from "../entries/tables";
 import { lockStorageKey, queueLooseFilesNow } from "../media/queries";
@@ -107,9 +108,19 @@ async function targetsOf(ctx: WriteContext, input: DeleteInput): Promise<TrashTa
 	return query.execute();
 }
 
+/**
+ * 입력이 가리키는 항목들을 그 `scope`들의 잠금 아래에서 다시 고른다. 먼저 고른 항목들의 `scope`를 이름 순으로 잠근 뒤 다시
+ * 골라, 그사이 되살아난 항목은 빼고(이름으로 준 항목이면 거절하고) 잠그지 않은 `scope`의 항목은 다음 삭제로 남긴다.
+ */
+async function lockedTargets(ctx: WriteContext, input: DeleteInput): Promise<TrashTarget[]> {
+	const scopes = [...new Set((await targetsOf(ctx, input)).map((target) => target.scope))].sort();
+	for (const scope of scopes) await lockFolderScope(ctx.db, scope);
+	return (await targetsOf(ctx, input)).filter((target) => scopes.includes(target.scope));
+}
+
 /** 휴지통 항목을 함께 들어간 것과 함께 영구 삭제한다. */
 export async function deleteItems(input: DeleteInput, ctx: WriteContext): Promise<TrashRef | TrashRef[]> {
-	const targets = await targetsOf(ctx, input);
+	const targets = await lockedTargets(ctx, input);
 	const trees: Tree[] = [];
 	for (const target of targets) trees.push(await itemsOf(ctx, target));
 	const media = trees.flatMap((tree) => tree.media);

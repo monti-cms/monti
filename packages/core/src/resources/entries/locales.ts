@@ -6,6 +6,7 @@ import { uuidInput } from "../_shared/input";
 import { recountEntryMediaUses } from "../media/uses";
 import { saveCopy } from "./copies";
 import { dataShape, type entryLocaleInput, slugInput } from "./inputs";
+import { findLockedEntry } from "./locks";
 import { findEntry } from "./read";
 import { tablesOf } from "./tables";
 import type { Entry } from "./types";
@@ -35,7 +36,7 @@ async function rejectExistingLocale(ctx: WriteContext, entry: Entry, locale: str
  */
 export async function addLocale(input: z.infer<typeof addLocaleInput>, ctx: WriteContext): Promise<Entry> {
 	rejectLocale(ctx, input.locale);
-	const source = await findEntry(ctx, { id: input.id }, "draft");
+	const source = await findLockedEntry(ctx, { id: input.id }, "draft");
 	const { id, collection: name } = source;
 	const collection = collectionOf(ctx, name);
 	const data = await checkData(ctx, collection, input);
@@ -52,7 +53,7 @@ export async function addLocale(input: z.infer<typeof addLocaleInput>, ctx: Writ
  * 지울 수 없다.
  */
 export async function removeLocale(input: z.infer<typeof entryLocaleInput>, ctx: WriteContext) {
-	const entry = await findEntry(ctx, { id: input.id }, "draft");
+	const entry = await findLockedEntry(ctx, { id: input.id }, "draft");
 	if (input.locale === entry.source_locale) throw new MontiError("BAD_REQUEST", "원문 언어는 지울 수 없다");
 	const removed = await tablesOf(ctx.db)
 		.deleteFrom(`${entry.collection}_data`)
@@ -70,7 +71,7 @@ export async function removeLocale(input: z.infer<typeof entryLocaleInput>, ctx:
  * 그대로 돌려준다.
  */
 export async function setSourceLocale(input: z.infer<typeof entryLocaleInput>, ctx: WriteContext): Promise<Entry> {
-	const entry = await findEntry(ctx, { id: input.id, locale: input.locale }, "draft");
+	const entry = await findLockedEntry(ctx, { id: input.id, locale: input.locale }, "draft");
 	if (entry.source_locale === input.locale) return entry;
 	const db = tablesOf(ctx.db);
 	await db.updateTable(entry.collection).set({ source_locale: input.locale }).where("id", "=", entry.id).execute();

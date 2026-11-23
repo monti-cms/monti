@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { lockFolderScope } from "../../db/locks";
 import { MontiError } from "../../engine/errors";
 import type { WriteContext } from "../../engine/types";
 import { collectionOf } from "../_shared/collection";
@@ -6,6 +7,7 @@ import { uuidInput } from "../_shared/input";
 import { recountEntryMediaUses } from "../media/uses";
 import { saveCopy } from "./copies";
 import { dataShape, folderInput, slugInput } from "./inputs";
+import { findLockedEntry } from "./locks";
 import { findEntry } from "./read";
 import { tablesOf } from "./tables";
 import type { CopyKey, Entry, EntryData } from "./types";
@@ -53,10 +55,10 @@ function patchOf(input: DataInput, existing: EntryData): DataInput {
  * 활성 글의 `locale`(생략하면 원문 언어) 작업본의 슬러그와 필드·본문, 글 전체의 폴더를 바꾼다. `fields`를 주면 필드
  * 값 전체를, `body`를 주면 본문을 교체하고 생략한 쪽은 그대로 두며, 둘 중 하나라도 주면 모든 언어 기준으로 미디어
  * 사용처를 다시 센다. 그 작업본의 같은 경로에 이미 있던 참조는 대상이 휴지통에 있어도 그대로 둘 수 있다. 발행본은
- * 건드리지 않는다.
+ * 건드리지 않는다. 글을 잠근 뒤의 작업본에 덧붙여 쓰므로 겹친 다른 수정이 저장한 것을 잃지 않는다.
  */
 async function updateOne(input: z.infer<typeof updateOneInput>, ctx: WriteContext): Promise<Entry> {
-	const existing = await findEntry(ctx, { id: input.id, locale: input.locale }, "draft");
+	const existing = await findLockedEntry(ctx, { id: input.id, locale: input.locale }, "draft");
 	const { id, locale, collection: name } = existing;
 	const collection = collectionOf(ctx, name);
 	const replaces = input.fields !== undefined || input.body !== undefined;
@@ -72,7 +74,10 @@ async function updateOne(input: z.infer<typeof updateOneInput>, ctx: WriteContex
 	return findEntry(ctx, { id, locale }, "draft");
 }
 
-/** 컬렉션마다 `ids` 가운데 그 컬렉션의 활성 글들. 하나라도 활성 글이 아니면 거절한다. */
+/**
+ * 컬렉션마다 `ids` 가운데 그 컬렉션의 활성 글들. 하나라도 활성 글이 아니면 거절한다. 잠그지 않고 읽어 잠글 컬렉션을 고르는
+ * 데만 쓴다: 그 뒤 휴지통에 들어간 글은 쓰는 쪽이 가린다.
+ */
 async function activeOwners(ctx: WriteContext, ids: string[]): Promise<Map<string, string[]>> {
 	const owners = new Map<string, string[]>();
 	for (const name of Object.keys(ctx.schema.collections)) {
@@ -93,18 +98,26 @@ async function activeOwners(ctx: WriteContext, ids: string[]): Promise<Map<strin
 	return owners;
 }
 
-/** 활성 글들을 그 컬렉션의 활성 폴더 하나로, `folder_id: null`이면 루트로 옮긴다. */
+/**
+ * 활성 글들을 그 컬렉션의 활성 폴더 하나로, `folder_id: null`이면 루트로 옮긴다. 컬렉션마다 이름 순으로 `scope` 잠금을
+ * 잡아 폴더 수정·휴지통 이동과 서로 기다리다 멈추지 않는다. 잠금을 기다리는 동안 겹친 폴더의 휴지통 이동이 글을 함께 보냈을
+ * 수 있어 아직 활성인 글만 옮기고, 옮기지 못한 글이 있으면 이동 전체를 거절한다.
+ */
 async function moveEntries(input: z.infer<typeof moveInput>, ctx: WriteContext) {
 	const owners = await activeOwners(ctx, [...new Set(input.ids)]);
 	const moved = [];
-	for (const [name, ids] of owners) {
+	for (const name of [...owners.keys()].sort()) {
+		await lockFolderScope(ctx.db, name);
+		const ids = owners.get(name) as string[];
 		if (input.folder_id !== null) await rejectFolder(ctx, input.folder_id, name);
 		const rows = await tablesOf(ctx.db)
 			.updateTable(name)
 			.set({ folder_id: input.folder_id })
 			.where("id", "in", ids)
+			.where("trashed_at", "is", null)
 			.returning(["id", "folder_id"])
 			.execute();
+		if (rows.length !== ids.length) throw new MontiError("NOT_FOUND", "활성 글이 아닌 `id`가 있다");
 		moved.push(...rows.map((row) => ({ id: String(row.id), folder_id: row.folder_id as string | null })));
 	}
 	return moved;

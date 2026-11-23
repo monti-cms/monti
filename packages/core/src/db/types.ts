@@ -50,9 +50,13 @@ export interface MediaUsesTable {
 	field_path: string;
 }
 
-/** 아무도 쓰지 않아 지워지기를 기다리는 저장소 파일. */
+/**
+ * 아무도 쓰지 않아 지워지기를 기다리는 저장소 파일. `kind`는 `media.startUpload`가 발급해 아직 등록되지 않은 키(`"upload"`)와
+ * 교체·영구 삭제로 쓰이지 않게 된 키(`"cleanup"`, 기본값)를 가른다.
+ */
 export interface LooseFilesTable {
 	key: string;
+	kind: ColumnType<"upload" | "cleanup", "upload" | "cleanup" | undefined, "upload" | "cleanup">;
 	remove_after: Timestamp;
 }
 

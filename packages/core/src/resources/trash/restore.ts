@@ -93,8 +93,8 @@ async function restoreTarget(ctx: WriteContext, target: TrashTarget): Promise<vo
 }
 
 /**
- * 휴지통 항목을 휴지통에서 꺼낸다. 그 `scope`의 폴더 구조 잠금을 잡은 뒤에 폴더 이름을 고르고 새 폴더를 만들어, 겹친
- * 되살리기·폴더 만들기·고치기가 커밋된 뒤의 이름을 보고 다시 쓰거나 번호를 붙인다.
+ * 휴지통 항목을 휴지통에서 꺼낸다. 그 `scope`의 잠금을 잡은 뒤 다시 찾아, 겹친 복원·영구 삭제가 먼저 꺼냈으면 거절하고
+ * 겹친 복원이 만든 대체 폴더와 정한 슬러그를 본다.
  */
 export async function restoreItem(input: z.infer<typeof idInput>, ctx: WriteContext): Promise<TrashRef> {
 	const { scope } = await findTarget(ctx, input.id);

@@ -19,16 +19,33 @@ const BUILT_IN_BLOCKS: readonly BlockDefinition[] = [
 	{ type: "table", holds: "nothing" },
 ];
 
+/** 링크 주소가 시작할 수 있는 것: `http:`·`https:`·`mailto:` 스킴(대소문자 무관), `/` 하나로 시작하는 상대 경로, `#` 조각. */
+const SAFE_HREF = /^(?:https?:|mailto:|#|\/(?![/\\]))/i;
+
+/**
+ * 링크 주소에 제어 문자(U+0000~U+001F, U+007F)가 없는지. URL 파서는 주소의 탭과 줄바꿈을 지우고 읽어, `/`와 `/` 사이에 탭을
+ * 넣은 상대 경로가 다른 호스트를 가리키는 `//host`가 된다.
+ */
+function hasNoControlCharacter(href: string): boolean {
+	return [...href].every((character) => character > "\u001f" && character !== "\u007f");
+}
+
 const BUILT_IN_MARKS: readonly MarkDefinition[] = [
-	"bold",
-	"italic",
-	"underline",
-	"strike",
-	"code",
-	"link",
-	"sup",
-	"sub",
-].map((type) => ({ type }));
+	...["bold", "italic", "underline", "strike", "code", "sup", "sub"].map((type) => ({ type })),
+	{
+		type: "link",
+		attrs: z.object({
+			href: z
+				.string()
+				.regex(SAFE_HREF, "허용되지 않은 링크 주소입니다.")
+				.refine(hasNoControlCharacter, "링크 주소에 제어 문자를 쓸 수 없습니다.")
+				.optional(),
+		}),
+	},
+];
+
+/** 블록이 놓일 수 있는 가장 깊은 단계. 최상위 블록이 1단계다. */
+const MAX_DEPTH = 32;
 
 /** 모든 블록이 가질 수 있는 예약 속성. 블록 정의와 상관없이 검사한다. */
 const RESERVED_ATTRS: Record<string, z.ZodTypeAny> = { mediaId: z.uuid(), mediaIds: z.array(z.uuid()) };
@@ -53,7 +70,7 @@ export function validateDoc(doc: unknown, options: ValidateDocOptions = {}): Doc
 		ids: new Set(),
 		issues: [],
 	};
-	if (isRecord(doc)) checkBlockList(check, doc.blocks, "blocks");
+	if (isRecord(doc)) checkBlockList(check, doc.blocks, "blocks", 1);
 	else report(check, "", "문서는 객체여야 합니다.");
 	return check.issues;
 }
@@ -67,17 +84,23 @@ function byType<T extends { type: string }>(builtIn: readonly T[], added: readon
 	return new Map([...builtIn, ...added].map((definition) => [definition.type, definition]));
 }
 
-function checkBlockList(check: Check, value: unknown, path: string, allowed?: readonly string[]): void {
+/** `depth`단계 블록들의 목록. 최상위 목록이 1단계다. */
+function checkBlockList(check: Check, value: unknown, path: string, depth: number, allowed?: readonly string[]): void {
 	if (!Array.isArray(value)) {
 		report(check, path, "블록 배열이어야 합니다.");
 		return;
 	}
 	value.forEach((block, index) => {
-		checkBlock(check, block, `${path}[${index}]`, allowed);
+		checkBlock(check, block, `${path}[${index}]`, depth, allowed);
 	});
 }
 
-function checkBlock(check: Check, block: unknown, path: string, allowed?: readonly string[]): void {
+/** `depth`단계 블록 하나. `MAX_DEPTH`보다 깊으면 그 블록을 문제로 두고 더 들어가지 않는다. */
+function checkBlock(check: Check, block: unknown, path: string, depth: number, allowed?: readonly string[]): void {
+	if (depth > MAX_DEPTH) {
+		report(check, path, `블록은 ${MAX_DEPTH}단계보다 깊이 중첩할 수 없습니다.`);
+		return;
+	}
 	if (!isRecord(block)) {
 		report(check, path, "블록은 객체여야 합니다.");
 		return;
@@ -89,7 +112,7 @@ function checkBlock(check: Check, block: unknown, path: string, allowed?: readon
 		report(check, path, `"${definition.type}" 블록은 여기에 둘 수 없습니다.`);
 	}
 	checkAttrs(check, block.attrs, definition.attrs, `${path}.attrs`);
-	checkHeld(check, block, definition, path);
+	checkHeld(check, block, definition, path, depth);
 }
 
 function checkId(check: Check, id: unknown, path: string): void {
@@ -119,14 +142,14 @@ function checkAttrs(check: Check, attrs: unknown, schema: z.ZodTypeAny | undefin
 	}
 }
 
-function checkHeld(check: Check, block: Value, definition: BlockDefinition, path: string): void {
+function checkHeld(check: Check, block: Value, definition: BlockDefinition, path: string, depth: number): void {
 	for (const key of ["content", "children"] as const) {
 		const value = block[key];
 		const at = `${path}.${key}`;
 		if (value === undefined) continue;
 		if (definition.holds !== HELD_BY[key]) report(check, at, `"${definition.type}" 블록은 ${key}를 담지 않습니다.`);
 		else if (key === "content") checkInlines(check, value, at);
-		else checkBlockList(check, value, at, definition.children);
+		else checkBlockList(check, value, at, depth + 1, definition.children);
 	}
 }
 

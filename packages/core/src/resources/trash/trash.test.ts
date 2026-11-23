@@ -3,6 +3,7 @@ import { type Kysely, sql } from "kysely";
 import { afterEach, beforeEach, expect, it } from "vitest";
 import { createTestDatabase, type TestDatabase } from "../../__test__/database";
 import { createMemoryStorage, type MemoryStorage } from "../../__test__/memory-storage";
+import { holdingAfter, overlap } from "../../__test__/race";
 import { migrate } from "../../db/migrate";
 import { initial } from "../../db/migrations/0001-initial";
 import type { Database } from "../../db/types";
@@ -43,8 +44,22 @@ const SCHEMA: Schema = {
 	},
 };
 
+/** 폴더 트리 안의 `posts` 글을 읽는 문장. */
+const TREE_ENTRIES_READ = /from "posts" as "item"/;
+/** 휴지통 항목을 찾는 문장(휴지통 동작이 가장 먼저 실행한다). */
+const TRASH_READ = /^select "item"\."kind", "item"\."id", "item"\."scope" from/;
+
 function montiOf(withStorage = true) {
-	return createMonti(db, { entries, folders, media, trash }, [], {
+	return montiOn(db, withStorage);
+}
+
+/** SQL이 `pattern`에 맞는 첫 문장을 실행한 직후 `hold`가 끝날 때까지 멈추는 엔진. */
+function heldMonti(pattern: RegExp, hold: () => Promise<void>) {
+	return montiOn(holdingAfter(db, pattern, hold));
+}
+
+function montiOn(on: Kysely<Database>, withStorage = true) {
+	return createMonti(on, { entries, folders, media, trash }, [], {
 		schema: SCHEMA,
 		config: { name: "Monti Blog", dev: false, storage: withStorage ? storage : undefined },
 		schemaFile: "unused-schema-file",
@@ -102,9 +117,9 @@ async function createFolder(scope: string, parent_id: string | null = null, name
 	return montiOf().folders.create({ scope, parent_id, name });
 }
 
-/** 메모리 저장소에 파일을 올리고 `media.create`로 등록한다. */
+/** `media.startUpload`로 받은 키로 메모리 저장소에 파일을 올리고 `media.create`로 등록한다. */
 async function createMedia(folder_id: string | null = null, filename?: string) {
-	const key = randomUUID();
+	const { key } = await montiOf().media.startUpload({ mime_type: "image/png", size: 1024 });
 	storage.seed(key, { mime: "image/png", size: 1024 });
 	return montiOf().media.create({ key, folder_id, filename });
 }
@@ -277,6 +292,57 @@ it("TRH-MOVE-6 이미 휴지통에 있는 항목은 다시 휴지통에 보낼 �
 	await expect(montiOf().trash.move({ id: entry.id })).rejects.toMatchObject({ code: "NOT_FOUND" });
 	// TRH-MOVE-6.2
 	expect(await trashedAtText(POSTS, entry.id)).toBe(before);
+});
+
+it("TRH-MOVE-7 상위 폴더를 휴지통에 보내는 동안 안의 글을 먼저 따로 보내도 그 글의 휴지통 시각은 덮어씌워지지 않는다", async () => {
+	const folder = await createFolder(POSTS);
+	const [alone, together] = [await createEntry({ folder_id: folder.id }), await createEntry({ folder_id: folder.id })];
+
+	// 폴더 이동이 안의 글을 읽은 직후 멈춘 동안 따로 버릴 글의 이동이 커밋된다.
+	const [folderMove, entryMove] = await overlap(
+		db,
+		(hold) => heldMonti(TREE_ENTRIES_READ, hold).trash.move({ id: folder.id }),
+		() => montiOf().trash.move({ id: alone.id }),
+		{ commits: true },
+	);
+	const folderAt = await trashedAtText("folders", folder.id);
+	const listed = (await montiOf().trash.list()).map((item) => item.id);
+
+	// TRH-MOVE-7.1
+	expect({
+		codes: [folderMove.code, entryMove.code],
+		alone: (await trashedAtText(POSTS, alone.id)) === folderAt,
+	}).toEqual({
+		codes: [null, null],
+		alone: false,
+	});
+	// TRH-MOVE-7.2
+	expect(await trashedAtText(POSTS, together.id)).toBe(folderAt);
+	// TRH-MOVE-7.3
+	expect(listed.sort()).toEqual([folder.id, alone.id].sort());
+});
+
+it("TRH-MOVE-8 폴더를 휴지통에 보내는 동안 그 폴더에 새 글을 넣어도 휴지통 폴더 아래 활성 글이 남지 않는다", async () => {
+	const folder = await createFolder(POSTS);
+
+	// 폴더 이동이 안의 글을 읽은 직후 멈춘 동안 그 폴더에 글을 만든다.
+	await overlap(
+		db,
+		(hold) => heldMonti(TREE_ENTRIES_READ, hold).trash.move({ id: folder.id }),
+		() => createEntry({ folder_id: folder.id }),
+	);
+	const active = await tables
+		.selectFrom(POSTS)
+		.selectAll()
+		.where("folder_id", "=", folder.id)
+		.where("trashed_at", "is", null)
+		.execute();
+
+	// TRH-MOVE-8.1
+	expect({ folderTrashed: (await folderRow(folder.id))?.trashed_at !== null, active }).toEqual({
+		folderTrashed: true,
+		active: [],
+	});
 });
 
 it("TRH-READ-1 휴지통의 글·폴더·미디어만 최근에 버린 것부터 돌려준다", async () => {
@@ -513,6 +579,60 @@ it("TRH-RST-9 미디어 폴더를 되살리면 함께 들어갔던 하위 폴더
 	expect(output).toEqual({ kind: "folder", id: parent.id });
 });
 
+it("TRH-RST-10 같은 휴지통 폴더에 있던 글 두 개를 동시에 되살려도 대체 활성 폴더는 하나만 생긴다", async () => {
+	const folder = await createFolder(POSTS);
+	const [one, two] = [await createEntry({ folder_id: folder.id }), await createEntry({ folder_id: folder.id })];
+	await moveToTrash(one.id);
+	await moveToTrash(two.id);
+	await moveToTrash(folder.id);
+	const folderAt = await trashedAtText("folders", folder.id);
+
+	// 첫 복원이 같은 이름의 활성 폴더를 찾아본 직후 멈춘 동안 두 번째 복원이 시작된다.
+	const [first, second] = await overlap(
+		db,
+		(hold) => heldMonti(/^select "id", "name" from "folders" .* and "name" = \$/, hold).trash.restore({ id: one.id }),
+		() => montiOf().trash.restore({ id: two.id }),
+	);
+	const twins = await db
+		.selectFrom("folders")
+		.select("id")
+		.where("scope", "=", POSTS)
+		.where("name", "=", folder.name)
+		.where("trashed_at", "is", null)
+		.where("id", "<>", folder.id)
+		.execute();
+
+	// TRH-RST-10.1
+	expect({ codes: [first.code, second.code], folderAt: await trashedAtText("folders", folder.id) }).toEqual({
+		codes: [null, null],
+		folderAt,
+	});
+	// TRH-RST-10.2
+	expect(twins).toHaveLength(1);
+	// TRH-RST-10.3
+	expect([(await entryRow(one.id))?.folder_id, (await entryRow(two.id))?.folder_id]).toEqual([
+		twins[0]?.id,
+		twins[0]?.id,
+	]);
+});
+
+it("TRH-RST-11 같은 글을 동시에 두 번 되살리면 한 건만 성공하고 슬러그에 불필요한 번호가 붙지 않는다", async () => {
+	const entry = await createEntry({ slug: "hello" });
+	await moveToTrash(entry.id);
+
+	// 첫 복원이 휴지통 행을 읽은 직후 멈춘 동안 두 번째 복원이 시작된다.
+	const [first, second] = await overlap(
+		db,
+		(hold) => heldMonti(TRASH_READ, hold).trash.restore({ id: entry.id }),
+		() => montiOf().trash.restore({ id: entry.id }),
+	);
+
+	// TRH-RST-11.1
+	expect([first.code, second.code].sort()).toEqual(["NOT_FOUND", null]);
+	// TRH-RST-11.2
+	expect((await copyRows(entry.id, POSTS, "draft"))[0]?.slug).toBe("hello");
+});
+
 it("TRH-DEL-1 글을 영구 삭제하면 그 글의 모든 데이터와 다른 글이 그 글을 가리키던 참조가 함께 정리된다", async () => {
 	const item = await createMedia();
 	const tag = await createPublishedEntry({ collection: TAGS, fields: { title: "태그", icon: item.id } });
@@ -684,4 +804,34 @@ it("TRH-DEL-8 대상 중 휴지통에 있지 않은 항목이 하나라도 있�
 	});
 	// TRH-DEL-8.2
 	expect({ trashed: await entryRow(trashed.id), active: await entryRow(active.id) }).toEqual(before);
+});
+
+it("TRH-DEL-9 휴지통 폴더를 되살리는 동안 전체 영구 삭제가 동시에 실행되어도 되살아난 폴더와 글은 지워지지 않는다", async () => {
+	const folder = await createFolder(POSTS);
+	const inside = await createEntry({ folder_id: folder.id });
+	const alone = await createEntry();
+	await moveToTrash(folder.id);
+	await moveToTrash(alone.id);
+
+	// 전체 영구 삭제가 삭제 대상을 읽은 직후 멈춘 동안 폴더 복원이 커밋된다.
+	const [removal, restore] = await overlap(
+		db,
+		(hold) => heldMonti(TRASH_READ, hold).trash.delete({ all: true }),
+		() => montiOf().trash.restore({ id: folder.id }),
+		{ commits: true },
+	);
+	const restored = { folder: await folderRow(folder.id), entry: await entryRow(inside.id) };
+
+	// TRH-DEL-9.1
+	expect({
+		restore: restore.code,
+		folder: restored.folder?.trashed_at,
+		entry: restored.entry?.trashed_at,
+		folder_id: restored.entry?.folder_id,
+	}).toEqual({ restore: null, folder: null, entry: null, folder_id: folder.id });
+	// TRH-DEL-9.2
+	expect({ returned: removal.value, alone: await entryRow(alone.id) }).toEqual({
+		returned: [{ kind: "entry", id: alone.id }],
+		alone: undefined,
+	});
 });

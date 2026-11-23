@@ -5,6 +5,7 @@ import { collectionOf } from "../_shared/collection";
 import { timestampInput, uuidInput } from "../_shared/input";
 import { referencesOf, rejectInactive } from "./active";
 import { saveCopy } from "./copies";
+import { findLockedEntry } from "./locks";
 import { findEntry } from "./read";
 import type { ConditionalValue } from "./slots";
 import { tablesOf } from "./tables";
@@ -57,7 +58,7 @@ async function rejectUnfilled(ctx: WriteContext, entry: Entry): Promise<void> {
  * 발행은 지금, 다시 발행은 이미 발행된 시각이다.
  */
 export async function publishEntry(input: z.infer<typeof publishInput>, ctx: WriteContext): Promise<Entry> {
-	const entry = await findEntry(ctx, { id: input.id, locale: input.locale }, "draft");
+	const entry = await findLockedEntry(ctx, { id: input.id, locale: input.locale }, "draft");
 	const { id, locale, collection: name, slug } = entry;
 	await rejectUnfilled(ctx, entry);
 	await rejectTakenSlug(ctx, name, { id, locale, slug }, "published");

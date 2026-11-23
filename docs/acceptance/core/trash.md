@@ -4,10 +4,10 @@
 
 | 액션 | 하는 일 | 주요 거절 |
 |---|---|---|
-| `trash.move` | 활성 글·폴더(하위 항목 동시 이동)·미디어를 휴지통으로 보내고 DB 참조·`media_uses`는 복원을 위해 유지한다 | 이미 휴지통·미존재 `NOT_FOUND` |
+| `trash.move` | 활성 글·폴더(하위 항목 동시 이동, 먼저 따로 버린 하위 항목 시각 보존, 폴더 이동 중 들어온 새 항목의 활성 잔존 방지)·미디어를 휴지통으로 보내고 DB 참조·`media_uses`는 복원을 위해 유지한다 | 이미 휴지통·미존재 `NOT_FOUND` |
 | `trash.list` · `get` | 폴더와 함께 들어간 항목을 묶어 최신순으로 조회(`kind`, `id`, `name`, `trashed_at`) | 휴지통 항목 아님 `NOT_FOUND` |
-| `trash.restore` | 휴지통 항목 복원(글은 발행본 삭제 후 초안 복귀, 휴지통 상위 폴더 재생성/재사용, 이름·슬러그 충돌 시 `-2` 부여) | 휴지통 항목 아님 `NOT_FOUND` |
-| `trash.delete` | `{ id }`·`{ ids }`·`{ before }`·`{ all: true }` 영구 삭제(외래 키·사용처 정리, 미디어 파일 키는 `loose_files` 즉시 등록) | 대상 중 비휴지통 항목 포함 시 전체 롤백 `NOT_FOUND` |
+| `trash.restore` | 휴지통 항목 복원(글은 발행본 삭제 후 초안 복귀, 동시 복원 시 1건만 성공, 휴지통 상위 폴더 재생성/재사용 및 동시 복원 시 대체 폴더 공유, 이름·슬러그 충돌 시 `-2` 부여) | 휴지통 항목 아님 `NOT_FOUND` |
+| `trash.delete` | `{ id }`·`{ ids }`·`{ before }`·`{ all: true }` 영구 삭제(외래 키·사용처 정리, 미디어 파일 키는 `loose_files` 즉시 등록, 영구 삭제와 복원이 겹쳐도 되살아난 활성 항목 보호) | 대상 중 비휴지통 항목 포함 시 전체 롤백 `NOT_FOUND` |
 
 ---
 
@@ -79,6 +79,28 @@
 - **결과**:
   - `TRH-MOVE-6.1` `NOT_FOUND` 오류를 던진다
   - `TRH-MOVE-6.2` `<collection>` 테이블에서 해당 글의 `trashed_at`이 원래 그대로이다
+
+</details>
+
+<details>
+<summary><strong><code>TRH-MOVE-7</code></strong> 상위 폴더를 휴지통에 보내는 동안 안의 글을 먼저 따로 보내도 그 글의 휴지통 시각은 덮어씌워지지 않는다</summary>
+
+- **전제**: 컬렉션 `scope`의 활성 폴더 안에 활성 글 둘(따로 버릴 글, 함께 버릴 글)이 있다
+- **행동**: 상위 폴더의 `trash.move`가 하위 항목을 읽은 뒤 쓰기 전에, 따로 버릴 글의 `trash.move`가 별도 연결에서 커밋되도록 실행한다
+- **결과**:
+  - `TRH-MOVE-7.1` 두 호출 모두 성공하고, 따로 버릴 글의 `trashed_at`이 상위 폴더의 `trashed_at`과 다르다
+  - `TRH-MOVE-7.2` 함께 버릴 글의 `trashed_at`이 상위 폴더의 `trashed_at`과 같다
+  - `TRH-MOVE-7.3` `trash.list`에 상위 폴더 줄과 따로 버릴 글 줄이 별도로 나타난다
+
+</details>
+
+<details>
+<summary><strong><code>TRH-MOVE-8</code></strong> 폴더를 휴지통에 보내는 동안 그 폴더에 새 글을 넣어도 휴지통 폴더 아래 활성 글이 남지 않는다</summary>
+
+- **전제**: 컬렉션 `scope`의 활성 폴더가 하나 있다
+- **행동**: 그 폴더의 `trash.move`가 하위 항목을 읽은 뒤 커밋하기 전에, 해당 폴더를 `folder_id`로 지정한 `entries.create`가 별도 연결에서 겹쳐 실행된다
+- **결과**:
+  - `TRH-MOVE-8.1` 두 호출이 끝난 뒤 휴지통에 들어간 폴더를 `folder_id`로 두고 `trashed_at`이 `null`인 글이 `<collection>` 테이블에 없다
 
 </details>
 
@@ -241,6 +263,29 @@
 
 </details>
 
+<details>
+<summary><strong><code>TRH-RST-10</code></strong> 같은 휴지통 폴더에 있던 글 두 개를 동시에 되살려도 대체 활성 폴더는 하나만 생긴다</summary>
+
+- **전제**: 컬렉션 `scope`의 폴더 안의 글 둘을 각각 먼저 따로 휴지통에 보낸 뒤, 그 폴더를 `trash.move`로 보냈다
+- **행동**: 두 글의 `id`로 `trash.restore` 두 건을, 두 호출이 모두 대체 활성 폴더를 찾기 전에 겹치도록 실행한다
+- **결과**:
+  - `TRH-RST-10.1` 두 호출 모두 오류 없이 끝나고 휴지통 폴더의 `trashed_at`은 원래 그대로이다
+  - `TRH-RST-10.2` `folders` 테이블에 그 `scope`·이름의 새 활성 폴더(휴지통 폴더와 다른 `id`)가 정확히 하나만 생긴다
+  - `TRH-RST-10.3` 두 글의 `folder_id`가 모두 그 새 활성 폴더의 `id`이다
+
+</details>
+
+<details>
+<summary><strong><code>TRH-RST-11</code></strong> 같은 글을 동시에 두 번 되살리면 한 건만 성공하고 슬러그에 불필요한 번호가 붙지 않는다</summary>
+
+- **전제**: 작업본 `slug`가 `"hello"`인 글이 휴지통에 있고, 같은 슬러그의 활성 글은 없다
+- **행동**: 해당 글의 `id`로 `trash.restore` 두 건을, 두 호출이 모두 휴지통 행을 읽은 뒤 복원 쓰기 전에 겹치도록 실행한다
+- **결과**:
+  - `TRH-RST-11.1` 한 건은 성공하고 나머지 한 건은 `NOT_FOUND` 오류를 던진다
+  - `TRH-RST-11.2` 되살아난 글의 작업본 `slug`가 원래 `"hello"` 그대로이다
+
+</details>
+
 ## 4. 영구 삭제 (`delete`)
 
 ### 핵심 요구사항
@@ -338,5 +383,16 @@
 - **결과**:
   - `TRH-DEL-8.1` `NOT_FOUND` 오류를 던진다
   - `TRH-DEL-8.2` `<collection>` 테이블에서 두 글의 행이 원래 그대로이다
+
+</details>
+
+<details>
+<summary><strong><code>TRH-DEL-9</code></strong> 휴지통 폴더를 되살리는 동안 전체 영구 삭제가 동시에 실행되어도 되살아난 폴더와 글은 지워지지 않는다</summary>
+
+- **전제**: 함께 버린 글이 들어 있는 휴지통 폴더 하나와 별도의 휴지통 글 하나가 있다
+- **행동**: `trash.delete({ all: true })`가 삭제 대상을 읽은 뒤 삭제를 실행하기 전에, 휴지통 폴더의 `trash.restore`가 별도 연결에서 커밋되도록 실행한다
+- **결과**:
+  - `TRH-DEL-9.1` 되살아난 폴더와 그 안의 글이 `folders`와 `<collection>` 테이블에 활성(`trashed_at`이 `null`) 상태로 남아 있고, 글의 `folder_id`도 원래 폴더 그대로이다
+  - `TRH-DEL-9.2` `trash.delete`는 별도의 휴지통 글만 삭제하고, 반환 목록에 되살아난 폴더와 그 안의 글이 포함되지 않는다
 
 </details>
