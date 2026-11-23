@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import type { Kysely, Transaction } from "kysely";
+import { type Kysely, type KyselyPlugin, sql, type Transaction } from "kysely";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { z } from "zod";
 import { createTestDatabase, type TestDatabase } from "../__test__/database";
@@ -660,6 +660,20 @@ function insertLate(trx: Transaction<Database>): Promise<unknown> {
 		.execute();
 }
 
+/** 쿼리와 결과를 그대로 넘기는 Kysely 플러그인: `trx`에서 실행기를 가르는 데만 쓴다. */
+const passThrough: KyselyPlugin = {
+	transformQuery: ({ node }) => node,
+	transformResult: async ({ result }) => result,
+};
+
+/** 플러그인을 붙인 raw SQL로 폴더 행 하나를 넣는다. */
+function insertLateRaw(trx: Transaction<Database>): Promise<unknown> {
+	const { id, name } = row("Late");
+	return sql`insert into folders (id, name, scope) values (${id}, ${name}, 'media')`
+		.withPlugin(passThrough)
+		.execute(trx);
+}
+
 const lateCases: LateCase[] = [
 	{
 		name: "두 문장 사이에 멈춘 Operation",
@@ -673,6 +687,30 @@ const lateCases: LateCase[] = [
 		name: "실행 중인 trx 쿼리",
 		inside: async ({ trx, start }) => {
 			start(insertLate(trx));
+		},
+	},
+	{
+		name: "withSchema로 갈라진 trx의 실행 중인 쿼리",
+		inside: async ({ trx, start }) => {
+			start(insertLate(trx.withSchema("public")));
+		},
+	},
+	{
+		name: "withPlugin으로 갈라진 trx의 실행 중인 쿼리",
+		inside: async ({ trx, start }) => {
+			start(insertLate(trx.withPlugin(passThrough)));
+		},
+	},
+	{
+		name: "플러그인을 붙인 raw SQL의 실행 중인 쿼리",
+		inside: async ({ trx, start }) => {
+			start(insertLateRaw(trx));
+		},
+	},
+	{
+		name: "withoutPlugins로 갈라진 trx의 실행 중인 쿼리",
+		inside: async ({ trx, start }) => {
+			start(insertLate(trx.withoutPlugins()));
 		},
 	},
 	{
@@ -692,6 +730,10 @@ const lateCases: LateCase[] = [
 		beforeCommit: ({ tx, start }) => start(tx.folders.addLater(row("Late"))),
 	},
 	{ name: "커밋 전에 붙잡아 둔 trx로 시작한 쿼리", beforeCommit: ({ trx, start }) => start(insertLate(trx)) },
+	{
+		name: "커밋 전에 붙잡아 둔 trx를 withoutPlugins로 갈라 시작한 쿼리",
+		beforeCommit: ({ trx, start }) => start(insertLate(trx.withoutPlugins())),
+	},
 ];
 
 /**

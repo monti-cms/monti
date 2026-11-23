@@ -4,6 +4,7 @@ import {
 	type Kysely,
 	type PluginTransformQueryArgs,
 	type PluginTransformResultArgs,
+	type QueryExecutor,
 	type QueryResult,
 	type RootOperationNode,
 	sql,
@@ -230,11 +231,30 @@ function trackedTrx(trx: Transaction<Database>, work: CallbackWork): Transaction
 		return result;
 	}
 	const tracked = trx.withPlugin({ transformQuery, transformResult });
-	const executor = tracked.getExecutor();
-	const executeQuery = executor.executeQuery.bind(executor);
-	executor.executeQuery = <R>(query: CompiledQuery<R>, options?: AbortableQueryOptions) =>
-		work.track(() => executeQuery(query, options));
+	counted(tracked.getExecutor(), work);
 	return tracked;
+}
+
+/**
+ * `executor`의 쿼리를 콜백의 작업으로 센다. `trx.withSchema`·`withPlugin`·`withoutPlugins`처럼 이 실행기에서 갈라진 실행기도
+ * 같이 센다: Kysely는 이때 새 실행기를 만든다. `withoutPlugins`는 `trackedTrx`의 플러그인도 떼므로 쿼리를 실행하기 직전에도
+ * 콜백이 끝났는지 확인한다.
+ */
+function counted(executor: QueryExecutor, work: CallbackWork): QueryExecutor {
+	const executeQuery = executor.executeQuery.bind(executor);
+	const withPlugin = executor.withPlugin.bind(executor);
+	const withPlugins = executor.withPlugins.bind(executor);
+	const withPluginAtFront = executor.withPluginAtFront.bind(executor);
+	const withoutPlugins = executor.withoutPlugins.bind(executor);
+	executor.executeQuery = <R>(query: CompiledQuery<R>, options?: AbortableQueryOptions) => {
+		work.open();
+		return work.track(() => executeQuery(query, options));
+	};
+	executor.withPlugin = (plugin) => counted(withPlugin(plugin), work);
+	executor.withPlugins = (plugins) => counted(withPlugins(plugins), work);
+	executor.withPluginAtFront = (plugin) => counted(withPluginAtFront(plugin), work);
+	executor.withoutPlugins = () => counted(withoutPlugins(), work);
+	return executor;
 }
 
 /**
