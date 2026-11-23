@@ -1,4 +1,4 @@
-import { readFile } from "node:fs/promises";
+import { readFile, realpath } from "node:fs/promises";
 import path from "node:path";
 import {
 	coreMigrations,
@@ -21,6 +21,12 @@ const projectSource = "project";
 
 /** core의 마이그레이션 출처. `migrateMonti`가 core의 단계를 기록하는 이름과 같다. */
 const coreSource = "@monti-cms/core";
+
+/**
+ * 트랜잭션을 끝내는 `COMMIT`·`ROLLBACK` 문장 하나: 줄 처음이나 `;` 뒤에서 시작해 줄 끝이나 `;`에서 끝난다. 대소문자는 가리지
+ * 않고 앞뒤 공백은 둘 수 있다.
+ */
+const transactionEnd = /(?:^|;)\s*(?:commit|rollback)\s*(?:;|$)/im;
 
 /** 부팅이 불러온 프로젝트: 설정·스키마 파일의 `default` export와 두 파일의 절대 경로. `startMonti`에 그대로 넘긴다. */
 export interface LoadedProject {
@@ -72,32 +78,51 @@ export async function getMigrationStatus({ db, dir }: StatusOptions): Promise<Mi
 	return (await listMigrationFiles(dir)).map((name) => ({ name, applied: ran.has(name) }));
 }
 
-/** `migrateMonti`로 내장 단계를 적용한 뒤 아직 적용하지 않은 `.sql` 파일을 core의 `migrate`로 실행하고, 그 이름을 돌려준다. */
+/**
+ * `migrateMonti`로 내장 단계를 적용한 뒤 `.sql` 파일을 core의 `migrate`로 실행하고, 이 호출이 실제로 적용한 파일 이름을
+ * 돌려준다. 파일 검사는 DB를 건드리기 전에 한다. 이미 적용한 파일은 core의 `migrate`가 잠금 안에서 건너뛰므로, 두 실행이 겹쳐도
+ * 파일은 한 번만 적용되고 각 호출은 자신이 적용한 파일만 돌려준다.
+ */
 async function applyMigrations({ db, project, dir }: RunOptions): Promise<string[]> {
+	const files = await readSqlSteps(dir);
 	await migrateMonti({ db, schema: project.schema, config: project.config });
-	const steps = await pendingSqlSteps(db, dir);
-	await migrate(db, projectSource, steps);
-	return steps.map((step) => step.name);
+	const applied: string[] = [];
+	await migrate(
+		db,
+		projectSource,
+		files.map((step) => recordingTo(applied, step)),
+	);
+	return applied;
+}
+
+/** `step`을 실행하고, 실행이 끝나면 그 이름을 `applied`에 더하는 단계. */
+function recordingTo(applied: string[], step: Migration): Migration {
+	async function up(db: Kysely<unknown>): Promise<void> {
+		await step.up(db);
+		applied.push(step.name);
+	}
+	return { name: step.name, up };
 }
 
 /**
- * 시험 실행: `migrateMonti`가 하듯 스키마(`BAD_REQUEST`)와 플러그인 작업 경로 충돌(`CONFLICT`)을 DB를 건드리기 전에 검사한
- * 뒤, 한 트랜잭션에서 `migrations` 테이블을 준비하고 아직 실행하지 않은 core·플러그인 단계와 `.sql` 파일을 실제 적용과 같은
- * 순서로 실행·기록해 보고, 성공하든 실패하든 되돌린다. 실행해 본 `.sql` 파일 이름을 돌려준다.
+ * 시험 실행: `migrateMonti`가 하듯 스키마(`BAD_REQUEST`)와 플러그인 작업 경로 충돌(`CONFLICT`)을, 그리고 `.sql` 파일을 DB를
+ * 건드리기 전에 검사한 뒤, 한 트랜잭션에서 `migrations` 테이블을 준비하고 아직 실행하지 않은 core·플러그인 단계와 `.sql`
+ * 파일을 실제 적용과 같은 순서로 실행·기록해 보고, 성공하든 실패하든 되돌린다. 실행해 본 `.sql` 파일 이름을 돌려준다.
  */
 async function tryMigrations({ db, project, dir }: RunOptions): Promise<string[]> {
 	const plugins = project.config.plugins ?? [];
 	snapshotOf(project.schema);
 	specOf(plugins);
+	const files = await readSqlSteps(dir);
 	const tx = await db.startTransaction().execute();
 	try {
 		await ensureHistory(tx);
-		const files = await pendingSqlSteps(tx, dir);
-		const sources: SourceSteps[] = [...(await pendingBuiltInSteps(tx, plugins)), [projectSource, files]];
+		const [projectSteps] = await pendingSteps(tx, [[projectSource, files]]);
+		const sources = [...(await pendingSteps(tx, builtInSources(plugins))), projectSteps];
 		for (const [source, steps] of sources) {
 			for (const step of steps) await runRecorded(tx, source, step);
 		}
-		return files.map((step) => step.name);
+		return projectSteps[1].map((step) => step.name);
 	} finally {
 		await rollbackQuietly(tx);
 	}
@@ -132,12 +157,13 @@ async function rollbackQuietly(tx: ControlledTransaction<Database>): Promise<voi
 	}
 }
 
-/**
- * 아직 실행하지 않은 내장 단계를 출처별로: core의 단계(`"@monti-cms/core"` 출처), 그다음 플러그인마다 그 단계(플러그인 `name`
- * 출처).
- */
-async function pendingBuiltInSteps(db: Kysely<Database>, plugins: readonly Plugin[]): Promise<SourceSteps[]> {
-	const sources: SourceSteps[] = [[coreSource, coreMigrations], ...plugins.map(pluginSource)];
+/** 내장 단계의 출처별 목록: core의 단계(`"@monti-cms/core"` 출처), 그다음 플러그인마다 그 단계(플러그인 `name` 출처). */
+function builtInSources(plugins: readonly Plugin[]): SourceSteps[] {
+	return [[coreSource, coreMigrations], ...plugins.map(pluginSource)];
+}
+
+/** 출처마다 그 출처로 `migrations`에 아직 기록되지 않은 단계만 남긴 목록. */
+async function pendingSteps(db: Kysely<Database>, sources: readonly SourceSteps[]): Promise<SourceSteps[]> {
 	const pending: SourceSteps[] = [];
 	for (const [source, steps] of sources) {
 		const ran = await ranNames(db, source);
@@ -151,11 +177,29 @@ function pluginSource(plugin: Plugin): SourceSteps {
 	return [plugin.name, plugin.migrations ?? []];
 }
 
-/** `dir`의 `.sql` 파일 가운데 `"project"` 출처로 아직 적용하지 않은 것을 이름순으로, 파일 내용을 실행하는 단계로 만든다. */
-async function pendingSqlSteps(db: Kysely<Database>, dir: string): Promise<Migration[]> {
-	const ran = await ranNames(db, projectSource);
-	const names = (await listMigrationFiles(dir)).filter((name) => !ran.has(name));
-	return Promise.all(names.map(async (name) => sqlStep(name, await readFile(path.join(dir, name), "utf8"))));
+/**
+ * `dir`의 `.sql` 파일을 모두 읽어 이름순으로 실행 단계로 만든다. DB를 건드리기 전에 부르며, 실행하면 안 되는 파일이 하나라도
+ * 있으면 실행 오류로 거절한다(`readSqlStep`).
+ */
+async function readSqlSteps(dir: string): Promise<Migration[]> {
+	return Promise.all((await listMigrationFiles(dir)).map((name) => readSqlStep(dir, name)));
+}
+
+/**
+ * `dir`의 `.sql` 파일 `name`을 실제 경로로 읽어 단계로 만든다. 실제 경로가 `dir` 밖인 파일(바깥을 가리키는 심볼릭 링크)과
+ * 트랜잭션을 끝내는 문장(`transactionEnd`)이 든 파일은 실행 오류다. 그런 문장은 단계의 트랜잭션을 먼저 끝내, 실패한 파일을
+ * 되돌리지 못하게 하고 시험 실행의 변경도 실제로 남긴다.
+ */
+async function readSqlStep(dir: string, name: string): Promise<Migration> {
+	const [root, file] = await Promise.all([realpath(dir), realpath(path.join(dir, name))]);
+	if (!file.startsWith(`${root}${path.sep}`)) {
+		throw new CliError(1, `마이그레이션 폴더 밖을 가리키는 파일은 실행할 수 없다: ${name}`);
+	}
+	const text = await readFile(file, "utf8");
+	if (transactionEnd.test(text)) {
+		throw new CliError(1, `트랜잭션을 끝내는 COMMIT·ROLLBACK 문장이 든 파일은 실행할 수 없다: ${name}`);
+	}
+	return sqlStep(name, text);
 }
 
 /** 이름이 `name`이고, `text`의 SQL을 바인딩 없이 그대로(여러 문장이어도 한 번에) 실행하는 단계. */

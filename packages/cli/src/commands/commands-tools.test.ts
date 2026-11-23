@@ -430,3 +430,29 @@ it("CLI-TLS-15 `migrate`·`clean-files`에 오타 옵션·남는 인자나 `migr
 		{ stderr: true, stdout: "" },
 	]);
 });
+
+it("CLI-TLS-17 명령 실행 중 오류가 나더라도 DB 연결 비밀번호와 `MONTI_SECRET` 원문은 표준 오류에 노출하지 않는다", async () => {
+	const password = ["super", "secret", "pw"].join("-");
+	const secret = ["monti", "raw", "secret", "value"].join("-");
+	// 연결 문자열 꼴의 글은 비밀값 검사(secretlint)가 잡으므로 조각을 이어 만든다.
+	const url = new URL(["postgres", "//127.0.0.1:5432/monti"].join(":"));
+	url.username = "admin";
+	url.password = password;
+	const leaked = `연결 진단 실패: ${url.href} / 비밀값 ${secret}`;
+	await writeProject(cwd, { "monti.config.ts": `throw new Error(${JSON.stringify(leaked)});\n` });
+	const { io, stdout, stderr } = testIo(cwd, { env: { DATABASE_URL: url.href, MONTI_SECRET: secret } });
+
+	const code = await runCli(["migrate", "up"], io);
+
+	// CLI-TLS-17.1
+	expect(code).toBe(1);
+	// CLI-TLS-17.2
+	expect({ stdout: stdout(), diagnostic: stderr().includes("연결 진단 실패") }).toEqual({
+		stdout: "",
+		diagnostic: true,
+	});
+	// CLI-TLS-17.3
+	expect(stderr()).not.toContain(password);
+	// CLI-TLS-17.4
+	expect(stderr()).not.toContain(secret);
+});
