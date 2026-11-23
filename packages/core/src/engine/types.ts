@@ -208,10 +208,14 @@ type WriteClientNode<N> =
 	N extends WriteOperation<infer I, infer O> ? Call<I, O> : N extends ResourceTree ? MontiWriteClient<N> : never;
 
 export type Monti<R extends ResourceTree = Record<never, never>> = MontiClient<R> & {
-	/** Runs the callback's calls in one transaction; their events are sent in call order once it commits. */
-	transaction<T>(fn: (tx: MontiClient<R>) => Promise<T>): Promise<T>;
-	/** Runs the callback's writes as they would run, then rolls them back: no event is sent. */
-	dryRun<T>(fn: (tx: MontiWriteClient<R>) => Promise<T>): Promise<T>;
+	/**
+	 * 콜백의 호출들을 한 트랜잭션에서 실행하고, 커밋된 뒤 그 이벤트를 호출 순서대로 통지한다. `trx`는 그 트랜잭션의 DB다:
+	 * 플러그인은 `trx`로 자기 테이블을 Operation 쓰기와 함께 커밋한다. `trx`로 직접 실행한 쿼리의 DB 오류는 콜백이 잡아도
+	 * 트랜잭션을 실패시킨다.
+	 */
+	transaction<T>(fn: (tx: MontiClient<R>, trx: Transaction<Database>) => Promise<T>): Promise<T>;
+	/** 콜백의 쓰기를 실제와 같이 실행한 뒤 롤백한다: 이벤트를 통지하지 않는다. `trx`는 `transaction`의 것과 같다. */
+	dryRun<T>(fn: (tx: MontiWriteClient<R>, trx: Transaction<Database>) => Promise<T>): Promise<T>;
 	/** Adds a subscriber to committed writes; the returned function removes it. */
 	onEvent(listener: EventListener): () => void;
 	/** Every operation of the resource tree, plugin operations included. */
