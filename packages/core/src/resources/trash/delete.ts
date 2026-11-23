@@ -40,8 +40,24 @@ async function lockTrashedMediaKeys(ctx: WriteContext, ids: string[]): Promise<v
 }
 
 /**
+ * 휴지통에 있는 미디어 `ids`의 행을 `id` 순서로 잠근다. 사용처를 기록하는 쓰기도 미디어 행을 `id` 순서로 잠그므로, 여러
+ * 미디어를 겹쳐 지우고 참조하는 쓰기끼리 서로 기다리다 멈추지 않는다.
+ */
+async function lockTrashedMediaRows(ctx: WriteContext, ids: string[]): Promise<void> {
+	if (ids.length === 0) return;
+	await ctx.db
+		.selectFrom("media")
+		.select("id")
+		.where("id", "=", anyOf(ids))
+		.where("trashed_at", "is not", null)
+		.orderBy("id")
+		.forUpdate()
+		.execute();
+}
+
+/**
  * 휴지통의 미디어들을 지운다. 사용처 기록과 글의 참조는 DB 외래 키가 정리하고, 파일은 지금 지울 임시 파일로 `loose_files`에
- * 올린다. 키는 `deleteItems`가 먼저 잠근다.
+ * 올린다. 키와 행은 `deleteItems`가 먼저 잠근다.
  */
 async function deleteMedia(ctx: WriteContext, ids: string[]): Promise<void> {
 	if (ids.length === 0) return;
@@ -96,10 +112,9 @@ export async function deleteItems(input: DeleteInput, ctx: WriteContext): Promis
 	const targets = await targetsOf(ctx, input);
 	const trees: Tree[] = [];
 	for (const target of targets) trees.push(await itemsOf(ctx, target));
-	await lockTrashedMediaKeys(
-		ctx,
-		trees.flatMap((tree) => tree.media),
-	);
+	const media = trees.flatMap((tree) => tree.media);
+	await lockTrashedMediaKeys(ctx, media);
+	await lockTrashedMediaRows(ctx, media);
 	for (const tree of trees) await deleteTree(ctx, tree);
 	const refs = targets.map(({ kind, id }) => ({ kind, id }));
 	return "id" in input ? refs[0] : refs;

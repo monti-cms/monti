@@ -19,12 +19,12 @@ export function encryptSecret(masterSecret: string | undefined, value: string): 
 
 /**
  * `encryptSecret`이 저장한 `iv:tag:ciphertext`를 `masterSecret`의 키로 복호화한다. 저장할 때와 다른 비밀값이라 풀 수 없으면
- * 거절하되, 오류에는 저장된 값도 비밀값도 담지 않는다.
+ * 거절하고, 저장된 값이 이 모양이 아니어도 같은 오류로 거절한다. 오류에는 저장된 값도 비밀값도 담지 않는다.
  */
 export function decryptSecret(masterSecret: string | undefined, stored: string): string {
 	const key = keyOf(masterSecret);
-	const [iv, tag, encrypted] = stored.split(":").map((part) => Buffer.from(part, "base64"));
 	try {
+		const [iv, tag, encrypted] = stored.split(":").map((part) => Buffer.from(part, "base64"));
 		const decipher = createDecipheriv(ALGORITHM, key, iv as Buffer, { authTagLength: 16 });
 		decipher.setAuthTag(tag as Buffer);
 		return Buffer.concat([decipher.update(encrypted as Buffer), decipher.final()]).toString();

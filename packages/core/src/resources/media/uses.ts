@@ -47,13 +47,14 @@ async function writeUses(ctx: WriteContext, source: UseSource, uses: UsesByPath)
 
 /**
  * `uses`가 참조하는 미디어 행을 이 트랜잭션이 끝날 때까지 영구 삭제되지 않게 잠근다. 이미 지우는 중인 행은 그 삭제가 끝날
- * 때까지 기다려, 뒤이은 판정이 삭제된 뒤의 상태를 보게 한다.
+ * 때까지 기다려, 뒤이은 판정이 삭제된 뒤의 상태를 보게 한다. 영구 삭제처럼 `id` 순서로 잠가, 여러 미디어를 겹쳐 잠그는
+ * 쓰기끼리 서로 기다리다 멈추지 않는다.
  */
 async function lockUsedMedia(ctx: WriteContext, uses: UsesByPath): Promise<void> {
 	const ids = idsOf(uses);
 	// `in ()`는 SQL이 아니다: 참조가 없으면 잠글 것도 없다.
 	if (ids.length === 0) return;
-	await ctx.db.selectFrom("media").select("id").where("id", "in", ids).forKeyShare().execute();
+	await ctx.db.selectFrom("media").select("id").where("id", "in", ids).orderBy("id").forKeyShare().execute();
 }
 
 /**

@@ -35,13 +35,15 @@ const createInput = z.object({
 });
 
 /**
- * `"media"`나 스키마 컬렉션 범위에 폴더를 만든다. 부모를 주면 같은 범위의 활성 폴더여야 한다. 같은 위치의 활성 폴더와 이름이
- * 겹치면 DB 고유 색인이 `CONFLICT`로 막는다.
+ * `"media"`나 스키마 컬렉션 범위에 폴더를 만든다. 부모를 주면 같은 범위의 활성 폴더여야 한다. 그 `scope`의 폴더 구조 잠금을
+ * 잡은 뒤에 부모를 확인해, 겹친 휴지통 이동이 부모를 보낸 뒤에 그 아래에 활성 폴더를 남기지 않는다. 같은 위치의 활성 폴더와
+ * 이름이 겹치면 DB 고유 색인이 `CONFLICT`로 막는다.
  */
 async function createFolder(input: z.infer<typeof createInput>, ctx: WriteContext): Promise<Folder> {
 	if (input.scope !== "media" && !Object.hasOwn(ctx.schema.collections, input.scope)) {
 		throw new MontiError("BAD_REQUEST", `"${input.scope}" 범위의 컬렉션이나 미디어가 없다`);
 	}
+	await lockFolderScope(ctx.db, input.scope);
 	const folder = {
 		id: input.__preset_id ?? randomUUID(),
 		scope: input.scope,
