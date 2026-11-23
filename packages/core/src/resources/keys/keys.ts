@@ -21,11 +21,10 @@ async function listKeys(_input: unknown, ctx: ReadContext): Promise<StoredKey[]>
 
 const createInput = z.object({ service: z.string().min(1), name: z.string().min(1), secret: z.string().min(1) });
 
-/** `keys.create`: 키의 비밀값을 엔진의 암호화 비밀값(`masterSecret`)으로 암호화해 저장한다. */
+/** `keys.create`: 키의 비밀값을 엔진의 암호화 비밀값(`masterSecret`)으로 암호화해 저장한다. 이름 중복은 DB 고유 제약이 `CONFLICT`로 막는다. */
 function createWith(masterSecret: string | undefined) {
 	return async function createKey(input: z.infer<typeof createInput>, ctx: WriteContext): Promise<StoredKey> {
 		const key = { id: randomUUID(), service: input.service, name: input.name, last4: input.secret.slice(-4) };
-		await rejectTakenName(ctx, key.name, key.id);
 		await ctx.db
 			.insertInto("api_keys")
 			.values({ ...key, secret: encryptSecret(masterSecret, input.secret) })
@@ -39,7 +38,6 @@ const updateInput = z.object({ id: z.string(), name: z.string().min(1), secret: 
 /** `keys.update`: 이름을 바꾸고, 비밀값이 주어지면 암호화한 비밀값과 `last4`도 바꾼다. */
 function updateWith(masterSecret: string | undefined) {
 	return async function updateKey(input: z.infer<typeof updateInput>, ctx: WriteContext): Promise<StoredKey> {
-		await rejectTakenName(ctx, input.name, input.id);
 		const secret =
 			input.secret === undefined
 				? {}
@@ -53,17 +51,6 @@ function updateWith(masterSecret: string | undefined) {
 		if (updated === undefined) throw new MontiError("NOT_FOUND", "이 `id`의 키가 없습니다");
 		return updated;
 	};
-}
-
-/** Rejects a name another key than `exceptId` already has. */
-async function rejectTakenName(ctx: WriteContext, name: string, exceptId: string): Promise<void> {
-	const taken = await ctx.db
-		.selectFrom("api_keys")
-		.select("id")
-		.where("name", "=", name)
-		.where("id", "<>", exceptId)
-		.executeTakeFirst();
-	if (taken !== undefined) throw new MontiError("CONFLICT", "Another key has this name");
 }
 
 const idInput = z.object({ id: z.string() });

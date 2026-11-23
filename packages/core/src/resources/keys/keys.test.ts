@@ -1,6 +1,7 @@
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { createTestDatabase, type TestDatabase } from "../../__test__/database";
+import { codeOf, overlap } from "../../__test__/race";
 import { migrate } from "../../db/migrate";
 import { initial } from "../../db/migrations/0001-initial";
 import type { Database } from "../../db/types";
@@ -12,9 +13,11 @@ import { createKeys } from "./keys";
 let testDb: TestDatabase;
 let db: Kysely<Database>;
 
-function montiOf(plugins: Plugin[], withSecret = true) {
-	const secret = withSecret ? "test monti secret" : undefined;
-	return createMonti(db, { keys: createKeys(keyServicesOf(plugins), secret) }, plugins, {
+const SECRET = "test monti secret";
+
+/** `secret`을 암호화 비밀값으로 쓰는 엔진. `null`을 주면 암호화 비밀값이 없다. */
+function montiOf(plugins: Plugin[], secret: string | null = SECRET) {
+	return createMonti(db, { keys: createKeys(keyServicesOf(plugins), secret ?? undefined) }, plugins, {
 		schema: { locales: ["ko"], collections: {} },
 		config: { name: "Monti Blog", dev: false },
 		schemaFile: "unused-schema-file",
@@ -59,14 +62,6 @@ function byName(a: { name: string }, b: { name: string }): number {
 	return a.name < b.name ? -1 : 1;
 }
 
-/** 실행이 거절되면 그 오류 코드, 성공하면 null. */
-async function codeOf(run: Promise<unknown>): Promise<string | null> {
-	return run.then(
-		() => null,
-		(error: { code: string }) => error.code,
-	);
-}
-
 it("KEY-CRT-1 encrypts and stores a key and returns its last four characters", async () => {
 	const monti = montiOf([]);
 
@@ -96,7 +91,7 @@ it("KEY-CRT-2 rejects keys.create with CONFLICT for a name already taken", async
 });
 
 it("KEY-CRT-3 암호화 비밀값이 없으면 키를 저장할 수 없다", async () => {
-	const monti = montiOf([], false);
+	const monti = montiOf([], null);
 
 	// KEY-CRT-3.1
 	await expect(monti.keys.create(mailKey)).rejects.toMatchObject({ code: "BAD_REQUEST" });
@@ -193,7 +188,7 @@ it("KEY-UPD-4 rejects keys.update with NOT_FOUND for an id that does not exist",
 it("KEY-UPD-5 암호화 비밀값이 없으면 저장된 키의 비밀값을 바꿀 수 없다", async () => {
 	const stored = await montiOf([]).keys.create(mailKey);
 	const before = await keyRows();
-	const monti = montiOf([], false);
+	const monti = montiOf([], null);
 
 	// KEY-UPD-5.1
 	await expect(
@@ -287,8 +282,72 @@ it("KEY-CHK-5 rejects keys.check with NOT_FOUND for an id that does not exist", 
 
 it("KEY-CHK-6 암호화 비밀값이 없으면 저장된 키 ID로 연결을 확인할 수 없다", async () => {
 	const stored = await montiOf([mailPlugin]).keys.create(mailKey);
-	const monti = montiOf([mailPlugin], false);
+	const monti = montiOf([mailPlugin], null);
 
 	// KEY-CHK-6.1
 	await expect(monti.keys.check({ id: stored.id })).rejects.toMatchObject({ code: "BAD_REQUEST" });
+});
+
+it("KEY-CRT-5 같은 이름으로 키를 동시에 두 번 만들면 한 건만 성공하고 나머지는 거절된다", async () => {
+	const monti = montiOf([]);
+
+	// 첫 생성을 커밋 직전에 멈춰 두고 두 번째 생성을 시작한다.
+	const [first, second] = await overlap(
+		db,
+		(hold) =>
+			monti.transaction(async (tx) => {
+				const created = await tx.keys.create(mailKey);
+				await hold();
+				return created;
+			}),
+		() => monti.keys.create({ ...mailKey, secret: "other-secret-0000" }),
+	);
+
+	// KEY-CRT-5.1
+	expect([first.code, second.code].sort()).toEqual(["CONFLICT", null]);
+	// KEY-CRT-5.2
+	expect((await keyRows()).filter((row) => row.name === mailKey.name)).toHaveLength(1);
+});
+
+it("KEY-UPD-7 서로 다른 두 키의 이름을 같은 이름으로 동시에 바꾸면 한 건만 성공하고 나머지는 거절된다", async () => {
+	const monti = montiOf([]);
+	const mail = await monti.keys.create(mailKey);
+	const storage = await monti.keys.create(storageKey);
+	const renamed = "Renamed";
+
+	// 첫 수정을 커밋 직전에 멈춰 두고 두 번째 수정을 시작한다.
+	const [first, second] = await overlap(
+		db,
+		(hold) =>
+			monti.transaction(async (tx) => {
+				const updated = await tx.keys.update({ id: mail.id, name: renamed });
+				await hold();
+				return updated;
+			}),
+		() => monti.keys.update({ id: storage.id, name: renamed }),
+	);
+
+	// KEY-UPD-7.1
+	expect([first.code, second.code].sort()).toEqual(["CONFLICT", null]);
+	// KEY-UPD-7.2
+	expect((await keyRows()).filter((row) => row.name === renamed)).toHaveLength(1);
+});
+
+it("KEY-CHK-7 저장할 때와 다른 암호화 비밀값으로는 저장된 키의 연결을 확인할 수 없다", async () => {
+	const [firstSecret, secondSecret] = ["first monti secret", "second monti secret"];
+	const stored = await montiOf([mailPlugin], firstSecret).keys.create(mailKey);
+	const monti = montiOf([mailPlugin], secondSecret);
+
+	const error = await monti.keys.check({ id: stored.id }).then(
+		() => undefined,
+		(thrown: { code?: string; message?: string; details?: unknown }) => thrown,
+	);
+	const shown = JSON.stringify({ message: error?.message, details: error?.details });
+
+	// KEY-CHK-7.1
+	expect(error?.code).toBe("BAD_REQUEST");
+	// KEY-CHK-7.2
+	expect(passing).not.toHaveBeenCalled();
+	// KEY-CHK-7.3
+	expect([mailKey.secret, firstSecret, secondSecret].filter((secret) => shown.includes(secret))).toEqual([]);
 });

@@ -8,7 +8,7 @@ import {
 	type TestDatabase,
 	tableExists,
 } from "../__test__/database";
-import { overlap } from "../__test__/race";
+import { codeOf, overlap } from "../__test__/race";
 import { migrate } from "./migrate";
 import { initial } from "./migrations/0001-initial";
 import type { Migration } from "./types";
@@ -210,4 +210,66 @@ it("DB-SCH-2 같은 글이나 템플릿의 같은 위치에 같은 미디어 사
 	const { rows } = await sql<{ count: string }>`select count(*) as count from media_uses`.execute(testDb.db);
 	// DB-SCH-2.2
 	expect(rows).toEqual([{ count: "1" }]);
+});
+
+async function countOf(table: string): Promise<number> {
+	const { rows } = await sql<{ count: number }>`select count(*)::int as count from ${sql.table(table)}`.execute(
+		testDb.db,
+	);
+	return rows[0]?.count ?? 0;
+}
+
+function insertAdmin(email: string) {
+	return sql`insert into admin (id, email, password_hash) values (${randomUUID()}, ${email}, 'salt:key')`.execute(
+		testDb.db,
+	);
+}
+
+function insertKey(name: string) {
+	return sql`insert into api_keys (id, service, name, secret, last4)
+		values (${randomUUID()}, 'mail', ${name}, 'iv:tag:secret', '1234')`.execute(testDb.db);
+}
+
+it("DB-SCH-3 관리자 테이블에는 한 명을 초과하는 행을 저장할 수 없고, 키 테이블에는 같은 이름의 키를 두 번 저장할 수 없다", async () => {
+	await migrate(testDb.db, "@monti-cms/core", [initial]);
+	await insertAdmin("owner@example.com");
+	await insertKey("Mail");
+
+	const adminCode = await codeOf(insertAdmin("other@example.com"));
+	const keyCode = await codeOf(insertKey("Mail"));
+
+	// DB-SCH-3.1
+	expect({ code: adminCode, rows: await countOf("admin") }).toEqual({ code: "23505", rows: 1 });
+	// DB-SCH-3.2
+	expect({ code: keyCode, rows: await countOf("api_keys") }).toEqual({ code: "23505", rows: 1 });
+});
+
+function insertFolder(name: string, parentId: string | null, id = randomUUID()) {
+	return sql`insert into folders (id, scope, parent_id, name) values (${id}, 'posts', ${parentId}, ${name})`.execute(
+		testDb.db,
+	);
+}
+
+function insertTemplate(name: string) {
+	return sql`insert into templates (id, collection, name, content)
+		values (${randomUUID()}, 'posts', ${name}, '{"blocks":[]}')`.execute(testDb.db);
+}
+
+it("DB-SCH-4 폴더 테이블의 활성 이름과 템플릿 테이블의 컬렉션별 이름은 DB 수준에서 중복 저장을 막는다", async () => {
+	await migrate(testDb.db, "@monti-cms/core", [initial]);
+	const root = randomUUID();
+	await insertFolder("Root", null, root);
+	await insertFolder("Child", root);
+	await insertTemplate("Template");
+
+	const rootCode = await codeOf(insertFolder("Root", null));
+	const childCode = await codeOf(insertFolder("Child", root));
+	const templateCode = await codeOf(insertTemplate("Template"));
+
+	// DB-SCH-4.1
+	expect(rootCode).toBe("23505");
+	// DB-SCH-4.2
+	expect(childCode).toBe("23505");
+	// DB-SCH-4.3
+	expect(templateCode).toBe("23505");
 });

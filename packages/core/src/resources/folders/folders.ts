@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
+import { lockFolderScope } from "../../db/locks";
 import { MontiError } from "../../engine/errors";
 import { defineRead, defineWrite } from "../../engine/operation";
 import type { ReadContext, WriteContext } from "../../engine/types";
@@ -33,11 +34,16 @@ const createInput = z.object({
 	parent_id: uuidInput.nullable().optional(),
 });
 
-/** Makes a folder in `"media"` or a schema collection, under an active folder of the same scope when given one. */
+/**
+ * `"media"`나 스키마 컬렉션 범위에 폴더를 만든다. 부모를 주면 같은 범위의 활성 폴더여야 한다. 그 `scope`의 폴더 구조 잠금을
+ * 잡은 뒤에 부모를 확인해, 겹친 휴지통 이동이 부모를 보낸 뒤에 그 아래에 활성 폴더를 남기지 않는다. 같은 위치의 활성 폴더와
+ * 이름이 겹치면 DB 고유 색인이 `CONFLICT`로 막는다.
+ */
 async function createFolder(input: z.infer<typeof createInput>, ctx: WriteContext): Promise<Folder> {
 	if (input.scope !== "media" && !Object.hasOwn(ctx.schema.collections, input.scope)) {
-		throw new MontiError("BAD_REQUEST", `No collection or media has the scope "${input.scope}"`);
+		throw new MontiError("BAD_REQUEST", `"${input.scope}" 범위의 컬렉션이나 미디어가 없다`);
 	}
+	await lockFolderScope(ctx.db, input.scope);
 	const folder = {
 		id: input.__preset_id ?? randomUUID(),
 		scope: input.scope,
@@ -45,7 +51,6 @@ async function createFolder(input: z.infer<typeof createInput>, ctx: WriteContex
 		parent_id: input.parent_id ?? null,
 	};
 	if (folder.parent_id !== null) await rejectParent(ctx, folder.parent_id, folder.scope);
-	await rejectTaken(ctx, folder);
 	return ctx.db.insertInto("folders").values(folder).returning(SHOWN).executeTakeFirstOrThrow();
 }
 
@@ -78,15 +83,6 @@ export function activeChildren(ctx: ReadContext, scope: string, parentId: string
 	return parentId === null ? query.where("parent_id", "is", null) : query.where("parent_id", "=", parentId);
 }
 
-/** Rejects a name another active folder already has under the same parent of the same scope; `id` is the folder itself, left out. */
-async function rejectTaken(ctx: WriteContext, folder: Folder): Promise<void> {
-	const taken = await activeChildren(ctx, folder.scope, folder.parent_id)
-		.where("id", "<>", folder.id)
-		.where("name", "=", folder.name)
-		.executeTakeFirst();
-	if (taken !== undefined) throw new MontiError("CONFLICT", "An active folder here already has this name");
-}
-
 const updateInput = z.object({
 	id: uuidInput,
 	name: z.string().min(1).optional(),
@@ -94,30 +90,39 @@ const updateInput = z.object({
 });
 
 /**
- * 활성 폴더의 이름을 바꾸거나 옮긴다. `parent_id`가 null이면 루트로 옮기고, 생략한 항목은 그대로 둔다. 바뀐 뒤의 이름과
- * 부모를 늘 함께 저장하므로 바꿀 항목이 없으면 기존 폴더를 그대로 돌려준다.
+ * 활성 폴더의 이름을 바꾸거나 옮긴다. `parent_id`가 null이면 루트로 옮기고, 생략한 항목은 쓰지 않는다. 바꿀 항목이
+ * 없으면 기존 폴더를 그대로 돌려준다. 옮긴 위치의 활성 폴더와 이름이 겹치면 DB 고유 색인이 `CONFLICT`로 막는다.
  */
 async function updateFolder(input: z.infer<typeof updateInput>, ctx: WriteContext): Promise<Folder> {
-	const target = await ctx.db
-		.selectFrom("folders")
-		.select(SHOWN)
-		.where("id", "=", input.id)
-		.where("trashed_at", "is", null)
-		.executeTakeFirst();
-	if (target === undefined) throw new MontiError("NOT_FOUND", "이 `id`의 활성 폴더가 없다");
+	const target = await lockedTarget(ctx, input.id);
 	if (typeof input.parent_id === "string") {
 		await rejectParent(ctx, input.parent_id, target.scope);
 		await rejectCycle(ctx, input.id, input.parent_id);
 	}
-	const parentId = input.parent_id === undefined ? target.parent_id : input.parent_id;
-	const next = { ...target, name: input.name ?? target.name, parent_id: parentId };
-	await rejectTaken(ctx, next);
+	if (input.name === undefined && input.parent_id === undefined) return target;
 	return ctx.db
 		.updateTable("folders")
-		.set({ name: next.name, parent_id: next.parent_id })
+		.set({ name: input.name, parent_id: input.parent_id })
 		.where("id", "=", input.id)
 		.returning(SHOWN)
 		.executeTakeFirstOrThrow();
+}
+
+/**
+ * 고칠 활성 폴더 `id`. 그 `scope`의 폴더 구조 잠금을 먼저 잡고 읽으므로, 겹친 이동·휴지통 이동이 커밋된 뒤의 이름과 부모를
+ * 본다. 활성 폴더가 아니면 `NOT_FOUND`다.
+ */
+async function lockedTarget(ctx: WriteContext, id: string): Promise<Folder> {
+	const found = await ctx.db.selectFrom("folders").select("scope").where("id", "=", id).executeTakeFirst();
+	if (found !== undefined) await lockFolderScope(ctx.db, found.scope);
+	const target = await ctx.db
+		.selectFrom("folders")
+		.select(SHOWN)
+		.where("id", "=", id)
+		.where("trashed_at", "is", null)
+		.executeTakeFirst();
+	if (target === undefined) throw new MontiError("NOT_FOUND", "이 `id`의 활성 폴더가 없다");
+	return target;
 }
 
 /** Rejects a move under the folder itself or one of its descendants: `id` among the new parent's ancestors, itself included. */

@@ -4,8 +4,8 @@
 
 | 액션 | 하는 일 | 주요 거절 |
 |---|---|---|
-| `admin.create` | 최초 관리자 계정과 로그인 세션을 만든다 | 형식 오류·빈 비밀번호 `BAD_REQUEST`, 이미 존재 `CONFLICT` |
-| `admin.update` | 현재 비밀번호 확인 후 이메일·비밀번호 변경 및 전체 세션 삭제 | 형식 오류·빈 비밀번호 `BAD_REQUEST`, 계정 없음·비밀번호 불일치 `UNAUTHORIZED` |
+| `admin.create` | 최초 관리자 계정과 로그인 세션을 만든다(동시 생성 시 1건만 성공) | 형식 오류·빈 비밀번호 `BAD_REQUEST`, 이미 존재·동시 생성 `CONFLICT` |
+| `admin.update` | 현재 비밀번호 확인 후 이메일·비밀번호 변경 및 전체 세션 삭제(변경 도중 이전 비밀번호로 연 세션도 남지 않음) | 형식 오류·빈 비밀번호 `BAD_REQUEST`, 계정 없음·비밀번호 불일치 `UNAUTHORIZED` |
 | `session.create` | 이메일·비밀번호 검증 후 세션 토큰 발급(해시·만료시각 저장) | 이메일·비밀번호 불일치 `UNAUTHORIZED` |
 | `session.get` | 유효한 토큰이면 `{ admin: { id, email } }`, 만료·미존재면 `{ admin: null }` | 없음 |
 | `session.delete` | 해당 토큰의 세션 행만 삭제한다 | 없음 |
@@ -51,6 +51,18 @@
 - **결과**:
   - `ADM-CRT-3.1` `BAD_REQUEST` 오류를 던진다
   - `ADM-CRT-3.2` `admin` 테이블이 비어 있다
+
+</details>
+
+<details>
+<summary><strong><code>ADM-CRT-4</code></strong> 최초 관리자 생성을 동시에 두 번 실행하면 한 건만 성공하고 나머지는 거절된다</summary>
+
+- **전제**: `admin` 테이블과 `session` 테이블이 비어 있다
+- **행동**: 서로 다른 이메일과 비밀번호로 `admin.create` 두 건을, 서로의 커밋을 보기 전에 겹치도록 동시에 실행한다
+- **결과**:
+  - `ADM-CRT-4.1` 한 건은 성공하고 나머지 한 건은 `CONFLICT` 오류를 던진다
+  - `ADM-CRT-4.2` `admin` 테이블에 성공한 관리자의 행이 정확히 하나만 남는다
+  - `ADM-CRT-4.3` `session` 테이블에 성공한 관리자의 세션 행이 정확히 하나만 남는다
 
 </details>
 
@@ -104,6 +116,29 @@
 - **행동**: 유효한 현재 비밀번호, 새 이메일, 새 비밀번호로 `admin.update`를 실행한다
 - **결과**:
   - `ADM-UPD-4.1` `UNAUTHORIZED` 오류를 던진다
+
+</details>
+
+<details>
+<summary><strong><code>ADM-UPD-5</code></strong> 비밀번호를 바꾸는 동안 이전 비밀번호로 시도한 로그인은 변경 뒤 사용할 수 없다</summary>
+
+- **전제**: 관리자가 하나 있다. 이전 비밀번호로 호출한 `session.create`가 시작된 상태에서, 같은 이메일과 새 비밀번호로 바꾸는 `admin.update`가 겹쳐 실행된다
+- **행동**: 두 호출(`admin.update`와 이전 비밀번호 `session.create`)을 별도 연결에서 동시에 실행한다
+- **결과**:
+  - `ADM-UPD-5.1` `admin.update`가 성공한다
+  - `ADM-UPD-5.2` 두 호출이 끝난 뒤 `session` 테이블에 행이 하나도 남아 있지 않다
+  - `ADM-UPD-5.3` `session.create`가 돌려준 토큰이 있다면 그 토큰으로 `session.get`을 실행해도 `{ admin: null }`을 돌려준다
+
+</details>
+
+<details>
+<summary><strong><code>ADM-UPD-6</code></strong> 같은 현재 비밀번호로 관리자 정보를 동시에 두 번 바꾸면 한 건만 성공하고 나머지는 거절된다</summary>
+
+- **전제**: 관리자가 하나 있다
+- **행동**: 같은 현재 비밀번호와 서로 다른 새 비밀번호(첫 번째 변경, 두 번째 변경)로 `admin.update` 두 건을, 첫 번째 변경이 커밋되기 전에 두 번째 변경이 진입하도록 동시에 실행한다
+- **결과**:
+  - `ADM-UPD-6.1` 한 건은 성공하고 나머지 한 건은 `UNAUTHORIZED` 오류를 던진다
+  - `ADM-UPD-6.2` 성공한 호출의 새 이메일과 새 비밀번호로 `session.create`를 실행하면 토큰을 돌려준다
 
 </details>
 

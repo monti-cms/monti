@@ -4,11 +4,11 @@
 
 | 액션 | 하는 일 | 주요 거절 |
 |---|---|---|
-| `keys.create` | 외부 서비스 키를 암호화 저장하고 원문 없이 `id`, `service`, `name`, `last4` 반환 | 암호화 `secret` 미설정·빈 문자열 `BAD_REQUEST`, 이름 중복 `CONFLICT` |
+| `keys.create` | 외부 서비스 키를 암호화 저장하고 원문 없이 `id`, `service`, `name`, `last4` 반환 | 암호화 `secret` 미설정·빈 문자열 `BAD_REQUEST`, 이름 중복(동시 생성 포함) `CONFLICT` |
 | `keys.list` | 원문 `secret`을 제외한 키 목록을 돌려준다 | 없음 |
-| `keys.update` | 키 `name`과 선택 `secret` 갱신 | 빈 문자열·`secret` 변경 시 암호화 `secret` 미설정 `BAD_REQUEST`, 미존재 `NOT_FOUND`, 이름 중복 `CONFLICT` |
+| `keys.update` | 키 `name`과 선택 `secret` 갱신 | 빈 문자열·`secret` 변경 시 암호화 `secret` 미설정 `BAD_REQUEST`, 미존재 `NOT_FOUND`, 이름 중복(동시 수정 포함) `CONFLICT` |
 | `keys.delete` | 지정한 키 삭제 | 미존재 `NOT_FOUND` |
-| `keys.check` | 입력 `{ service, secret }` 또는 저장된 `{ id }`로 플러그인 `keyServices` 연결 확인 | 확인 실패·복호화 `secret` 미설정 `BAD_REQUEST`, 미등록 서비스·없는 ID `NOT_FOUND` |
+| `keys.check` | 입력 `{ service, secret }` 또는 저장된 `{ id }`로 플러그인 `keyServices` 연결 확인 | 확인 실패·복호화 `secret` 미설정·복호화 실패 `BAD_REQUEST`, 미등록 서비스·없는 ID `NOT_FOUND` |
 
 ---
 
@@ -62,6 +62,17 @@
 - **결과**:
   - `KEY-CRT-4.1` `BAD_REQUEST` 오류를 던진다
   - `KEY-CRT-4.2` `api_keys`가 비어 있다
+
+</details>
+
+<details>
+<summary><strong><code>KEY-CRT-5</code></strong> 같은 이름으로 키를 동시에 두 번 만들면 한 건만 성공하고 나머지는 거절된다</summary>
+
+- **전제**: 암호화 비밀값(`secret`)이 설정되어 있고 `api_keys`가 비어 있다
+- **행동**: 같은 `name`으로 `keys.create` 두 건을, 서로의 커밋을 보기 전에 겹치도록 동시에 실행한다
+- **결과**:
+  - `KEY-CRT-5.1` 한 건은 성공하고 나머지 한 건은 `CONFLICT` 오류를 던진다
+  - `KEY-CRT-5.2` `api_keys` 테이블에 해당 `name`의 행이 정확히 하나만 남는다
 
 </details>
 
@@ -150,6 +161,17 @@
 - **결과**:
   - `KEY-UPD-6.1` `BAD_REQUEST` 오류를 던진다
   - `KEY-UPD-6.2` `api_keys`에서 해당 키의 `name`, `secret`, `last4`가 원래 그대로이다
+
+</details>
+
+<details>
+<summary><strong><code>KEY-UPD-7</code></strong> 서로 다른 두 키의 이름을 같은 이름으로 동시에 바꾸면 한 건만 성공하고 나머지는 거절된다</summary>
+
+- **전제**: 암호화 비밀값(`secret`)이 설정되어 있고 서로 다른 이름의 키 두 개가 저장되어 있다
+- **행동**: 두 키의 `id`에 같은 새 `name`을 넣어 `keys.update` 두 건을, 서로의 커밋을 보기 전에 겹치도록 동시에 실행한다
+- **결과**:
+  - `KEY-UPD-7.1` 한 건은 성공하고 나머지 한 건은 `CONFLICT` 오류를 던진다
+  - `KEY-UPD-7.2` `api_keys` 테이블에 그 새 `name`을 가진 행이 정확히 하나만 남는다
 
 </details>
 
@@ -244,5 +266,17 @@
 - **행동**: 저장된 키의 `id`로 `keys.check`를 실행한다
 - **결과**:
   - `KEY-CHK-6.1` `BAD_REQUEST` 오류를 던진다
+
+</details>
+
+<details>
+<summary><strong><code>KEY-CHK-7</code></strong> 저장할 때와 다른 암호화 비밀값으로는 저장된 키의 연결을 확인할 수 없다</summary>
+
+- **전제**: 연결 확인 함수를 가진 플러그인이 등록되어 있고, 첫 번째 암호화 비밀값(`secret`)으로 저장한 키가 하나 있으며, 그와 다른 두 번째 암호화 비밀값으로 엔진이 생성되어 있다
+- **행동**: 저장된 키의 `id`로 `keys.check`를 실행한다
+- **결과**:
+  - `KEY-CHK-7.1` `BAD_REQUEST` 오류를 던진다
+  - `KEY-CHK-7.2` 플러그인의 연결 확인 함수가 호출되지 않는다
+  - `KEY-CHK-7.3` 오류의 `message`와 `details`에 저장한 키 원문과 두 암호화 비밀값이 들어 있지 않다
 
 </details>

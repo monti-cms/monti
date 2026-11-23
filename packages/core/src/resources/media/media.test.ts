@@ -1,8 +1,9 @@
 import { randomUUID } from "node:crypto";
-import { type Kysely, sql } from "kysely";
+import type { Kysely } from "kysely";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { createTestDatabase, type TestDatabase } from "../../__test__/database";
 import { createMemoryStorage, type MemoryStorage } from "../../__test__/memory-storage";
+import { codeOf, type Gate, gate, waitForLockWaits } from "../../__test__/race";
 import { migrate } from "../../db/migrate";
 import { initial } from "../../db/migrations/0001-initial";
 import type { Database } from "../../db/types";
@@ -100,31 +101,6 @@ async function looseFile(key: string) {
 	return db.selectFrom("loose_files").selectAll().where("key", "=", key).executeTakeFirst();
 }
 
-/** 실행이 거절되면 그 오류 코드, 성공하면 null. */
-async function codeOf(run: Promise<unknown>): Promise<string | null> {
-	return run.then(
-		() => null,
-		(error: { code: string }) => error.code,
-	);
-}
-
-/** 한 번 열리는 문: `pass`를 부른 쪽은 `open`될 때까지 기다리고, `reached`는 누군가 문 앞에 왔을 때 풀린다. */
-interface Gate {
-	reached: Promise<void>;
-	open: () => void;
-	pass: () => Promise<void>;
-}
-
-function gate(): Gate {
-	const reached = Promise.withResolvers<void>();
-	const opened = Promise.withResolvers<void>();
-	async function pass(): Promise<void> {
-		reached.resolve();
-		await opened.promise;
-	}
-	return { reached: reached.promise, open: () => opened.resolve(), pass };
-}
-
 /** 메서드마다 그 키로 불리면 문에서 기다리게 할 키와 문. */
 type Gates = Partial<Record<"stat" | "remove", { key: string; gate: Gate }>>;
 
@@ -146,20 +122,6 @@ function gatedStorage(gates: Gates): StorageAdapter {
 			await storage.remove(key);
 		},
 	};
-}
-
-/** 이 DB에서 잠금을 기다리는 연결이 `count`개가 될 때까지 기다린다. */
-async function waitForLockWaits(count: number): Promise<void> {
-	await vi.waitFor(
-		async () => {
-			const { rows } = await sql<{ waiting: number }>`
-				select count(*)::int as waiting from pg_stat_activity
-				where datname = current_database() and wait_event_type = 'Lock'
-			`.execute(db);
-			if (rows[0]?.waiting !== count) throw new Error("아직 잠금을 기다리는 연결이 없다");
-		},
-		{ timeout: 2000, interval: 10 },
-	);
 }
 
 it("MED-UPL-1 issues an upload ticket for a new UUID key and records it in loose_files for 24 hours", async () => {
@@ -543,7 +505,7 @@ it("MED-UPD-8 같은 미디어의 파일을 동시에 교체해도 먼저 교체
 	try {
 		await held.reached;
 		updates.push(codeOf(monti.media.update({ id: row.id, key: second })));
-		await waitForLockWaits(1).finally(held.open);
+		await waitForLockWaits(db, 1).finally(held.open);
 		const codes = await Promise.all(updates);
 
 		// MED-UPD-8.1
@@ -649,7 +611,7 @@ it("MED-CLN-3 임시 파일 정리와 미디어 등록이 같은 키로 동시�
 		await removing.reached;
 		const createA = codeOf(monti.media.create({ key: keyA }));
 		pending.push(createA);
-		await waitForLockWaits(1).finally(removing.open);
+		await waitForLockWaits(db, 1).finally(removing.open);
 		const result = await cleanup;
 		const codeA = await createA;
 		statting.open();

@@ -3,12 +3,15 @@ import type { Kysely } from "kysely";
 import { afterEach, beforeEach, expect, it } from "vitest";
 import { createTestDatabase, type TestDatabase } from "../../__test__/database";
 import { createMemoryStorage, type MemoryStorage } from "../../__test__/memory-storage";
+import { overlap } from "../../__test__/race";
 import { migrate } from "../../db/migrate";
 import { initial } from "../../db/migrations/0001-initial";
 import type { Database } from "../../db/types";
 import { createMonti } from "../../engine/engine";
-import type { MontiConfig } from "../../engine/types";
+import type { MontiConfig, Schema } from "../../engine/types";
 import { validateDoc } from "../../rich-text/validate-doc";
+import { syncSchemaTables } from "../schema/sync-tables";
+import { trash } from "../trash/trash";
 import { templates } from "./templates";
 
 let testDb: TestDatabase;
@@ -37,15 +40,17 @@ function configOf(withStorage: boolean): MontiConfig {
 	return { name: "Monti Blog", dev: false, blocks: [GALLERY], storage: withStorage ? storage : undefined };
 }
 
+const SCHEMA: Schema = {
+	locales: ["ko"],
+	collections: {
+		[POSTS]: { fields: { title: { type: "text" } } },
+		[PAGES]: { fields: { title: { type: "text" } } },
+	},
+};
+
 function montiOf(withStorage = true) {
-	return createMonti(db, { templates }, [], {
-		schema: {
-			locales: ["ko"],
-			collections: {
-				[POSTS]: { fields: { title: { type: "text" } } },
-				[PAGES]: { fields: { title: { type: "text" } } },
-			},
-		},
+	return createMonti(db, { templates, trash }, [], {
+		schema: SCHEMA,
 		config: configOf(withStorage),
 		schemaFile: "unused-schema-file",
 		configFile: "unused-config-file",
@@ -130,6 +135,18 @@ async function seedUse(use: UseSeed): Promise<UseSeed> {
 async function seedTemplateUsing(name: string, mediaId?: string) {
 	mediaId ??= await seedMedia();
 	const template = await seedTemplate({ name, content: imageDoc(mediaId) });
+	const use = await seedUse({
+		media_id: mediaId,
+		source_kind: "template",
+		source_id: template.id,
+		field_path: "content",
+	});
+	return { template, use };
+}
+
+/** `content`가 본문인 템플릿과 그 본문이 참조하는 `mediaId`의 `media_uses` 행. */
+async function seedTemplateWith(content: Record<string, unknown>, mediaId: string) {
+	const template = await seedTemplate({ content });
 	const use = await seedUse({
 		media_id: mediaId,
 		source_kind: "template",
@@ -489,4 +506,141 @@ it("TPL-DEL-2 rejects templates.delete with NOT_FOUND for an id no template has"
 
 	// TPL-DEL-2.1
 	await expect(montiOf().templates.delete({ id: randomUUID() })).rejects.toMatchObject({ code: "NOT_FOUND" });
+});
+
+it("TPL-CRT-10 같은 컬렉션에 같은 이름의 템플릿을 동시에 두 번 만들면 한 건만 성공하고 나머지는 거절된다", async () => {
+	const monti = montiOf();
+	const template = { collection: POSTS, name: "Review", content: PLAIN };
+
+	// 첫 생성을 커밋 직전에 멈춰 두고 두 번째 생성을 시작한다.
+	const [first, second] = await overlap(
+		db,
+		(hold) =>
+			monti.transaction(async (tx) => {
+				const created = await tx.templates.create(template);
+				await hold();
+				return created;
+			}),
+		() => monti.templates.create(template),
+	);
+	const named = (await templateRows()).filter((row) => row.collection === POSTS && row.name === template.name);
+
+	// TPL-CRT-10.1
+	expect([first.code, second.code].sort()).toEqual(["CONFLICT", null]);
+	// TPL-CRT-10.2
+	expect(named).toHaveLength(1);
+});
+
+/** 템플릿 하나의 `media_uses`를 미디어 `id` 순으로 `media_id`만. */
+async function usedMedia(templateId: string): Promise<string[]> {
+	return (await useRows("template", templateId)).map((row) => row.media_id);
+}
+
+it("TPL-UPD-9 같은 템플릿의 본문을 동시에 두 번 바꿔도 최종 본문과 미디어 사용처가 일치하고 중복 기록이 남지 않는다", async () => {
+	const [firstMedia, secondMedia] = [await seedMedia(), await seedMedia()];
+	const template = await seedTemplate({ content: { blocks: [] } });
+	const [firstDoc, secondDoc] = [imageDoc(firstMedia), imageDoc(secondMedia)];
+	const monti = montiOf();
+
+	// 첫 수정을 커밋 직전에 멈춰 두고 두 번째 수정을 시작한다.
+	const [first, second] = await overlap(
+		db,
+		(hold) =>
+			monti.transaction(async (tx) => {
+				const updated = await tx.templates.update({ id: template.id, content: firstDoc });
+				await hold();
+				return updated;
+			}),
+		() => monti.templates.update({ id: template.id, content: secondDoc }),
+	);
+	const { content } = await templateRow(template.id);
+	const finalMedia = JSON.stringify(content).includes(firstMedia) ? firstMedia : secondMedia;
+
+	// TPL-UPD-9.1
+	expect([first.code, second.code]).toEqual([null, null]);
+	// TPL-UPD-9.2
+	expect([firstDoc, secondDoc]).toContainEqual(content);
+	// TPL-UPD-9.3
+	expect(await usedMedia(template.id)).toEqual([finalMedia]);
+});
+
+it("TPL-UPD-10 같은 템플릿의 이름과 본문을 동시에 각각 바꿔도 두 변경이 모두 남는다", async () => {
+	const media = await seedMedia();
+	const template = await seedTemplate({ name: "Before", content: { blocks: [] } });
+	const content = imageDoc(media);
+	const monti = montiOf();
+
+	// 이름 수정을 커밋 직전에 멈춰 두고 본문 수정을 시작한다.
+	const [rename, rewrite] = await overlap(
+		db,
+		(hold) =>
+			monti.transaction(async (tx) => {
+				const renamed = await tx.templates.update({ id: template.id, name: "After" });
+				await hold();
+				return renamed;
+			}),
+		() => monti.templates.update({ id: template.id, content }),
+	);
+	const row = await templateRow(template.id);
+
+	// TPL-UPD-10.1
+	expect([rename.code, rewrite.code]).toEqual([null, null]);
+	// TPL-UPD-10.2
+	expect({ name: row.name, content: row.content }).toEqual({ name: "After", content });
+	// TPL-UPD-10.3
+	expect(await usedMedia(template.id)).toEqual([media]);
+});
+
+it("TPL-UPD-11 서로 다른 두 템플릿의 이름을 같은 이름으로 동시에 바꾸면 한 건만 성공하고 나머지는 거절된다", async () => {
+	const [one, two] = [await seedTemplate({ name: "One" }), await seedTemplate({ name: "Two" })];
+	const monti = montiOf();
+
+	// 첫 수정을 커밋 직전에 멈춰 두고 두 번째 수정을 시작한다.
+	const [first, second] = await overlap(
+		db,
+		(hold) =>
+			monti.transaction(async (tx) => {
+				const updated = await tx.templates.update({ id: one.id, name: "Same" });
+				await hold();
+				return updated;
+			}),
+		() => monti.templates.update({ id: two.id, name: "Same" }),
+	);
+	const named = (await templateRows()).filter((row) => row.collection === POSTS && row.name === "Same");
+
+	// TPL-UPD-11.1
+	expect([first.code, second.code].sort()).toEqual(["CONFLICT", null]);
+	// TPL-UPD-11.2
+	expect(named).toHaveLength(1);
+});
+
+it("TPL-UPD-12 휴지통에 있던 미디어를 영구 삭제하는 동안 그 미디어를 유지한 채 템플릿을 수정하면 저장이 끊기지 않고 거절된다", async () => {
+	await syncSchemaTables(db, SCHEMA);
+	const media = await seedMedia(true);
+	/** 문단 하나와 그 미디어를 참조하는 이미지 블록 하나로 된 본문. */
+	const contentWith = (text: string) => ({
+		blocks: [
+			{ id: "p1", type: "paragraph", content: [{ type: "text", text }] },
+			{ id: "i1", type: "image", attrs: { mediaId: media } },
+		],
+	});
+	const { template } = await seedTemplateWith(contentWith("Hello"), media);
+	const monti = montiOf();
+
+	// 미디어 영구 삭제를 커밋 직전에 멈춰 두고 템플릿 수정을 시작한다.
+	const [removal, update] = await overlap(
+		db,
+		(hold) =>
+			monti.transaction(async (tx) => {
+				const removed = await tx.trash.delete({ id: media });
+				await hold();
+				return removed;
+			}),
+		() => monti.templates.update({ id: template.id, content: contentWith("Bye") }),
+	);
+
+	// TPL-UPD-12.1
+	expect([removal.code, update.code]).toEqual([null, "BAD_REQUEST"]);
+	// TPL-UPD-12.2
+	expect((await templateRow(template.id)).content).toEqual(contentWith("Hello"));
 });
