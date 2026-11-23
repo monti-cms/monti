@@ -1,8 +1,11 @@
 import { MontiError } from "./errors";
 import type { KeyServiceDefinition, Operation, Plugin, ResourceTree } from "./types";
 
-/** `monti`에 엔진이 직접 다는 메서드 이름: 리소스 이름으로 쓰면 메서드를 가린다. */
-const ENGINE_METHODS = ["spec", "transaction", "dryRun", "onEvent"];
+/**
+ * `monti` 최상위에 오는 메서드 이름: 엔진이 다는 것과 `startMonti`가 더하는 `withStoredKey`. 리소스 이름으로 쓰면 메서드를
+ * 가리거나 메서드에 가려진다.
+ */
+const ENGINE_METHODS = ["spec", "transaction", "dryRun", "onEvent", "withStoredKey"];
 
 /**
  * The resource tree with each plugin's operations added at `<resource>.<action>`. A plugin may add actions to an

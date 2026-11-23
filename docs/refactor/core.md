@@ -186,7 +186,7 @@ export interface MontiConfig {
 
 서버 플러그인(`Plugin`)은 `name`, `operations`, `keyServices`, `migrations`, `onEvent` 다섯 속성을 가진다.
 
-- **이름·경로 충돌 차단**: 플러그인 Operation 경로는 기존 경로뿐 아니라 엔진 기본 메서드 이름(`spec`, `transaction`, `dryRun`, `onEvent`)과도 겹칠 수 없다(`CONFLICT`). `migrateMonti`에서는 플러그인 이름이 서로 겹치면 `CONFLICT`, 예약된 출처 이름(`"@monti-cms/core"`, `"project"`)이면 `BAD_REQUEST`로 DB를 건드리기 전에 거절한다.
+- **이름·경로 충돌 차단**: 플러그인 Operation 경로는 기존 경로뿐 아니라 `monti` 최상위 메서드 이름(`spec`, `transaction`, `dryRun`, `onEvent`, `withStoredKey`)과도 겹칠 수 없다(`CONFLICT`). `migrateMonti`에서는 플러그인 이름이 서로 겹치면 `CONFLICT`, 예약된 출처 이름(`"@monti-cms/core"`, `"project"`)이면 `BAD_REQUEST`로 DB를 건드리기 전에 거절한다.
 - **마이그레이션(`migrations`)**: DB 준비 함수 `migrateMonti({ db, schema, config })`가 core(`"@monti-cms/core"`) 먼저, 그다음 플러그인(`plugin.name`) 순서로 한 번씩 실행하고 `migrations` 테이블(`(source, name)`)에 기록한다(`config.dev === true`이면 현재 DB 스키마 기준으로 컬렉션 테이블까지 동기화). 동시 `migrate`·`migrateMonti` 호출은 직렬화해 각 단계가 한 번만 실행되게 하며, 한 배열에 이름이 같은 단계가 중복되면 실행 전에 거절한다. `startMonti`는 DB를 변경하지 않고 스키마 검사와 엔진 조립만 수행한다.
 - **DB 타입 확장**: core는 플러그인 테이블 타입을 받는 제네릭을 두지 않는다. 플러그인 코드가 Kysely 0.29.8의 `ctx.db.$extendTables<PluginTables>()`(트랜잭션 콜백에서는 `trx.$extendTables<PluginTables>()`)로 자기 테이블 타입을 직접 더해 core 테이블과 함께 조회한다.
 - **DB 스키마 분리**: PostgreSQL `public` 스키마는 core의 고정 테이블과 사용자 컬렉션 테이블 전용이다. 플러그인은 자기 전용 PostgreSQL 스키마(예: `ai`)에 테이블을 둔다.

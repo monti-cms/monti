@@ -4,7 +4,7 @@
 
 | 함수 / 객체 | 하는 일 | 주요 거절 |
 |---|---|---|
-| `startMonti` | DB를 변경하지 않고 스키마 검사·코어/플러그인 리소스 조립만 수행해 `monti`를 반환한다(`secret`은 `keys` 내부 격리, `admin`·`session`·`keys` 쓰기는 `onEvent` 미통지) | 잘못된 스키마 `BAD_REQUEST`, 중복 플러그인 경로·엔진 기본 메서드 이름 `CONFLICT` |
+| `startMonti` | DB를 변경하지 않고 스키마 검사·코어/플러그인 리소스 조립만 수행해 `monti`를 반환한다(`secret`은 `keys` 내부 격리, `admin`·`session`·`keys` 쓰기는 `onEvent` 미통지, 서버 전용 `monti.withStoredKey`는 명세에 없음) | 잘못된 스키마 `BAD_REQUEST`, 중복 플러그인 경로·엔진 기본 메서드 이름 `CONFLICT` |
 | `migrateMonti` | 스키마 검사 → 코어(`"@monti-cms/core"`)·플러그인 내장 마이그레이션 순차 실행 → 개발 서버(`dev: true`)만 현재 DB 스키마의 컬렉션 테이블 동기화(동시 실행 안전) | 잘못된 스키마·예약 출처 플러그인 이름 `BAD_REQUEST`, 플러그인 이름 중복 `CONFLICT` |
 | `monti.spec()` · `specOf` | DB 연결 유무와 무관하게 코어 전체 및 플러그인 Operation의 이름·종류·입력 JSON Schema 명세를 돌려준다 | 중복 플러그인 경로·엔진 기본 메서드 이름 `CONFLICT` |
 | `migrate` · `coreMigrations` | 지정한 출처(`source`)의 마이그레이션 단계를 순서대로 실행해 `migrations` 테이블에 기록하고, 코어 내장 마이그레이션 목록(`coreMigrations`)을 공개한다 | 실패한 단계 롤백, 배열 내 중복 단계 이름 거절 |
@@ -229,5 +229,25 @@
 - **행동**: `specOf([plugin])`을 호출한다
 - **결과**:
   - `START-20.1` `CONFLICT` 오류를 던진다
+
+</details>
+
+<details>
+<summary><strong><code>START-21</code></strong> `startMonti`로 만든 `monti`의 `withStoredKey`로 저장된 키의 원문을 받아 쓴다</summary>
+
+- **전제**: 암호화 비밀값(`secret`)을 주고 `startMonti`로 만든 `monti`로 `keys.create`를 실행해 저장한 키가 하나 있다
+- **행동**: 그 키의 `id`와 `service`로 `monti.withStoredKey`를 호출한다
+- **결과**:
+  - `START-21.1` 콜백이 저장할 때 넣은 비밀값 원문을 받는다
+
+</details>
+
+<details>
+<summary><strong><code>START-22</code></strong> 플러그인 리소스 이름으로 `withStoredKey`를 쓸 수 없다</summary>
+
+- **전제**: 리소스 이름이 `withStoredKey`인 Operation을 가진 플러그인이 `config.plugins`에 있다
+- **행동**: `startMonti`를 호출한다
+- **결과**:
+  - `START-22.1` `CONFLICT` 오류를 던진다
 
 </details>

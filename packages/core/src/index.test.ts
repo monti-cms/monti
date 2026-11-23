@@ -554,3 +554,30 @@ it("START-20 DB 없이 명세를 만들 때도 엔진 기본 메서드 이름을
 	// START-20.1
 	expect(() => specOf([plugin])).toThrow(expect.objectContaining({ code: "CONFLICT" }));
 });
+
+it("START-21 `startMonti`로 만든 `monti`의 `withStoredKey`로 저장된 키의 원문을 받아 쓴다", async () => {
+	await prepare([]);
+	const monti = startMonti({
+		db,
+		schema,
+		config: { name: "Monti Blog" },
+		schemaFile,
+		configFile,
+		secret: "test monti secret",
+	});
+	const { id } = await monti.keys.create({ service: "mail", name: "Mail", secret: "mail-secret-1234" });
+	const use = vi.fn<(apiKey: string) => Promise<void>>().mockResolvedValue(undefined);
+
+	await monti.withStoredKey({ id, service: "mail" }, use);
+
+	// START-21.1
+	expect(use).toHaveBeenCalledExactlyOnceWith("mail-secret-1234");
+});
+
+it("START-22 플러그인 리소스 이름으로 `withStoredKey`를 쓸 수 없다", () => {
+	const tag = defineWrite({ input: z.object({ name: z.string() }), run: tagRun });
+	const plugin: Plugin = { name: "albums", operations: { withStoredKey: { tag } } };
+
+	// START-22.1
+	expect(() => start([plugin])).toThrow(expect.objectContaining({ code: "CONFLICT" }));
+});
