@@ -4,8 +4,8 @@
 
 | 기능 | 하는 일 | 주요 거절 |
 |---|---|---|
-| 세션 인증·쿠키 (`auth.ts`) | 최초 관리자 생성·로그인 시 `HttpOnly` 쿠키를 발급하고 토큰을 본문에서 숨기며, `GET /session` 조회, `DELETE /session`·`PATCH /admin` 쿠키 만료 삭제, 그 외 모든 요청의 세션 검증을 수행한다 | 쿠키 없음·만료·위조 토큰 시 `401`(DB 미변경), 중복 관리자 시 `409`, 잘못된 로그인 시 `401`, 계정 변경 실패 시 쿠키 유지 |
-| 요청 파이프라인 (`handler.ts`, `index.ts`) | 경로 매칭→인증→입력 해석→실행 순서로 표준 CRUD·쿼리 필터·다건 수정·단일 리소스·플러그인 Operation·`?dryRun=true`·공개 옵션(`basePath`, `cookie`)을 처리하고 오류를 HTTP 응답으로 매핑한다 | 경로 오류 `404`/`405`(+`Allow`), 코어 오류 5종 → `400`·`401`·`403`·`404`·`409`, 내부 예외 → 상세 숨김 `500` |
+| 세션 인증·쿠키 (`auth.ts`) | 최초 관리자 생성(동시 생성 시 1건만 성공)·로그인 시 `HttpOnly` 쿠키를 발급하고 토큰을 본문에서 숨기며, `GET /session` 조회, `DELETE /session`·`PATCH /admin` 쿠키 만료 삭제, 그 외 모든 요청의 세션 검증을 수행한다 | 쿠키 없음·만료·위조 토큰 시 `401`(DB 미변경), 중복 관리자 시 `409`(`set-cookie` 없음), 잘못된 로그인 시 `401`(`set-cookie` 없음), 계정 변경 실패 시 쿠키 유지 |
+| 요청 파이프라인 (`handler.ts`, `index.ts`) | 경로 매칭→인증→입력 해석→실행 순서로 표준 CRUD·쿼리 필터·다건 수정·단일 리소스·플러그인 Operation·`?dryRun=true`·공개 옵션(`basePath`, `cookie`)을 처리하고 오류를 HTTP 응답으로 매핑한다 | 경로 오류 `404`/`405`(+`Allow`), 코어 오류 5종 → `400`·`401`·`403`·`404`·`409`, 본문 1 MiB 초과(공개 요청 포함) → `413` `PAYLOAD_TOO_LARGE`, 내부 예외 → 상세 숨김 `500` |
 
 ---
 
@@ -72,6 +72,31 @@
   - `HTTP-HDL-5.1` `PATCH /api/admin`의 상태 코드가 `200`이고 본문에 바뀐 `email`이 담긴다
   - `HTTP-HDL-5.2` `set-cookie` 헤더에 `monti_session=;`와 `Max-Age=0`이 포함된다
   - `HTTP-HDL-5.3` 이후 같은 쿠키로 보낸 `GET /api/templates`가 `401`로 거절된다
+
+</details>
+
+### 경계 · 방어 검증
+
+<details>
+<summary><strong><code>HTTP-HDL-20</code></strong> 로그인 실패나 중복 관리자 생성이 거절될 때 세션 쿠키를 설정하지 않는다</summary>
+
+- **전제**: 관리자가 이미 생성되어 있다
+- **행동**: 틀린 비밀번호로 `POST /api/session`을 호출하고, 새 이메일로 `POST /api/admin`을 호출한다
+- **결과**:
+  - `HTTP-HDL-20.1` `POST /api/session` 응답이 `401`이고 `set-cookie` 헤더가 없다
+  - `HTTP-HDL-20.2` `POST /api/admin` 응답이 `409`이고 `set-cookie` 헤더가 없다
+
+</details>
+
+<details>
+<summary><strong><code>HTTP-HDL-21</code></strong> 최초 관리자 생성 요청을 동시에 두 번 보내면 하나만 성공하고 세션 쿠키를 받는다</summary>
+
+- **전제**: 관리자가 아직 없는 DB로 `createHttpHandler(monti)`를 만들었다
+- **행동**: 쿠키 없이 서로 다른 이메일의 `POST /api/admin` 요청 두 건을 동시에 보낸다
+- **결과**:
+  - `HTTP-HDL-21.1` 두 응답 중 하나는 `201`이며 `set-cookie` 헤더를 받고, 나머지 하나는 `409`(`CONFLICT`)이며 `set-cookie` 헤더가 없다
+  - `HTTP-HDL-21.2` DB `admin` 테이블에 행이 정확히 하나만 남는다
+  - `HTTP-HDL-21.3` DB `session` 테이블에 행이 정확히 하나만 남는다
 
 </details>
 
@@ -230,5 +255,17 @@
 - **결과**:
   - `HTTP-HDL-18.1` `PATCH /api/admin`의 상태 코드가 `401`이고 `set-cookie` 헤더가 없다
   - `HTTP-HDL-18.2` 같은 쿠키로 보낸 `GET /api/templates`가 `200`으로 통과한다
+
+</details>
+
+<details>
+<summary><strong><code>HTTP-HDL-19</code></strong> 허용 크기를 넘는 본문은 로그인하지 않은 공개 요청에서도 작업을 실행하지 않고 거절한다</summary>
+
+- **전제**: 1 MiB를 1바이트 넘는 `application/json` 본문의 `POST /api/session`과 `POST /api/admin` 요청이 있다
+- **행동**: 쿠키 없이 두 요청을 핸들러로 보낸다
+- **결과**:
+  - `HTTP-HDL-19.1` 두 응답 모두 상태 `413`, `content-type`이 `application/json; charset=utf-8`, `cache-control`이 `no-store`, `error.code`가 `"PAYLOAD_TOO_LARGE"`이다
+  - `HTTP-HDL-19.2` 두 응답 모두 `set-cookie` 헤더가 없다
+  - `HTTP-HDL-19.3` `admin`과 `session` 테이블의 행 수가 그대로이다
 
 </details>

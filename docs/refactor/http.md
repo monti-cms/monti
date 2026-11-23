@@ -100,6 +100,7 @@ export function createHttpHandler(monti: Monti, options?: HttpHandlerOptions): H
     - `array` 허용 속성에서는 같은 키가 1개만 와도 배열(`["a"]`)로, 여러 번 오면 모든 값을 배열로 수집
     - 그 외 또는 변환 불가 값(예: 숫자 자리에 `"abc"`)은 문자열 그대로 남겨 core Zod 검증(`400 BAD_REQUEST`)이 처리하게 한다.
 - **요청 본문 (`POST`, `PATCH`, `DELETE`)**:
+  - 본문 크기는 UTF-8 바이트 기준 최대 `1 MiB`(`1_048_576`바이트)까지 허용하며, `Content-Length` 유무와 관계없이 스트림을 읽는 도중 상한을 넘으면 즉시 `413 PAYLOAD_TOO_LARGE`로 거절한다(공개 요청인 `POST /session`·`POST /admin` 포함).
   - 본문이 비어 있으면 `Content-Type` 헤더 없이도 `{}`로 취급한다(`DELETE /templates/:id`, `DELETE /session` 등).
   - 본문이 비어 있지 않으면 `Content-Type` 헤더의 미디어 타입이 `application/json`(대소문자 무관, `; charset=utf-8` 등 파라미터 허용)이어야 하며, 아니면 `400 BAD_REQUEST`로 거절한다(폼 CSRF 방어).
   - JSON 구문 오류이거나 최상위 값이 일반 객체(non-null, non-array)가 아니면 `400 BAD_REQUEST`로 거절한다.
@@ -177,9 +178,10 @@ export function createHttpHandler(monti: Monti, options?: HttpHandlerOptions): H
 | `MontiError("NOT_FOUND")` / 없는 경로·리소스 | `404` | `"NOT_FOUND"` |
 | 허용되지 않은 HTTP 메서드 | `405` (+ `Allow` 헤더) | `"METHOD_NOT_ALLOWED"` |
 | `MontiError("CONFLICT")` | `409` | `"CONFLICT"` |
+| 요청 본문 크기 상한(1 MiB) 초과 | `413` | `"PAYLOAD_TOO_LARGE"` |
 | 그 외 예기치 않은 오류 | `500` | `"INTERNAL_ERROR"` (내부 스택·상세 숨김) |
 
-- `MontiError` 판별은 `instanceof` 대신 오류 객체의 `code` 속성이 코어 `ErrorCode` 5종(`BAD_REQUEST`, `UNAUTHORIZED`, `FORBIDDEN`, `NOT_FOUND`, `CONFLICT`)에 속하는지로 판별한다.
+- 오류 응답 매핑은 코어 `ErrorCode` 5종(`BAD_REQUEST`, `UNAUTHORIZED`, `FORBIDDEN`, `NOT_FOUND`, `CONFLICT`)과 HTTP 본문 크기 초과 코드(`PAYLOAD_TOO_LARGE` → `413`)를 판별한다.
 
 ## 6. 폴더 구조와 코드 규칙
 
