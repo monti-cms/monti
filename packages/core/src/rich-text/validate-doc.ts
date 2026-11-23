@@ -22,11 +22,25 @@ const BUILT_IN_BLOCKS: readonly BlockDefinition[] = [
 /** 링크 주소가 시작할 수 있는 것: `http:`·`https:`·`mailto:` 스킴(대소문자 무관), `/` 하나로 시작하는 상대 경로, `#` 조각. */
 const SAFE_HREF = /^(?:https?:|mailto:|#|\/(?![/\\]))/i;
 
+/**
+ * 링크 주소에 제어 문자(U+0000~U+001F, U+007F)가 없는지. URL 파서는 주소의 탭과 줄바꿈을 지우고 읽어, `/`와 `/` 사이에 탭을
+ * 넣은 상대 경로가 다른 호스트를 가리키는 `//host`가 된다.
+ */
+function hasNoControlCharacter(href: string): boolean {
+	return [...href].every((character) => character > "\u001f" && character !== "\u007f");
+}
+
 const BUILT_IN_MARKS: readonly MarkDefinition[] = [
 	...["bold", "italic", "underline", "strike", "code", "sup", "sub"].map((type) => ({ type })),
 	{
 		type: "link",
-		attrs: z.object({ href: z.string().regex(SAFE_HREF, "허용되지 않은 링크 주소입니다.").optional() }),
+		attrs: z.object({
+			href: z
+				.string()
+				.regex(SAFE_HREF, "허용되지 않은 링크 주소입니다.")
+				.refine(hasNoControlCharacter, "링크 주소에 제어 문자를 쓸 수 없습니다.")
+				.optional(),
+		}),
 	},
 ];
 
