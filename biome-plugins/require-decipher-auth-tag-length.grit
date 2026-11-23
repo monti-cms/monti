@@ -1,0 +1,10 @@
+// Node.js `createDecipheriv` with AEAD modes such as `aes-256-gcm` accepts truncated authentication tags unless `authTagLength` is
+// explicitly fixed in the 4th options argument. Require an explicit `authTagLength` option on every `createDecipheriv` call.
+or {
+	`createDecipheriv($alg, $key, $iv)`,
+	`$obj.createDecipheriv($alg, $key, $iv)`,
+	`createDecipheriv($alg, $key, $iv, $opts)` where { $opts <: not contains `authTagLength` },
+	`$obj.createDecipheriv($alg, $key, $iv, $opts)` where { $opts <: not contains `authTagLength` }
+} as $call where {
+	register_diagnostic(span=$call, message="Pass explicit { authTagLength: 16 } to createDecipheriv to prevent truncated authentication tags.", severity="error")
+}

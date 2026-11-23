@@ -20,7 +20,7 @@ export function encryptSecret(masterSecret: string | undefined, value: string): 
 /** `encryptSecret`이 저장한 `iv:tag:ciphertext`를 `masterSecret`의 키로 복호화한다. */
 export function decryptSecret(masterSecret: string | undefined, stored: string): string {
 	const [iv, tag, encrypted] = stored.split(":").map((part) => Buffer.from(part, "base64"));
-	const decipher = createDecipheriv(ALGORITHM, keyOf(masterSecret), iv as Buffer);
+	const decipher = createDecipheriv(ALGORITHM, keyOf(masterSecret), iv as Buffer, { authTagLength: 16 });
 	decipher.setAuthTag(tag as Buffer);
 	return Buffer.concat([decipher.update(encrypted as Buffer), decipher.final()]).toString();
 }
