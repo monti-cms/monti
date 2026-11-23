@@ -31,7 +31,7 @@ const createInput = z.object({
  */
 async function createTemplate(input: z.infer<typeof createInput>, ctx: WriteContext): Promise<Template> {
 	if (!Object.hasOwn(ctx.schema.collections, input.collection)) {
-		throw new MontiError("BAD_REQUEST", `No collection is named "${input.collection}"`);
+		throw new MontiError("BAD_REQUEST", `"${input.collection}" 컬렉션이 없다`);
 	}
 	const doc = docOf(input.content, ctx);
 	const template = { id: input.__preset_id ?? randomUUID(), collection: input.collection, name: input.name };

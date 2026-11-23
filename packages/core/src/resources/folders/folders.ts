@@ -40,7 +40,7 @@ const createInput = z.object({
  */
 async function createFolder(input: z.infer<typeof createInput>, ctx: WriteContext): Promise<Folder> {
 	if (input.scope !== "media" && !Object.hasOwn(ctx.schema.collections, input.scope)) {
-		throw new MontiError("BAD_REQUEST", `No collection or media has the scope "${input.scope}"`);
+		throw new MontiError("BAD_REQUEST", `"${input.scope}" 범위의 컬렉션이나 미디어가 없다`);
 	}
 	const folder = {
 		id: input.__preset_id ?? randomUUID(),
