@@ -439,3 +439,99 @@ it("ENG-TX-5 콜백이 잡아 무시한 CONFLICT 뒤에 정상 반환하거나 �
 	// ENG-TX-5.3
 	expect(listener).not.toHaveBeenCalled();
 });
+
+it("ENG-EVT-3 구독자가 받은 이벤트 값을 고치려 해도 다른 구독자와 호출자의 반환값은 바뀌지 않는다", async () => {
+	const create = defineWrite({
+		input: folderInput,
+		run: async (input, ctx) => ({ ...(await insertFolder(input, ctx)), name: input.name }),
+	});
+	const monti = createMonti(db, { folders: { create } });
+	monti.onEvent((event) => {
+		Object.assign(event.output as object, { name: "바꾼 이름" });
+	});
+	let received: unknown;
+	monti.onEvent((event) => {
+		received = event.output;
+	});
+	const input = { id: randomUUID(), name: "Photos" };
+
+	const output = await monti.folders.create(input);
+
+	// ENG-EVT-3.1
+	expect(output).toEqual({ id: input.id, name: "Photos" });
+	// ENG-EVT-3.2
+	expect(received).toEqual({ id: input.id, name: "Photos" });
+});
+
+it("ENG-EVT-5 이벤트로 보낼 수 없는 결과를 돌려주는 쓰기는 저장되지 않고 오류가 난다", async () => {
+	const create = defineWrite({
+		input: folderInput,
+		run: async (input, ctx) => ({ ...(await insertFolder(input, ctx)), format: () => input.name }),
+	});
+	const monti = createMonti(db, { folders: { create } });
+	const listener = vi.fn();
+	monti.onEvent(listener);
+
+	const outcome = await monti.folders.create({ id: randomUUID(), name: "Photos" }).catch((error: unknown) => error);
+	await new Promise((resolve) => setTimeout(resolve, 0));
+
+	// ENG-EVT-5.1
+	expect(outcome).toBeInstanceOf(Error);
+	// ENG-EVT-5.2
+	expect(await folderNames()).toEqual([]);
+	// ENG-EVT-5.3
+	expect(listener).not.toHaveBeenCalled();
+});
+
+/** 정상 폴더 하나를 만든 뒤, 없는 부모를 가리켜 외래 키 오류가 나는 폴더 쓰기를 잡아 무시하고 정상 반환한다. */
+async function ignoreForeignKeyError(tx: Record<"folders", FolderWrites["folders"]>): Promise<string> {
+	await tx.folders.add({ id: randomUUID(), name: "Photos" });
+	await tx.folders.create({ id: randomUUID(), name: "Orphan" }).catch(() => undefined);
+	return "done";
+}
+
+it("ENG-TX-6 콜백 안에서 DB 쓰기가 실패하면 콜백이 그 오류를 잡아도 트랜잭션과 드라이런은 실패한다", async () => {
+	const add = defineWrite({ input: folderInput, run: insertFolder });
+	const create = defineWrite({
+		input: folderInput,
+		run: async (input, ctx) => {
+			const parent_id = randomUUID();
+			await ctx.db
+				.insertInto("folders")
+				.values({ id: input.id, scope: "media", name: input.name, parent_id })
+				.execute();
+			return { id: input.id };
+		},
+	});
+	const monti = createMonti(db, { folders: { add, create } });
+	const listener = vi.fn();
+	monti.onEvent(listener);
+
+	const outcomes = [
+		await monti.transaction(ignoreForeignKeyError).catch((error: unknown) => error),
+		await monti.dryRun(ignoreForeignKeyError).catch((error: unknown) => error),
+	];
+
+	// ENG-TX-6.1
+	expect(outcomes).toMatchObject([{ code: "23503" }, { code: "23503" }]);
+	// ENG-TX-6.2
+	expect(await folderNames()).toEqual([]);
+	// ENG-TX-6.3
+	expect(listener).not.toHaveBeenCalled();
+});
+
+it("ENG-PLG-3 플러그인의 리소스 이름이 엔진의 기본 메서드 이름과 겹치면 엔진을 만들 수 없다", () => {
+	const create = defineWrite({ input: folderInput, run: insertFolder });
+	const codes = ["spec", "transaction"].map((resource) => {
+		const plugin: Plugin = { name: "named-plugin", operations: { [resource]: { create } } };
+		try {
+			createMonti(db, { folders: { create } }, [plugin]);
+			return null;
+		} catch (error) {
+			return (error as MontiError).code;
+		}
+	});
+
+	// ENG-PLG-3.1
+	expect(codes).toEqual(["CONFLICT", "CONFLICT"]);
+});

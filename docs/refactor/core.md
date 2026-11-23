@@ -80,15 +80,17 @@ sequenceDiagram
 
 ### 3.3 이벤트 (`onEvent`)
 
-- 쓰기가 커밋된 직후 `{ operation, input, output }`을 구독자에게 통지한다. 읽기와 `dryRun`은 통지하지 않는다.
-- 비밀번호·세션 토큰·외부 API 키 원문이 구독자에게 새어 나가지 않도록 `admin`·`session`·`keys` 리소스의 쓰기는 `onEvent`로 통지하지 않는다.
+- 쓰기가 커밋된 직후 `{ operation, input, output }`을 구독자마다 독립된 값(사본)으로 통지해, 한 구독자가 받은 값을 바꿔도 호출자 반환값이나 다른 구독자에 영향을 주지 않는다. 읽기와 `dryRun`은 통지하지 않는다.
+- 비밀번호·세션 토큰·외부 API 키 원문·업로드 티켓(서명된 URL·헤더)이 구독자에게 새어 나가지 않도록 `admin`·`session`·`keys` 리소스의 쓰기와 `media.startUpload`는 `onEvent`로 통지하지 않는다.
+- 통지할 이벤트(`input`·`output`)에 함수처럼 복사할 수 없는 값이 있으면 커밋하지 않고 오류를 던진다. 이벤트가 조용히 빠지는 대신 쓰기를 만든 쪽이 바로 알게 한다 (소유자 승인 2026-11-23).
 - core는 통지만 발행하고 구독자 완료를 기다리지 않는다. 한 구독자의 실패가 커밋 결과나 다른 구독자의 통지에 영향을 주지 않게 격리해 호출한다.
 
 ### 3.4 오류 (`MontiError`)
 
 - 오류는 `MontiError` 하나로 통일하며 코드는 `BAD_REQUEST`, `UNAUTHORIZED`, `FORBIDDEN`, `NOT_FOUND`, `CONFLICT` 다섯 가지다.
 - 입력 검사 실패는 `BAD_REQUEST`다.
-- 쓰기 중 발생하는 PostgreSQL 고유 제약 위반(`23505`, 중복 `id` 등)은 엔진이 `CONFLICT`로 변환한다. DB 고유 제약 위반은 트랜잭션 자체를 중단시키므로 콜백이 잡아도 해당 `transaction`·`dryRun`은 끝에서 그 `CONFLICT`로 실패한다.
+- 쓰기 중 발생하는 PostgreSQL 고유 제약 위반(`23505`, 중복 `id` 등)은 엔진이 `CONFLICT`로 변환한다. DB 쓰기 오류는 트랜잭션 자체를 중단시키므로 콜백이 잡아도 해당 `transaction`·`dryRun`은 끝에서 그 오류로 실패한다.
+- 이것은 의도한 동작이다: `monti.transaction` 안에서는 고유 제약 위반의 `CONFLICT`를 포함해 어떤 DB 오류든 트랜잭션 전체를 실패시킨다. 호출자가 `CONFLICT`를 잡고 같은 트랜잭션에서 이어 갈 수 없다 (소유자 승인 2026-11-23).
 
 ### 3.5 주요 타입 계약
 
@@ -105,8 +107,8 @@ export interface ReadContext<TTables = {}> {
 
 export interface WriteContext<TTables = {}> extends ReadContext<TTables> {
   db: Transaction<Database & TTables>;
-  setSchema: (schema: Schema) => void;                    // 개발 서버가 아니면 FORBIDDEN
-  setConfig: (config: Pick<MontiConfig, "name">) => void; // 개발 서버가 아니면 FORBIDDEN
+  setSchema: (schema: Schema) => Promise<Schema>;                  // 개발 서버가 아니면 FORBIDDEN. 차례를 받은 뒤의 이전 스키마를 돌려준다
+  setConfig: (config: Pick<MontiConfig, "name">) => Promise<void>; // 개발 서버가 아니면 FORBIDDEN
 }
 
 export type ErrorCode = "BAD_REQUEST" | "UNAUTHORIZED" | "FORBIDDEN" | "NOT_FOUND" | "CONFLICT";
@@ -166,7 +168,7 @@ export interface MontiConfig {
 ## 4. 컨텍스트와 설정
 
 - **개발 서버 판정**: `config.dev === true`일 때만 개발 서버다. 코어는 환경 변수를 직접 읽지 않는다.
-- **스키마·설정 수정**: `schema.update`와 `config.update`는 개발 서버에서만 허용되며 운영 서버에서는 `FORBIDDEN`이다. 트랜잭션 안의 사본을 바꾸고 커밋 직후 공유 상태와 코드 파일(`monti.schema.ts`, `monti.config.ts`)에 반영한다. 롤백이나 `dryRun`이면 버린다.
+- **스키마·설정 수정**: `schema.update`와 `config.update`는 개발 서버에서만 허용되며 운영 서버에서는 `FORBIDDEN`이다. `schema.get`·`config.get`은 내부 상태를 밖에서 고칠 수 없도록 독립 사본을 돌려준다. `schema.update`·`config.update`는 동시 호출을 직렬화하고, 파일 쓰기 가능 여부를 커밋 전에 검증·임시 준비한 뒤 원자적으로 교체해 파일 쓰기에 실패하면 DB 변경과 공유 상태도 남기지 않는다. 롤백이나 `dryRun`이면 버린다.
 - **저장소(`storage`)**: 선택 설정이다. `storage`가 없을 때 `media` 리소스를 호출하면 `BAD_REQUEST`로 거절한다.
 - **암호화 비밀값(`secret`)**: `MontiConfig`(`ctx.config`)에 두지 않고 `startMonti({ ..., secret })` 시작 옵션으로만 받아 `keys` 리소스 클로저에 격리해 전달한다. `secret`이 없으면 키 생성(`keys.create`), 새 비밀값이 포함된 키 수정(`keys.update`), 저장된 키 ID로 실행하는 연결 확인(`keys.check({ id })`)만 `BAD_REQUEST`로 거절하고 나머지 코어는 정상 동작한다.
 
@@ -174,7 +176,8 @@ export interface MontiConfig {
 
 서버 플러그인(`Plugin`)은 `name`, `operations`, `keyServices`, `migrations`, `onEvent` 다섯 속성을 가진다.
 
-- **마이그레이션(`migrations`)**: DB 준비 함수 `migrateMonti({ db, schema, config })`가 core(`"@monti-cms/core"`) 먼저, 그다음 플러그인(`plugin.name`) 순서로 한 번씩 실행하고 `migrations` 테이블(`(source, name)`)에 기록한다(`config.dev === true`이면 컬렉션 테이블까지 동기화). `startMonti`는 DB를 변경하지 않고 스키마 검사와 엔진 조립만 수행한다.
+- **이름·경로 충돌 차단**: 플러그인 Operation 경로는 기존 경로뿐 아니라 엔진 기본 메서드 이름(`spec`, `transaction`, `dryRun`, `onEvent`)과도 겹칠 수 없다(`CONFLICT`). `migrateMonti`에서는 플러그인 이름이 서로 겹치면 `CONFLICT`, 예약된 출처 이름(`"@monti-cms/core"`, `"project"`)이면 `BAD_REQUEST`로 DB를 건드리기 전에 거절한다.
+- **마이그레이션(`migrations`)**: DB 준비 함수 `migrateMonti({ db, schema, config })`가 core(`"@monti-cms/core"`) 먼저, 그다음 플러그인(`plugin.name`) 순서로 한 번씩 실행하고 `migrations` 테이블(`(source, name)`)에 기록한다(`config.dev === true`이면 현재 DB 스키마 기준으로 컬렉션 테이블까지 동기화). 동시 `migrate`·`migrateMonti` 호출은 직렬화해 각 단계가 한 번만 실행되게 하며, 한 배열에 이름이 같은 단계가 중복되면 실행 전에 거절한다. `startMonti`는 DB를 변경하지 않고 스키마 검사와 엔진 조립만 수행한다.
 - **DB 타입 확장**: `defineRead`·`defineWrite`에 플러그인 테이블 타입(`TTables`)을 넘기면 `ctx.db`에서 core 테이블과 함께 조회할 수 있다.
 
 ## 6. 데이터베이스와 컬렉션 테이블 구조
@@ -267,10 +270,10 @@ erDiagram
   }
 
   media_uses {
-    uuid media_id FK
-    text source_kind "entry | template"
-    uuid source_id
-    text field_path
+    uuid media_id PK,FK
+    text source_kind PK "entry | template"
+    uuid source_id PK
+    text field_path PK
   }
 
   loose_files {
@@ -301,7 +304,7 @@ erDiagram
 
 ### 6.1 8종 필드의 DB 매핑 규칙
 
-- **예약어·식별자·관계 대상 차단**: 고정 테이블 이름(`templates`, `folders`, `media`, `media_uses`, `loose_files`, `admin`, `session`, `api_keys`, `migrations`)과 `_data`, `_rels`로 끝나는 이름은 컬렉션 키로 쓸 수 없다. 데이터 테이블의 고정 열 이름(`entry_id`, `locale`, `status`, `slug`, `published_at`, `translation_seen`, `body`)은 필드(하위 필드 포함) 이름으로 쓸 수 없다. 컬렉션 키, 필드 키, 조건부 분기 이름에는 큰따옴표(`"`), 점(`.`), 연속 밑줄(`__`)을 쓸 수 없고, 모든 키와 만들어질 테이블·열 이름(`<collection>_data`, `<collection>_rels`, `<field>__<option>__<subfield>`, `<to>_id`)은 PostgreSQL 식별자 한도(UTF-8 63바이트)를 넘을 수 없다. 모든 `relation` 필드(조건부 하위 포함)의 `to`는 같은 스키마의 `collections`에 존재하는 키여야 한다.
+- **예약어·식별자·관계 대상 차단**: 고정 테이블 이름(`templates`, `folders`, `media`, `media_uses`, `loose_files`, `admin`, `session`, `api_keys`, `migrations`)과 `_data`, `_rels`로 끝나는 이름은 컬렉션 키로 쓸 수 없다. 데이터 테이블의 고정 열 이름(`entry_id`, `locale`, `status`, `slug`, `published_at`, `translation_seen`, `body`)은 필드(하위 필드 포함) 이름으로 쓸 수 없다. 빈 문자열(`""`)은 컬렉션·필드·분기 키로 쓸 수 없고, 컬렉션 키·필드 키·조건부 분기 이름에는 큰따옴표(`"`), 점(`.`), 연속 밑줄(`__`)을 쓸 수 없으며, 모든 키와 만들어질 테이블·열 이름(`<collection>_data`, `<collection>_rels`, `<field>__<option>__<subfield>`, `<to>_id`)은 PostgreSQL 식별자 한도(UTF-8 63바이트)를 넘을 수 없다. 모든 `relation` 필드(조건부 하위 포함)의 `to`는 같은 스키마의 `collections`에 존재하는 키여야 한다.
 - **단일 값 필드 (`<collection>_data` 컬럼)**
   - `text` → `text`
   - `number` → `double precision`
@@ -319,7 +322,7 @@ erDiagram
 
 ### 6.2 스키마 변경과 마이그레이션
 
-- **개발 서버 (`config.dev === true`)**: `migrateMonti` 실행 시와 `schema.update` 실행 시 현재 스키마와 DB의 컬렉션 테이블 구조를 비교해 같은 트랜잭션 안에서 테이블·컬럼·외래 키를 즉시 맞춘다(`CREATE` / `ALTER` / `DROP`). 열의 타입을 바꿀 때 `number`·`boolean`·`date` → `text`는 기존 값을 문자열로 유지하고, `text` → `number`는 숫자 형태의 값만 숫자로 바꾸고 나머지는 `NULL`로 비우며, 단건 `select` → 다건 `select`(`text[]`)는 기존 값을 1개짜리 배열로 감싸고, 다건 `select`(`text[]`) → 단건 `select`는 첫 번째 원소만 남기며, `relation` 필드의 대상 컬렉션(`to`)이 바뀌거나 호환되지 않거나 변환할 수 없는 값은 `NULL`로 비워 변환한다. 변경하지 않은 필드의 기존 값은 그대로 유지한다. 이 스키마 스냅샷·SQL diff 순수 함수(`snapshotOf`, `planSchemaDiff`)는 `index.ts`에서 공개해 개발 서버 동기화와 마이그레이션 CLI가 완전히 동일한 규칙을 공유한다.
+- **개발 서버 (`config.dev === true`)**: `migrateMonti` 실행 시와 `schema.update` 실행 시 현재 연결의 DB 스키마(`current_schema()`)에서 컬렉션 테이블 구조를 읽어 같은 트랜잭션 안에서 테이블·컬럼·외래 키를 즉시 맞춘다(`CREATE` / `ALTER` / `DROP`). 다건 참조 필드나 컬렉션을 지우면 해당 `<collection>_rels` 행과 `media_uses` 기록도 함께 정리한다. 열의 타입을 바꿀 때 `number`·`boolean`·`date` → `text`는 기존 값을 문자열로 유지하고, `text` → `number`는 숫자 형태의 값만 숫자로 바꾸고 나머지는 `NULL`로 비우며, 단건 `select` → 다건 `select`(`text[]`)는 기존 값을 1개짜리 배열로 감싸고, 다건 `select`(`text[]`) → 단건 `select`는 첫 번째 원소만 남기며, `relation` 필드의 대상 컬렉션(`to`)이 바뀌거나 호환되지 않거나 변환할 수 없는 값은 `NULL`로 비워 변환한다. 변경하지 않은 필드의 기존 값은 그대로 유지한다. 이 스키마 스냅샷·SQL diff 순수 함수(`snapshotOf`, `planSchemaDiff`)는 `index.ts`에서 공개해 개발 서버 동기화와 마이그레이션 CLI가 완전히 동일한 규칙을 공유하며, `planSchemaDiff`는 이전 스냅샷의 식별자도 검증해 허용되지 않은 이름이 있으면 `BAD_REQUEST`로 거절한다.
 - **운영 서버 (`config.dev !== true`)**: 서버가 임의로 테이블을 추측해 바꾸지 않고 등록된 마이그레이션 단계만 순서대로 실행한다. 배포 전 마이그레이션 파일 생성과 실행은 CLI가 맡으며, 이를 위해 `index.ts`에서 `migrate`, `specOf`, `snapshotOf`, `planSchemaDiff`를 공개한다.
 
 ### 6.3 초안(`draft`)과 발행본(`published`), `slug`와 필수값(`required`)
@@ -438,6 +441,8 @@ packages/core/src/
 | 2026-11-22 | `slug`도 초안(`draft`)에서는 비워 둘 수 있고(`null`) 발행(`publish`)할 때 `required` 필드와 함께 검사한다. `addLocale`은 원문 언어의 `slug`를 기본으로 복사한다. |
 | 2026-11-22 | 영구 삭제 시 참조 정리는 DB 외래 키(`ON DELETE SET NULL` / `CASCADE`)가 맡는다. 휴지통 항목 참조는 복원을 위해 DB에 남기되, 발행본(`status: "published"`) 조회에서만 빈칸으로 걸러 돌려주고 초안(`status: "draft"`) 조회에서는 원래 참조 ID를 그대로 돌려준다. 새로 참조를 넣거나(`create`·`addLocale`·`duplicate` 및 `update`의 신규 참조) 발행(`publish`)할 때는 필드나 본문이 휴지통·없는 대상을 가리키면 `BAD_REQUEST`로 거절하되, 초안·템플릿 수정(`update`)에서 이미 들어 있던 휴지통 참조를 그대로 유지한 채 임시저장하는 것은 허용한다. |
 | 2026-11-23 | 미디어 안전성을 위해 `media.key`에 DB 고유 제약을 두고, `media.size` 상한을 PostgreSQL `integer` 최대값(`2_147_483_647`)으로 `startUpload`와 `stat` 검증에 통일 적용한다. `dryRun`에서는 저장소 래퍼로 `storage.ticket`·`remove`를 `BAD_REQUEST`로 차단하며, `media` 등록·교체·영구 삭제·`removeLooseFiles`는 키 단위 트랜잭션 잠금(`pg_advisory_xact_lock`)과 `FOR NO KEY UPDATE` 행 잠금으로 경합을 방지한다. `removeLooseFiles`는 `{ removed, failed }`를 반환한다. |
+| 2026-11-23 | 기반 계층 보강: 동시 `migrate`·`migrateMonti`·`schema.update`·`config.update` 직렬화 및 원자적 파일 교체(파일 쓰기 실패 시 DB 롤백), `media_uses` 복합 기본 키, `schema.get`·`config.get`·`onEvent` 값 사본 격리, 콜백 안 모든 DB 오류의 트랜잭션·드라이런 실패 보장, 플러그인 이름·기본 메서드 충돌 차단, `planSchemaDiff` 이전 스냅샷 식별자 검증, `current_schema()` 기준 카탈로그 조회, `media.startUpload` 이벤트 미통지를 확정한다. |
+| 2026-11-23 | 쓰기는 기본으로 이벤트를 보내고, 비밀값을 돌려주는 쓰기(admin·session·keys·`media.startUpload`)만 제외 목록으로 뺀다 (소유자 승인 2026-11-23) |
 
 ## 11. 정하지 않은 것
 

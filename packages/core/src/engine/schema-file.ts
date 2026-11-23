@@ -1,4 +1,3 @@
-import { writeFile } from "node:fs/promises";
 import { z } from "zod";
 import { MontiError } from "./errors";
 import type { FieldSchema, Schema, ValueFieldSchema } from "./types";
@@ -70,7 +69,7 @@ const reservedKeys = [
 ];
 
 /** 고정 테이블 이름도, `_data`·`_rels`로 끝나는 이름도 아닌 컬렉션 키인지. */
-function isCollectionKey(key: string): boolean {
+export function isCollectionKey(key: string): boolean {
 	return !reservedKeys.includes(key) && !key.endsWith("_data") && !key.endsWith("_rels");
 }
 
@@ -126,10 +125,10 @@ function keysOf(key: string, collectionFields: z.infer<typeof fields>): string[]
 /** 키에 쓸 수 없는 문자열: SQL 식별자를 감싸는 큰따옴표, 점, 하위 필드 열 이름을 잇는 연속 밑줄. */
 const forbiddenInKeys = ['"', ".", "__"];
 
-/** 모든 컬렉션의 키에 금지된 문자열이 없는지. */
+/** 모든 컬렉션의 키가 비어 있지 않고 금지된 문자열이 없는지. */
 function hasAllowedKeys(collections: Collections): boolean {
 	return Object.entries(collections).every(([key, { fields: collectionFields }]) =>
-		keysOf(key, collectionFields).every((name) => !forbiddenInKeys.some((part) => name.includes(part))),
+		keysOf(key, collectionFields).every((name) => name !== "" && !forbiddenInKeys.some((part) => name.includes(part))),
 	);
 }
 
@@ -141,7 +140,7 @@ function createdNamesOf(key: string, collectionFields: z.infer<typeof fields>): 
 }
 
 /** PostgreSQL 식별자 한도(UTF-8 바이트). DB는 이보다 긴 이름을 오류 없이 잘라 만든다. */
-const MAX_IDENTIFIER_BYTES = 63;
+export const MAX_IDENTIFIER_BYTES = 63;
 
 /** 모든 컬렉션의 키와 만들어질 테이블·열 이름이 식별자 한도 안인지. */
 function fitsIdentifiers(collections: Collections): boolean {
@@ -172,7 +171,7 @@ export const schemaShape: z.ZodType<Schema> = z.object({
 		.refine(hasCollectionKeys, {
 			message: "코어 기본 테이블 이름이나 _data·_rels로 끝나는 이름은 컬렉션 이름으로 쓸 수 없습니다",
 		})
-		.refine(hasAllowedKeys, { message: "키에는 큰따옴표, 점, 연속 밑줄을 쓸 수 없습니다" })
+		.refine(hasAllowedKeys, { message: "키는 비어 있을 수 없고 큰따옴표, 점, 연속 밑줄을 쓸 수 없습니다" })
 		.refine(fitsIdentifiers, { message: "키나 만들어질 테이블·열 이름이 UTF-8 63바이트를 넘습니다" })
 		.refine(hasRelationTargets, { message: "관계 필드의 `to`가 스키마에 없는 컬렉션입니다" }),
 });
@@ -190,7 +189,7 @@ export function validSchema(value: Schema): Schema {
 	return result.data;
 }
 
-/** 스키마를 `monti.schema.ts`에 모듈의 기본 내보내기로 쓴다. */
-export async function writeSchemaFile(file: string, schema: Schema): Promise<void> {
-	await writeFile(file, `export default ${JSON.stringify(schema, null, "\t")};\n`);
+/** 스키마를 모듈의 기본 내보내기로 쓴 `monti.schema.ts`의 글자. */
+export function schemaText(schema: Schema): string {
+	return `export default ${JSON.stringify(schema, null, "\t")};\n`;
 }

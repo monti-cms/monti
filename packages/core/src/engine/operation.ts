@@ -9,7 +9,7 @@ export function defineRead<TInput, TOutput>(def: {
 	return { kind: "read", input: def.input, run: def.run };
 }
 
-/** Defines a write: it runs inside a transaction and its event is sent after the commit. */
+/** 쓰기 Operation을 정의한다: 트랜잭션 안에서 실행되며 커밋 뒤 이벤트를 통지한다. */
 export function defineWrite<TInput, TOutput>(def: {
 	input: z.ZodType<TInput>;
 	run: (input: TInput, ctx: WriteContext) => Promise<TOutput>;

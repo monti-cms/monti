@@ -4,11 +4,11 @@
 
 | 함수 / 객체 | 하는 일 | 주요 거절 |
 |---|---|---|
-| `startMonti` | DB를 변경하지 않고 스키마 검사·코어/플러그인 리소스 조립만 수행해 `monti`를 반환한다(`secret`은 `keys` 내부 격리, `admin`·`session`·`keys` 쓰기는 `onEvent` 미통지) | 잘못된 스키마 `BAD_REQUEST`, 중복 플러그인 경로 `CONFLICT` |
-| `migrateMonti` | 스키마 검사 → 코어(`"@monti-cms/core"`)·플러그인 내장 마이그레이션 순차 실행 → 개발 서버(`dev: true`)만 컬렉션 테이블 동기화 | 잘못된 스키마는 마이그레이션 전 `BAD_REQUEST` |
-| `monti.spec()` · `specOf` | DB 연결 유무와 무관하게 코어 전체 및 플러그인 Operation의 이름·종류·입력 JSON Schema 명세를 돌려준다 | 중복 플러그인 경로 거절 |
-| `migrate` · `coreMigrations` | 지정한 출처(`source`)의 마이그레이션 단계를 순서대로 실행해 `migrations` 테이블에 기록하고, 코어 내장 마이그레이션 목록(`coreMigrations`)을 공개한다 | 실패한 단계 롤백 |
-| `snapshotOf` · `planSchemaDiff` | 스키마의 DB 테이블·열 스냅샷을 만들고, 이전 스냅샷과 새 스키마의 차이를 개발 서버 동기화와 동일한 PostgreSQL DDL 문장 목록으로 생성한다 | 잘못된 스키마 `BAD_REQUEST` |
+| `startMonti` | DB를 변경하지 않고 스키마 검사·코어/플러그인 리소스 조립만 수행해 `monti`를 반환한다(`secret`은 `keys` 내부 격리, `admin`·`session`·`keys` 쓰기는 `onEvent` 미통지) | 잘못된 스키마 `BAD_REQUEST`, 중복 플러그인 경로·엔진 기본 메서드 이름 `CONFLICT` |
+| `migrateMonti` | 스키마 검사 → 코어(`"@monti-cms/core"`)·플러그인 내장 마이그레이션 순차 실행 → 개발 서버(`dev: true`)만 현재 DB 스키마의 컬렉션 테이블 동기화(동시 실행 안전) | 잘못된 스키마·예약 출처 플러그인 이름 `BAD_REQUEST`, 플러그인 이름 중복 `CONFLICT` |
+| `monti.spec()` · `specOf` | DB 연결 유무와 무관하게 코어 전체 및 플러그인 Operation의 이름·종류·입력 JSON Schema 명세를 돌려준다 | 중복 플러그인 경로·엔진 기본 메서드 이름 `CONFLICT` |
+| `migrate` · `coreMigrations` | 지정한 출처(`source`)의 마이그레이션 단계를 순서대로 실행해 `migrations` 테이블에 기록하고, 코어 내장 마이그레이션 목록(`coreMigrations`)을 공개한다 | 실패한 단계 롤백, 배열 내 중복 단계 이름 거절 |
+| `snapshotOf` · `planSchemaDiff` | 스키마의 DB 테이블·열 스냅샷을 만들고, 이전 스냅샷과 새 스키마의 차이를 개발 서버 동기화와 동일한 PostgreSQL DDL 문장 목록으로 생성한다 | 잘못된 스키마·허용되지 않은 식별자의 이전 스냅샷 `BAD_REQUEST` |
 
 ---
 
@@ -165,5 +165,69 @@
 - **결과**:
   - `START-3.1` `BAD_REQUEST` 오류를 던진다
   - `START-3.2` `migrations` 테이블이 없다
+
+</details>
+
+<details>
+<summary><strong><code>START-15</code></strong> 개발 서버를 동시에 두 번 띄워도 컬렉션 테이블 준비가 둘 다 성공한다</summary>
+
+- **전제**: 비어 있는 DB, `posts` 컬렉션이 정의된 스키마, `config.dev: true` 설정이 있다
+- **행동**: 같은 DB로 `migrateMonti({ db, schema, config })`를 동시에 두 번 실행한다
+- **결과**:
+  - `START-15.1` 두 호출 모두 오류 없이 끝난다
+  - `START-15.2` DB에 `posts`와 `posts_data` 테이블이 만들어져 있다
+
+</details>
+
+<details>
+<summary><strong><code>START-16</code></strong> 이름이 같은 플러그인이 둘 이상 있으면 마이그레이션을 시작할 수 없다</summary>
+
+- **전제**: 비어 있는 DB와, 같은 `name`을 가진 플러그인 둘이 들어 있는 설정이 있다
+- **행동**: `migrateMonti({ db, schema, config })`를 실행한다
+- **결과**:
+  - `START-16.1` `CONFLICT` 오류를 던진다
+  - `START-16.2` DB에 `migrations` 테이블이 만들어지지 않는다
+
+</details>
+
+<details>
+<summary><strong><code>START-17</code></strong> 예약된 출처 이름의 플러그인으로는 마이그레이션을 시작할 수 없다</summary>
+
+- **전제**: 비어 있는 DB와, 이름이 `"@monti-cms/core"`인 플러그인이 들어 있는 설정, 이름이 `"project"`인 플러그인이 들어 있는 설정이 각각 있다
+- **행동**: 각 설정으로 `migrateMonti({ db, schema, config })`를 실행한다
+- **결과**:
+  - `START-17.1` 두 호출 모두 `BAD_REQUEST` 오류를 던진다
+  - `START-17.2` DB에 `migrations` 테이블이 만들어지지 않는다
+
+</details>
+
+<details>
+<summary><strong><code>START-18</code></strong> 허용되지 않은 식별자가 들어 있는 이전 스냅샷으로는 스키마 변경 SQL을 만들 수 없다</summary>
+
+- **전제**: 컬렉션 키나 열 이름에 `"`, `.`, 빈 문자열이 들어 있거나 63바이트를 넘는 이전 스냅샷이 있다(조건부 열의 `__`는 허용)
+- **행동**: 그 이전 스냅샷과 정상 새 스키마로 `planSchemaDiff`를 호출한다
+- **결과**:
+  - `START-18.1` `BAD_REQUEST` 오류를 던진다
+
+</details>
+
+<details>
+<summary><strong><code>START-19</code></strong> 기본 DB 스키마가 `public`이 아니어도 개발 서버 동기화가 같은 스키마에서 동작한다</summary>
+
+- **전제**: `app` 스키마가 존재하고 연결의 `search_path`가 `app`으로 설정되어 있으며, `posts` 컬렉션이 `app`에 이미 적용된 DB와 `posts`에 새 필드를 추가한 스키마, `config.dev: true` 설정이 있다
+- **행동**: `migrateMonti({ db, schema, config })`를 실행한다
+- **결과**:
+  - `START-19.1` `app.posts_data` 테이블에 새 필드 열이 추가된다
+  - `START-19.2` `public` 스키마에는 `posts` 테이블이 만들어지지 않는다
+
+</details>
+
+<details>
+<summary><strong><code>START-20</code></strong> DB 없이 명세를 만들 때도 엔진 기본 메서드 이름을 플러그인 리소스 이름으로 쓸 수 없다</summary>
+
+- **전제**: 리소스 이름이 `spec`인 Operation을 가진 플러그인이 있다
+- **행동**: `specOf([plugin])`을 호출한다
+- **결과**:
+  - `START-20.1` `CONFLICT` 오류를 던진다
 
 </details>

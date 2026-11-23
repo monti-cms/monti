@@ -4,6 +4,7 @@ import path from "node:path";
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, expect, it } from "vitest";
 import { createTestDatabase, type TestDatabase } from "../../__test__/database";
+import { gate, waitForLockWaits } from "../../__test__/race";
 import { migrate } from "../../db/migrate";
 import { initial } from "../../db/migrations/0001-initial";
 import type { Database } from "../../db/types";
@@ -63,6 +64,19 @@ it("CFG-GET-1 현재 사이트 설정을 돌려준다", async () => {
 
 	// CFG-GET-1.1
 	expect(await monti.config.get({})).toEqual({ name: "Monti Blog", dev: false });
+});
+
+it("CFG-GET-2 조회해서 받은 설정을 고쳐도 운영 서버가 개발 모드로 바뀌지 않는다", async () => {
+	const monti = montiOf(false);
+	const received = await monti.config.get({});
+	received.dev = true;
+
+	const update = monti.config.update({ name: newName });
+
+	// CFG-GET-2.1
+	await expect(update).rejects.toMatchObject({ code: "FORBIDDEN" });
+	// CFG-GET-2.2
+	expect((await monti.config.get({})).dev).toBe(false);
 });
 
 it("CFG-UPD-1 개발 서버에서 사이트 이름을 바꾸고 설정 파일에 기록한다", async () => {
@@ -140,4 +154,73 @@ it("CFG-UPD-6 사이트 이름을 빈 문자열로 바꿀 수 없다", async () 
 	await expect(monti.config.update({ name: "" })).rejects.toMatchObject({ code: "BAD_REQUEST" });
 	// CFG-UPD-6.2
 	expect(await monti.config.get({})).toEqual({ name: "Monti Blog", dev: true });
+});
+
+it("CFG-UPD-7 설정 파일에 플러그인 이름이 사이트 이름보다 먼저 적혀 있어도 사이트 이름만 바뀐다", async () => {
+	await writeFile(
+		configFile,
+		`const defineConfig = (config: object) => {
+	return config;
+};
+
+export default defineConfig({
+	plugins: [{ name: "monti-plugin-search" }],
+	dev: true, // 개발 서버
+	/* 사이트 이름 */ name: 'Monti Blog'
+});
+`,
+	);
+	const monti = montiOf(true);
+
+	await monti.config.update({ name: newName });
+	const module: { default: MontiConfig & { plugins: { name: string }[] } } = await import(configFile);
+
+	// CFG-UPD-7.1
+	expect(module.default.plugins[0]?.name).toBe("monti-plugin-search");
+	// CFG-UPD-7.2
+	expect(module.default.name).toBe(newName);
+});
+
+it("CFG-UPD-8 개발 서버에서 사이트 이름을 동시에 두 번 바꿔도 설정 파일이 깨지지 않고 조회 결과와 일치한다", async () => {
+	const monti = montiOf(true);
+	const held = gate();
+
+	// 첫 변경을 커밋 직전에 멈춰 두고 두 번째 변경을 시작한다. 두 번째는 첫 변경이 끝나기를 기다려야 한다.
+	const first = monti.transaction(async (tx) => {
+		await tx.config.update({ name: "가 사이트" });
+		await held.pass();
+	});
+	await held.reached;
+	const second = monti.config.update({ name: "나 사이트" });
+	try {
+		await waitForLockWaits(db, 1);
+	} finally {
+		held.open();
+	}
+	const runs = await Promise.allSettled([first, second]);
+	const { name } = await monti.config.get({});
+
+	// CFG-UPD-8.1
+	expect(runs.map((run) => run.status)).toEqual(["fulfilled", "fulfilled"]);
+	// CFG-UPD-8.2
+	expect(["가 사이트", "나 사이트"]).toContain(name);
+	// CFG-UPD-8.3
+	expect(await readFile(configFile, "utf8")).toBe(originalText.replace('"Monti Blog"', JSON.stringify(name)));
+});
+
+it("CFG-UPD-9 설정 파일에 사이트 이름이 글자 그대로 적혀 있지 않으면 이름을 바꿀 수 없다", async () => {
+	const variableText = `const siteName = "Monti Blog";
+export default { name: siteName, dev: true };
+`;
+	await writeFile(configFile, variableText);
+	const monti = montiOf(true);
+
+	const update = monti.config.update({ name: newName });
+
+	// CFG-UPD-9.1
+	await expect(update).rejects.toMatchObject({ code: "BAD_REQUEST" });
+	// CFG-UPD-9.2
+	expect(await monti.config.get({})).toEqual({ name: "Monti Blog", dev: true });
+	// CFG-UPD-9.3
+	expect(await readFile(configFile, "utf8")).toBe(variableText);
 });

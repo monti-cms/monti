@@ -209,6 +209,17 @@ it("MED-UPL-3 시험 실행(dryRun)에서는 업로드 티켓을 발급할 수 �
 	expect(await mediaRows()).toEqual([]);
 });
 
+it("MED-UPL-4 업로드 티켓 발급은 이벤트 구독자에게 통지하지 않는다", async () => {
+	const monti = montiOf();
+	const listener = vi.fn();
+	monti.onEvent(listener);
+
+	await monti.media.startUpload({ mime_type: "image/png", size: 10 });
+
+	// MED-UPL-4.1
+	expect(listener).not.toHaveBeenCalled();
+});
+
 it("MED-CRT-1 스토리지 파일을 확인해 미디어로 등록하고 임시 목록에서 해당 키만 지운다", async () => {
 	const key = randomUUID();
 	const other = randomUUID();

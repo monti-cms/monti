@@ -1,16 +1,20 @@
 import { randomUUID } from "node:crypto";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { type Kysely, sql } from "kysely";
 import { afterEach, beforeEach, expect, it } from "vitest";
 import { columnsOf, createTestDatabase, type TestDatabase, tableExists } from "../../__test__/database";
+import { createMemoryStorage } from "../../__test__/memory-storage";
+import { codeOf, overlap } from "../../__test__/race";
 import { migrate } from "../../db/migrate";
 import { initial } from "../../db/migrations/0001-initial";
 import type { Database } from "../../db/types";
 import { createMonti } from "../../engine/engine";
+import { fixedDataColumns } from "../../engine/schema-file";
 import type { CollectionSchema, Schema } from "../../engine/types";
 import { entries } from "../entries/entries";
+import { media } from "../media/media";
 import { schema } from "./schema";
 import { syncSchemaTables } from "./sync-tables";
 
@@ -109,14 +113,6 @@ async function tablesExisting(names: string[]): Promise<string[]> {
 	return found;
 }
 
-/** 실행해서 던진 오류 코드. 오류가 없으면 `null`. */
-async function codeOf(run: Promise<unknown>): Promise<string | null> {
-	return run.then(
-		() => null,
-		(error: { code: string }) => error.code,
-	);
-}
-
 beforeEach(async () => {
 	testDb = await createTestDatabase();
 	await migrate(testDb.db, "@monti-cms/core", [initial]);
@@ -139,6 +135,19 @@ it("SCH-GET-1 현재 스키마를 돌려준다", async () => {
 	expect(await monti.schema.get({})).toEqual(original);
 });
 
+it("SCH-GET-2 조회해서 받은 스키마 객체를 밖에서 고쳐도 엔진의 현재 스키마는 바뀌지 않는다", async () => {
+	const initial = structuredClone(original);
+	const monti = await montiOf(false, initial);
+	const received = await monti.schema.get({});
+	received.locales.push("en");
+	delete received.collections.posts;
+
+	const output = await monti.schema.get({});
+
+	// SCH-GET-2.1
+	expect(output).toEqual(original);
+});
+
 it("SCH-UPD-1 개발 서버에서 스키마를 바꾸면 현재 스키마와 스키마 파일에 새 스키마가 기록된다", async () => {
 	const monti = await montiOf(true);
 
@@ -146,6 +155,9 @@ it("SCH-UPD-1 개발 서버에서 스키마를 바꾸면 현재 스키마와 스
 
 	// SCH-UPD-1.1
 	expect(output).toEqual(changed);
+	// 받은 반환값을 밖에서 고쳐도 엔진의 현재 스키마는 새 스키마 그대로여야 한다.
+	output.locales.push("fr");
+	delete output.collections.tags;
 	// SCH-UPD-1.2
 	expect(await monti.schema.get({})).toEqual(changed);
 	// SCH-UPD-1.3
@@ -379,13 +391,35 @@ it("SCH-UPD-7 필드의 종류나 관계 대상을 바꾸면 데이터 테이블
 	});
 });
 
+/** `applied` 스키마가 적용된 개발 서버에서 `media` 리소스까지 가진 엔진과, DB에 넣어 둔 미디어 하나의 `id`. */
+async function montiWithMedia(applied: Schema) {
+	await writeFile(schemaFile, `export default ${JSON.stringify(applied)};\n`);
+	await syncSchemaTables(db, applied);
+	const monti = createMonti(db, { schema, entries, media }, [], {
+		schema: applied,
+		config: { name: "Monti Blog", dev: true, storage: createMemoryStorage() },
+		schemaFile,
+		configFile,
+	});
+	const mediaId = randomUUID();
+	await db
+		.insertInto("media")
+		.values({ id: mediaId, key: mediaId, filename: "a.png", mime_type: "image/png", size: 1 })
+		.execute();
+	return { monti, mediaId };
+}
+
 it("SCH-UPD-8 스키마에서 컬렉션을 지우면 그 컬렉션의 테이블들이 모두 삭제된다", async () => {
-	const monti = await montiOf(true);
+	const { monti, mediaId } = await montiWithMedia(withCollections({ posts: { fields: { cover: { type: "media" } } } }));
+	await monti.entries.create({ collection: "posts", locale: "ko", fields: { cover: mediaId } });
 
 	await monti.schema.update(empty);
+	const { uses } = await monti.media.get({ id: mediaId });
 
 	// SCH-UPD-8.1
 	expect(await tablesExisting(["posts", "posts_data", "posts_rels"])).toEqual([]);
+	// SCH-UPD-8.2
+	expect(uses).toEqual([]);
 });
 
 /** `authors`·`members`와, 다건 `relation` 필드 `contributors`가 `to` 컬렉션을 가리키는 `posts`가 있는 스키마. */
@@ -585,4 +619,88 @@ it("SCH-UPD-16 관계 필드가 스키마에 없는 컬렉션을 가리키면 �
 	expect(codes).toEqual(["BAD_REQUEST", "BAD_REQUEST"]);
 	// SCH-UPD-16.2
 	expect(await monti.schema.get({})).toEqual(original);
+});
+
+it("SCH-UPD-18 개발 서버에서 서로 다른 스키마를 동시에 저장해도 DB와 스키마 파일, 조회 결과가 하나의 스키마로 일치한다", async () => {
+	const monti = await montiOf(true, withCollections({ posts: { fields: {} } }));
+	const withTitle = withCollections({ posts: { fields: { title: { type: "text" } } } });
+	const withSummary = withCollections({ posts: { fields: { summary: { type: "text" } } } });
+
+	// 첫 저장을 커밋 직전에 멈춰 두고 두 번째 저장을 시작한다.
+	const runs = await overlap(
+		db,
+		(hold) =>
+			monti.transaction(async (tx) => {
+				await tx.schema.update(withTitle);
+				await hold();
+			}),
+		() => monti.schema.update(withSummary),
+	);
+	const current = await monti.schema.get({});
+	const userColumns = (await columnsOf(testDb.db, "posts_data")).filter(
+		(column) => !(fixedDataColumns as readonly string[]).includes(column),
+	);
+
+	// SCH-UPD-18.1
+	expect(runs.map((run) => run.code)).toEqual([null, null]);
+	// SCH-UPD-18.2
+	expect([withTitle, withSummary]).toContainEqual(current);
+	// SCH-UPD-18.3
+	expect(await schemaInFile()).toEqual(current);
+	// SCH-UPD-18.4
+	expect(userColumns).toEqual(Object.keys(current.collections.posts?.fields ?? {}));
+});
+
+it("SCH-UPD-19 이름이 빈 컬렉션이나 필드는 스키마에 넣을 수 없다", async () => {
+	const monti = await montiOf(true);
+	const emptyKeys = [
+		withCollections({ "": { fields: {} } }),
+		withCollections({ posts: { fields: { "": { type: "text" } } } }),
+	];
+
+	const codes: (string | null)[] = [];
+	for (const next of emptyKeys) codes.push(await codeOf(monti.schema.update(next)));
+
+	// SCH-UPD-19.1
+	expect(codes).toEqual(["BAD_REQUEST", "BAD_REQUEST"]);
+	// SCH-UPD-19.2
+	expect(await monti.schema.get({})).toEqual(original);
+	// SCH-UPD-19.3
+	expect(await schemaInFile()).toEqual(original);
+});
+
+it("SCH-UPD-20 여러 개를 고르는 미디어 필드를 지우면 연결 기록과 미디어 사용처도 함께 지워진다", async () => {
+	const cover = { type: "media" as const, many: true };
+	const { monti, mediaId } = await montiWithMedia(
+		withCollections({ posts: { fields: { gallery: { type: "media", many: true }, cover } } }),
+	);
+	const post = await monti.entries.create({
+		collection: "posts",
+		locale: "ko",
+		fields: { gallery: [mediaId], cover: [mediaId] },
+	});
+
+	await monti.schema.update(withCollections({ posts: { fields: { cover } } }));
+	const { rows } = await sql<{ path: string }>`select path from posts_rels where path = 'gallery'`.execute(db);
+	const { uses } = await monti.media.get({ id: mediaId });
+
+	// SCH-UPD-20.1
+	expect(rows).toEqual([]);
+	// SCH-UPD-20.2
+	expect(uses).toEqual([{ source_kind: "entry", source_id: post.id, field_path: "cover" }]);
+});
+
+it("SCH-UPD-21 스키마 파일에 쓸 수 없으면 DB 테이블과 현재 스키마를 바꾸지 않고 실패한다", async () => {
+	const monti = await montiOf(true, empty);
+	await rm(schemaFile);
+	await mkdir(schemaFile);
+
+	const update = monti.schema.update(original);
+
+	// SCH-UPD-21.1
+	await expect(update).rejects.toThrow();
+	// SCH-UPD-21.2
+	expect(await monti.schema.get({})).toEqual(empty);
+	// SCH-UPD-21.3
+	expect(await tableExists(testDb.db, "posts")).toBe(false);
 });

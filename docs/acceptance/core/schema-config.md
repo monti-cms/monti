@@ -4,14 +4,16 @@
 
 | 액션 | 하는 일 | 주요 거절 |
 |---|---|---|
-| `schema.get` | 현재 스키마(`ctx.schema`)를 돌려준다 | 없음 |
-| `schema.update` | 개발 서버(`dev: true`)에서 스키마·컬렉션 테이블·열·타입 변환을 동기화하고 커밋 후 파일에 반영한다(롤백·`dryRun` 시 원복) | 운영 서버 `FORBIDDEN`, 미지원 필드·예약어·금지 기호(`"`,`.`,`__`)·63바이트 초과·없는 `relation.to` `BAD_REQUEST` |
-| `config.get` | 현재 사이트 설정(`ctx.config`)을 돌려준다 | 없음 |
-| `config.update` | 개발 서버에서 사이트 `name`을 변경하고 커밋 후 `monti.config.ts`에 기록한다(롤백·`dryRun` 시 원복) | 운영 서버 `FORBIDDEN`, 빈 `name` `BAD_REQUEST` |
+| `schema.get` | 현재 스키마(`ctx.schema`)의 독립 사본을 돌려준다 | 없음 |
+| `schema.update` | 개발 서버(`dev: true`)에서 스키마·컬렉션 테이블·열·타입 변환·미디어 사용처를 동기화하고 파일에 반영한다(동시 저장 안전, 롤백·`dryRun`·파일 쓰기 실패 시 원복) | 운영 서버 `FORBIDDEN`, 미지원 필드·빈 키·예약어·금지 기호(`"`,`.`,`__`)·63바이트 초과·없는 `relation.to` `BAD_REQUEST` |
+| `config.get` | 현재 사이트 설정(`ctx.config`)의 독립 사본을 돌려준다 | 없음 |
+| `config.update` | 개발 서버에서 사이트 `name`을 변경하고 `monti.config.ts`의 사이트 이름 자리만 기록한다(동시 저장 안전, 롤백·`dryRun` 시 원복) | 운영 서버 `FORBIDDEN`, 빈 `name`·글자 그대로 적히지 않은 사이트 이름 `BAD_REQUEST` |
 
 ---
 
 ## 1. 스키마 조회 (`schema.get`)
+
+### 핵심 요구사항
 
 <details>
 <summary><strong><code>SCH-GET-1</code></strong> 현재 스키마를 돌려준다</summary>
@@ -20,6 +22,18 @@
 - **행동**: `schema.get`을 실행한다
 - **결과**:
   - `SCH-GET-1.1` 현재 스키마를 돌려준다
+
+</details>
+
+### 경계 · 방어 검증
+
+<details>
+<summary><strong><code>SCH-GET-2</code></strong> 조회해서 받은 스키마 객체를 밖에서 고쳐도 엔진의 현재 스키마는 바뀌지 않는다</summary>
+
+- **전제**: 컬렉션 하나가 있는 초기 스키마로 엔진이 생성되어 있고, 앞서 `schema.get`이 돌려준 객체의 `locales`와 `collections`를 밖에서 수정해 두었다
+- **행동**: `schema.get`을 다시 실행한다
+- **결과**:
+  - `SCH-GET-2.1` 반환값이 원래 초기 스키마 그대로이다
 
 </details>
 
@@ -113,10 +127,11 @@
 <details>
 <summary><strong><code>SCH-UPD-8</code></strong> 스키마에서 컬렉션을 지우면 그 컬렉션의 테이블들이 모두 삭제된다</summary>
 
-- **전제**: `config.dev`가 `true`이고 `posts` 컬렉션이 적용되어 `posts`, `posts_data`, `posts_rels` 테이블이 있다
+- **전제**: `config.dev`가 `true`이고 `posts` 컬렉션이 적용되어 `posts`, `posts_data`, `posts_rels` 테이블이 있으며, 미디어 필드에 미디어를 넣은 `posts` 글이 있다
 - **행동**: `posts` 컬렉션을 제거한 스키마로 `schema.update`를 실행한다
 - **결과**:
   - `SCH-UPD-8.1` DB에 `posts`, `posts_data`, `posts_rels` 테이블이 없다
+  - `SCH-UPD-8.2` 그 미디어의 `media.get` 결과 `uses`에 지운 컬렉션의 글이 없다
 
 </details>
 
@@ -226,7 +241,57 @@
 
 </details>
 
+<details>
+<summary><strong><code>SCH-UPD-18</code></strong> 개발 서버에서 서로 다른 스키마를 동시에 저장해도 DB와 스키마 파일, 조회 결과가 하나의 스키마로 일치한다</summary>
+
+- **전제**: `config.dev`가 `true`이고 `posts` 컬렉션이 있는 초기 스키마 파일이 있으며, 제목 필드를 더한 스키마와 요약 필드를 더한 스키마가 준비되어 있다
+- **행동**: 같은 엔진에서 제목 필드를 더한 스키마와 요약 필드를 더한 스키마로 `schema.update`를 동시에 실행한다
+- **결과**:
+  - `SCH-UPD-18.1` 두 호출 모두 오류 없이 끝난다
+  - `SCH-UPD-18.2` `schema.get`의 결과가 제목 필드를 더한 스키마 또는 요약 필드를 더한 스키마 중 하나와 같다
+  - `SCH-UPD-18.3` 스키마 파일에서 읽은 값이 `schema.get`과 같다
+  - `SCH-UPD-18.4` `posts_data` 테이블의 사용자 열 목록이 `schema.get`의 `posts` 필드와 같다
+
+</details>
+
+<details>
+<summary><strong><code>SCH-UPD-19</code></strong> 이름이 빈 컬렉션이나 필드는 스키마에 넣을 수 없다</summary>
+
+- **전제**: `config.dev`가 `true`이고 초기 스키마 파일이 있다
+- **행동**: 빈 문자열 `""`을 컬렉션 키로 쓴 스키마와 빈 문자열 `""`을 필드 키로 쓴 스키마로 각각 `schema.update`를 실행한다
+- **결과**:
+  - `SCH-UPD-19.1` 두 호출 모두 `BAD_REQUEST` 오류를 던진다
+  - `SCH-UPD-19.2` `schema.get`이 원래 스키마 그대로이다
+  - `SCH-UPD-19.3` 스키마 파일에서 읽은 값이 원래 스키마 그대로이다
+
+</details>
+
+<details>
+<summary><strong><code>SCH-UPD-20</code></strong> 여러 개를 고르는 미디어 필드를 지우면 연결 기록과 미디어 사용처도 함께 지워진다</summary>
+
+- **전제**: `config.dev`가 `true`이고 `storage`가 설정되어 있으며, `media`를 가리키는 다건 필드 `gallery`와 `cover`를 가진 `posts` 컬렉션에 같은 미디어가 두 필드 모두에 연결된 글이 저장되어 있다
+- **행동**: `posts`에서 `gallery`만 제거하고 `cover`는 남긴 스키마로 `schema.update`를 실행한다
+- **결과**:
+  - `SCH-UPD-20.1` `posts_rels` 테이블에 경로 `gallery`의 행이 없다
+  - `SCH-UPD-20.2` `media.get`의 `uses`에서 `gallery` 경로는 사라지고 `cover` 경로는 남아 있다
+
+</details>
+
+<details>
+<summary><strong><code>SCH-UPD-21</code></strong> 스키마 파일에 쓸 수 없으면 DB 테이블과 현재 스키마를 바꾸지 않고 실패한다</summary>
+
+- **전제**: `config.dev`가 `true`이고 정상 초기 스키마 파일로 엔진이 생성된 뒤, 해당 스키마 파일 경로가 쓸 수 없는 상태(예: 쓰기 권한 제거 또는 디렉터리로 교체)가 되었다
+- **행동**: 새 컬렉션 `posts`를 추가한 스키마로 `schema.update`를 실행한다
+- **결과**:
+  - `SCH-UPD-21.1` 오류가 던져진다
+  - `SCH-UPD-21.2` `schema.get`이 원래 스키마 그대로이다
+  - `SCH-UPD-21.3` DB에 `posts` 테이블이 없다
+
+</details>
+
 ## 3. 설정 조회 (`config.get`)
+
+### 핵심 요구사항
 
 <details>
 <summary><strong><code>CFG-GET-1</code></strong> 현재 사이트 설정을 돌려준다</summary>
@@ -235,6 +300,19 @@
 - **행동**: `config.get`을 실행한다
 - **결과**:
   - `CFG-GET-1.1` 현재 사이트 설정을 돌려준다
+
+</details>
+
+### 경계 · 방어 검증
+
+<details>
+<summary><strong><code>CFG-GET-2</code></strong> 조회해서 받은 설정을 고쳐도 운영 서버가 개발 모드로 바뀌지 않는다</summary>
+
+- **전제**: `config.dev`가 `false`인 설정으로 엔진이 생성되어 있고, 앞서 `config.get`이 돌려준 객체의 `dev`를 `true`로 바꿔 두었다
+- **행동**: 새 `name`으로 `config.update`를 실행한다
+- **결과**:
+  - `CFG-GET-2.1` `FORBIDDEN` 오류를 던진다
+  - `CFG-GET-2.2` 다시 `config.get`을 실행하면 `dev`가 `false` 그대로이다
 
 </details>
 
@@ -309,5 +387,40 @@
 - **결과**:
   - `CFG-UPD-6.1` `BAD_REQUEST` 오류를 던진다
   - `CFG-UPD-6.2` `config.get`을 실행하면 원래 설정 그대로이다
+
+</details>
+
+<details>
+<summary><strong><code>CFG-UPD-7</code></strong> 설정 파일에 플러그인 이름이 사이트 이름보다 먼저 적혀 있어도 사이트 이름만 바뀐다</summary>
+
+- **전제**: `config.dev`가 `true`이고, 플러그인 객체의 `name`이 사이트 `name`보다 앞에 적힌 설정 파일이 있다
+- **행동**: 새 `name`으로 `config.update`를 실행한다
+- **결과**:
+  - `CFG-UPD-7.1` 설정 파일의 플러그인 `name`은 원래 그대로이다
+  - `CFG-UPD-7.2` 설정 파일의 사이트 `name`만 새 이름으로 바뀐다
+
+</details>
+
+<details>
+<summary><strong><code>CFG-UPD-8</code></strong> 개발 서버에서 사이트 이름을 동시에 두 번 바꿔도 설정 파일이 깨지지 않고 조회 결과와 일치한다</summary>
+
+- **전제**: `config.dev`가 `true`이고 초기 설정 파일이 있다
+- **행동**: 같은 엔진에서 `"가 사이트"`와 `"나 사이트"`로 `config.update`를 동시에 실행한다
+- **결과**:
+  - `CFG-UPD-8.1` 두 호출 모두 오류 없이 끝난다
+  - `CFG-UPD-8.2` `config.get`의 `name`은 `"가 사이트"` 또는 `"나 사이트"` 중 하나이다
+  - `CFG-UPD-8.3` 설정 파일의 사이트 `name`이 `config.get`의 `name`과 같고 파일 나머지 내용은 깨지지 않는다
+
+</details>
+
+<details>
+<summary><strong><code>CFG-UPD-9</code></strong> 설정 파일에 사이트 이름이 글자 그대로 적혀 있지 않으면 이름을 바꿀 수 없다</summary>
+
+- **전제**: `config.dev`가 `true`이고 사이트 `name`이 문자열 리터럴이 아닌 변수 참조로 적힌 설정 파일이 있다
+- **행동**: 새 `name`으로 `config.update`를 실행한다
+- **결과**:
+  - `CFG-UPD-9.1` `BAD_REQUEST` 오류를 던진다
+  - `CFG-UPD-9.2` `config.get`이 원래 설정 그대로이다
+  - `CFG-UPD-9.3` 설정 파일의 내용이 원래 그대로이다
 
 </details>
