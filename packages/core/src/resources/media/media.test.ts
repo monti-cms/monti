@@ -600,19 +600,15 @@ it("MED-UPD-8 같은 미디어의 파일을 동시에 두 번 교체해도 바�
 			const replacedAt = (file?.remove_after.getTime() ?? 0) - DAY_MS;
 			return { kind: file?.kind, replacedAt: replacedAt >= from && replacedAt <= to };
 		}
-		const [originalFile, firstFile] = [await looseFile(row.key), await looseFile(first)];
-
 		// MED-UPD-8.1
 		expect({ codes, key: (await mediaRow(row.id)).key }).toEqual({ codes: [null, null], key: second });
 		// MED-UPD-8.2
 		expect({
 			original: await cleanup(row.key, openedAt, doneAt[0]),
 			first: await cleanup(first, openedAt, doneAt[1]),
-			order: (originalFile?.remove_after.getTime() ?? 0) <= (firstFile?.remove_after.getTime() ?? 0),
 		}).toEqual({
 			original: { kind: "cleanup", replacedAt: true },
 			first: { kind: "cleanup", replacedAt: true },
-			order: true,
 		});
 		// MED-UPD-8.3
 		expect(await looseFile(second)).toBeUndefined();

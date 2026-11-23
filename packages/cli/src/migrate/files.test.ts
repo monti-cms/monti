@@ -119,10 +119,11 @@ it("CLI-MGF-7 같은 변경을 동시에 생성해도 새 SQL 파일 하나가 �
 	const change = { dir, schema: postsWithSubtitle, name: "subtitle" };
 	const planned = await generateMigration({ ...change, dryRun: true });
 
-	await Promise.allSettled([generateMigration(change), generateMigration(change)]);
+	// 이름을 달리해, 같은 파일 이름 때문에 두 번째 쓰기가 실패하는 것으로 디렉터리 잠금이 없는 것을 가리지 않게 한다.
+	await Promise.allSettled([generateMigration(change), generateMigration({ ...change, name: "subtitle_again" })]);
 
 	const names = await readdir(dir);
-	const added = names.filter((name) => /^0002_.*\.sql$/.test(name));
+	const added = names.filter((name) => name.endsWith(".sql") && name !== "0001_init.sql");
 	const sqls = await Promise.all(added.map((name) => migrationText(name)));
 	// CLI-MGF-7.2
 	expect(sqls).toEqual([planned?.sql]);
