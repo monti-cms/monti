@@ -74,7 +74,10 @@ async function updateOne(input: z.infer<typeof updateOneInput>, ctx: WriteContex
 	return findEntry(ctx, { id, locale }, "draft");
 }
 
-/** 컬렉션마다 `ids` 가운데 그 컬렉션의 활성 글들. 하나라도 활성 글이 아니면 거절한다. */
+/**
+ * 컬렉션마다 `ids` 가운데 그 컬렉션의 활성 글들. 하나라도 활성 글이 아니면 거절한다. 잠그지 않고 읽어 잠글 컬렉션을 고르는
+ * 데만 쓴다: 그 뒤 휴지통에 들어간 글은 쓰는 쪽이 가린다.
+ */
 async function activeOwners(ctx: WriteContext, ids: string[]): Promise<Map<string, string[]>> {
 	const owners = new Map<string, string[]>();
 	for (const name of Object.keys(ctx.schema.collections)) {
@@ -97,7 +100,8 @@ async function activeOwners(ctx: WriteContext, ids: string[]): Promise<Map<strin
 
 /**
  * 활성 글들을 그 컬렉션의 활성 폴더 하나로, `folder_id: null`이면 루트로 옮긴다. 컬렉션마다 이름 순으로 `scope` 잠금을
- * 잡아 폴더 수정·휴지통 이동과 서로 기다리다 멈추지 않는다.
+ * 잡아 폴더 수정·휴지통 이동과 서로 기다리다 멈추지 않는다. 잠금을 기다리는 동안 겹친 폴더의 휴지통 이동이 글을 함께 보냈을
+ * 수 있어 아직 활성인 글만 옮기고, 옮기지 못한 글이 있으면 이동 전체를 거절한다.
  */
 async function moveEntries(input: z.infer<typeof moveInput>, ctx: WriteContext) {
 	const owners = await activeOwners(ctx, [...new Set(input.ids)]);
@@ -110,8 +114,10 @@ async function moveEntries(input: z.infer<typeof moveInput>, ctx: WriteContext) 
 			.updateTable(name)
 			.set({ folder_id: input.folder_id })
 			.where("id", "in", ids)
+			.where("trashed_at", "is", null)
 			.returning(["id", "folder_id"])
 			.execute();
+		if (rows.length !== ids.length) throw new MontiError("NOT_FOUND", "활성 글이 아닌 `id`가 있다");
 		moved.push(...rows.map((row) => ({ id: String(row.id), folder_id: row.folder_id as string | null })));
 	}
 	return moved;

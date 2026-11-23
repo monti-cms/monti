@@ -58,10 +58,7 @@ async function swapColumn(ctx: WriteContext, name: string, column: string, swap:
 	return rows.map((row) => String(row.entry_id));
 }
 
-/**
- * 다건 관계 `path`에서 `swap.from`을 가리키는 언어·상태 묶음들. 그 묶음들의 목록을 잠그기 전에 한 번에 읽어 바꿀 묶음을
- * 고른다.
- */
+/** 다건 관계 `path`에서 `swap.from`을 가리키는 언어·상태 묶음들. 그 묶음들의 목록을 한 번에 읽어 바꿀 묶음을 고른다. */
 async function referringGroups(ctx: WriteContext, name: string, path: string, swap: Swap): Promise<Row[]> {
 	const db = tablesOf(ctx.db);
 	const column = `${swap.to}_id`;
@@ -86,8 +83,8 @@ function sameGroup(a: Row, b: Row): boolean {
 }
 
 /**
- * 한 언어·상태(`group`)의 다건 관계 `path` 행들을 바꾼 목록으로 다시 쓴다. 지우면서 돌려받은 지금 목록을 바꾸므로, 잠그기
- * 전에 다른 수정이 커밋한 항목도 남는다. `position`은 0부터 다시 매긴다.
+ * 한 언어·상태(`group`)의 다건 관계 `path` 행들을 바꾼 목록으로 다시 쓴다. 지우면서 돌려받은 지금 목록을 바꾼다.
+ * `position`은 0부터 다시 매긴다.
  */
 async function rewriteGroup(ctx: WriteContext, name: string, group: Row, path: string, swap: Swap): Promise<void> {
 	const db = tablesOf(ctx.db);
@@ -106,14 +103,17 @@ async function rewriteGroup(ctx: WriteContext, name: string, group: Row, path: s
 	if (rows.length > 0) await db.insertInto(`${name}_rels`).values(rows).execute();
 }
 
-/** 바꿀 관계 하나: 컬렉션 `name`의 관계 자리와, 다건이면 잠그기 전에 고른 바꿀 묶음들. */
+/** 바꿀 관계 하나: 컬렉션 `name`의 관계 자리와, 다건이면 읽은 때에 `swap.from`을 가리키던 묶음들. */
 interface Change {
 	name: string;
 	slot: Slot;
 	groups: Row[];
 }
 
-/** `swap.to`를 가리키는 모든 관계 자리(조건부 하위, 여러 개 선택 포함)와 다건 자리의 바꿀 묶음들. 잠그지 않고 읽는다. */
+/**
+ * `swap.to`를 가리키는 모든 관계 자리(조건부 하위, 여러 개 선택 포함)와 다건 자리의 바꿀 묶음들. 자리는 스키마가 정해 언제
+ * 읽어도 같고, 묶음은 읽은 때의 것이다.
+ */
 async function changesOf(ctx: WriteContext, swap: Swap): Promise<Change[]> {
 	const changes: Change[] = [];
 	for (const [name, collection] of Object.entries(ctx.schema.collections)) {
@@ -135,14 +135,18 @@ async function applyChange(ctx: WriteContext, change: Change, swap: Swap): Promi
 
 /**
  * `from_id`를 가리키던 모든 관계(조건부 하위, 여러 개 선택 포함)가 `into_id`를 가리키게 한다. 모든 언어의 작업본과
- * 발행본, 휴지통 글까지 고치고 `from_id`는 그대로 둔다. `updated_ids`에는 바뀐 글이 한 번씩 든다. 바꿀 묶음을 고른 뒤
- * 관계가 있는 컬렉션들의 `scope` 잠금을 이름 순으로 잡고 바꿔, 진행 중인 글 수정이 끝난 뒤의 목록을 고친다.
+ * 발행본, 휴지통 글까지 고치고 `from_id`는 그대로 둔다. `updated_ids`에는 바뀐 글이 한 번씩 든다. 관계가 있는 컬렉션들의
+ * `scope` 잠금을 이름 순으로 잡은 뒤 두 글을 다시 확인하고 바꿀 묶음을 다시 골라, 잠금을 기다리는 동안 커밋된 글 수정이
+ * `from_id`를 새로 넣은 묶음과 그사이 휴지통에 들어간 `into_id`를 놓치지 않는다. 잠글 컬렉션은 처음 읽은 것과 같다.
  */
 export async function replaceReferences(input: z.infer<typeof replaceInput>, ctx: WriteContext) {
 	const swap = { to: await collectionOfBoth(ctx, input), from: input.from_id, into: input.into_id };
-	const changes = await changesOf(ctx, swap);
-	for (const name of [...new Set(changes.map((change) => change.name))].sort()) await lockFolderScope(ctx.db, name);
+	const names = (await changesOf(ctx, swap)).map((change) => change.name);
+	for (const name of [...new Set(names)].sort()) await lockFolderScope(ctx.db, name);
+	await collectionOfBoth(ctx, input);
 	const updated = new Set<string>();
-	for (const change of changes) for (const id of await applyChange(ctx, change, swap)) updated.add(id);
+	for (const change of await changesOf(ctx, swap)) {
+		for (const id of await applyChange(ctx, change, swap)) updated.add(id);
+	}
 	return { from_id: input.from_id, into_id: input.into_id, updated_ids: [...updated] };
 }

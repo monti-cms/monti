@@ -88,6 +88,8 @@ async function draftUses(ctx: WriteContext, name: string, collection: Collection
 /**
  * 글의 `media_uses` 행을 그 글의 모든 언어 작업본이 참조하는 존재하는 미디어(휴지통 포함)의 합집합으로 바꾼다. 본문은
  * `"body"`, 최상위 미디어 필드는 `"<key>"`, 조건부 하위 미디어 필드는 `"<key>.<option>.<sub>"` 경로다(`_rels.path`와 같다).
+ * 행을 바꾸기 전에 참조하는 미디어 행을 잠가, 겹친 영구 삭제와 서로 기다리다 멈추지 않는다. 그 삭제가 지운 미디어는 잠근
+ * 뒤에 남은 행을 읽어 뺀다.
  */
 export async function recountEntryMediaUses(
 	ctx: WriteContext,
@@ -96,6 +98,7 @@ export async function recountEntryMediaUses(
 	entryId: string,
 ): Promise<void> {
 	const uses = await draftUses(ctx, name, collection, entryId);
+	await lockUsedMedia(ctx, uses);
 	const ids = idsOf(uses);
 	const existing =
 		ids.length === 0

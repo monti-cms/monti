@@ -135,6 +135,8 @@ function montiOf(schema: Schema = SCHEMA) {
 
 /** `posts` 글의 작업본을 읽는 문장(`entries`가 글을 찾을 때 가장 먼저 실행한다). */
 const DRAFT_READ = /from "posts" as "e" inner join "posts_data" as "d"/;
+/** `posts` 글의 모든 언어 작업본을 읽는 문장(언어 조건 없이 끝난다): 미디어 사용처를 다시 셀 때 실행한다. */
+const USES_READ = /from "posts" as "e" inner join "posts_data" as "d".* and "e"\."id" = \$\d+$/;
 /** `posts` 작업본의 슬러그가 비어 있는지 확인하는 문장. */
 const SLUG_CHECK = /"d"\."slug" = \$/;
 
@@ -1310,10 +1312,10 @@ it("ENT-UPD-21 같은 글의 서로 다른 두 언어를 동시에 수정해도 
 	const entry = await seedEntry();
 	await seedCopy(POSTS, entry.id, "en", "draft");
 
-	// `ko` 수정이 작업본을 읽은 직후 멈춘 동안 `en` 수정이 작업본을 읽고 저장한다.
+	// `ko` 수정이 작업본을 쓰고 모든 언어의 미디어를 읽은 직후(사용처를 쓰기 전) 멈춘 동안 `en` 수정이 시작된다.
 	const [ko, en] = await overlap(
 		db,
-		(hold) => heldMonti(DRAFT_READ, hold).entries.update({ id: entry.id, fields: { cover: first } }),
+		(hold) => heldMonti(USES_READ, hold).entries.update({ id: entry.id, fields: { cover: first } }),
 		() => montiOf().entries.update({ id: entry.id, locale: "en", fields: { cover: second } }),
 	);
 	const covers = [
