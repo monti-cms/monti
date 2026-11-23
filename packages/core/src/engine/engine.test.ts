@@ -623,8 +623,14 @@ it("ENG-TX-10 콜백이 트랜잭션 DB에 직접 실행한 쿼리의 DB 오류�
 	expect(listener).not.toHaveBeenCalled();
 });
 
-/** 콜백이 받는 클라이언트: 폴더 하나를 넣는 `add`와, 두 폴더를 넣되 그 사이에 멈출 수 있는 `addTwo`. */
-type LateWrites = Record<"folders", Record<"add" | "addTwo", (input: z.infer<typeof folderInput>) => Promise<unknown>>>;
+/**
+ * 콜백이 받는 클라이언트: 폴더 하나를 넣는 `add`, 두 폴더를 넣되 그 사이에 멈출 수 있는 `addTwo`, 멈췄다가 폴더 하나를
+ * 넣는 `addLater`.
+ */
+type LateWrites = Record<
+	"folders",
+	Record<"add" | "addTwo" | "addLater", (input: z.infer<typeof folderInput>) => Promise<unknown>>
+>;
 
 /** 기다리지 않는 작업을 시작할 때 쓰는 것들: 콜백이 받은 `tx`·`trx`와, 시작한 작업을 맡겨 끝까지 지켜볼 `start`. */
 interface LateTools {
@@ -683,7 +689,7 @@ const lateCases: LateCase[] = [
 	},
 	{
 		name: "커밋 전에 붙잡아 둔 tx로 시작한 Operation",
-		beforeCommit: ({ tx, start }) => start(tx.folders.add(row("Late"))),
+		beforeCommit: ({ tx, start }) => start(tx.folders.addLater(row("Late"))),
 	},
 	{ name: "커밋 전에 붙잡아 둔 trx로 시작한 쿼리", beforeCommit: ({ trx, start }) => start(insertLate(trx)) },
 ];
@@ -705,7 +711,14 @@ async function runWithLate(run: "transaction" | "dryRun", late: LateCase): Promi
 			return insertFolder(row("Late"), ctx);
 		},
 	});
-	const monti = createMonti(holdingAfter(db, /^select 1$/, held.pass), { folders: { add, addTwo } });
+	const addLater = defineWrite({
+		input: folderInput,
+		run: async (input, ctx) => {
+			await parked.pass();
+			return insertFolder(input, ctx);
+		},
+	});
+	const monti = createMonti(holdingAfter(db, /^select 1$/, held.pass), { folders: { add, addTwo, addLater } });
 	// 거절된 늦은 작업이 처리되지 않은 거절로 남지 않게, 시작하자마자 결과를 받아 둔다.
 	const started: Promise<unknown>[] = [];
 	const start = (work: Promise<unknown>) => started.push(work.catch(() => undefined));
