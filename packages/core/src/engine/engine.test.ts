@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import type { Kysely } from "kysely";
+import type { Kysely, Transaction } from "kysely";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { z } from "zod";
 import { createTestDatabase, type TestDatabase } from "../__test__/database";
@@ -534,4 +534,85 @@ it("ENG-PLG-3 플러그인의 리소스 이름이 엔진의 기본 메서드 이
 
 	// ENG-PLG-3.1
 	expect(codes).toEqual(["CONFLICT", "CONFLICT"]);
+});
+
+/** 콜백이 받는 클라이언트 가운데 폴더 쓰기 `add` 하나. */
+type FolderAdd = Record<"folders", Pick<FolderWrites["folders"], "add">>;
+
+/** `tx`로 폴더 쓰기를 실행하고 `trx`로 다른 폴더를 직접 넣은 뒤, `trx`로 읽은 폴더 이름들을 돌려준다. */
+async function writeBoth(tx: FolderAdd, trx: Transaction<Database>): Promise<string[]> {
+	await tx.folders.add({ id: randomUUID(), name: "Photos" });
+	await trx.insertInto("folders").values({ id: randomUUID(), scope: "media", name: "Videos" }).execute();
+	const rows = await trx.selectFrom("folders").select("name").orderBy("name").execute();
+	return rows.map((row) => row.name);
+}
+
+it("ENG-TX-7 `transaction` 콜백이 두 번째 인자로 받은 트랜잭션 DB에 직접 쓴 행은 Operation 쓰기와 함께 커밋된다", async () => {
+	const add = defineWrite({ input: folderInput, run: insertFolder });
+	const monti = createMonti(db, { folders: { add } });
+
+	const seen = await monti.transaction(writeBoth);
+
+	// ENG-TX-7.1
+	expect(seen).toEqual(["Photos", "Videos"]);
+	// ENG-TX-7.2
+	expect(await folderNames()).toEqual(["Photos", "Videos"]);
+});
+
+it("ENG-TX-8 `transaction` 콜백이 실패하면 트랜잭션 DB에 직접 쓴 행도 함께 롤백된다", async () => {
+	const add = defineWrite({ input: folderInput, run: insertFolder });
+	const monti = createMonti(db, { folders: { add } });
+
+	const failed = monti.transaction(async (tx, trx) => {
+		await writeBoth(tx, trx);
+		throw new Error("콜백 실패");
+	});
+
+	// ENG-TX-8.1
+	await expect(failed).rejects.toThrow("콜백 실패");
+	// ENG-TX-8.2
+	expect(await folderNames()).toEqual([]);
+});
+
+it("ENG-TX-9 `dryRun` 콜백도 두 번째 인자로 트랜잭션 DB를 받고, 직접 쓴 행은 실행 뒤 롤백된다", async () => {
+	const add = defineWrite({ input: folderInput, run: insertFolder });
+	const monti = createMonti(db, { folders: { add } });
+
+	const seen = await monti.dryRun(writeBoth);
+
+	// ENG-TX-9.1
+	expect(seen).toEqual(["Photos", "Videos"]);
+	// ENG-TX-9.2
+	expect(await folderNames()).toEqual([]);
+});
+
+/** 정상 폴더 쓰기 뒤에, 없는 부모를 가리키는 폴더를 `trx`로 직접 넣어 난 외래 키 오류를 잡아 무시하고 정상 반환한다. */
+async function ignoreRawForeignKeyError(tx: FolderAdd, trx: Transaction<Database>): Promise<string> {
+	await tx.folders.add({ id: randomUUID(), name: "Photos" });
+	const orphan = { id: randomUUID(), scope: "media", name: "Orphan", parent_id: randomUUID() };
+	await trx
+		.insertInto("folders")
+		.values(orphan)
+		.execute()
+		.catch(() => undefined);
+	return "done";
+}
+
+it("ENG-TX-10 콜백이 트랜잭션 DB에 직접 실행한 쿼리의 DB 오류를 잡고 정상 반환해도 트랜잭션과 드라이런은 실패한다", async () => {
+	const add = defineWrite({ input: folderInput, run: insertFolder });
+	const monti = createMonti(db, { folders: { add } });
+	const listener = vi.fn();
+	monti.onEvent(listener);
+
+	const outcomes = [
+		await monti.transaction(ignoreRawForeignKeyError).catch((error: unknown) => error),
+		await monti.dryRun(ignoreRawForeignKeyError).catch((error: unknown) => error),
+	];
+
+	// ENG-TX-10.1
+	expect(outcomes).toMatchObject([{ code: "25P02" }, { code: "25P02" }]);
+	// ENG-TX-10.2
+	expect(await folderNames()).toEqual([]);
+	// ENG-TX-10.3
+	expect(listener).not.toHaveBeenCalled();
 });

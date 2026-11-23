@@ -17,7 +17,7 @@ const SECRET = "test monti secret";
 
 /** `secret`을 암호화 비밀값으로 쓰는 엔진. `null`을 주면 암호화 비밀값이 없다. */
 function montiOf(plugins: Plugin[], secret: string | null = SECRET) {
-	return createMonti(db, { keys: createKeys(keyServicesOf(plugins), secret ?? undefined) }, plugins, {
+	return createMonti(db, { keys: createKeys(keyServicesOf(plugins), secret ?? undefined).resource }, plugins, {
 		schema: { locales: ["ko"], collections: {} },
 		config: { name: "Monti Blog", dev: false },
 		schemaFile: "unused-schema-file",

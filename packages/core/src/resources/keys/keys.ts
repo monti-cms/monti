@@ -65,7 +65,7 @@ const checkInput = z.union([z.object({ service: z.string(), secret: z.string() }
 /** `keys.check`: 플러그인의 키 서비스로 새로 입력한 비밀값이나 저장된 키의 비밀값을 확인한다. */
 function checkWith(services: KeyServiceDefinition[], masterSecret: string | undefined) {
 	return async function checkKey(input: z.infer<typeof checkInput>, ctx: ReadContext): Promise<{ ok: true }> {
-		const { service, secret } = "id" in input ? await storedSecret(ctx, masterSecret, input.id) : input;
+		const { service, secret } = "id" in input ? await storedSecret(ctx.db, masterSecret, input.id) : input;
 		const definition = services.find((candidate) => candidate.service === service);
 		if (definition === undefined) throw new MontiError("NOT_FOUND", `"${service}" 키를 확인하는 플러그인이 없습니다`);
 		try {
@@ -79,25 +79,42 @@ function checkWith(services: KeyServiceDefinition[], masterSecret: string | unde
 
 /** 저장된 키의 서비스와, 엔진의 암호화 비밀값으로 복호화한 비밀값. */
 async function storedSecret(
-	ctx: ReadContext,
+	db: ReadContext["db"],
 	masterSecret: string | undefined,
 	id: string,
 ): Promise<{ service: string; secret: string }> {
-	const row = await ctx.db.selectFrom("api_keys").select(["service", "secret"]).where("id", "=", id).executeTakeFirst();
+	const row = await db.selectFrom("api_keys").select(["service", "secret"]).where("id", "=", id).executeTakeFirst();
 	if (row === undefined) throw new MontiError("NOT_FOUND", "이 `id`의 키가 없습니다");
 	return { service: row.service, secret: decryptSecret(masterSecret, row.secret) };
+}
+
+/**
+ * `withStoredKey`: 저장된 키 `key.id`의 복호화한 비밀값을 `use`에 넘기고 `use`의 결과를 돌려준다. 저장된 서비스가
+ * `key.service`와 다르면 거절한다. `use`가 던진 오류는 감싸지 않고 그대로 나간다.
+ */
+function useStoredWith(masterSecret: string | undefined) {
+	return async function withStoredKey<T>(
+		db: ReadContext["db"],
+		key: { id: string; service: string },
+		use: (apiKey: string) => Promise<T>,
+	): Promise<T> {
+		const { service, secret } = await storedSecret(db, masterSecret, key.id);
+		if (service !== key.service) throw new MontiError("BAD_REQUEST", `이 키는 "${key.service}" 서비스의 키가 아닙니다`);
+		return use(secret);
+	};
 }
 
 const list = defineRead({ input: z.object({}), run: listKeys });
 const remove = defineWrite({ input: idInput, run: deleteKey });
 
 /**
- * `keys` 리소스. `check`는 플러그인이 등록한 키 서비스를 쓴다. 암호화 비밀값(`secret`)은 설정(`ctx.config`)에 두지 않고
- * 이 클로저에만 담아, 키를 암호화·복호화하는 작업만 쓴다.
+ * `keys` 리소스(`resource`)와, 서버 코드가 저장된 키의 비밀값을 꺼내 쓰는 `withStoredKey`. `check`는 플러그인이 등록한 키
+ * 서비스를 쓴다. 암호화 비밀값(`secret`)은 설정(`ctx.config`)에 두지 않고 이 클로저에만 담아, 키를 암호화·복호화하는
+ * 작업만 쓴다. `withStoredKey`는 Operation이 아니어서 명세에 나오지 않고, 읽을 DB를 첫 인자로 받는다.
  */
 export function createKeys(services: KeyServiceDefinition[], secret?: string) {
 	const create = defineWrite({ input: createInput, run: createWith(secret) });
 	const update = defineWrite({ input: updateInput, run: updateWith(secret) });
 	const check = defineRead({ input: checkInput, run: checkWith(services, secret) });
-	return { list, create, update, delete: remove, check };
+	return { resource: { list, create, update, delete: remove, check }, withStoredKey: useStoredWith(secret) };
 }

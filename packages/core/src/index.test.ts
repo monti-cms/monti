@@ -554,3 +554,94 @@ it("START-20 DB 없이 명세를 만들 때도 엔진 기본 메서드 이름을
 	// START-20.1
 	expect(() => specOf([plugin])).toThrow(expect.objectContaining({ code: "CONFLICT" }));
 });
+
+it("START-21 `startMonti`로 만든 `monti`의 `withStoredKey`로 저장된 키의 원문을 받아 쓴다", async () => {
+	await prepare([]);
+	const monti = startMonti({
+		db,
+		schema,
+		config: { name: "Monti Blog" },
+		schemaFile,
+		configFile,
+		secret: "test monti secret",
+	});
+	const { id } = await monti.keys.create({ service: "mail", name: "Mail", secret: "mail-secret-1234" });
+	const use = vi.fn<(apiKey: string) => Promise<void>>().mockResolvedValue(undefined);
+
+	await monti.withStoredKey({ id, service: "mail" }, use);
+
+	// START-21.1
+	expect(use).toHaveBeenCalledExactlyOnceWith("mail-secret-1234");
+});
+
+it("START-22 플러그인 리소스 이름으로 `withStoredKey`를 쓸 수 없다", () => {
+	const tag = defineWrite({ input: z.object({ name: z.string() }), run: tagRun });
+	const plugin: Plugin = { name: "albums", operations: { withStoredKey: { tag } } };
+
+	// START-22.1
+	expect(() => start([plugin])).toThrow(expect.objectContaining({ code: "CONFLICT" }));
+});
+
+/** 암호화 비밀값으로 `startMonti`를 한 `monti`. `null`을 주면 암호화 비밀값이 없다. */
+async function keyMonti(secret: string | null = "test monti secret") {
+	await prepare([]);
+	return startMonti({
+		db,
+		schema,
+		config: { name: "Monti Blog" },
+		schemaFile,
+		configFile,
+		secret: secret ?? undefined,
+	});
+}
+
+const mailKey = { service: "mail", name: "Mail", secret: "mail-secret-1234" };
+
+it("KEY-USE-1 서버 코드가 저장된 키의 원문을 받아 쓰고 그 결과를 돌려받는다", async () => {
+	const monti = await keyMonti();
+	const { id } = await monti.keys.create(mailKey);
+	const use = vi.fn<(apiKey: string) => Promise<string>>().mockResolvedValue("모델 목록");
+
+	const output = await monti.withStoredKey({ id, service: mailKey.service }, use);
+
+	// KEY-USE-1.1
+	expect(use.mock.calls).toEqual([[mailKey.secret]]);
+	// KEY-USE-1.2
+	expect(output).toBe("모델 목록");
+});
+
+it("KEY-USE-2 암호화 비밀값이 없으면 저장된 키를 받아 쓸 수 없다", async () => {
+	const { id } = await (await keyMonti()).keys.create(mailKey);
+	const use = vi.fn<(apiKey: string) => Promise<string>>().mockResolvedValue("모델 목록");
+
+	const used = (await keyMonti(null)).withStoredKey({ id, service: mailKey.service }, use);
+
+	// KEY-USE-2.1
+	await expect(used).rejects.toMatchObject({ code: "BAD_REQUEST" });
+	// KEY-USE-2.2
+	expect(use).not.toHaveBeenCalled();
+});
+
+it("KEY-USE-3 존재하지 않는 키는 받아 쓸 수 없다", async () => {
+	const use = vi.fn<(apiKey: string) => Promise<string>>().mockResolvedValue("모델 목록");
+
+	const used = (await keyMonti()).withStoredKey({ id: "no-such-key", service: mailKey.service }, use);
+
+	// KEY-USE-3.1
+	await expect(used).rejects.toMatchObject({ code: "NOT_FOUND" });
+	// KEY-USE-3.2
+	expect(use).not.toHaveBeenCalled();
+});
+
+it("KEY-USE-4 다른 서비스의 키로 저장된 키는 받아 쓸 수 없다", async () => {
+	const monti = await keyMonti();
+	const { id } = await monti.keys.create(mailKey);
+	const use = vi.fn<(apiKey: string) => Promise<string>>().mockResolvedValue("모델 목록");
+
+	const used = monti.withStoredKey({ id, service: "storage" }, use);
+
+	// KEY-USE-4.1
+	await expect(used).rejects.toMatchObject({ code: "BAD_REQUEST" });
+	// KEY-USE-4.2
+	expect(use).not.toHaveBeenCalled();
+});

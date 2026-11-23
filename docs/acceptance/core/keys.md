@@ -1,6 +1,6 @@
 # `resources/keys/` 인수 조건
 
-[`docs/refactor/core.md`](../../refactor/core.md) 5절(`Plugin.keyServices`), 6절(`api_keys`), 7절(`keys` 리소스)의 인수 조건이다.
+[`docs/refactor/core.md`](../../refactor/core.md) 3.2절(`monti.withStoredKey`), 5절(`Plugin.keyServices`), 6절(`api_keys`), 7절(`keys` 리소스)의 인수 조건이다.
 
 | 액션 | 하는 일 | 주요 거절 |
 |---|---|---|
@@ -9,6 +9,7 @@
 | `keys.update` | 키 `name`과 선택 `secret` 갱신 | 빈 문자열·`secret` 변경 시 암호화 `secret` 미설정 `BAD_REQUEST`, 미존재 `NOT_FOUND`, 이름 중복(동시 수정 포함) `CONFLICT` |
 | `keys.delete` | 지정한 키 삭제 | 미존재 `NOT_FOUND` |
 | `keys.check` | 입력 `{ service, secret }` 또는 저장된 `{ id }`로 플러그인 `keyServices` 연결 확인 | 확인 실패·복호화 `secret` 미설정·복호화 실패 `BAD_REQUEST`, 미등록 서비스·없는 ID `NOT_FOUND` |
+| `monti.withStoredKey` | 서버 코드가 저장된 키 `{ id, service }`의 복호화된 원문을 콜백 `use`로 받아 쓰고 그 결과를 돌려받는다(Operation이 아니다) | 복호화 `secret` 미설정·저장된 `service` 불일치 `BAD_REQUEST`, 없는 ID `NOT_FOUND` |
 
 ---
 
@@ -278,5 +279,55 @@
   - `KEY-CHK-7.1` `BAD_REQUEST` 오류를 던진다
   - `KEY-CHK-7.2` 플러그인의 연결 확인 함수가 호출되지 않는다
   - `KEY-CHK-7.3` 오류의 `message`와 `details`에 저장한 키 원문과 두 암호화 비밀값이 들어 있지 않다
+
+</details>
+
+## 6. 저장된 키 사용 (`monti.withStoredKey`)
+
+### 핵심 요구사항
+
+<details>
+<summary><strong><code>KEY-USE-1</code></strong> 서버 코드가 저장된 키의 원문을 받아 쓰고 그 결과를 돌려받는다</summary>
+
+- **전제**: 키가 하나 저장되어 있다
+- **행동**: 저장된 키의 `id`와 `service`, 값을 돌려주는 콜백 `use`로 `withStoredKey({ id, service }, use)`를 실행한다
+- **결과**:
+  - `KEY-USE-1.1` `use`가 복호화된 원문 `secret`으로 호출된다
+  - `KEY-USE-1.2` `use`가 돌려준 값을 돌려준다
+
+</details>
+
+### 경계 · 방어 검증
+
+<details>
+<summary><strong><code>KEY-USE-2</code></strong> 암호화 비밀값이 없으면 저장된 키를 받아 쓸 수 없다</summary>
+
+- **전제**: 키가 하나 저장되어 있고 암호화 비밀값(`secret`)이 설정되지 않은 엔진이다
+- **행동**: 저장된 키의 `id`와 `service`로 `withStoredKey({ id, service }, use)`를 실행한다
+- **결과**:
+  - `KEY-USE-2.1` `BAD_REQUEST` 오류를 던진다
+  - `KEY-USE-2.2` `use`가 호출되지 않는다
+
+</details>
+
+<details>
+<summary><strong><code>KEY-USE-3</code></strong> 존재하지 않는 키는 받아 쓸 수 없다</summary>
+
+- **전제**: `api_keys`가 비어 있다
+- **행동**: 존재하지 않는 `id`로 `withStoredKey({ id, service }, use)`를 실행한다
+- **결과**:
+  - `KEY-USE-3.1` `NOT_FOUND` 오류를 던진다
+  - `KEY-USE-3.2` `use`가 호출되지 않는다
+
+</details>
+
+<details>
+<summary><strong><code>KEY-USE-4</code></strong> 다른 서비스의 키로 저장된 키는 받아 쓸 수 없다</summary>
+
+- **전제**: 키가 하나 저장되어 있다
+- **행동**: 저장된 키의 `id`와, 저장된 것과 다른 `service`로 `withStoredKey({ id, service }, use)`를 실행한다
+- **결과**:
+  - `KEY-USE-4.1` `BAD_REQUEST` 오류를 던진다
+  - `KEY-USE-4.2` `use`가 호출되지 않는다
 
 </details>

@@ -1,4 +1,4 @@
-import type { Kysely, Transaction } from "kysely";
+import { type Kysely, sql, type Transaction } from "kysely";
 import type { Database } from "../db/types";
 import { uniqueConflictMessage } from "../db/unique-conflicts";
 import { MontiError } from "./errors";
@@ -118,56 +118,77 @@ function callbackRunner(trx: Transaction<Database>, stage: Stage, queue: MontiEv
 
 /**
  * 콜백의 값, 또는 콜백의 쓰기가 낸 첫 DB 오류(고유 제약 위반은 `CONFLICT`). 콜백이 그 오류를 잡고 정상 반환해도, 잡은 뒤
- * 이어간 DB 호출이 중단된 트랜잭션 오류(`25P02`)로 실패해도 그 첫 오류로 실패한다.
+ * 이어간 DB 호출이 중단된 트랜잭션 오류(`25P02`)로 실패해도 그 첫 오류로 실패한다. 콜백이 정상 반환했으면 `trx`가
+ * 중단되지 않았는지도 확인한다.
  */
-async function runSettled<T>(run: () => Promise<T>, aborts: unknown[]): Promise<T> {
+async function runSettled<T>(run: () => Promise<T>, aborts: unknown[], trx: Transaction<Database>): Promise<T> {
 	const result = await run().then(
 		(value) => ({ value }),
 		(error: unknown) => ({ error }),
 	);
 	if (aborts.length > 0) throw aborts[0];
 	if ("error" in result) throw result.error;
+	await assertNotAborted(trx);
 	return result.value;
 }
 
-/** 콜백의 호출들은 한 트랜잭션을 공유한다. 커밋된 뒤 쌓인 이벤트를 호출 순서대로 통지한다. */
+/**
+ * 콜백이 `trx`로 직접 실행한 쿼리의 DB 오류를 잡고 정상 반환했으면 던진다: 중단된 트랜잭션에서는 이 조회가 `25P02`로
+ * 실패하고, 그 오류를 그대로 던진다. 커밋하지 않는 `dryRun`은 이 확인이 없으면 저장되지 않을 쓰기를 성공으로 알린다.
+ * `transaction`은 Kysely가 `COMMIT`의 `ROLLBACK` 응답을 `AbortedTransactionError`로 알리지만, 같은 확인으로 `dryRun`과 같은
+ * 오류를 내고 단계의 파일을 준비하기 전에 실패한다.
+ */
+async function assertNotAborted(trx: Transaction<Database>): Promise<void> {
+	await sql`select 1`.execute(trx);
+}
+
+/**
+ * 콜백의 호출들은 한 트랜잭션을 공유하고, 콜백은 그 트랜잭션의 DB(`trx`)도 받는다. 커밋된 뒤 쌓인 이벤트를 호출 순서대로
+ * 통지한다.
+ */
 function transactionOf<R extends ResourceTree>(
 	db: Kysely<Database>,
 	state: State,
 	tree: ResourceTree,
 	emit: (event: MontiEvent) => void,
 ) {
-	return async function transaction<T>(fn: (tx: MontiClient<R>) => Promise<T>): Promise<T> {
+	return async function transaction<T>(fn: (tx: MontiClient<R>, trx: Transaction<Database>) => Promise<T>): Promise<T> {
 		const queue: MontiEvent[] = [];
 		const aborts: unknown[] = [];
 		const result = await committed(db, state, async (trx, stage) => {
 			const client = buildClient(tree, "", callbackRunner(trx, stage, queue, aborts), true);
-			return runSettled(() => fn(client as MontiClient<R>), aborts);
+			return runSettled(() => fn(client as MontiClient<R>, trx), aborts, trx);
 		});
 		for (const event of queue) emit(event);
 		return result;
 	};
 }
 
+/** `dryRun`이 콜백을 끝낸 뒤 트랜잭션을 되돌리려고 던지는 표시. 바깥으로 나가지 않는다. */
+class DryRunRollback extends Error {}
+
 /**
- * 쓰기만 보이는 콜백을 실제와 같이 실행한 뒤 롤백한다. 쌓인 이벤트와 단계는 버린다. 단계의 저장소는 롤백으로 되돌릴 수
- * 없는 티켓 발급(`ticket`)과 삭제(`remove`)를 `BAD_REQUEST`로 거절한다. 롤백이 실패해도 단계의 차례는 넘긴다.
+ * 쓰기만 보이는 콜백을 실제와 같이 실행한 뒤 롤백한다. 콜백은 그 트랜잭션의 DB(`trx`)도 받는다. `trx`는 직접 커밋할 수
+ * 있는 트랜잭션이 아니라, 엔진이 끝을 정하는 트랜잭션이다. 쌓인 이벤트와 단계는 버린다. 단계의 저장소는 롤백으로 되돌릴
+ * 수 없는 티켓 발급(`ticket`)과 삭제(`remove`)를 `BAD_REQUEST`로 거절한다. 롤백이 실패해도 단계의 차례는 넘긴다.
  */
 function dryRunOf<R extends ResourceTree>(db: Kysely<Database>, state: State, tree: ResourceTree) {
-	return async function dryRun<T>(fn: (tx: MontiWriteClient<R>) => Promise<T>): Promise<T> {
-		const trx = await db.startTransaction().execute();
+	return async function dryRun<T>(fn: (tx: MontiWriteClient<R>, trx: Transaction<Database>) => Promise<T>): Promise<T> {
 		const stage = state.stage(true);
 		const aborts: unknown[] = [];
+		const outcome: { value?: T } = {};
 		try {
-			const client = buildClient(tree, "", callbackRunner(trx, stage, [], aborts), false);
-			return await runSettled(() => fn(client as MontiWriteClient<R>), aborts);
+			await db.transaction().execute(async (trx) => {
+				const client = buildClient(tree, "", callbackRunner(trx, stage, [], aborts), false);
+				outcome.value = await runSettled(() => fn(client as MontiWriteClient<R>, trx), aborts, trx);
+				throw new DryRunRollback();
+			});
+		} catch (error) {
+			if (!(error instanceof DryRunRollback)) throw error;
 		} finally {
-			try {
-				await trx.rollback().execute();
-			} finally {
-				await stage.release();
-			}
+			await stage.release();
 		}
+		return outcome.value as T;
 	};
 }
 
