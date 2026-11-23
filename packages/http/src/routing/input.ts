@@ -8,6 +8,14 @@ const DRY_RUN = "dryRun";
 /** 점 표기 쿼리 키에 쓸 수 없는 세그먼트: 입력 객체의 프로토타입을 바꿀 수 있다. */
 const FORBIDDEN_SEGMENTS = new Set(["__proto__", "constructor", "prototype"]);
 
+/** 요청 본문의 최대 크기: UTF-8 바이트로 1 MiB. */
+const MAX_BODY_BYTES = 1_048_576;
+
+/** 본문이 허용 크기를 넘은 요청의 오류. 응답 층이 `code`를 보고 `413`으로 바꾼다. */
+class PayloadTooLargeError extends Error {
+	readonly code = "PAYLOAD_TOO_LARGE";
+}
+
 /**
  * 요청의 Operation 입력과 시험 실행 여부. `GET`은 쿼리를, 쓰기 메서드는 JSON 본문을 입력으로 삼고, 경로 `:id`가 있으면
  * 그것이 쿼리·본문의 `id`보다 우선한다. 잘못된 `dryRun`, 쓰기 요청의 다른 쿼리 키, 잘못된 본문은 `BAD_REQUEST`다.
@@ -82,11 +90,31 @@ function converted(values: string[], types: Set<unknown>): unknown {
 async function bodyInput(request: Request, query: URLSearchParams): Promise<Record<string, unknown>> {
 	if ([...query.keys()].some((key) => key !== DRY_RUN))
 		throw badRequest("쓰기 요청에는 dryRun 말고 쿼리를 붙일 수 없다");
-	const text = await request.text();
+	const text = await readBody(request);
 	if (text === "") return {};
 	const mediaType = (request.headers.get("content-type") ?? "").split(";")[0].trim().toLowerCase();
 	if (mediaType !== "application/json") throw badRequest("본문은 Content-Type: application/json이어야 한다");
 	return jsonObject(text);
+}
+
+/**
+ * 본문을 조각마다 세며 읽어 UTF-8로 푼다. `Content-Length`와 관계없이 읽은 바이트가 허용 크기를 넘는 순간 스트림을
+ * 취소하고 `PAYLOAD_TOO_LARGE`를 던진다. 큰 본문을 다 받아 두지 않는다.
+ */
+async function readBody(request: Request): Promise<string> {
+	const reader = request.body?.getReader();
+	if (reader === undefined) return "";
+	const chunks: Uint8Array[] = [];
+	let size = 0;
+	for (let chunk = await reader.read(); !chunk.done; chunk = await reader.read()) {
+		size += chunk.value.byteLength;
+		if (size > MAX_BODY_BYTES) {
+			await reader.cancel();
+			throw new PayloadTooLargeError("본문이 허용 크기(1 MiB)를 넘는다");
+		}
+		chunks.push(chunk.value);
+	}
+	return new Blob(chunks).text();
 }
 
 function jsonObject(text: string): Record<string, unknown> {

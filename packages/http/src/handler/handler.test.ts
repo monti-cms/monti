@@ -431,3 +431,80 @@ it("HTTP-HDL-18 현재 비밀번호가 틀려 관리자 계정 변경에 실패�
 	// HTTP-HDL-18.2
 	expect(follow.status).toBe(200);
 });
+
+/** `value`에 `pad` 속성을 더해 UTF-8 바이트 크기가 정확히 `bytes`인 JSON 글자. `value`의 속성은 그대로다. */
+function paddedJson(value: Record<string, unknown>, bytes: number): string {
+	const empty = JSON.stringify({ ...value, pad: "" });
+	return JSON.stringify({ ...value, pad: "a".repeat(bytes - empty.length) });
+}
+
+/** `admin`·`session` 테이블의 행 수. */
+async function accountRows(db: Awaited<ReturnType<typeof setup>>["db"]) {
+	const admins = await db.selectFrom("admin").selectAll().execute();
+	const sessions = await db.selectFrom("session").selectAll().execute();
+	return { admin: admins.length, session: sessions.length };
+}
+
+it("HTTP-HDL-19 허용 크기를 넘는 본문은 로그인하지 않은 공개 요청에서도 작업을 실행하지 않고 거절한다", async () => {
+	const { db, handler } = await setup({ admin: false });
+	const before = await accountRows(db);
+	// 상한이 없다면 관리자 생성과 그 뒤 로그인이 모두 성공하는 본문이다.
+	const raw = paddedJson(login, 1_048_577);
+	const responses = [
+		await send(handler, "POST", "/api/admin", { raw }),
+		await send(handler, "POST", "/api/session", { raw }),
+	];
+	const results = await Promise.all(
+		responses.map(async (response) => [
+			response.status,
+			response.headers.get("content-type"),
+			response.headers.get("cache-control"),
+			(await bodyOf(response)).error?.code,
+		]),
+	);
+	// HTTP-HDL-19.1
+	expect(results).toEqual(Array(2).fill([413, "application/json; charset=utf-8", "no-store", "PAYLOAD_TOO_LARGE"]));
+	// HTTP-HDL-19.2
+	expect(responses.map((response) => response.headers.get("set-cookie"))).toEqual([null, null]);
+	// HTTP-HDL-19.3
+	expect(await accountRows(db)).toEqual(before);
+});
+
+it("HTTP-HDL-20 로그인 실패나 중복 관리자 생성이 거절될 때 세션 쿠키를 설정하지 않는다", async () => {
+	const { handler } = await setup();
+	const wrong = await send(handler, "POST", "/api/session", { json: { email: EMAIL, password: "wrong-password" } });
+	const duplicate = await send(handler, "POST", "/api/admin", {
+		json: { email: "other@example.com", password: PASSWORD },
+	});
+	// HTTP-HDL-20.1
+	expect([wrong.status, wrong.headers.get("set-cookie")]).toEqual([401, null]);
+	// HTTP-HDL-20.2
+	expect([duplicate.status, duplicate.headers.get("set-cookie")]).toEqual([409, null]);
+});
+
+it("HTTP-HDL-21 최초 관리자 생성 요청을 동시에 두 번 보내면 하나만 성공하고 세션 쿠키를 받는다", async () => {
+	const { db, handler } = await setup({ admin: false });
+	const responses = await Promise.all(
+		["first@example.com", "second@example.com"].map((email) =>
+			send(handler, "POST", "/api/admin", { json: { email, password: PASSWORD } }),
+		),
+	);
+	const results = await Promise.all(
+		responses.map(async (response) => [
+			response.status,
+			(await bodyOf(response)).error?.code ?? null,
+			response.headers.get("set-cookie") !== null,
+		]),
+	);
+	results.sort(([a], [b]) => Number(a) - Number(b));
+	const rows = await accountRows(db);
+	// HTTP-HDL-21.1
+	expect(results).toEqual([
+		[201, null, true],
+		[409, "CONFLICT", false],
+	]);
+	// HTTP-HDL-21.2
+	expect(rows.admin).toBe(1);
+	// HTTP-HDL-21.3
+	expect(rows.session).toBe(1);
+});

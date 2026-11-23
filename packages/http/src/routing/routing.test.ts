@@ -49,7 +49,7 @@ function route(table: RouteTable, method: string, pathname: string) {
 }
 
 interface Body {
-	body: string | Uint8Array;
+	body: string | Uint8Array | ReadableStream<Uint8Array>;
 	type?: string;
 }
 
@@ -59,11 +59,26 @@ async function parse(table: RouteTable, method: string, path: string, body?: Bod
 	const result = matchRoute(table, method, url.pathname);
 	if (result.kind !== "match") throw new Error(`테스트 준비 오류: ${method} ${path}가 매칭되지 않았다`);
 	const headers = body?.type === undefined ? undefined : { "content-type": body.type };
-	return parseInput(result, new Request(url, { method, headers, body: body?.body }));
+	return parseInput(result, new Request(url, { method, headers, body: body?.body, duplex: "half" }));
 }
 
 const json = (value: unknown): Body => ({ body: JSON.stringify(value), type: "application/json" });
 const BAD_REQUEST = { code: "BAD_REQUEST" };
+
+/** 본문 허용 크기: 1 MiB. */
+const MIB = 1_048_576;
+
+/** `bytes`를 64 KiB 조각으로 흘려보내는 본문 스트림. `Content-Length` 헤더가 붙지 않는다. */
+function streamOf(bytes: Uint8Array): ReadableStream<Uint8Array> {
+	let offset = 0;
+	return new ReadableStream({
+		pull(controller) {
+			if (offset >= bytes.byteLength) return controller.close();
+			controller.enqueue(bytes.slice(offset, offset + 65_536));
+			offset += 65_536;
+		},
+	});
+}
 
 it("HTTP-RUT-1 표준 동사(`list`, `get`, `create`, `update`, `delete`)를 각각의 HTTP 메서드와 경로로 매핑하고 `GET /<resource>`에서는 목록을 우선한다", () => {
 	// HTTP-RUT-1.1
@@ -343,4 +358,19 @@ it("HTTP-RUT-22 점(`.`) 중첩 쿼리의 위험한 프로토타입 키와 키 �
 	]);
 	// HTTP-RUT-22.3
 	expect(conflictCodes).toEqual(["BAD_REQUEST", "BAD_REQUEST"]);
+});
+
+it("HTTP-RUT-23 허용 크기(1 MiB)를 넘는 요청 본문은 거절하고 정확히 1 MiB인 JSON 본문은 조립한다", async () => {
+	const oversized = streamOf(new Uint8Array(MIB + 1).fill(0x61));
+	const tooLarge = parse(core, "POST", "/api/templates", { body: oversized, type: "application/json" });
+	// 64 KiB 조각 경계에 3바이트 글자("가")가 걸치게 채운 정확히 1 MiB짜리 JSON.
+	const head = "a".repeat(65_536 - 10);
+	const name = `${head}가${"a".repeat(MIB - 14 - head.length)}`;
+	const exact = new TextEncoder().encode(JSON.stringify({ name }));
+	if (exact.byteLength !== MIB) throw new Error(`테스트 준비 오류: 본문이 ${exact.byteLength}바이트다`);
+	const parsed = await parse(core, "POST", "/api/templates", { body: streamOf(exact), type: "application/json" });
+	// HTTP-RUT-23.1
+	await expect(tooLarge).rejects.toMatchObject({ code: "PAYLOAD_TOO_LARGE" });
+	// HTTP-RUT-23.2
+	expect(parsed.input).toEqual({ name });
 });
