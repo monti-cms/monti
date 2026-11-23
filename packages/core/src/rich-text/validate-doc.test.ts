@@ -300,6 +300,7 @@ it("RT-INL-6 내장 링크 마크의 주소에 허용되지 않은 스킴이나 
 		"JavaScript:alert(1)",
 		"data:text/html,<script>",
 		"//example.com",
+		"/\t/evil.com",
 	];
 	const content = hrefs.map((href) => text(href, [{ type: "link", href }]));
 	const paths = pathsOf({ blocks: [{ id: "b0", type: "paragraph", content }] });
@@ -309,6 +310,8 @@ it("RT-INL-6 내장 링크 마크의 주소에 허용되지 않은 스킴이나 
 	expect([3, 4].flatMap((n) => under(paths, `blocks[0].content[${n}]`))).toEqual([]);
 	// RT-INL-6.3
 	expect(paths).toEqual(expect.arrayContaining([5, 6, 7, 8].map((n) => `blocks[0].content[${n}].marks[0]`)));
+	// RT-INL-6.4
+	expect(paths).toContain("blocks[0].content[9].marks[0]");
 });
 
 it("RT-MED-1 블록의 단건 미디어 예약 속성이 유효한 UUID가 아니면 문제를 돌려준다", () => {

@@ -1,14 +1,15 @@
 import { randomUUID } from "node:crypto";
-import type { Kysely } from "kysely";
+import { type Kysely, sql } from "kysely";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { createTestDatabase, type TestDatabase } from "../../__test__/database";
 import { createMemoryStorage, type MemoryStorage } from "../../__test__/memory-storage";
-import { codeOf, type Gate, gate, waitForLockWaits } from "../../__test__/race";
+import { codeOf, type Gate, gate, holdingAfter, overlap, waitForLockWaits } from "../../__test__/race";
 import { migrate } from "../../db/migrate";
 import { initial } from "../../db/migrations/0001-initial";
 import type { Database } from "../../db/types";
 import { createMonti } from "../../engine/engine";
 import type { StorageAdapter } from "../../engine/types";
+import { trash } from "../trash/trash";
 import { removeLooseFiles } from "./loose-files";
 import { media } from "./media";
 
@@ -22,6 +23,22 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
 function montiOf(withStorage = true) {
 	return montiWith(withStorage ? storage : undefined);
+}
+
+/** 폴더 트리 안의 미디어를 읽는 문장(폴더의 휴지통 이동이 함께 보낼 미디어를 모을 때 실행한다). */
+const TREE_MEDIA_READ = /from "media" as "item"/;
+
+/**
+ * 휴지통 동작만 쓰는 엔진. SQL이 `pattern`에 맞는 첫 문장을 실행한 직후 `hold`가 끝날 때까지 멈춘다. 이 파일의 DB에는
+ * 컬렉션 테이블이 없어 컬렉션 없는 스키마로 미디어 폴더를 휴지통에 보낸다.
+ */
+function heldTrash(pattern: RegExp, hold: () => Promise<void>) {
+	return createMonti(holdingAfter(db, pattern, hold), { trash }, [], {
+		schema: { locales: ["ko"], collections: {} },
+		config: { name: "Monti Blog", dev: false },
+		schemaFile: "unused-schema-file",
+		configFile: "unused-config-file",
+	});
 }
 
 /** 저장소로 `adapter`를 쓰는 엔진. */
@@ -359,6 +376,28 @@ it("MED-CRT-10 미디어 등록에서 이미지 가로·세로 크기는 DB 정�
 	]);
 });
 
+it("MED-CRT-11 미디어 폴더를 휴지통에 보내는 동안 그 폴더에 새 미디어를 등록해도 휴지통 폴더 아래 활성 미디어가 남지 않는다", async () => {
+	const folder = await seedFolder("media");
+	const key = await issuedKey({ mime: "image/png", size: 10 });
+
+	// 폴더 이동이 안의 미디어를 읽은 직후 멈춘 동안 그 폴더에 미디어를 등록한다.
+	await overlap(
+		db,
+		(hold) => heldTrash(TREE_MEDIA_READ, hold).trash.move({ id: folder }),
+		() => montiOf().media.create({ key, folder_id: folder }),
+	);
+	const trashed = await db.selectFrom("folders").select("trashed_at").where("id", "=", folder).executeTakeFirst();
+	const active = await db
+		.selectFrom("media")
+		.select("id")
+		.where("folder_id", "=", folder)
+		.where("trashed_at", "is", null)
+		.execute();
+
+	// MED-CRT-11.1
+	expect({ folderTrashed: trashed?.trashed_at !== null, active }).toEqual({ folderTrashed: true, active: [] });
+});
+
 it("MED-READ-1 lists only the media directly in the given folder", async () => {
 	const folder = await seedFolder("media");
 	const child = await seedFolder("media", folder);
@@ -603,6 +642,26 @@ it("MED-UPD-10 미디어 수정에서 이미지 가로·세로 크기는 DB 정�
 	expect(codes).toEqual(["BAD_REQUEST", "BAD_REQUEST"]);
 	// MED-UPD-10.2
 	expect({ width: stored.width, height: stored.height }).toEqual({ width: 2_147_483_647, height: 2_147_483_647 });
+});
+
+it("MED-UPD-11 미디어 폴더를 휴지통에 보내는 동안 그 안의 미디어를 폴더 밖으로 옮겨도 폴더와 함께 버려진 미디어가 폴더 밖에 남지 않는다", async () => {
+	const folder = await seedFolder("media");
+	const item = await seedMedia({ folder_id: folder });
+
+	// 폴더 이동이 안의 미디어를 읽은 직후 멈춘 동안 그 미디어를 루트로 꺼내는 다건 이동이 시작된다.
+	await overlap(
+		db,
+		(hold) => heldTrash(TREE_MEDIA_READ, hold).trash.move({ id: folder }),
+		() => montiOf().media.update({ ids: [item.id], folder_id: null }),
+	);
+	const trashed = await db.selectFrom("folders").select("trashed_at").where("id", "=", folder).executeTakeFirst();
+	const { rows: outside } = await sql<{ id: string }>`
+		select id from media
+		where trashed_at = (select trashed_at from folders where id = ${folder}) and folder_id is distinct from ${folder}
+	`.execute(db);
+
+	// MED-UPD-11.1
+	expect({ folderTrashed: trashed?.trashed_at !== null, outside }).toEqual({ folderTrashed: true, outside: [] });
 });
 
 it("MED-CRT-2 registers the media with the given __preset_id", async () => {

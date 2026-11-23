@@ -4,7 +4,7 @@
 |---|---|
 | 문서 · 기본 블록 | `validateDoc`은 예외를 던지지 않고 13종 내장 블록·인라인·마크의 구조와 중복 `id`를 검사해 문제 목록(`path`)을 돌려준다 |
 | 블록 확장 · 중첩 | 사용자 정의 블록 추가 및 내장 블록 `attrs` 덮어쓰기, `holds`(`text`·`blocks`·`nothing`)와 허용 `children` 목록 및 최대 중첩 깊이(32단계)를 검사한다 |
-| 인라인 · 마크 | `text`·`hardBreak`·`footnoteRef` 인라인과 8종 내장·사용자 정의 마크의 형식 및 내장 `link` 마크의 `href` 허용 스킴(`http:`, `https:`, `mailto:`, `/`, `#`)을 검사한다 |
+| 인라인 · 마크 | `text`·`hardBreak`·`footnoteRef` 인라인과 8종 내장·사용자 정의 마크의 형식 및 내장 `link` 마크의 `href` 허용 스킴(`http:`, `https:`, `mailto:`, `/`, `#`)과 제어 문자 금지를 검사한다 |
 | 미디어 예약 속성 | 모든 블록(`children` 포함)의 `attrs.mediaId`(UUID)·`attrs.mediaIds`(UUID 배열)를 사용자 스키마와 무관하게 검사한다 |
 
 ---
@@ -245,12 +245,13 @@
 <details>
 <summary><strong><code>RT-INL-6</code></strong> 내장 링크 마크의 주소에 허용되지 않은 스킴이나 스킴 없는 네트워크 경로가 들어 있으면 문제를 돌려준다</summary>
 
-- **전제**: `blocks[0]` `paragraph` 안에 허용 주소(`https://example.com`, `http://example.com`, `mailto:a@example.com`, 상대 경로 `/about`, 문서 내 조각 `#top`)를 가진 `link` 마크들과 위험 주소(`javascript:alert(1)`, `JavaScript:alert(1)`, `data:text/html,<script>`, `//example.com`)를 가진 `link` 마크들이 들어 있다
+- **전제**: `blocks[0]` `paragraph` 안에 허용 주소(`https://example.com`, `http://example.com`, `mailto:a@example.com`, 상대 경로 `/about`, 문서 내 조각 `#top`)를 가진 `link` 마크들과 위험 주소(`javascript:alert(1)`, `JavaScript:alert(1)`, `data:text/html,<script>`, `//example.com`, `/`와 `/` 사이에 탭 문자가 든 `/<탭>/evil.com`)를 가진 `link` 마크들이 들어 있다
 - **행동**: 추가 마크 정의 없이 `validateDoc`으로 문서를 검사한다
 - **결과**:
   - `RT-INL-6.1` `https:`, `http:`, `mailto:` 주소의 `link` 마크 경로에는 문제가 보고되지 않는다
   - `RT-INL-6.2` 상대 경로(`/about`)와 문서 내 조각(`#top`)의 `link` 마크 경로에는 문제가 보고되지 않는다
   - `RT-INL-6.3` `javascript:`, `JavaScript:`, `data:`, `//example.com` 주소의 각 `link` 마크 경로(`blocks[0].content[n].marks[0]`의 `href`)에는 각각 문제가 보고된다
+  - `RT-INL-6.4` 탭 문자가 든 `/<탭>/evil.com` 주소의 `link` 마크 경로에는 문제가 보고된다
 
 </details>
 

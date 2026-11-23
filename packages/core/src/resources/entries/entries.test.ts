@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import type { Kysely } from "kysely";
+import { type Kysely, sql } from "kysely";
 import { afterEach, beforeEach, expect, it } from "vitest";
 import { createTestDatabase, type TestDatabase } from "../../__test__/database";
 import { holdingAfter, overlap } from "../../__test__/race";
@@ -137,6 +137,8 @@ function montiOf(schema: Schema = SCHEMA) {
 const DRAFT_READ = /from "posts" as "e" inner join "posts_data" as "d"/;
 /** `posts` 글의 모든 언어 작업본을 읽는 문장(언어 조건 없이 끝난다): 미디어 사용처를 다시 셀 때 실행한다. */
 const USES_READ = /from "posts" as "e" inner join "posts_data" as "d".* and "e"\."id" = \$\d+$/;
+/** 폴더 트리 안의 `posts` 글을 읽는 문장(폴더의 휴지통 이동이 함께 보낼 글을 모을 때 실행한다). */
+const TREE_ENTRIES_READ = /from "posts" as "item"/;
 /** `posts` 작업본의 슬러그가 비어 있는지 확인하는 문장. */
 const SLUG_CHECK = /"d"\."slug" = \$/;
 
@@ -1357,6 +1359,26 @@ it("ENT-UPD-22 글을 휴지통에 보내는 동안 그 글을 수정해도 휴�
 	expect({ draft: await dataRow(POSTS, entry.id, "ko", "draft"), uses }).toEqual({ draft, uses: [use] });
 });
 
+it("ENT-UPD-23 폴더를 휴지통에 보내는 동안 그 안의 글을 다른 폴더로 옮겨도 폴더와 함께 버려진 글이 폴더 밖에 남지 않는다", async () => {
+	const [folder, other] = [await seedFolder(), await seedFolder()];
+	const entry = await seedEntry({ folder_id: folder });
+
+	// 폴더 이동이 안의 글을 읽은 직후 멈춘 동안 그 글의 다건 이동이 시작된다.
+	await overlap(
+		db,
+		(hold) => heldMonti(TREE_ENTRIES_READ, hold).trash.move({ id: folder }),
+		() => montiOf().entries.update({ ids: [entry.id], folder_id: other }),
+	);
+	const trashed = await db.selectFrom("folders").select("trashed_at").where("id", "=", folder).executeTakeFirst();
+	const { rows: outside } = await sql<{ id: string }>`
+		select id from ${sql.table(POSTS)}
+		where trashed_at = (select trashed_at from folders where id = ${folder}) and folder_id is distinct from ${folder}
+	`.execute(db);
+
+	// ENT-UPD-23.1
+	expect({ folderTrashed: trashed?.trashed_at !== null, outside }).toEqual({ folderTrashed: true, outside: [] });
+});
+
 it("ENT-PUB-1 슬러그와 필수 필드가 채워진 작업본으로 발행본을 만든다", async () => {
 	// 스키마에 있는 분기를 고른 조건부 필드도 함께 채운다.
 	const columns = { ...FILLED_NOTE, kind: "plain", kind__plain__note: "메모" };
@@ -1963,6 +1985,28 @@ it("ENT-REF-11 다건 관계 필드를 편집하는 동안 참조 교체가 동�
 	expect([replace.code, update.code]).toEqual([null, null]);
 	// ENT-REF-11.2
 	expect((await relsRows(PAGES, page.id, "topics_id")).map((rel) => rel.id)).toEqual([newAuthor.id, extra.id]);
+});
+
+it("ENT-REF-12 참조 교체가 실행되는 동안 다른 글이 옛 글을 새로 가리키게 되어도 그 참조까지 새 글로 바뀐다", async () => {
+	const [oldAuthor, newAuthor] = [await seedEntry({ collection: TOPICS }), await seedEntry({ collection: TOPICS })];
+	const page = await seedEntry({ collection: PAGES });
+
+	// 참조 교체가 옛 작성자를 가리키는 글이 없음을 읽은 직후 멈춘 동안 옛 작성자를 넣는 다건 관계 수정이 커밋된다.
+	const [replace, update] = await overlap(
+		db,
+		(hold) =>
+			heldMonti(/"topics_id" from "pages_rels"/, hold).entries.replaceReferences({
+				from_id: oldAuthor.id,
+				into_id: newAuthor.id,
+			}),
+		() => montiOf().entries.update({ id: page.id, fields: { topic: [oldAuthor.id] } }),
+		{ commits: true },
+	);
+
+	// ENT-REF-12.1
+	expect([replace.code, update.code]).toEqual([null, null]);
+	// ENT-REF-12.2
+	expect((await relsRows(PAGES, page.id, "topics_id")).map((rel) => rel.id)).toEqual([newAuthor.id]);
 });
 
 it("ENT-LOC-1 활성 글에 비원문 언어를 추가할 때 슬러그를 생략하면 원문 언어의 슬러그를 기본으로 복사한다", async () => {

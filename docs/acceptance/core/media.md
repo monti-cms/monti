@@ -5,9 +5,9 @@
 | 액션 / 함수 | 하는 일 | 주요 거절 |
 |---|---|---|
 | `media.startUpload` | 새 UUID `key`로 `storage.ticket` 발급 및 `loose_files` 24시간 만료 등록(`onEvent` 미통지) | `storage` 미설정·`dryRun` 실행·크기 범위 초과 시 `BAD_REQUEST` |
-| `media.create` | `storage.stat` 확인 후 미디어 등록(`filename` 생략 시 `key`) 및 `loose_files` 제거 | `storage` 없음·미발급/삭제 대기 키·없는 파일·크기/가로세로 범위 초과·빈 `filename`·잘못된 폴더 `BAD_REQUEST`, 중복 `key`(동시 등록 포함) `CONFLICT` |
+| `media.create` | `storage.stat` 확인 후 미디어 등록(`filename` 생략 시 `key`) 및 `loose_files` 제거(폴더의 휴지통 이동과 겹쳐도 휴지통 폴더 아래 활성 미디어를 남기지 않음) | `storage` 없음·미발급/삭제 대기 키·없는 파일·크기/가로세로 범위 초과·빈 `filename`·잘못된 폴더 `BAD_REQUEST`, 중복 `key`(동시 등록 포함) `CONFLICT` |
 | `media.list` · `get` | 활성 미디어를 `url`과 함께 조회(`get`은 `uses` 포함, `folder_id` 생략=전체·`null`=루트) | 휴지통·미존재 `NOT_FOUND` |
-| `media.update` | 단건 메타 수정·폴더 이동·파일 교체(동시 교체 시에도 이전 `key` 24시간 대기 등록), 다건 폴더 일괄 이동 | 미발급/삭제 대기 키·가로세로 범위 초과·빈 `filename`·잘못된 폴더 `BAD_REQUEST`, 휴지통 포함 시 전체 롤백 `NOT_FOUND` |
+| `media.update` | 단건 메타 수정·폴더 이동·파일 교체(동시 교체 시에도 이전 `key` 24시간 대기 등록), 다건 폴더 일괄 이동(폴더의 휴지통 이동과 겹쳐도 함께 버려진 미디어를 폴더 밖에 남기지 않음) | 미발급/삭제 대기 키·가로세로 범위 초과·빈 `filename`·잘못된 폴더 `BAD_REQUEST`, 휴지통 포함 시 전체 롤백 `NOT_FOUND` |
 | `removeLooseFiles` | 만료된 `loose_files`만 동시 등록과 충돌하지 않게 `storage.remove`로 정리하고 `{ removed, failed }`를 돌려준다 | Operation 아님(`transaction`·`dryRun` 밖에서 호출) |
 
 ---
@@ -180,6 +180,16 @@
 - **결과**:
   - `MED-CRT-10.1` `width` 초과 호출과 `height` 초과 호출은 모두 `BAD_REQUEST` 오류를 던진다
   - `MED-CRT-10.2` 최대 허용치(`2_147_483_647`) 호출만 성공해 `media` 테이블에 해당 행 하나만 저장된다
+
+</details>
+
+<details>
+<summary><strong><code>MED-CRT-11</code></strong> 미디어 폴더를 휴지통에 보내는 동안 그 폴더에 새 미디어를 등록해도 휴지통 폴더 아래 활성 미디어가 남지 않는다</summary>
+
+- **전제**: `"media"` `scope`의 활성 폴더가 하나 있고, `media.startUpload`로 발급해 `storage`에 올린 파일이 있다
+- **행동**: 그 폴더의 `trash.move`가 하위 항목을 읽은 뒤 커밋하기 전에, 해당 폴더를 `folder_id`로 지정한 `media.create`가 별도 연결에서 겹쳐 실행된다
+- **결과**:
+  - `MED-CRT-11.1` 두 호출이 끝난 뒤 휴지통에 들어간 폴더를 `folder_id`로 두고 `trashed_at`이 `null`인 행이 `media` 테이블에 없다
 
 </details>
 
@@ -360,6 +370,16 @@
 - **결과**:
   - `MED-UPD-10.1` `width` 초과 호출과 `height` 초과 호출은 모두 `BAD_REQUEST` 오류를 던진다
   - `MED-UPD-10.2` 최대 허용치(`2_147_483_647`) 호출이 성공해 `media` 테이블의 `width`·`height`가 `2_147_483_647`로 갱신된다
+
+</details>
+
+<details>
+<summary><strong><code>MED-UPD-11</code></strong> 미디어 폴더를 휴지통에 보내는 동안 그 안의 미디어를 폴더 밖으로 옮겨도 폴더와 함께 버려진 미디어가 폴더 밖에 남지 않는다</summary>
+
+- **전제**: `"media"` `scope`의 활성 폴더 안에 활성 미디어가 하나 있다
+- **행동**: 그 폴더의 `trash.move`가 하위 항목을 읽은 뒤 커밋하기 전에, 그 미디어의 `ids`와 `folder_id: null`로 `media.update`가 별도 연결에서 겹쳐 실행된다
+- **결과**:
+  - `MED-UPD-11.1` 두 호출이 끝난 뒤 `trashed_at`이 그 폴더의 `trashed_at`과 같으면서 `folder_id`가 그 폴더가 아닌 행이 `media` 테이블에 없다
 
 </details>
 

@@ -6,11 +6,11 @@
 |---|---|---|
 | `entries.create` | 원문 언어 초안(`status: "draft"`) 생성(`slug`·`required` 빈칸 허용, `__preset_id` 지원) 및 `media_uses` 기록 | 스키마·필드·본문·휴지통 참조 오류 `BAD_REQUEST`, 슬러그 중복(동시 생성 포함) `CONFLICT` |
 | `entries.get` · `list` | `status`(기본 `"published"` / `"draft"`) 조회. 발행본은 휴지통 참조를 `fields`에서 제외하고 초안은 원래 ID를 유지한다 | 없는 컬렉션 `BAD_REQUEST`, 미발행·휴지통·없는 언어 `NOT_FOUND` |
-| `entries.update` | 단건은 전달된 `slug`·`fields`·`body`·`folder_id`만 갱신(기존 경로의 휴지통 참조 유지 허용, 독립 필드·다언어 동시 수정 보존, 휴지통 이동과 겹쳐도 사용처 보존), 다건은 폴더 일괄 이동 | 형식·새 휴지통 참조·폴더 범위 오류 `BAD_REQUEST`, 휴지통·없는 언어 `NOT_FOUND`, 슬러그 중복(동시 수정 포함) `CONFLICT` |
+| `entries.update` | 단건은 전달된 `slug`·`fields`·`body`·`folder_id`만 갱신(기존 경로의 휴지통 참조 유지 허용, 독립 필드·다언어 동시 수정 보존, 휴지통 이동과 겹쳐도 사용처 보존), 다건은 폴더 일괄 이동(폴더의 휴지통 이동과 겹쳐도 함께 버려진 글을 폴더 밖에 남기지 않음) | 형식·새 휴지통 참조·폴더 범위 오류 `BAD_REQUEST`, 휴지통·없는 언어 `NOT_FOUND`, 슬러그 중복(동시 수정 포함) `CONFLICT` |
 | `entries.publish` | 초안을 발행본(`status: "published"`)으로 저장(`slug`·필수값·모든 참조 필드와 본문의 활성 상태 검사) | 빈 슬러그·필수값·휴지통 참조·사라진 분기 `BAD_REQUEST`, 휴지통·없는 언어 `NOT_FOUND`, 발행 슬러그 중복 `CONFLICT` |
 | `entries.unpublish` | 해당 언어 발행본만 삭제하고 초안과 `media_uses`는 유지(이미 미발행이어도 성공) | 휴지통·없는 언어 `NOT_FOUND` |
 | `entries.duplicate` | 원문 언어 초안만 미발행 새 글로 복제(`slug` 생략 시 `-copy` 자동 부여, 동시 복제 시 서로 다른 번호 슬러그 배정, `null` 유지) | 형식 오류·휴지통 참조 `BAD_REQUEST`, 휴지통 `NOT_FOUND`, 슬러그 중복 `CONFLICT` |
-| `entries.replaceReferences` | `from_id`를 가리키는 모든 언어·상태·휴지통 글의 `relation`을 `into_id`로 일괄 교체(동시 다건 관계 편집과 겹쳐도 추가 관계 보존) | 자기 자신·다른 컬렉션 `BAD_REQUEST`, 없는 ID·휴지통 `into_id` `NOT_FOUND` |
+| `entries.replaceReferences` | `from_id`를 가리키는 모든 언어·상태·휴지통 글의 `relation`을 `into_id`로 일괄 교체(동시 다건 관계 편집과 겹쳐도 추가 관계 보존, 그사이 새로 생긴 `from_id` 참조도 교체) | 자기 자신·다른 컬렉션 `BAD_REQUEST`, 없는 ID·휴지통 `into_id` `NOT_FOUND` |
 | `entries.addLocale` | 비원문 언어 초안 추가(`slug` 생략 시 원문 슬러그 복사) 및 `media_uses` 갱신 | 없는 언어·형식·휴지통 참조 `BAD_REQUEST`, 휴지통 `NOT_FOUND`, 중복 언어·슬러그(동시 추가 포함) `CONFLICT` |
 | `entries.removeLocale` | 비원문 언어의 초안·발행본 즉시 삭제 및 남은 언어 기준 `media_uses` 갱신(원문 언어 변경·수정·발행과 겹쳐도 원문 작업본 보존 및 삭제 언어 잔존 방지) | 원문 언어 삭제 `BAD_REQUEST`, 휴지통·없는 언어 `NOT_FOUND` |
 | `entries.setSourceLocale` | 기준 언어 변경 및 모든 언어의 `translation_seen` 초기화(원문 언어 삭제와 겹쳐도 원문 작업본 보존) | 휴지통·없는 언어 `NOT_FOUND` |
@@ -636,7 +636,7 @@
 <summary><strong><code>ENT-UPD-21</code></strong> 같은 글의 서로 다른 두 언어를 동시에 수정해도 두 언어 내용과 미디어 사용처가 모두 남는다</summary>
 
 - **전제**: `storage`가 설정되어 있고 `ko` 원문과 `en` 번역 언어 작업본을 가진 활성 글 하나와 활성 미디어 둘(첫 번째 미디어, 두 번째 미디어)이 있다
-- **행동**: `ko` 작업본에 첫 번째 미디어를 넣는 `entries.update`와 `en` 작업본에 두 번째 미디어를 넣는 `entries.update`를, 두 호출이 모두 작업본을 읽은 뒤 어느 쪽도 `<collection>_data`와 `media_uses`에 쓰기 전에 겹치도록 실행한다
+- **행동**: `ko` 작업본에 첫 번째 미디어를 넣는 `entries.update`가 글 전체의 미디어 사용처를 읽은 뒤 `media_uses`에 쓰기 전에, `en` 작업본에 두 번째 미디어를 넣는 `entries.update`를 별도 연결에서 겹쳐 실행한다
 - **결과**:
   - `ENT-UPD-21.1` 두 호출 모두 오류 없이 끝난다
   - `ENT-UPD-21.2` `<collection>_data` 테이블의 `ko` 작업본에는 첫 번째 미디어가, `en` 작업본에는 두 번째 미디어가 저장되어 있다
@@ -653,6 +653,16 @@
   - `ENT-UPD-22.1` `trash.move`가 성공해 `<collection>` 테이블에 `trashed_at`이 설정된다
   - `ENT-UPD-22.2` `entries.update`는 `NOT_FOUND` 오류를 던진다
   - `ENT-UPD-22.3` 작업본 내용과 `media_uses`의 미디어 사용처 행이 휴지통 이동 전 그대로 남아 있다
+
+</details>
+
+<details>
+<summary><strong><code>ENT-UPD-23</code></strong> 폴더를 휴지통에 보내는 동안 그 안의 글을 다른 폴더로 옮겨도 폴더와 함께 버려진 글이 폴더 밖에 남지 않는다</summary>
+
+- **전제**: 컬렉션 `scope`의 활성 폴더 둘(버릴 폴더, 다른 폴더)이 있고, 버릴 폴더 안에 활성 글이 하나 있다
+- **행동**: 버릴 폴더의 `trash.move`가 하위 항목을 읽은 뒤 커밋하기 전에, 그 글의 `ids`와 다른 폴더의 `folder_id`로 `entries.update`가 별도 연결에서 겹쳐 실행된다
+- **결과**:
+  - `ENT-UPD-23.1` 두 호출이 끝난 뒤 `trashed_at`이 버릴 폴더의 `trashed_at`과 같으면서 `folder_id`가 버릴 폴더가 아닌 글이 `<collection>` 테이블에 없다
 
 </details>
 
@@ -1077,6 +1087,17 @@
 - **결과**:
   - `ENT-REF-11.1` 두 호출 모두 오류 없이 끝난다
   - `ENT-REF-11.2` `posts` 글의 최종 다건 `relation` 목록이 `[새 작성자, 추가 작성자]`이다
+
+</details>
+
+<details>
+<summary><strong><code>ENT-REF-12</code></strong> 참조 교체가 실행되는 동안 다른 글이 옛 글을 새로 가리키게 되어도 그 참조까지 새 글로 바뀐다</summary>
+
+- **전제**: `authors` 컬렉션에 활성 글 둘(옛 작성자, 새 작성자)이 있고, `posts` 컬렉션의 글 하나가 다건 `relation` 필드를 비워 두고 있다
+- **행동**: `from_id: 옛 작성자`, `into_id: 새 작성자`로 실행한 `entries.replaceReferences`가 옛 작성자를 가리키는 글이 없음을 읽은 뒤 교체 쓰기를 실행하기 전에, `posts` 글의 다건 `relation`을 `[옛 작성자]`로 바꾸는 `entries.update`가 별도 연결에서 커밋되도록 실행한다
+- **결과**:
+  - `ENT-REF-12.1` 두 호출 모두 오류 없이 끝난다
+  - `ENT-REF-12.2` `posts` 글의 최종 다건 `relation` 목록이 `[새 작성자]`이다
 
 </details>
 
