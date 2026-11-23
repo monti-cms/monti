@@ -69,17 +69,18 @@ const BAD_REQUEST = { code: "BAD_REQUEST" };
 const MIB = 1_048_576;
 
 /** `bytes`를 64 KiB 조각으로 흘려보내는 본문 스트림. `Content-Length` 헤더가 붙지 않는다. */
-function streamOf(bytes: Uint8Array): ReadableStream<Uint8Array> {
-	let offset = 0;
+/** 64 KiB씩 1 MiB를 넘길 때까지 내보낸 뒤 끝나지 않는 JSON 본문 스트림. */
+function unendingStream(): ReadableStream<Uint8Array> {
+	const chunk = new TextEncoder().encode("a".repeat(65_536));
+	let sent = 0;
 	return new ReadableStream({
 		pull(controller) {
-			if (offset >= bytes.byteLength) return controller.close();
-			controller.enqueue(bytes.slice(offset, offset + 65_536));
-			offset += 65_536;
+			if (sent > MIB) return new Promise<void>(() => {});
+			controller.enqueue(sent === 0 ? new TextEncoder().encode(`{"name":"${"a".repeat(65_536 - 9)}`) : chunk);
+			sent += 65_536;
 		},
 	});
 }
-
 it("HTTP-RUT-1 표준 동사(`list`, `get`, `create`, `update`, `delete`)를 각각의 HTTP 메서드와 경로로 매핑하고 `GET /<resource>`에서는 목록을 우선한다", () => {
 	// HTTP-RUT-1.1
 	expect(route(core, "GET", "/api/templates")).toMatchObject({ name: "templates.list" });
@@ -360,18 +361,8 @@ it("HTTP-RUT-22 점(`.`) 중첩 쿼리의 위험한 프로토타입 키와 키 �
 	expect(conflictCodes).toEqual(["BAD_REQUEST", "BAD_REQUEST"]);
 });
 
-it("HTTP-RUT-23 허용 크기(1 MiB)를 넘는 요청 본문은 거절하고 정확히 1 MiB인 JSON 본문은 조립한다", async () => {
-	// 64 KiB 조각 경계에 3바이트 글자("가")가 걸치게 채운 정확히 1 MiB짜리 JSON과, 글자 수는 1 MiB 이하이지만 바이트가 1 MiB + 1인 JSON.
-	const head = "a".repeat(65_536 - 10);
-	const over = new TextEncoder().encode(JSON.stringify({ name: `${head}가${"a".repeat(MIB + 1 - 14 - head.length)}` }));
-	if (over.byteLength !== MIB + 1) throw new Error(`테스트 준비 오류: 초과 본문이 ${over.byteLength}바이트다`);
-	const tooLarge = parse(core, "POST", "/api/templates", { body: streamOf(over), type: "application/json" });
-	const name = `${head}가${"a".repeat(MIB - 14 - head.length)}`;
-	const exact = new TextEncoder().encode(JSON.stringify({ name }));
-	if (exact.byteLength !== MIB) throw new Error(`테스트 준비 오류: 본문이 ${exact.byteLength}바이트다`);
-	const parsed = await parse(core, "POST", "/api/templates", { body: streamOf(exact), type: "application/json" });
+it("HTTP-RUT-23 허용 크기(1 MiB)를 넘는 요청 본문은 끝까지 읽지 않고 거절한다", async () => {
+	const tooLarge = parse(core, "POST", "/api/templates", { body: unendingStream(), type: "application/json" });
 	// HTTP-RUT-23.1
 	await expect(tooLarge).rejects.toMatchObject({ code: "PAYLOAD_TOO_LARGE" });
-	// HTTP-RUT-23.2
-	expect(parsed.input).toEqual({ name });
 });

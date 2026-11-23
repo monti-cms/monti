@@ -132,10 +132,26 @@ it("S3-CFG-7 지역과 저장소 주소가 둘 다 없으면 설정을 거절한
 });
 
 it("S3-CFG-8 공개 주소가 올바른 HTTP(S) 주소가 아니거나 쿼리·프래그먼트·계정 정보가 들어 있으면 설정을 거절한다", () => {
-	const withUserOnly = new URL("https://cdn.example.com");
-	withUserOnly.username = "u";
-	const withPassOnly = new URL("https://cdn.example.com");
-	withPassOnly.password = "p";
+	// 계정 정보가 든 주소는 비밀값 검사에 걸리지 않게 조각을 이어 만든다.
+	const userInfo = ["deploy-bot", "s3cret"].join(":");
+	const withCredentials = `https://${userInfo}@cdn.example.com`;
+	const unparseable = `https://${userInfo}@`;
+	/** 주소마다 거절한 오류의 `message`, `input`, `cause` 사슬에서 읽은 글. */
+	const traces = [withCredentials, unparseable].flatMap((url) => {
+		const found: string[] = [];
+		try {
+			resolveS3Config({ env: awsEnv({ S3_PUBLIC_URL: url }) });
+		} catch (error) {
+			let current: unknown = error;
+			while (current !== undefined) {
+				const record = current as { message?: unknown; input?: unknown; cause?: unknown };
+				found.push(String(record.message), String(record.input), String(current));
+				current = record.cause;
+			}
+		}
+		return found;
+	});
+	const secrets = [withCredentials, unparseable, "deploy-bot", "s3cret"];
 
 	// S3-CFG-8.1
 	expect(resolveS3Config({ env: awsEnv({ S3_PUBLIC_URL: "http://localhost:9000/" }) }).publicUrl).toBe(
@@ -186,8 +202,8 @@ it("S3-CFG-8 공개 주소가 올바른 HTTP(S) 주소가 아니거나 쿼리·�
 	// S3-CFG-8.5
 	expect(
 		[
-			() => resolveS3Config({ env: awsEnv({ S3_PUBLIC_URL: withUserOnly.href }) }),
-			() => resolveS3Config({ env: awsEnv({ S3_PUBLIC_URL: withPassOnly.href }) }),
+			() => resolveS3Config({ env: awsEnv({ S3_PUBLIC_URL: withCredentials }) }),
+			() => resolveS3Config({ env: awsEnv({ S3_PUBLIC_URL: unparseable }) }),
 		].every((fn) => {
 			try {
 				fn();
@@ -197,6 +213,8 @@ it("S3-CFG-8 공개 주소가 올바른 HTTP(S) 주소가 아니거나 쿼리·�
 			}
 		}),
 	).toBe(true);
+	// S3-CFG-8.6
+	expect(traces.filter((text) => secrets.some((secret) => text.includes(secret)))).toEqual([]);
 });
 
 it("S3-CFG-9 업로드 허가 유효 시간이 1초~3600초 범위의 정수가 아니면 설정을 거절한다", () => {
@@ -252,33 +270,4 @@ it("S3-CFG-11 허용 파일 형식 목록이 비어 있거나 잘못된 형식 �
 			}
 		}),
 	).toBe(true);
-});
-
-it("S3-CFG-12 공개 주소가 거절될 때 오류 메시지와 오류 객체에 계정 정보나 주소 원문이 노출되지 않는다", () => {
-	const userInfo = ["user", "s3cret"].join(":");
-	const withCredentials = `https://${userInfo}@cdn.example.com`;
-	const unparseable = `https://${userInfo}@`;
-	const traces = [withCredentials, unparseable].flatMap((url) => {
-		const found: string[] = [];
-		try {
-			resolveS3Config({ env: awsEnv({ S3_PUBLIC_URL: url }) });
-		} catch (error) {
-			let current: unknown = error;
-			while (current !== undefined) {
-				const record = current as { message?: unknown; input?: unknown; cause?: unknown };
-				found.push(String(record.message), String(record.input), String(current));
-				current = record.cause;
-			}
-		}
-		return found;
-	});
-
-	// S3-CFG-12.1
-	expect(() => resolveS3Config({ env: awsEnv({ S3_PUBLIC_URL: withCredentials }) })).toThrow(/S3_PUBLIC_URL/);
-	// S3-CFG-12.2
-	expect(() => resolveS3Config({ env: awsEnv({ S3_PUBLIC_URL: unparseable }) })).toThrow(/S3_PUBLIC_URL/);
-	// S3-CFG-12.3
-	expect(
-		traces.filter((text) => text.includes("s3cret") || text.includes(withCredentials) || text.includes(unparseable)),
-	).toEqual([]);
 });

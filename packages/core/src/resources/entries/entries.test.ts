@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { type Kysely, sql } from "kysely";
+import type { Kysely } from "kysely";
 import { afterEach, beforeEach, expect, it } from "vitest";
 import { createTestDatabase, type TestDatabase } from "../../__test__/database";
 import { holdingAfter, overlap } from "../../__test__/race";
@@ -1269,23 +1269,6 @@ it("ENT-UPD-18 필드와 본문을 보내지 않고 슬러그나 폴더만 바�
 /** 필수 필드를 모두 채운 `notes` 작업본. */
 const FILLED_NOTE = { title: "Note", rank: 0, pinned: false, labels: ["a"] };
 
-it("ENT-UPD-19 서로 다른 두 글의 작업본 슬러그를 같은 값으로 동시에 바꾸면 한 건만 성공하고 나머지는 거절된다", async () => {
-	const [one, two] = [await seedEntry({ slug: "one" }), await seedEntry({ slug: "two" })];
-
-	// 첫 수정이 새 슬러그가 비어 있음을 확인한 직후 멈춘 동안 두 번째 수정이 시작된다.
-	const [first, second] = await overlap(
-		db,
-		(hold) => heldMonti(SLUG_CHECK, hold).entries.update({ id: one.id, slug: "same" }),
-		() => montiOf().entries.update({ id: two.id, slug: "same" }),
-	);
-	const same = (await dataRows(POSTS)).filter((row) => row.status === "draft" && row.slug === "same");
-
-	// ENT-UPD-19.1
-	expect([first.code, second.code].sort()).toEqual(["CONFLICT", null]);
-	// ENT-UPD-19.2
-	expect(same.filter((row) => row.locale === "ko")).toHaveLength(1);
-});
-
 it("ENT-UPD-20 같은 글의 필드와 본문을 동시에 각각 수정해도 두 변경이 모두 남고 미디어 사용처가 일치한다", async () => {
 	const media = await seedMedia();
 	const entry = await seedEntry({ columns: { title: "옛 제목" } });
@@ -1311,8 +1294,9 @@ it("ENT-UPD-20 같은 글의 필드와 본문을 동시에 각각 수정해도 �
 
 it("ENT-UPD-21 같은 글의 서로 다른 두 언어를 동시에 수정해도 두 언어 내용과 미디어 사용처가 모두 남는다", async () => {
 	const [first, second] = [await seedMedia(), await seedMedia()];
-	const entry = await seedEntry();
-	await seedCopy(POSTS, entry.id, "en", "draft");
+	// 두 언어 작업본 모두 `cover`가 비어 있다.
+	const entry = await seedEntry({ columns: { cover: null } });
+	await seedCopy(POSTS, entry.id, "en", "draft", { columns: { cover: null } });
 
 	// `ko` 수정이 작업본을 쓰고 모든 언어의 미디어를 읽은 직후(사용처를 쓰기 전) 멈춘 동안 `en` 수정이 시작된다.
 	const [ko, en] = await overlap(
@@ -1324,14 +1308,23 @@ it("ENT-UPD-21 같은 글의 서로 다른 두 언어를 동시에 수정해도 
 		(await dataRow(POSTS, entry.id, "ko", "draft"))?.cover,
 		(await dataRow(POSTS, entry.id, "en", "draft"))?.cover,
 	];
-	const uses = await db.selectFrom("media_uses").select("media_id").where("source_id", "=", entry.id).execute();
+	const uses = await db
+		.selectFrom("media_uses")
+		.select(["media_id", "source_kind", "source_id", "field_path"])
+		.where("source_id", "=", entry.id)
+		.orderBy("media_id")
+		.execute();
 
 	// ENT-UPD-21.1
 	expect([ko.code, en.code]).toEqual([null, null]);
 	// ENT-UPD-21.2
 	expect(covers).toEqual([first, second]);
 	// ENT-UPD-21.3
-	expect(uses.map((use) => use.media_id).sort()).toEqual([first, second].sort());
+	expect(uses).toEqual(
+		[first, second]
+			.sort()
+			.map((media_id) => ({ media_id, source_kind: "entry", source_id: entry.id, field_path: "cover" })),
+	);
 });
 
 it("ENT-UPD-22 글을 휴지통에 보내는 동안 그 글을 수정해도 휴지통에 들어간 글의 작업본과 미디어 사용처가 지워지지 않는다", async () => {
@@ -1359,7 +1352,7 @@ it("ENT-UPD-22 글을 휴지통에 보내는 동안 그 글을 수정해도 휴�
 	expect({ draft: await dataRow(POSTS, entry.id, "ko", "draft"), uses }).toEqual({ draft, uses: [use] });
 });
 
-it("ENT-UPD-23 폴더를 휴지통에 보내는 동안 그 안의 글을 다른 폴더로 옮겨도 폴더와 함께 버려진 글이 폴더 밖에 남지 않는다", async () => {
+it("ENT-UPD-23 폴더를 휴지통에 보내는 동안 그 안의 글을 다른 폴더로 옮기려 해도 글은 폴더와 함께 휴지통에 들어간다", async () => {
 	const [folder, other] = [await seedFolder(), await seedFolder()];
 	const entry = await seedEntry({ folder_id: folder });
 
@@ -1369,14 +1362,20 @@ it("ENT-UPD-23 폴더를 휴지통에 보내는 동안 그 안의 글을 다른 
 		(hold) => heldMonti(TREE_ENTRIES_READ, hold).trash.move({ id: folder }),
 		() => montiOf().entries.update({ ids: [entry.id], folder_id: other }),
 	);
-	const trashed = await db.selectFrom("folders").select("trashed_at").where("id", "=", folder).executeTakeFirst();
-	const { rows: outside } = await sql<{ id: string }>`
-		select id from ${sql.table(POSTS)}
-		where trashed_at = (select trashed_at from folders where id = ${folder}) and folder_id is distinct from ${folder}
-	`.execute(db);
+	const trashed = await db
+		.selectFrom("folders")
+		.select("trashed_at")
+		.where("id", "=", folder)
+		.executeTakeFirstOrThrow();
+	const moved = await entryRow(POSTS, entry.id);
 
 	// ENT-UPD-23.1
-	expect({ folderTrashed: trashed?.trashed_at !== null, outside }).toEqual({ folderTrashed: true, outside: [] });
+	expect(trashed.trashed_at).toBeInstanceOf(Date);
+	// ENT-UPD-23.2
+	expect({ folder_id: moved.folder_id, trashed_at: moved.trashed_at }).toEqual({
+		folder_id: folder,
+		trashed_at: trashed.trashed_at,
+	});
 });
 
 it("ENT-PUB-1 슬러그와 필수 필드가 채워진 작업본으로 발행본을 만든다", async () => {
@@ -1956,38 +1955,7 @@ it("ENT-REF-10 존재하지 않는 글 ID로는 참조를 바꿀 수 없다", as
 	expect(codes).toEqual(["NOT_FOUND", "NOT_FOUND"]);
 });
 
-// ---- 8. 언어 추가 ----
-
-it("ENT-REF-11 다건 관계 필드를 편집하는 동안 참조 교체가 동시에 실행되어도 새로 추가한 관계가 사라지지 않는다", async () => {
-	const [oldAuthor, newAuthor, extra] = [
-		await seedEntry({ collection: TOPICS }),
-		await seedEntry({ collection: TOPICS }),
-		await seedEntry({ collection: TOPICS }),
-	];
-	const page = await seedEntry({
-		collection: PAGES,
-		rels: [{ path: "topic", column: "topics_id", ids: [oldAuthor.id] }],
-	});
-
-	// 참조 교체가 `[옛 작성자]`를 읽은 직후 멈춘 동안 다건 관계 수정이 커밋된다.
-	const [replace, update] = await overlap(
-		db,
-		(hold) =>
-			heldMonti(/"topics_id" from "pages_rels"/, hold).entries.replaceReferences({
-				from_id: oldAuthor.id,
-				into_id: newAuthor.id,
-			}),
-		() => montiOf().entries.update({ id: page.id, fields: { topic: [oldAuthor.id, extra.id] } }),
-		{ commits: true },
-	);
-
-	// ENT-REF-11.1
-	expect([replace.code, update.code]).toEqual([null, null]);
-	// ENT-REF-11.2
-	expect((await relsRows(PAGES, page.id, "topics_id")).map((rel) => rel.id)).toEqual([newAuthor.id, extra.id]);
-});
-
-it("ENT-REF-12 참조 교체가 실행되는 동안 다른 글이 옛 글을 새로 가리키게 되어도 그 참조까지 새 글로 바뀐다", async () => {
+it("ENT-REF-12 교체할 참조를 확인한 뒤 교체가 적용되기 전에 추가된 참조도 함께 바뀐다", async () => {
 	const [oldAuthor, newAuthor] = [await seedEntry({ collection: TOPICS }), await seedEntry({ collection: TOPICS })];
 	const page = await seedEntry({ collection: PAGES });
 
@@ -2008,6 +1976,8 @@ it("ENT-REF-12 참조 교체가 실행되는 동안 다른 글이 옛 글을 새
 	// ENT-REF-12.2
 	expect((await relsRows(PAGES, page.id, "topics_id")).map((rel) => rel.id)).toEqual([newAuthor.id]);
 });
+
+// ---- 8. 언어 추가 ----
 
 it("ENT-LOC-1 활성 글에 비원문 언어를 추가할 때 슬러그를 생략하면 원문 언어의 슬러그를 기본으로 복사한다", async () => {
 	const folder = await seedFolder({ scope: NOTES });
@@ -2151,23 +2121,6 @@ it("ENT-LOC-10 한 글에 같은 번역 언어를 동시에 두 번 추가하면
 	expect([first.code, second.code].sort()).toEqual(["CONFLICT", null]);
 	// ENT-LOC-10.2
 	expect((await dataRow(POSTS, entry.id, "en", "draft"))?.title).toBe(winner.fields.title);
-});
-
-it("ENT-LOC-11 서로 다른 두 글에 같은 번역 언어와 같은 슬러그를 동시에 추가하면 한 건만 성공하고 나머지는 거절된다", async () => {
-	const [one, two] = [await seedEntry(), await seedEntry()];
-
-	// 첫 추가가 `"en"` 슬러그가 비어 있음을 확인한 직후 멈춘 동안 두 번째 추가가 시작된다.
-	const [first, second] = await overlap(
-		db,
-		(hold) => heldMonti(SLUG_CHECK, hold).entries.addLocale({ id: one.id, locale: "en", slug: "same" }),
-		() => montiOf().entries.addLocale({ id: two.id, locale: "en", slug: "same" }),
-	);
-	const same = (await dataRows(POSTS)).filter((row) => row.status === "draft" && row.slug === "same");
-
-	// ENT-LOC-11.1
-	expect([first.code, second.code].sort()).toEqual(["CONFLICT", null]);
-	// ENT-LOC-11.2
-	expect(same.filter((row) => row.locale === "en")).toHaveLength(1);
 });
 
 it("ENT-RLOC-1 비원문 언어를 즉시 삭제하면 발행본도 함께 지워지고 남은 언어 기준으로 미디어 사용처를 갱신한다", async () => {

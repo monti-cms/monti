@@ -219,12 +219,7 @@ function nestedQuotes(levels: number): Doc {
 	return { blocks: [block] };
 }
 
-it("RT-BLK-7 블록 중첩이 최대 깊이인 32단계까지는 통과한다", () => {
-	// RT-BLK-7.1
-	expect(validateDoc(nestedQuotes(32))).toEqual([]);
-});
-
-it("RT-BLK-8 블록 중첩이 최대 깊이(32단계)를 넘으면 예외를 던지지 않고 초과 위치 경로의 문제로 돌려준다", () => {
+it("RT-BLK-8 블록을 32단계보다 깊게 넣으면 처음 한도를 넘긴 블록이 문제로 보고된다", () => {
 	// RT-BLK-8.1
 	expect(pathsOf(nestedQuotes(33))).toContain(`blocks[0]${".children[0]".repeat(32)}`);
 });

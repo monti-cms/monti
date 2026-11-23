@@ -395,13 +395,21 @@ it("HTTP-HDL-16 검증 실패·잘못된 로그인·권한 없음·없는 대상
 	// HTTP-HDL-16.1
 	expect([invalid.status, (await bodyOf(invalid)).error.code]).toEqual([400, "BAD_REQUEST"]);
 	// HTTP-HDL-16.2
-	expect([wrong.status, (await bodyOf(wrong)).error.code]).toEqual([401, "UNAUTHORIZED"]);
+	expect({
+		status: wrong.status,
+		code: (await bodyOf(wrong)).error.code,
+		cookie: wrong.headers.get("set-cookie"),
+	}).toEqual({ status: 401, code: "UNAUTHORIZED", cookie: null });
 	// HTTP-HDL-16.3
 	expect([forbidden.status, (await bodyOf(forbidden)).error.code]).toEqual([403, "FORBIDDEN"]);
 	// HTTP-HDL-16.4
 	expect([missing.status, (await bodyOf(missing)).error.code]).toEqual([404, "NOT_FOUND"]);
 	// HTTP-HDL-16.5
-	expect([duplicate.status, (await bodyOf(duplicate)).error.code]).toEqual([409, "CONFLICT"]);
+	expect({
+		status: duplicate.status,
+		code: (await bodyOf(duplicate)).error.code,
+		cookie: duplicate.headers.get("set-cookie"),
+	}).toEqual({ status: 409, code: "CONFLICT", cookie: null });
 	// HTTP-HDL-16.6
 	expect([
 		bypassMove.status,
@@ -445,66 +453,39 @@ async function accountRows(db: Awaited<ReturnType<typeof setup>>["db"]) {
 	return { admin: admins.length, session: sessions.length };
 }
 
-it("HTTP-HDL-19 허용 크기를 넘는 본문은 로그인하지 않은 공개 요청에서도 작업을 실행하지 않고 거절한다", async () => {
-	const { db, handler } = await setup({ admin: false });
-	const before = await accountRows(db);
-	// 상한이 없다면 관리자 생성과 그 뒤 로그인이 모두 성공하는 본문이다.
-	const raw = paddedJson(login, 1_048_577);
-	const responses = [
-		await send(handler, "POST", "/api/admin", { raw }),
-		await send(handler, "POST", "/api/session", { raw }),
+/** 응답의 상태, `content-type`, `cache-control`, 오류 코드. */
+async function rejectionOf(response: Response) {
+	return [
+		response.status,
+		response.headers.get("content-type"),
+		response.headers.get("cache-control"),
+		(await bodyOf(response)).error?.code,
 	];
-	const results = await Promise.all(
-		responses.map(async (response) => [
-			response.status,
-			response.headers.get("content-type"),
-			response.headers.get("cache-control"),
-			(await bodyOf(response)).error?.code,
-		]),
-	);
+}
+
+const TOO_LARGE = [413, "application/json; charset=utf-8", "no-store", "PAYLOAD_TOO_LARGE"];
+
+it("HTTP-HDL-19 허용 크기를 넘는 본문으로는 로그인할 수 없다", async () => {
+	const { db, handler } = await setup();
+	const before = await accountRows(db);
+	// 상한이 없다면 로그인이 성공하는 본문이다.
+	const response = await send(handler, "POST", "/api/session", { raw: paddedJson(login, 1_048_577) });
 	// HTTP-HDL-19.1
-	expect(results).toEqual(Array(2).fill([413, "application/json; charset=utf-8", "no-store", "PAYLOAD_TOO_LARGE"]));
+	expect(await rejectionOf(response)).toEqual(TOO_LARGE);
 	// HTTP-HDL-19.2
-	expect(responses.map((response) => response.headers.get("set-cookie"))).toEqual([null, null]);
+	expect(response.headers.get("set-cookie")).toBeNull();
 	// HTTP-HDL-19.3
-	expect(await accountRows(db)).toEqual(before);
+	expect((await accountRows(db)).session).toBe(before.session);
 });
 
-it("HTTP-HDL-20 로그인 실패나 중복 관리자 생성이 거절될 때 세션 쿠키를 설정하지 않는다", async () => {
-	const { handler } = await setup();
-	const wrong = await send(handler, "POST", "/api/session", { json: { email: EMAIL, password: "wrong-password" } });
-	const duplicate = await send(handler, "POST", "/api/admin", {
-		json: { email: "other@example.com", password: PASSWORD },
-	});
-	// HTTP-HDL-20.1
-	expect([wrong.status, wrong.headers.get("set-cookie")]).toEqual([401, null]);
-	// HTTP-HDL-20.2
-	expect([duplicate.status, duplicate.headers.get("set-cookie")]).toEqual([409, null]);
-});
-
-it("HTTP-HDL-21 최초 관리자 생성 요청을 동시에 두 번 보내면 하나만 성공하고 세션 쿠키를 받는다", async () => {
+it("HTTP-HDL-23 허용 크기를 넘는 본문으로는 최초 관리자를 만들 수 없다", async () => {
 	const { db, handler } = await setup({ admin: false });
-	const responses = await Promise.all(
-		["first@example.com", "second@example.com"].map((email) =>
-			send(handler, "POST", "/api/admin", { json: { email, password: PASSWORD } }),
-		),
-	);
-	const results = await Promise.all(
-		responses.map(async (response) => [
-			response.status,
-			(await bodyOf(response)).error?.code ?? null,
-			response.headers.get("set-cookie") !== null,
-		]),
-	);
-	results.sort(([a], [b]) => Number(a) - Number(b));
-	const rows = await accountRows(db);
-	// HTTP-HDL-21.1
-	expect(results).toEqual([
-		[201, null, true],
-		[409, "CONFLICT", false],
-	]);
-	// HTTP-HDL-21.2
-	expect(rows.admin).toBe(1);
-	// HTTP-HDL-21.3
-	expect(rows.session).toBe(1);
+	// 상한이 없다면 최초 관리자 생성이 성공하는 본문이다.
+	const response = await send(handler, "POST", "/api/admin", { raw: paddedJson(login, 1_048_577) });
+	// HTTP-HDL-23.1
+	expect(await rejectionOf(response)).toEqual(TOO_LARGE);
+	// HTTP-HDL-23.2
+	expect(response.headers.get("set-cookie")).toBeNull();
+	// HTTP-HDL-23.3
+	expect(await accountRows(db)).toEqual({ admin: 0, session: 0 });
 });

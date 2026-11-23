@@ -267,7 +267,10 @@ it("START-5 `monti` 객체의 명세에 코어의 모든 Operation이 들어 있
 	const names = monti.spec().map((entry) => entry.name);
 
 	// START-5.1
-	expect(names.sort()).toEqual([...coreOperations].sort());
+	expect({ names: names.sort(), withStoredKey: names.includes("withStoredKey") }).toEqual({
+		names: [...coreOperations].sort(),
+		withStoredKey: false,
+	});
 });
 
 it("START-6 개발 서버에서 DB를 준비하면 스키마에 정의된 컬렉션 테이블도 함께 만든다", async () => {
@@ -495,6 +498,7 @@ it("START-18 허용되지 않은 식별자가 들어 있는 이전 스냅샷으�
 		{ collections: { ["c".repeat(59)]: column("title") } },
 		{ collections: { admin: column("title") } },
 		{ collections: { notes_data: column("title") } },
+		{ collections: { notes_rels: column("title") } },
 		{ collections: { posts: column('ti"tle') } },
 		{ collections: { posts: column("ti.tle") } },
 		{ collections: { posts: column("") } },
@@ -522,9 +526,15 @@ async function appSchemaDb(): Promise<Kysely<Database>> {
 	return new Kysely<Database>({ dialect: new PostgresDialect({ pool }) });
 }
 
-it("START-19 기본 DB 스키마가 `public`이 아니어도 개발 서버 동기화가 같은 스키마에서 동작한다", async () => {
-	const appDb = await appSchemaDb();
+it("START-19 기본 DB 스키마가 `public`이 아니면 개발 서버 동기화는 그 스키마의 테이블만 바꾼다", async () => {
 	const config = { name: "Monti Blog", dev: true };
+	const withHeadline: Schema = {
+		locales: ["ko"],
+		collections: { posts: { fields: { headline: { type: "text" } } } },
+	};
+	await migrateMonti({ db, schema: withHeadline, config });
+	const publicColumns = await columnDefinitionsOf(testDb.db, "posts_data");
+	const appDb = await appSchemaDb();
 	const withSummary: Schema = {
 		locales: ["ko"],
 		collections: { posts: { fields: { title: { type: "text" }, summary: { type: "text" } } } },
@@ -544,42 +554,41 @@ it("START-19 기본 DB 스키마가 `public`이 아니어도 개발 서버 동�
 	// START-19.1
 	expect(rows).toEqual([{ name: "summary" }]);
 	// START-19.2
-	expect(await tableExists(testDb.db, "posts")).toBe(false);
+	expect(await columnDefinitionsOf(testDb.db, "posts_data")).toEqual(publicColumns);
 });
 
-it("START-20 DB 없이 명세를 만들 때도 엔진 기본 메서드 이름을 플러그인 리소스 이름으로 쓸 수 없다", () => {
-	const tag = defineWrite({ input: z.object({ name: z.string() }), run: tagRun });
-	const plugin: Plugin = { name: "albums", operations: { spec: { tag } } };
-
-	// START-20.1
-	expect(() => specOf([plugin])).toThrow(expect.objectContaining({ code: "CONFLICT" }));
-});
-
-it("START-21 `startMonti`로 만든 `monti`의 `withStoredKey`로 저장된 키의 원문을 받아 쓴다", async () => {
+it("START-23 플러그인의 이벤트 구독에는 저장된 키의 원문을 읽는 기능이 제공되지 않는다", async () => {
 	await prepare([]);
+	const received = Promise.withResolvers<object>();
+	const plugin: Plugin = {
+		name: "watcher",
+		onEvent(_event, ctx) {
+			received.resolve(ctx.monti);
+		},
+	};
 	const monti = startMonti({
 		db,
 		schema,
-		config: { name: "Monti Blog" },
+		config: { name: "Monti Blog", plugins: [plugin] },
 		schemaFile,
 		configFile,
 		secret: "test monti secret",
 	});
-	const { id } = await monti.keys.create({ service: "mail", name: "Mail", secret: "mail-secret-1234" });
-	const use = vi.fn<(apiKey: string) => Promise<void>>().mockResolvedValue(undefined);
 
-	await monti.withStoredKey({ id, service: "mail" }, use);
+	const created = await monti.folders.create({ scope: "posts", name: "Drafts" }).then(
+		() => true,
+		() => false,
+	);
+	// 이벤트는 커밋 뒤 따로 통지된다: 2초 안에 오지 않으면 호출되지 않은 것으로 본다.
+	const pluginMonti = await Promise.race([
+		received.promise,
+		new Promise<null>((resolve) => setTimeout(() => resolve(null), 2000)),
+	]);
 
-	// START-21.1
-	expect(use).toHaveBeenCalledExactlyOnceWith("mail-secret-1234");
-});
-
-it("START-22 플러그인 리소스 이름으로 `withStoredKey`를 쓸 수 없다", () => {
-	const tag = defineWrite({ input: z.object({ name: z.string() }), run: tagRun });
-	const plugin: Plugin = { name: "albums", operations: { withStoredKey: { tag } } };
-
-	// START-22.1
-	expect(() => start([plugin])).toThrow(expect.objectContaining({ code: "CONFLICT" }));
+	// START-23.1
+	expect({ created, called: pluginMonti !== null }).toEqual({ created: true, called: true });
+	// START-23.2
+	expect(pluginMonti === null ? null : "withStoredKey" in pluginMonti).toBe(false);
 });
 
 /** 암호화 비밀값으로 `startMonti`를 한 `monti`. `null`을 주면 암호화 비밀값이 없다. */
