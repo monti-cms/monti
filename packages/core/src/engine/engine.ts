@@ -133,9 +133,10 @@ async function runSettled<T>(run: () => Promise<T>, aborts: unknown[], trx: Tran
 }
 
 /**
- * 콜백이 `trx`로 직접 실행한 쿼리의 DB 오류를 잡고 정상 반환했으면 던진다. PostgreSQL은 중단된 트랜잭션의 `COMMIT`에
- * 오류 없이 `ROLLBACK`으로 답하므로, 확인하지 않으면 저장되지 않은 쓰기를 성공으로 알리고 이벤트까지 통지하게 된다. 중단된
- * 트랜잭션에서는 이 조회가 `25P02`로 실패하고, 그 오류를 그대로 던진다.
+ * 콜백이 `trx`로 직접 실행한 쿼리의 DB 오류를 잡고 정상 반환했으면 던진다: 중단된 트랜잭션에서는 이 조회가 `25P02`로
+ * 실패하고, 그 오류를 그대로 던진다. 커밋하지 않는 `dryRun`은 이 확인이 없으면 저장되지 않을 쓰기를 성공으로 알린다.
+ * `transaction`은 Kysely가 `COMMIT`의 `ROLLBACK` 응답을 `AbortedTransactionError`로 알리지만, 같은 확인으로 `dryRun`과 같은
+ * 오류를 내고 단계의 파일을 준비하기 전에 실패한다.
  */
 async function assertNotAborted(trx: Transaction<Database>): Promise<void> {
 	await sql`select 1`.execute(trx);
