@@ -5,7 +5,7 @@
 | 명령 / 파일 | 하는 일 | 주요 거절 |
 |---|---|---|
 | `monti migrate generate` | DB 연결 없이 스냅샷과 스키마 차이로 SQL 파일을 생성하고, `--dry-run` 시 `{ sql }` JSON을, 변경 없음 시 `stdout` `null`과 `stderr` 안내를 출력한다 | 잘못된 스키마 시 실행 오류(`1`) |
-| `monti migrate up` · `status` | `up`은 대상 DB 정보(비밀번호 제외)를 `stderr`에 출력한 뒤 미적용 SQL을 적용(`--dry-run`은 빈 DB에도 무변경), `status`는 `migrations` 테이블 생성 없이 상태 JSON을 출력하며 `migrate --help`는 전체 도움말을 출력한다 | 개발 설정 `up`·SQL 오류 시 `1` |
+| `monti migrate up` · `status` | `up`은 대상 DB 정보(비밀번호 제외)를 `stderr`에 출력한 뒤 미적용 SQL을 적용(`--dry-run`은 빈 DB에도 무변경), `status`는 `migrations` 테이블 생성 없이 상태 JSON을 출력하며 `migrate --help`는 전체 도움말을 출력한다 | 개발 설정 `up`·SQL 오류 시 `1`(오류 출력 `stderr`에서 연결 비밀번호·`MONTI_SECRET` 원문 제거) |
 | `monti clean-files` | 만료된 임시 파일을 저장소와 DB에서 제거하고 `stdout`에 `null`을 출력한다 | `storage` 미설정·일부 삭제 실패 시 `1`, `--dry-run` 시 `2` |
 | `bin.mjs` | 실제 프로세스 진입점에서 `.env.local`·`.env` 값을 `process.env`에 채우고 단일 `jiti` 로더와 표준 입력(`--input -`) 파이프를 연결해 명령을 실행한다 | 오류 시 `process.exitCode` 반영 |
 
@@ -125,6 +125,19 @@
   - `CLI-TLS-9.1` 반환 종료 코드가 `1`이다
   - `CLI-TLS-9.2` `stderr`가 비어 있지 않고 `"[42601]"` 같은 DB 오류 코드 접두를 붙이지 않는다
   - `CLI-TLS-9.3` `stdout`이 비어 있다
+
+</details>
+
+<details>
+<summary><strong><code>CLI-TLS-17</code></strong> 명령 실행 중 오류가 나더라도 DB 연결 비밀번호와 `MONTI_SECRET` 원문은 표준 오류에 노출하지 않는다</summary>
+
+- **전제**: `DATABASE_URL`(`postgres://admin:super-secret-pw@127.0.0.1:5432/monti`)과 `MONTI_SECRET`이 설정되어 있고, 실행 중 일반 진단 문구와 함께 그 비밀번호·`MONTI_SECRET` 원문이 섞인 오류가 던져진다
+- **행동**: `runCli(["migrate", "up"], io)`를 실행한다
+- **결과**:
+  - `CLI-TLS-17.1` 종료 코드가 `1`이다
+  - `CLI-TLS-17.2` `stdout`이 비어 있고 `stderr`에 일반 진단 문구는 출력된다
+  - `CLI-TLS-17.3` `stderr`에 `"super-secret-pw"`가 없다
+  - `CLI-TLS-17.4` `stderr`에 `MONTI_SECRET` 원문이 없다
 
 </details>
 

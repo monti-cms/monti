@@ -1,4 +1,4 @@
-import { mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { type Schema, snapshotOf } from "@monti-cms/core";
@@ -96,4 +96,47 @@ it("CLI-MGF-5 번호가 없는 `.sql` 파일이 섞여 있어도 숫자 접두�
 	expect(generated?.filename).toBe("0002_add_subtitle.sql");
 	// CLI-MGF-5.2
 	expect({ manual: await migrationText("manual.sql"), init: await migrationText("0001_init.sql") }).toEqual(before);
+});
+
+it("CLI-MGF-6 허용되지 않은 식별자가 들어 있는 `_snapshot.json`으로는 마이그레이션 파일을 만들 수 없다", async () => {
+	await mkdir(dir);
+	const { collections } = snapshotOf(posts);
+	const saved = `${JSON.stringify({ collections: { 'po"sts': collections.posts } })}\n`;
+	await writeFile(path.join(dir, "_snapshot.json"), saved);
+
+	const generating = generateMigration({ dir, schema: postsWithSubtitle });
+
+	// CLI-MGF-6.1
+	await expect(generating).rejects.toMatchObject({ code: "BAD_REQUEST" });
+	// CLI-MGF-6.2
+	expect(await listMigrationFiles(dir)).toEqual([]);
+	// CLI-MGF-6.3
+	expect(await migrationText("_snapshot.json")).toBe(saved);
+});
+
+it("CLI-MGF-7 같은 디렉터리에서 마이그레이션 파일 생성이 겹치면 완성된 파일 하나만 남는다", async () => {
+	await generateMigration({ dir, schema: posts, name: "init" });
+
+	const results = await Promise.allSettled([
+		generateMigration({ dir, schema: postsWithSubtitle, name: "first" }),
+		generateMigration({ dir, schema: postsWithSubtitle, name: "second" }),
+	]);
+
+	const generated = results.flatMap((result) => (result.status === "fulfilled" ? [result.value] : []));
+	// CLI-MGF-7.1
+	expect({ statuses: results.map((result) => result.status).sort(), generated }).toEqual({
+		statuses: ["fulfilled", "rejected"],
+		generated: [{ filename: expect.stringMatching(/^0002_/), sql: expect.stringMatching(/\S/) }],
+	});
+	const names = await readdir(dir);
+	const added = names.filter((name) => /^0002_.*\.sql$/.test(name));
+	const files = await Promise.all(added.map(async (name) => ({ filename: name, sql: await migrationText(name) })));
+	// CLI-MGF-7.2
+	expect(files).toEqual(generated);
+	const temporary = names.filter((name) => name.endsWith(".tmp"));
+	// CLI-MGF-7.3
+	expect({ snapshot: await savedSnapshot(), temporary }).toEqual({
+		snapshot: snapshotOf(postsWithSubtitle),
+		temporary: [],
+	});
 });

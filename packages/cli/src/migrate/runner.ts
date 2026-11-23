@@ -72,32 +72,52 @@ export async function getMigrationStatus({ db, dir }: StatusOptions): Promise<Mi
 	return (await listMigrationFiles(dir)).map((name) => ({ name, applied: ran.has(name) }));
 }
 
-/** `migrateMonti`로 내장 단계를 적용한 뒤 아직 적용하지 않은 `.sql` 파일을 core의 `migrate`로 실행하고, 그 이름을 돌려준다. */
+/**
+ * `migrateMonti`로 내장 단계를 적용한 뒤 아직 적용하지 않은 `.sql` 파일을 core의 `migrate`로 실행하고, 이 호출이 실제로 적용한
+ * 파일 이름을 돌려준다. 파일은 DB를 바꾸기 전에, 아직 적용하지 않은 것만 읽는다(`readPendingSqlSteps`). 그사이 다른 실행이
+ * 적용한 파일은 core의 `migrate`가 잠금 안에서 건너뛰므로, 두 실행이 겹쳐도 파일은 한 번만 적용되고 각 호출은 자신이 적용한
+ * 파일만 돌려준다.
+ */
 async function applyMigrations({ db, project, dir }: RunOptions): Promise<string[]> {
+	const files = await readPendingSqlSteps(db, dir);
 	await migrateMonti({ db, schema: project.schema, config: project.config });
-	const steps = await pendingSqlSteps(db, dir);
-	await migrate(db, projectSource, steps);
-	return steps.map((step) => step.name);
+	const applied: string[] = [];
+	await migrate(
+		db,
+		projectSource,
+		files.map((step) => recordingTo(applied, step)),
+	);
+	return applied;
+}
+
+/** `step`을 실행하고, 실행이 끝나면 그 이름을 `applied`에 더하는 단계. */
+function recordingTo(applied: string[], step: Migration): Migration {
+	async function up(db: Kysely<unknown>): Promise<void> {
+		await step.up(db);
+		applied.push(step.name);
+	}
+	return { name: step.name, up };
 }
 
 /**
- * 시험 실행: `migrateMonti`가 하듯 스키마(`BAD_REQUEST`)와 플러그인 작업 경로 충돌(`CONFLICT`)을 DB를 건드리기 전에 검사한
- * 뒤, 한 트랜잭션에서 `migrations` 테이블을 준비하고 아직 실행하지 않은 core·플러그인 단계와 `.sql` 파일을 실제 적용과 같은
- * 순서로 실행·기록해 보고, 성공하든 실패하든 되돌린다. 실행해 본 `.sql` 파일 이름을 돌려준다.
+ * 시험 실행: `migrateMonti`가 하듯 스키마(`BAD_REQUEST`)와 플러그인 작업 경로 충돌(`CONFLICT`)을, 그리고 아직 적용하지 않은
+ * `.sql` 파일 읽기를 DB를 바꾸기 전에 마친 뒤, 한 트랜잭션에서 `migrations` 테이블을 준비하고 아직 실행하지 않은 core·플러그인 단계와 `.sql`
+ * 파일을 실제 적용과 같은 순서로 실행·기록해 보고, 성공하든 실패하든 되돌린다. 실행해 본 `.sql` 파일 이름을 돌려준다.
  */
 async function tryMigrations({ db, project, dir }: RunOptions): Promise<string[]> {
 	const plugins = project.config.plugins ?? [];
 	snapshotOf(project.schema);
 	specOf(plugins);
+	const files = await readPendingSqlSteps(db, dir);
 	const tx = await db.startTransaction().execute();
 	try {
 		await ensureHistory(tx);
-		const files = await pendingSqlSteps(tx, dir);
-		const sources: SourceSteps[] = [...(await pendingBuiltInSteps(tx, plugins)), [projectSource, files]];
+		const [projectSteps] = await pendingSteps(tx, [[projectSource, files]]);
+		const sources = [...(await pendingSteps(tx, builtInSources(plugins))), projectSteps];
 		for (const [source, steps] of sources) {
 			for (const step of steps) await runRecorded(tx, source, step);
 		}
-		return files.map((step) => step.name);
+		return projectSteps[1].map((step) => step.name);
 	} finally {
 		await rollbackQuietly(tx);
 	}
@@ -132,12 +152,13 @@ async function rollbackQuietly(tx: ControlledTransaction<Database>): Promise<voi
 	}
 }
 
-/**
- * 아직 실행하지 않은 내장 단계를 출처별로: core의 단계(`"@monti-cms/core"` 출처), 그다음 플러그인마다 그 단계(플러그인 `name`
- * 출처).
- */
-async function pendingBuiltInSteps(db: Kysely<Database>, plugins: readonly Plugin[]): Promise<SourceSteps[]> {
-	const sources: SourceSteps[] = [[coreSource, coreMigrations], ...plugins.map(pluginSource)];
+/** 내장 단계의 출처별 목록: core의 단계(`"@monti-cms/core"` 출처), 그다음 플러그인마다 그 단계(플러그인 `name` 출처). */
+function builtInSources(plugins: readonly Plugin[]): SourceSteps[] {
+	return [[coreSource, coreMigrations], ...plugins.map(pluginSource)];
+}
+
+/** 출처마다 그 출처로 `migrations`에 아직 기록되지 않은 단계만 남긴 목록. */
+async function pendingSteps(db: Kysely<Database>, sources: readonly SourceSteps[]): Promise<SourceSteps[]> {
 	const pending: SourceSteps[] = [];
 	for (const [source, steps] of sources) {
 		const ran = await ranNames(db, source);
@@ -151,11 +172,15 @@ function pluginSource(plugin: Plugin): SourceSteps {
 	return [plugin.name, plugin.migrations ?? []];
 }
 
-/** `dir`의 `.sql` 파일 가운데 `"project"` 출처로 아직 적용하지 않은 것을 이름순으로, 파일 내용을 실행하는 단계로 만든다. */
-async function pendingSqlSteps(db: Kysely<Database>, dir: string): Promise<Migration[]> {
+/**
+ * `dir`의 `.sql` 파일 가운데 `"project"` 출처로 아직 적용하지 않은 것만 읽어 이름순으로 실행 단계로 만든다. `migrations`
+ * 테이블이 아직 없으면(아무것도 적용하지 않은 DB) 모든 파일이 대상이다. DB를 바꾸기 전에 부른다. 이미 적용한 파일은 다시
+ * 실행하지 않으므로 읽지 않는다.
+ */
+async function readPendingSqlSteps(db: Kysely<Database>, dir: string): Promise<Migration[]> {
 	const ran = await ranNames(db, projectSource);
-	const names = (await listMigrationFiles(dir)).filter((name) => !ran.has(name));
-	return Promise.all(names.map(async (name) => sqlStep(name, await readFile(path.join(dir, name), "utf8"))));
+	const pending = (await listMigrationFiles(dir)).filter((name) => !ran.has(name));
+	return Promise.all(pending.map(async (name) => sqlStep(name, await readFile(path.join(dir, name), "utf8"))));
 }
 
 /** 이름이 `name`이고, `text`의 SQL을 바인딩 없이 그대로(여러 문장이어도 한 번에) 실행하는 단계. */

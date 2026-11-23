@@ -102,8 +102,9 @@ migrations/
 - `monti migrate up`:
   - `config.dev === true`이면 DB를 건드리지 않고 실행을 거절한다.
   - DB 연결 성공 후 서버에서 실제 접속한 호스트·포트·DB 이름(`current_database()`, `inet_server_addr()`, `inet_server_port()`)을 조회해 비밀번호 유출 없이 `stderr`에 출력한다.
-  - 먼저 `migrateMonti({ db, schema, config })`로 `core`·플러그인 내장 마이그레이션을 적용한 뒤, `migrations/*.sql`을 파일명 오름차순으로 읽어 `core`의 공개 `migrate(db, "project", steps)`로 실행한다(`"project"`은 사용자 프로젝트 SQL 마이그레이션 전용 출처이며, 각 `.sql` 파일은 `pg` 드라이버 위에서 바인딩 없는 `sql.raw(text)`로 한 트랜잭션 안에서 실행).
+  - 먼저 `migrateMonti({ db, schema, config })`로 `core`·플러그인 내장 마이그레이션을 적용한 뒤, `migrations/*.sql`을 파일명 오름차순으로 읽어 `core`의 공개 `migrate(db, "project", steps)`로 실행한다(`"project"`은 사용자 프로젝트 SQL 마이그레이션 전용 출처이며, 각 `.sql` 파일은 `pg` 드라이버 위에서 바인딩 없는 `sql.raw(text)`로 한 트랜잭션 안에서 실행). 동시 실행 시 각 호출은 자신이 실제 적용한 파일 목록만 반환한다.
   - `--dry-run`을 주면 스키마·플러그인 사전 검증(`snapshotOf`·`specOf`) 후 단일 트랜잭션 안에서 `migrations` 테이블 준비·미적용 코어(`coreMigrations`)·플러그인·프로젝트 `.sql` 단계 실행 및 이력 기록을 순서대로 시험 실행한 뒤 무조건 롤백해, 빈 DB에서도 테이블을 하나도 남기지 않는다(파일 안에 `COMMIT`이나 `CREATE INDEX CONCURRENTLY` 같은 트랜잭션 외부 구문이 없는 일반 DDL·DML을 기준으로 한다).
+  - 모든 CLI 명령의 오류 출력(`stderr`)에서는 `DATABASE_URL`의 연결 비밀번호와 `MONTI_SECRET` 원문을 가려 노출하지 않는다.
 - `monti migrate status`:
   - `migrateMonti`를 부르지 않고 DB 연결만 열어 `migrations` 테이블의 `source = "project"` 행만 조회해 각 `.sql` 파일의 `{ name, applied }` 목록을 JSON으로 출력한다(`migrations` 테이블이 아직 없으면 생성하지 않고 모든 파일을 `applied: false`로 반환).
 

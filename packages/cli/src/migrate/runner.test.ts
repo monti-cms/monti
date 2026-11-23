@@ -1,8 +1,9 @@
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { type MontiConfig, migrate, type Plugin, type Schema } from "@monti-cms/core";
-import { type Kysely, sql } from "kysely";
+import { type Database, type MontiConfig, migrate, migrateMonti, type Plugin, type Schema } from "@monti-cms/core";
+import { Kysely, PostgresDialect, sql } from "kysely";
+import pg from "pg";
 import { afterEach, beforeEach, expect, it } from "vitest";
 import {
 	columnsOf,
@@ -227,4 +228,37 @@ it("CLI-MGR-8 일부만 적용된 DB의 상태를 조회하면 프로젝트 출�
 		{ name: "0001_init.sql", applied: true },
 		{ name: "0002_add_subtitle.sql", applied: false },
 	]);
+});
+
+/** 내장 마이그레이션(core)만 적용한다: `monti migrate up`을 한 번 거친 운영 DB처럼 된다. */
+async function migrateBuiltIns(): Promise<void> {
+	await migrateMonti({ db: testDb.db, schema, config: { name: "테스트" } });
+}
+
+/** `migrations` 테이블에 `"project"` 출처로 기록된 행. */
+async function projectRecords(): Promise<[string, string][]> {
+	return (await recordedMigrations(testDb.db)).filter(([source]) => source === "project");
+}
+
+it("CLI-MGR-12 같은 DB에 운영 마이그레이션을 동시에 두 번 실행해도 각 파일은 한 번만 적용되고 자신이 적용한 파일만 돌려준다", async () => {
+	await migrateBuiltIns();
+	// 앞의 잠시 멈춤이 첫 호출의 잠금을 붙잡아, 그동안 두 번째 호출이 들어온다.
+	await writeSql("0001_init.sql", "select pg_sleep(0.5);\ncreate table posts (id uuid primary key);\n");
+	const other = new Kysely<Database>({
+		dialect: new PostgresDialect({ pool: new pg.Pool({ connectionString: testDb.url, max: 4 }) }),
+	});
+	await sql`select 1`.execute(other);
+	const project = projectWith({ name: "테스트" });
+
+	const results = await Promise.allSettled([testDb.db, other].map((db) => runMigrations({ db, project, dir }))).finally(
+		() => other.destroy(),
+	);
+
+	// CLI-MGR-12.1
+	expect(results.map((result) => result.status)).toEqual(["fulfilled", "fulfilled"]);
+	const applied = results.flatMap((result) => (result.status === "fulfilled" ? [result.value] : []));
+	// CLI-MGR-12.2
+	expect(applied.sort((a, b) => a.length - b.length)).toEqual([[], ["0001_init.sql"]]);
+	// CLI-MGR-12.3
+	expect(await projectRecords()).toEqual([["project", "0001_init.sql"]]);
 });
