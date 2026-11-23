@@ -34,7 +34,10 @@ const createInput = z.object({
 	parent_id: uuidInput.nullable().optional(),
 });
 
-/** Makes a folder in `"media"` or a schema collection, under an active folder of the same scope when given one. */
+/**
+ * `"media"`나 스키마 컬렉션 범위에 폴더를 만든다. 부모를 주면 같은 범위의 활성 폴더여야 한다. 같은 위치의 활성 폴더와 이름이
+ * 겹치면 DB 고유 색인이 `CONFLICT`로 막는다.
+ */
 async function createFolder(input: z.infer<typeof createInput>, ctx: WriteContext): Promise<Folder> {
 	if (input.scope !== "media" && !Object.hasOwn(ctx.schema.collections, input.scope)) {
 		throw new MontiError("BAD_REQUEST", `No collection or media has the scope "${input.scope}"`);
@@ -46,7 +49,6 @@ async function createFolder(input: z.infer<typeof createInput>, ctx: WriteContex
 		parent_id: input.parent_id ?? null,
 	};
 	if (folder.parent_id !== null) await rejectParent(ctx, folder.parent_id, folder.scope);
-	await rejectTaken(ctx, folder);
 	return ctx.db.insertInto("folders").values(folder).returning(SHOWN).executeTakeFirstOrThrow();
 }
 
@@ -79,15 +81,6 @@ export function activeChildren(ctx: ReadContext, scope: string, parentId: string
 	return parentId === null ? query.where("parent_id", "is", null) : query.where("parent_id", "=", parentId);
 }
 
-/** Rejects a name another active folder already has under the same parent of the same scope; `id` is the folder itself, left out. */
-async function rejectTaken(ctx: WriteContext, folder: Folder): Promise<void> {
-	const taken = await activeChildren(ctx, folder.scope, folder.parent_id)
-		.where("id", "<>", folder.id)
-		.where("name", "=", folder.name)
-		.executeTakeFirst();
-	if (taken !== undefined) throw new MontiError("CONFLICT", "An active folder here already has this name");
-}
-
 const updateInput = z.object({
 	id: uuidInput,
 	name: z.string().min(1).optional(),
@@ -95,8 +88,8 @@ const updateInput = z.object({
 });
 
 /**
- * 활성 폴더의 이름을 바꾸거나 옮긴다. `parent_id`가 null이면 루트로 옮기고, 생략한 항목은 그대로 둔다. 바뀐 뒤의 이름과
- * 부모를 늘 함께 저장하므로 바꿀 항목이 없으면 기존 폴더를 그대로 돌려준다.
+ * 활성 폴더의 이름을 바꾸거나 옮긴다. `parent_id`가 null이면 루트로 옮기고, 생략한 항목은 그대로 둔다. 이름을 늘 저장하므로
+ * 바꿀 항목이 없으면 기존 폴더를 그대로 돌려준다. 옮긴 위치의 활성 폴더와 이름이 겹치면 DB 고유 색인이 `CONFLICT`로 막는다.
  */
 async function updateFolder(input: z.infer<typeof updateInput>, ctx: WriteContext): Promise<Folder> {
 	const target = await lockedTarget(ctx, input.id);
@@ -104,12 +97,9 @@ async function updateFolder(input: z.infer<typeof updateInput>, ctx: WriteContex
 		await rejectParent(ctx, input.parent_id, target.scope);
 		await rejectCycle(ctx, input.id, input.parent_id);
 	}
-	const parentId = input.parent_id === undefined ? target.parent_id : input.parent_id;
-	const next = { ...target, name: input.name ?? target.name, parent_id: parentId };
-	await rejectTaken(ctx, next);
 	return ctx.db
 		.updateTable("folders")
-		.set({ name: next.name, parent_id: next.parent_id })
+		.set({ name: input.name ?? target.name, parent_id: input.parent_id })
 		.where("id", "=", input.id)
 		.returning(SHOWN)
 		.executeTakeFirstOrThrow();

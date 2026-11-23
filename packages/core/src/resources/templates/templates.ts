@@ -18,18 +18,6 @@ interface Template {
 
 const SHOWN = ["id", "collection", "name", "content"] as const;
 
-/** Rejects a name another template of the same collection already has; `id` is the template itself, left out. */
-async function rejectTaken(ctx: WriteContext, template: Omit<Template, "content">): Promise<void> {
-	const taken = await ctx.db
-		.selectFrom("templates")
-		.select("id")
-		.where("id", "<>", template.id)
-		.where("collection", "=", template.collection)
-		.where("name", "=", template.name)
-		.executeTakeFirst();
-	if (taken !== undefined) throw new MontiError("CONFLICT", "A template of this collection already has this name");
-}
-
 const createInput = z.object({
 	__preset_id: uuidInput.optional(),
 	collection: z.string(),
@@ -37,14 +25,16 @@ const createInput = z.object({
 	content: z.unknown(),
 });
 
-/** Makes a template of a schema collection and indexes the media its body references. */
+/**
+ * 스키마 컬렉션의 템플릿을 만들고 본문이 참조하는 미디어를 색인한다. 같은 컬렉션의 템플릿과 이름이 겹치면 DB 고유 제약이
+ * `CONFLICT`로 막는다.
+ */
 async function createTemplate(input: z.infer<typeof createInput>, ctx: WriteContext): Promise<Template> {
 	if (!Object.hasOwn(ctx.schema.collections, input.collection)) {
 		throw new MontiError("BAD_REQUEST", `No collection is named "${input.collection}"`);
 	}
 	const doc = docOf(input.content, ctx);
 	const template = { id: input.__preset_id ?? randomUUID(), collection: input.collection, name: input.name };
-	await rejectTaken(ctx, template);
 	await replaceMediaUses(ctx, { source_kind: "template", source_id: template.id }, "content", doc);
 	return ctx.db
 		.insertInto("templates")
@@ -89,7 +79,6 @@ async function updateTemplate(input: z.infer<typeof updateInput>, ctx: WriteCont
 	const existing = found(await templateQuery(ctx, input.id).forUpdate().executeTakeFirst());
 	const doc = input.content === undefined ? undefined : docOf(input.content, ctx);
 	const name = input.name ?? existing.name;
-	await rejectTaken(ctx, { ...existing, name });
 	const source = { source_kind: "template" as const, source_id: input.id };
 	if (doc !== undefined) await replaceMediaUses(ctx, source, "content", doc, existing.content);
 	return ctx.db

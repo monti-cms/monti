@@ -11,13 +11,11 @@ const passwordInput = z.string().min(1);
 
 const createInput = z.object({ email: emailInput, password: passwordInput });
 
-/** 첫 관리자를 만들고 로그인시킨다. 관리자는 언제나 하나뿐이다. */
+/** 첫 관리자를 만들고 로그인시킨다. 관리자는 언제나 하나뿐이다: 두 번째 관리자는 DB 고유 색인이 `CONFLICT`로 막는다. */
 async function createAdmin(
 	input: z.infer<typeof createInput>,
 	ctx: WriteContext,
 ): Promise<{ id: string; email: string; token: string }> {
-	const existing = await ctx.db.selectFrom("admin").select("id").executeTakeFirst();
-	if (existing !== undefined) throw new MontiError("CONFLICT", "관리자가 이미 있습니다");
 	const id = randomUUID();
 	const passwordHash = await hashPassword(input.password);
 	await ctx.db.insertInto("admin").values({ id, email: input.email, password_hash: passwordHash }).execute();
