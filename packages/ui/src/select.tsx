@@ -59,12 +59,12 @@ function SelectValue({ className, ...props }: SelectPrimitive.Value.Props) {
 
 /**
  * The look of a closed pick-one field, shared by {@link SelectTrigger} and `MenuField`: an underline, the value, and a caret at the end. The line turns
- * ink while it has focus or its list is open, and never a box around it. The field has no caret, so under the keyboard's focus the line is 2px thick in its own colour (ink, danger, or
+ * ink while it has focus or its list is open, and never a box around it. The field has no caret, so under the keyboard's focus the line is 2px thick in its own colour (1px border plus a 1px inset shadow, so the text does not move) (ink, danger, or
  * proposal blue), and no line at rest when valid (2026-11-24 owner). `data-size` is `default` (body text) or `sm` (note text, 2px less above and below).
  */
 export const SELECT_TRIGGER = cn(
 	FIELD_HOVER,
-	"flex items-center justify-between gap-monti-8 whitespace-nowrap rounded-none border-0 border-transparent border-b bg-transparent text-left text-monti-body text-monti-default outline-none transition-colors focus-visible:border-b-2 focus-visible:border-monti-contrast aria-expanded:border-monti-contrast disabled:cursor-default disabled:opacity-45 aria-readonly:cursor-default aria-readonly:select-text aria-readonly:focus-visible:border-monti-contrast aria-readonly:[&_[data-slot=select-icon]]:hidden aria-invalid:border-monti-danger data-[size=default]:h-monti-control-md data-[size=md]:h-monti-control-md data-[size=sm]:h-monti-control-sm data-[size=sm]:text-monti-note [&_svg]:pointer-events-none [&_svg]:shrink-0",
+	"flex items-center justify-between gap-monti-8 whitespace-nowrap rounded-none border-0 border-transparent border-b bg-transparent text-left text-monti-body text-monti-default outline-none transition-colors focus-visible:border-monti-contrast focus-visible:shadow-[inset_0_-1px_0_var(--monti-border-contrast)] aria-expanded:border-monti-contrast disabled:cursor-default disabled:opacity-45 aria-readonly:cursor-default aria-readonly:select-text aria-readonly:focus-visible:border-monti-contrast aria-readonly:[&_[data-slot=select-icon]]:hidden aria-invalid:border-monti-danger aria-invalid:focus-visible:shadow-[inset_0_-1px_0_var(--monti-fg-danger)] data-[size=default]:h-monti-control-md data-[size=md]:h-monti-control-md data-[size=sm]:h-monti-control-sm data-[size=sm]:text-monti-note [&_svg]:pointer-events-none [&_svg]:shrink-0",
 	FIELD_INSET,
 );
 
@@ -96,7 +96,7 @@ function SelectTrigger({
 			aria-description={useProposalDescription(proposal)}
 			className={cn(
 				SELECT_TRIGGER,
-				"data-proposal:border-monti-proposal data-proposal:border-b-[1.5px] data-placeholder:text-monti-faint data-proposal:text-monti-proposal data-proposal:focus-visible:border-b-2",
+				"data-proposal:border-monti-proposal data-proposal:border-b-[1.5px] data-placeholder:text-monti-faint data-proposal:text-monti-proposal data-proposal:focus-visible:shadow-[inset_0_-0.5px_0_var(--monti-fg-proposal)]",
 				width === "full" ? "w-full" : "w-fit",
 				className,
 			)}

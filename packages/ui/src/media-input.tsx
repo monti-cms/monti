@@ -84,8 +84,8 @@ function MediaInput({
 			className={cn(
 				!readOnly && FIELD_HOVER,
 				"flex w-full min-w-0 items-center border-transparent border-b transition-colors focus-within:border-monti-contrast data-proposal:border-monti-proposal data-proposal:border-b-[1.5px]",
-				// The file's name has no caret, so under the keyboard's focus the line is 2px thick in its own colour, as a select's is. The × at the end has its own ring.
-				"has-[>button:focus-visible]:border-b-2",
+				// The file's name has no caret, so under the keyboard's focus the line is 2px thick in its own colour (a 1px border plus an inset shadow, so the text does not move), as a select's is. The × at the end has its own ring.
+				"has-[>button:focus-visible]:shadow-[inset_0_-1px_0_var(--monti-border-contrast)] data-proposal:has-[>button:focus-visible]:shadow-[inset_0_-0.5px_0_var(--monti-fg-proposal)]",
 				FIELD_INSET,
 				HEIGHT[size],
 				className,
