@@ -106,15 +106,19 @@ async function readBody(request: Request): Promise<string> {
 	if (reader === undefined) return "";
 	const chunks: Uint8Array[] = [];
 	let size = 0;
-	for (let chunk = await reader.read(); !chunk.done; chunk = await reader.read()) {
-		size += chunk.value.byteLength;
-		if (size > MAX_BODY_BYTES) {
-			await reader.cancel();
-			throw new PayloadTooLargeError("본문이 허용 크기(1 MiB)를 넘는다");
+	try {
+		for (let chunk = await reader.read(); !chunk.done; chunk = await reader.read()) {
+			size += chunk.value.byteLength;
+			if (size > MAX_BODY_BYTES) {
+				void reader.cancel().catch(() => undefined);
+				throw new PayloadTooLargeError("본문이 허용 크기(1 MiB)를 넘는다");
+			}
+			chunks.push(chunk.value);
 		}
-		chunks.push(chunk.value);
+		return new Blob(chunks).text();
+	} finally {
+		reader.releaseLock();
 	}
-	return new Blob(chunks).text();
 }
 
 function jsonObject(text: string): Record<string, unknown> {

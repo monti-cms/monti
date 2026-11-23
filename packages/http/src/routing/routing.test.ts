@@ -361,10 +361,11 @@ it("HTTP-RUT-22 점(`.`) 중첩 쿼리의 위험한 프로토타입 키와 키 �
 });
 
 it("HTTP-RUT-23 허용 크기(1 MiB)를 넘는 요청 본문은 거절하고 정확히 1 MiB인 JSON 본문은 조립한다", async () => {
-	const oversized = streamOf(new Uint8Array(MIB + 1).fill(0x61));
-	const tooLarge = parse(core, "POST", "/api/templates", { body: oversized, type: "application/json" });
-	// 64 KiB 조각 경계에 3바이트 글자("가")가 걸치게 채운 정확히 1 MiB짜리 JSON.
+	// 64 KiB 조각 경계에 3바이트 글자("가")가 걸치게 채운 정확히 1 MiB짜리 JSON과, 글자 수는 1 MiB 이하이지만 바이트가 1 MiB + 1인 JSON.
 	const head = "a".repeat(65_536 - 10);
+	const over = new TextEncoder().encode(JSON.stringify({ name: `${head}가${"a".repeat(MIB + 1 - 14 - head.length)}` }));
+	if (over.byteLength !== MIB + 1) throw new Error(`테스트 준비 오류: 초과 본문이 ${over.byteLength}바이트다`);
+	const tooLarge = parse(core, "POST", "/api/templates", { body: streamOf(over), type: "application/json" });
 	const name = `${head}가${"a".repeat(MIB - 14 - head.length)}`;
 	const exact = new TextEncoder().encode(JSON.stringify({ name }));
 	if (exact.byteLength !== MIB) throw new Error(`테스트 준비 오류: 본문이 ${exact.byteLength}바이트다`);
