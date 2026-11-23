@@ -25,5 +25,5 @@ async function updateSchema(input: Schema, ctx: WriteContext): Promise<Schema> {
 /** `schema` 리소스: `update`는 개발 서버에서만 스키마를 바꾼다. */
 export const schema = {
 	get: defineRead({ input: z.object({}), run: getSchema }),
-	update: defineWrite({ input: schemaShape, run: updateSchema }),
+	update: defineWrite({ emit: true, input: schemaShape, run: updateSchema }),
 };

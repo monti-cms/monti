@@ -64,6 +64,7 @@ it("ENG-OP-1 runs a read called directly without a transaction", async () => {
 it("ENG-OP-2 runs a write called directly in a transaction and sends its event after the commit", async () => {
 	let inTransaction: boolean | undefined;
 	const create = defineWrite({
+		emit: true,
 		input: folderInput,
 		run: async (input, ctx) => {
 			inTransaction = ctx.db.isTransaction;
@@ -97,7 +98,7 @@ it("ENG-OP-3 입력이 스키마에 맞지 않으면 실행하지 않고 거절�
 	const run = vi.fn(async () => null);
 	// 모든 항목이 선택이라 빈 입력(`{}`)은 통과하는 입력 스키마다.
 	const input = z.object({ name: z.string().optional() });
-	const monti = createMonti(db, { folders: { rename: defineWrite({ input, run }) } });
+	const monti = createMonti(db, { folders: { rename: defineWrite({ emit: true, input, run }) } });
 	const listener = vi.fn();
 	monti.onEvent(listener);
 	// 타입 검사를 거치지 않은 호출자가 보내는 모양: `name`이 문자열이 아니다.
@@ -117,6 +118,7 @@ it("ENG-OP-3 입력이 스키마에 맞지 않으면 실행하지 않고 거절�
 
 it("ENG-OP-4 rolls back a write that fails while running and sends no event", async () => {
 	const create = defineWrite({
+		emit: true,
 		input: folderInput,
 		run: async (input, ctx) => {
 			await insertFolder(input, ctx);
@@ -138,7 +140,9 @@ it("ENG-OP-4 rolls back a write that fails while running and sends no event", as
 });
 
 it("ENG-EVT-1 keeps the write's result and the other subscribers when a subscriber fails", async () => {
-	const monti = createMonti(db, { folders: { create: defineWrite({ input: folderInput, run: insertFolder }) } });
+	const monti = createMonti(db, {
+		folders: { create: defineWrite({ emit: true, input: folderInput, run: insertFolder }) },
+	});
 	monti.onEvent(() => {
 		throw new Error("the subscriber throws");
 	});
@@ -160,7 +164,9 @@ it("ENG-EVT-1 keeps the write's result and the other subscribers when a subscrib
 });
 
 it("ENG-EVT-2 does not notify a subscriber that was removed", async () => {
-	const monti = createMonti(db, { folders: { create: defineWrite({ input: folderInput, run: insertFolder }) } });
+	const monti = createMonti(db, {
+		folders: { create: defineWrite({ emit: true, input: folderInput, run: insertFolder }) },
+	});
 	const listener = vi.fn();
 	const off = monti.onEvent(listener);
 	off();
@@ -174,6 +180,7 @@ it("ENG-EVT-2 does not notify a subscriber that was removed", async () => {
 it("ENG-TX-1 shares one transaction across a transaction callback's calls and sends their events in call order after the commit", async () => {
 	const contexts: ReadContext["db"][] = [];
 	const create = defineWrite({
+		emit: true,
 		input: folderInput,
 		run: async (input, ctx) => {
 			contexts.push(ctx.db);
@@ -181,6 +188,7 @@ it("ENG-TX-1 shares one transaction across a transaction callback's calls and se
 		},
 	});
 	const add = defineWrite({
+		emit: true,
 		input: folderInput,
 		run: async (input, ctx) => {
 			contexts.push(ctx.db);
@@ -240,7 +248,9 @@ it("ENG-TX-1 shares one transaction across a transaction callback's calls and se
 });
 
 it("ENG-TX-2 rolls back a transaction callback that fails midway and sends no event", async () => {
-	const monti = createMonti(db, { folders: { create: defineWrite({ input: folderInput, run: insertFolder }) } });
+	const monti = createMonti(db, {
+		folders: { create: defineWrite({ emit: true, input: folderInput, run: insertFolder }) },
+	});
 	const listener = vi.fn();
 	monti.onEvent(listener);
 
@@ -262,7 +272,7 @@ it("ENG-TX-3 shows only the writes in a dryRun callback, rolls them back and sen
 		input: z.object({}),
 		run: async (_input, ctx) => ctx.db.selectFrom("folders").select("name").execute(),
 	});
-	const create = defineWrite({ input: folderInput, run: insertFolder });
+	const create = defineWrite({ emit: true, input: folderInput, run: insertFolder });
 	const monti = createMonti(db, { folders: { create, list } });
 	const listener = vi.fn();
 	monti.onEvent(listener);
@@ -285,7 +295,7 @@ it("ENG-TX-3 shows only the writes in a dryRun callback, rolls them back and sen
 });
 
 it("ENG-PLG-1 connects a plugin's operations and onEvent to the engine", async () => {
-	const create = defineWrite({ input: folderInput, run: insertFolder });
+	const create = defineWrite({ emit: true, input: folderInput, run: insertFolder });
 	const pluginListener = vi.fn();
 	let namesAtEvent: Promise<string[]> | undefined;
 	const plugin: Plugin = {
@@ -365,6 +375,7 @@ it("ENG-SPEC-1 lists every operation with its name, its kind and its input as JS
 
 it("ENG-TX-4 turns a PostgreSQL unique violation in a write into CONFLICT and rolls it back", async () => {
 	const create = defineWrite({
+		emit: true,
 		input: folderInput,
 		run: async (input, ctx) => {
 			await insertFolder(input, ctx);
@@ -407,8 +418,9 @@ async function ignoreConflict(tx: FolderWrites, followUp: boolean): Promise<stri
 }
 
 it("ENG-TX-5 콜백이 잡아 무시한 CONFLICT 뒤에 정상 반환하거나 후속 DB 쓰기를 이어가도 transaction과 dryRun은 CONFLICT로 실패한다", async () => {
-	const add = defineWrite({ input: folderInput, run: insertFolder });
+	const add = defineWrite({ emit: true, input: folderInput, run: insertFolder });
 	const create = defineWrite({
+		emit: true,
 		input: folderInput,
 		run: async (input, ctx) => {
 			await insertFolder(input, ctx);
@@ -442,6 +454,7 @@ it("ENG-TX-5 콜백이 잡아 무시한 CONFLICT 뒤에 정상 반환하거나 �
 
 it("ENG-EVT-3 구독자가 받은 이벤트 값을 고치려 해도 다른 구독자와 호출자의 반환값은 바뀌지 않는다", async () => {
 	const create = defineWrite({
+		emit: true,
 		input: folderInput,
 		run: async (input, ctx) => ({ ...(await insertFolder(input, ctx)), name: input.name }),
 	});
@@ -463,6 +476,23 @@ it("ENG-EVT-3 구독자가 받은 이벤트 값을 고치려 해도 다른 구�
 	expect(received).toEqual({ id: input.id, name: "Photos" });
 });
 
+it("ENG-EVT-4 emit을 켜지 않은 쓰기 Operation은 커밋되어도 이벤트 구독자에게 통지하지 않는다", async () => {
+	const create = defineWrite({ input: folderInput, run: insertFolder });
+	const monti = createMonti(db, { folders: { create } });
+	const listener = vi.fn();
+	monti.onEvent(listener);
+	const input = { id: randomUUID(), name: "Photos" };
+
+	const output = await monti.folders.create(input);
+
+	// ENG-EVT-4.1
+	expect(output).toEqual({ id: input.id });
+	// ENG-EVT-4.1
+	expect(await folderNames()).toEqual(["Photos"]);
+	// ENG-EVT-4.2
+	expect(listener).not.toHaveBeenCalled();
+});
+
 /** 정상 폴더 하나를 만든 뒤, 없는 부모를 가리켜 외래 키 오류가 나는 폴더 쓰기를 잡아 무시하고 정상 반환한다. */
 async function ignoreForeignKeyError(tx: Record<"folders", FolderWrites["folders"]>): Promise<string> {
 	await tx.folders.add({ id: randomUUID(), name: "Photos" });
@@ -471,8 +501,9 @@ async function ignoreForeignKeyError(tx: Record<"folders", FolderWrites["folders
 }
 
 it("ENG-TX-6 콜백 안에서 DB 쓰기가 실패하면 콜백이 그 오류를 잡아도 트랜잭션과 드라이런은 실패한다", async () => {
-	const add = defineWrite({ input: folderInput, run: insertFolder });
+	const add = defineWrite({ emit: true, input: folderInput, run: insertFolder });
 	const create = defineWrite({
+		emit: true,
 		input: folderInput,
 		run: async (input, ctx) => {
 			const parent_id = randomUUID();

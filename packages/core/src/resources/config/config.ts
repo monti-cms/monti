@@ -17,5 +17,5 @@ async function updateConfig(input: z.infer<typeof nameInput>, ctx: WriteContext)
 /** `config` 리소스: `update`는 개발 서버에서만 사이트 이름을 바꾼다. */
 export const config = {
 	get: defineRead({ input: z.object({}), run: getConfig }),
-	update: defineWrite({ input: nameInput, run: updateConfig }),
+	update: defineWrite({ emit: true, input: nameInput, run: updateConfig }),
 };

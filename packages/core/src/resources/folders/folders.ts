@@ -146,6 +146,6 @@ async function rejectCycle(ctx: WriteContext, id: string, parentId: string): Pro
 /** The `folders` resource: folder trees of the collections and of the media. */
 export const folders = {
 	list: defineRead({ input: listInput, run: listFolders }),
-	create: defineWrite({ input: createInput, run: createFolder }),
-	update: defineWrite({ input: updateInput, run: updateFolder }),
+	create: defineWrite({ emit: true, input: createInput, run: createFolder }),
+	update: defineWrite({ emit: true, input: updateInput, run: updateFolder }),
 };

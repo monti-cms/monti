@@ -20,9 +20,9 @@ async function listAll(_: unknown, ctx: ReadContext): Promise<TrashItem[]> {
  * 폴더와 함께 보이고 되살아나고 지워진다.
  */
 export const trash = {
-	move: defineWrite({ input: idInput, run: moveItem }),
+	move: defineWrite({ emit: true, input: idInput, run: moveItem }),
 	list: defineRead({ input: z.object({}), run: listAll }),
 	get: defineRead({ input: idInput, run: getItem }),
-	restore: defineWrite({ input: idInput, run: restoreItem }),
-	delete: defineWrite({ input: deleteInput, run: deleteItems }),
+	restore: defineWrite({ emit: true, input: idInput, run: restoreItem }),
+	delete: defineWrite({ emit: true, input: deleteInput, run: deleteItems }),
 };

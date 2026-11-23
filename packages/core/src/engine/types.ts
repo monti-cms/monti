@@ -157,6 +157,8 @@ export interface ReadOperation<TInput, TOutput> {
 
 export interface WriteOperation<TInput, TOutput> {
 	kind: "write";
+	/** `true`인 쓰기만 커밋 뒤 `onEvent` 구독자에게 통지한다. 생략하면 통지하지 않는다. */
+	emit?: boolean;
 	input: z.ZodType<TInput>;
 	run(input: TInput, ctx: WriteContext): Promise<TOutput>;
 }
