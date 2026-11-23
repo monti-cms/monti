@@ -55,6 +55,8 @@ function changeLock(acquire: Acquire) {
 	return { hold, release };
 }
 
+type ChangeLock = ReturnType<typeof changeLock>;
+
 function ignore(): void {}
 
 /** 스키마 파일의 변경: 새 스키마의 글자로 바꾸고 공유 스키마에 반영한다. */
@@ -79,20 +81,39 @@ function configChange(shared: MontiState, changed: MontiConfig): FileChange {
 	return { file: shared.configFile, text, apply };
 }
 
+/** 단계가 고쳐 쓰는 사본과, 이 단계가 스키마를 이미 바꿨는지. */
+interface StageCopy {
+	schema: Schema;
+	config: MontiConfig;
+	schemaSet: boolean;
+}
+
+/**
+ * 단계의 `setSchema`: 잠금을 잡은 뒤의 이전 스키마를 돌려준다. 이 단계가 아직 바꾸지 않았으면 단계를 만들 때 본 사본은
+ * 앞선 단계의 커밋 전일 수 있으므로 공유 스키마를 본다. 받은 스키마는 사본으로 담아, 호출자가 고쳐도 엔진이 바뀌지 않는다.
+ */
+function schemaSetter(shared: MontiState, copy: StageCopy, files: ReturnType<typeof fileChanges>, lock: ChangeLock) {
+	return async function setSchema(db: Transaction<Database>, schema: Schema): Promise<Schema> {
+		allowChanges(copy.config);
+		await lock.hold(db);
+		const previous = copy.schemaSet ? copy.schema : shared.schema;
+		const stored = structuredClone(schema);
+		Object.assign(copy, { schema: stored, schemaSet: true });
+		files.add(schemaChange(shared, stored));
+		return previous;
+	};
+}
+
 function stageOf(shared: MontiState, acquire: Acquire, dryRun: boolean): Stage {
-	const copy = { schema: shared.schema, config: dryRun ? dryRunConfig(shared.config) : shared.config };
+	const config = dryRun ? dryRunConfig(shared.config) : shared.config;
+	const copy: StageCopy = { schema: shared.schema, config, schemaSet: false };
 	const files = fileChanges();
 	const lock = changeLock(acquire);
-	async function setSchema(db: Transaction<Database>, schema: Schema): Promise<void> {
+	const setSchema = schemaSetter(shared, copy, files, lock);
+	async function setConfig(db: Transaction<Database>, changed: Pick<MontiConfig, "name">): Promise<void> {
 		allowChanges(copy.config);
 		await lock.hold(db);
-		copy.schema = schema;
-		files.add(schemaChange(shared, schema));
-	}
-	async function setConfig(db: Transaction<Database>, config: Pick<MontiConfig, "name">): Promise<void> {
-		allowChanges(copy.config);
-		await lock.hold(db);
-		copy.config = { ...copy.config, name: config.name };
+		copy.config = { ...copy.config, name: changed.name };
 		files.add(configChange(shared, copy.config));
 	}
 	function context(db: Transaction<Database>): WriteContext {
@@ -102,9 +123,13 @@ function stageOf(shared: MontiState, acquire: Acquire, dryRun: boolean): Stage {
 		};
 		return { db, schema: copy.schema, config: copy.config, storage: copy.config?.storage, ...changes };
 	}
+	/** 임시 파일을 지우다 실패해도 차례는 넘긴다: 넘기지 않으면 엔진의 다음 스키마·설정 변경이 영영 기다린다. */
 	async function release(): Promise<void> {
-		await files.discard();
-		lock.release();
+		try {
+			await files.discard();
+		} finally {
+			lock.release();
+		}
 	}
 	return { context, prepare: files.prepare, commit: files.commit, release };
 }

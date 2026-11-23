@@ -12,7 +12,7 @@ interface CatalogColumn {
 }
 
 /** 연결의 현재 스키마(`current_schema()`)에서 컬렉션 주석이 달린 테이블 이름들. */
-async function collectionsInDatabase(db: QueryExecutorProvider): Promise<string[]> {
+export async function collectionsInDatabase(db: QueryExecutorProvider): Promise<string[]> {
 	const { rows } = await sql<{ name: string }>`
 		select c.relname as name
 		from pg_class c join pg_namespace n on n.oid = c.relnamespace

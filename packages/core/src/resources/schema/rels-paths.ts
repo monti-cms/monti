@@ -1,6 +1,7 @@
 import { sql } from "kysely";
 import type { CollectionSchema, Schema, WriteContext } from "../../engine/types";
 import { isMany, slotsOf } from "../entries/slots";
+import { collectionsInDatabase } from "./database-catalog";
 
 /** 컬렉션의 `<collection>_rels`에 담기는 다건 참조 경로들(`_rels.path`이자 `media_uses.field_path`). */
 function relsPathsOf(collection: CollectionSchema): string[] {
@@ -27,6 +28,21 @@ export async function removeRelsPaths(ctx: WriteContext, prev: Schema, next: Sch
 			.deleteFrom("media_uses")
 			.where("source_kind", "=", "entry")
 			.where("field_path", "in", paths)
+			.where(sql<boolean>`source_id in (select id from ${sql.table(key)})`)
+			.execute();
+	}
+}
+
+/**
+ * `next`에 없어 동기화가 지울 컬렉션(DB에 있는 컬렉션 테이블 중 `next`에 없는 것)의 글을 가리키는 `media_uses` 행을 지운다.
+ * 동기화가 지울 테이블과 같은 목록이다. 컬렉션 테이블이 지워지기 전에 불러야 그 글의 `id`를 읽을 수 있다.
+ */
+export async function removeDroppedUses(ctx: WriteContext, next: Schema): Promise<void> {
+	const dropped = (await collectionsInDatabase(ctx.db)).filter((key) => !Object.hasOwn(next.collections, key));
+	for (const key of dropped) {
+		await ctx.db
+			.deleteFrom("media_uses")
+			.where("source_kind", "=", "entry")
 			.where(sql<boolean>`source_id in (select id from ${sql.table(key)})`)
 			.execute();
 	}

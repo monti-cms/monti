@@ -105,8 +105,8 @@ export interface ReadContext<TTables = {}> {
 
 export interface WriteContext<TTables = {}> extends ReadContext<TTables> {
   db: Transaction<Database & TTables>;
-  setSchema: (schema: Schema) => void;                    // 개발 서버가 아니면 FORBIDDEN
-  setConfig: (config: Pick<MontiConfig, "name">) => void; // 개발 서버가 아니면 FORBIDDEN
+  setSchema: (schema: Schema) => Promise<Schema>;                  // 개발 서버가 아니면 FORBIDDEN. 차례를 받은 뒤의 이전 스키마를 돌려준다
+  setConfig: (config: Pick<MontiConfig, "name">) => Promise<void>; // 개발 서버가 아니면 FORBIDDEN
 }
 
 export type ErrorCode = "BAD_REQUEST" | "UNAUTHORIZED" | "FORBIDDEN" | "NOT_FOUND" | "CONFLICT";

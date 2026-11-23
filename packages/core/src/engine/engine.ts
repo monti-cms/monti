@@ -150,7 +150,7 @@ function transactionOf<R extends ResourceTree>(
 
 /**
  * 쓰기만 보이는 콜백을 실제와 같이 실행한 뒤 롤백한다. 쌓인 이벤트와 단계는 버린다. 단계의 저장소는 롤백으로 되돌릴 수
- * 없는 티켓 발급(`ticket`)과 삭제(`remove`)를 `BAD_REQUEST`로 거절한다.
+ * 없는 티켓 발급(`ticket`)과 삭제(`remove`)를 `BAD_REQUEST`로 거절한다. 롤백이 실패해도 단계의 차례는 넘긴다.
  */
 function dryRunOf<R extends ResourceTree>(db: Kysely<Database>, state: State, tree: ResourceTree) {
 	return async function dryRun<T>(fn: (tx: MontiWriteClient<R>) => Promise<T>): Promise<T> {
@@ -161,8 +161,11 @@ function dryRunOf<R extends ResourceTree>(db: Kysely<Database>, state: State, tr
 			const client = buildClient(tree, "", callbackRunner(trx, stage, [], aborts), false);
 			return await runSettled(() => fn(client as MontiWriteClient<R>), aborts);
 		} finally {
-			await trx.rollback().execute();
-			await stage.release();
+			try {
+				await trx.rollback().execute();
+			} finally {
+				await stage.release();
+			}
 		}
 	};
 }

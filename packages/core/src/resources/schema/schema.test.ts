@@ -162,6 +162,9 @@ it("SCH-UPD-1 개발 서버에서 스키마를 바꾸면 현재 스키마와 스
 
 	// SCH-UPD-1.1
 	expect(output).toEqual(changed);
+	// 받은 반환값을 밖에서 고쳐도 엔진의 현재 스키마는 새 스키마 그대로여야 한다.
+	output.locales.push("fr");
+	delete output.collections.tags;
 	// SCH-UPD-1.2
 	expect(await monti.schema.get({})).toEqual(changed);
 	// SCH-UPD-1.3

@@ -131,9 +131,10 @@ export interface ReadContext {
 export interface WriteContext extends ReadContext {
 	db: Transaction<Database>;
 	/**
-	 * 트랜잭션의 스키마 사본을 바꾼다. 다른 스키마·설정 변경과 차례를 지키며, 커밋 뒤 공유 상태와 파일에 반영된다.
+	 * 트랜잭션의 스키마 사본을 바꾸고, 차례를 받은 뒤의 이전 스키마를 돌려준다. 다른 스키마·설정 변경과 차례를 지키며, 커밋
+	 * 뒤 공유 상태와 파일에 반영된다. 받은 스키마는 사본으로 담는다.
 	 */
-	setSchema: (schema: Schema) => Promise<void>;
+	setSchema: (schema: Schema) => Promise<Schema>;
 	/** 트랜잭션의 사이트 이름 사본을 바꾼다. 다른 스키마·설정 변경과 차례를 지키며, 커밋 뒤 공유 상태와 파일에 반영된다. */
 	setConfig: (config: Pick<MontiConfig, "name">) => Promise<void>;
 }

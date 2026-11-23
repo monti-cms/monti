@@ -69,7 +69,7 @@ const reservedKeys = [
 ];
 
 /** 고정 테이블 이름도, `_data`·`_rels`로 끝나는 이름도 아닌 컬렉션 키인지. */
-function isCollectionKey(key: string): boolean {
+export function isCollectionKey(key: string): boolean {
 	return !reservedKeys.includes(key) && !key.endsWith("_data") && !key.endsWith("_rels");
 }
 
