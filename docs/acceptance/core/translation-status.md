@@ -6,7 +6,7 @@
 |---|---|---|
 | `translationStatus.get` | 비원문 언어 초안의 필드·본문 말단 블록별 상태(`unseen`·`seen`·`outdated`), `seen_value`, `link`, `exclude` 조회(원문 휴지통 참조 유지) | 원문 언어 `BAD_REQUEST`, 휴지통·없는 글/언어 `NOT_FOUND` |
 | `translationStatus.list` | 조건(`id`, `collection`, `locale`)에 맞는 활성 글 번역 언어별 `outdated_count`·`unseen_count` 집계 | 없는 컬렉션 `BAD_REQUEST` |
-| `translationStatus.update` | 필드 확인(`true`/`null`), 본문 블록 연결(`{ link }`)·번역 제외(`{ exclude: true }`)·초기화(`null`) 기록 | 원문 언어·없는 필드/블록·컨테이너 연결 `BAD_REQUEST`, 휴지통·없는 글/언어 `NOT_FOUND` |
+| `translationStatus.update` | 필드 확인(`true`/`null`, 서로 다른 필드 동시 확인 보존, 원문 언어 변경과 겹쳐도 이전 원문 기준 기록 방지), 본문 블록 연결(`{ link }`)·번역 제외(`{ exclude: true }`)·초기화(`null`) 기록 | 원문 언어·없는 필드/블록·컨테이너 연결 `BAD_REQUEST`, 휴지통·없는 글/언어 `NOT_FOUND` |
 
 ---
 
@@ -309,5 +309,27 @@
 - **행동**: 해당 글의 `id`, `locale: "en"`과 함께 필드 키 하나를 `true`로 넣어 `fields`로 `translationStatus.update`를 실행한다
 - **결과**:
   - `TST-UPD-14.1` `NOT_FOUND` 오류를 던진다
+
+</details>
+
+<details>
+<summary><strong><code>TST-UPD-15</code></strong> 같은 번역 언어에서 서로 다른 두 필드를 동시에 확인해도 두 확인 기록이 모두 남는다</summary>
+
+- **전제**: `ko` 원문에 필드 둘(첫 번째 필드, 두 번째 필드)이 있는 활성 글에 `en` 번역 언어 작업본이 있다
+- **행동**: 첫 번째 필드만 `true`로 확인하는 `translationStatus.update`와 두 번째 필드만 `true`로 확인하는 `translationStatus.update`를, 두 호출이 모두 변경 전 `translation_seen`을 읽은 뒤 쓰기 전에 겹치도록 실행한다
+- **결과**:
+  - `TST-UPD-15.1` 두 호출 모두 오류 없이 끝난다
+  - `TST-UPD-15.2` `translationStatus.get` 결과에서 두 필드 모두 `status: "seen"`이다
+
+</details>
+
+<details>
+<summary><strong><code>TST-UPD-16</code></strong> 원문 언어를 바꾸는 동안 번역 상태 확인이 겹쳐도 이전 원문 기준 기록이 남지 않는다</summary>
+
+- **전제**: `ko` 원문(`title: "한국어 제목"`), `en`(`title: "English title"`), `ja` 번역 언어 작업본을 가진 활성 글이 있다
+- **행동**: `ja`의 `title`을 확인하는 `translationStatus.update`가 `"ko"` 원문 값을 읽은 뒤 `translation_seen`에 쓰기 전에, `entries.setSourceLocale({ id, locale: "en" })`이 별도 연결에서 커밋되도록 실행한다
+- **결과**:
+  - `TST-UPD-16.1` `setSourceLocale`이 성공해 `source_locale`이 `"en"`이 된다
+  - `TST-UPD-16.2` `ja`의 `translationStatus.get` 결과에서 `title`의 `seen_value`가 이전 `"ko"` 원문 값이 아니라 새 `"en"` 원문 값(`"English title"`)과 같다
 
 </details>

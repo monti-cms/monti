@@ -444,6 +444,7 @@ packages/core/src/
 | 2026-11-23 | 기반 계층 보강: 동시 `migrate`·`migrateMonti`·`schema.update`·`config.update` 직렬화 및 원자적 파일 교체(파일 쓰기 실패 시 DB 롤백), `media_uses` 복합 기본 키, `schema.get`·`config.get`·`onEvent` 값 사본 격리, 콜백 안 모든 DB 오류의 트랜잭션·드라이런 실패 보장, 플러그인 이름·기본 메서드 충돌 차단, `planSchemaDiff` 이전 스냅샷 식별자 검증, `current_schema()` 기준 카탈로그 조회, `media.startUpload` 이벤트 미통지를 확정한다. |
 | 2026-11-23 | 쓰기는 기본으로 이벤트를 보내고, 비밀값을 돌려주는 쓰기(admin·session·keys·`media.startUpload`)만 제외 목록으로 뺀다 (소유자 승인 2026-11-23) |
 | 2026-11-23 | 인증·키·폴더·템플릿 보강: `0001-initial`에 `admin` 단일 행·`api_keys(name)`·활성 `folders` 위치별 이름·`templates(collection, name)` DB 고유 제약을 추가한다. `session.create`는 미등록 이메일에서도 타이밍 노출을 막기 위해 더미 `verifyPassword`를 실행하고, `admin.update`는 `admin` 행 잠금으로 동시 로그인·수정 경합을 차단한다. `keys.check`는 복호화 실패를 비밀값 노출 없이 `BAD_REQUEST`로 변환한다. `folders.update`와 `templates.update`는 행·범위 잠금으로 순환 이동·휴지통 이동·영구 삭제·동시 필드 편집 경합을 막는다. |
+| 2026-11-23 | 글·휴지통·번역 상태·리치 텍스트·미디어 보강: `entries`·`trash`·`translationStatus`의 동시 슬러그/언어/복제/참조 교체/필드·다언어 편집/휴지통 이동·복원·영구 삭제 경합을 잠금으로 차단한다. `rich-text`는 블록 최대 중첩 32단계와 내장 `link` 마크 `href` 허용 스킴(`http:`, `https:`, `mailto:`, `/`, `#`)을 강제한다. `media.create`/`update`는 `media.startUpload`로 발급된 티켓 키만 허용하고(교체·삭제 대기 키는 구분해 차단, 이미 등록된 키는 `CONFLICT` 우선, 동일 키 재전달은 성공 유지) 이미지 `width`·`height` 상한을 PostgreSQL `integer` 최대치(`2_147_483_647`)로 제한한다. |
 
 ## 11. 정하지 않은 것
 

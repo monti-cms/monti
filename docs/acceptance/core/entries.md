@@ -4,16 +4,16 @@
 
 | 액션 | 하는 일 | 주요 거절 |
 |---|---|---|
-| `entries.create` | 원문 언어 초안(`status: "draft"`) 생성(`slug`·`required` 빈칸 허용, `__preset_id` 지원) 및 `media_uses` 기록 | 스키마·필드·본문·휴지통 참조 오류 `BAD_REQUEST`, 슬러그 중복 `CONFLICT` |
+| `entries.create` | 원문 언어 초안(`status: "draft"`) 생성(`slug`·`required` 빈칸 허용, `__preset_id` 지원) 및 `media_uses` 기록 | 스키마·필드·본문·휴지통 참조 오류 `BAD_REQUEST`, 슬러그 중복(동시 생성 포함) `CONFLICT` |
 | `entries.get` · `list` | `status`(기본 `"published"` / `"draft"`) 조회. 발행본은 휴지통 참조를 `fields`에서 제외하고 초안은 원래 ID를 유지한다 | 없는 컬렉션 `BAD_REQUEST`, 미발행·휴지통·없는 언어 `NOT_FOUND` |
-| `entries.update` | 단건은 전달된 `slug`·`fields`·`body`·`folder_id`만 갱신(기존 경로의 휴지통 참조 유지 허용), 다건은 폴더 일괄 이동 | 형식·새 휴지통 참조·폴더 범위 오류 `BAD_REQUEST`, 휴지통·없는 언어 `NOT_FOUND`, 슬러그 중복 `CONFLICT` |
+| `entries.update` | 단건은 전달된 `slug`·`fields`·`body`·`folder_id`만 갱신(기존 경로의 휴지통 참조 유지 허용, 독립 필드·다언어 동시 수정 보존, 휴지통 이동과 겹쳐도 사용처 보존), 다건은 폴더 일괄 이동 | 형식·새 휴지통 참조·폴더 범위 오류 `BAD_REQUEST`, 휴지통·없는 언어 `NOT_FOUND`, 슬러그 중복(동시 수정 포함) `CONFLICT` |
 | `entries.publish` | 초안을 발행본(`status: "published"`)으로 저장(`slug`·필수값·모든 참조 필드와 본문의 활성 상태 검사) | 빈 슬러그·필수값·휴지통 참조·사라진 분기 `BAD_REQUEST`, 휴지통·없는 언어 `NOT_FOUND`, 발행 슬러그 중복 `CONFLICT` |
 | `entries.unpublish` | 해당 언어 발행본만 삭제하고 초안과 `media_uses`는 유지(이미 미발행이어도 성공) | 휴지통·없는 언어 `NOT_FOUND` |
-| `entries.duplicate` | 원문 언어 초안만 미발행 새 글로 복제(`slug` 생략 시 `-copy` 자동 부여, `null` 유지) | 형식 오류·휴지통 참조 `BAD_REQUEST`, 휴지통 `NOT_FOUND`, 슬러그 중복 `CONFLICT` |
-| `entries.replaceReferences` | `from_id`를 가리키는 모든 언어·상태·휴지통 글의 `relation`을 `into_id`로 일괄 교체 | 자기 자신·다른 컬렉션 `BAD_REQUEST`, 없는 ID·휴지통 `into_id` `NOT_FOUND` |
-| `entries.addLocale` | 비원문 언어 초안 추가(`slug` 생략 시 원문 슬러그 복사) 및 `media_uses` 갱신 | 없는 언어·형식·휴지통 참조 `BAD_REQUEST`, 휴지통 `NOT_FOUND`, 중복 언어·슬러그 `CONFLICT` |
-| `entries.removeLocale` | 비원문 언어의 초안·발행본 즉시 삭제 및 남은 언어 기준 `media_uses` 갱신 | 원문 언어 삭제 `BAD_REQUEST`, 휴지통·없는 언어 `NOT_FOUND` |
-| `entries.setSourceLocale` | 기준 언어 변경 및 모든 언어의 `translation_seen` 초기화 | 휴지통·없는 언어 `NOT_FOUND` |
+| `entries.duplicate` | 원문 언어 초안만 미발행 새 글로 복제(`slug` 생략 시 `-copy` 자동 부여, 동시 복제 시 서로 다른 번호 슬러그 배정, `null` 유지) | 형식 오류·휴지통 참조 `BAD_REQUEST`, 휴지통 `NOT_FOUND`, 슬러그 중복 `CONFLICT` |
+| `entries.replaceReferences` | `from_id`를 가리키는 모든 언어·상태·휴지통 글의 `relation`을 `into_id`로 일괄 교체(동시 다건 관계 편집과 겹쳐도 추가 관계 보존) | 자기 자신·다른 컬렉션 `BAD_REQUEST`, 없는 ID·휴지통 `into_id` `NOT_FOUND` |
+| `entries.addLocale` | 비원문 언어 초안 추가(`slug` 생략 시 원문 슬러그 복사) 및 `media_uses` 갱신 | 없는 언어·형식·휴지통 참조 `BAD_REQUEST`, 휴지통 `NOT_FOUND`, 중복 언어·슬러그(동시 추가 포함) `CONFLICT` |
+| `entries.removeLocale` | 비원문 언어의 초안·발행본 즉시 삭제 및 남은 언어 기준 `media_uses` 갱신(원문 언어 변경·수정·발행과 겹쳐도 원문 작업본 보존 및 삭제 언어 잔존 방지) | 원문 언어 삭제 `BAD_REQUEST`, 휴지통·없는 언어 `NOT_FOUND` |
+| `entries.setSourceLocale` | 기준 언어 변경 및 모든 언어의 `translation_seen` 초기화(원문 언어 삭제와 겹쳐도 원문 작업본 보존) | 휴지통·없는 언어 `NOT_FOUND` |
 
 > **공통 계약**: 반환 모양은 `{ id, collection, locale, source_locale, folder_id, slug, fields, body?, published_at }`이며, `media_uses.field_path`는 최상위 `"<필드키>"`, 조건부 하위 `"<조건필드키>.<분기>.<하위필드키>"`, 본문 `"body"`를 사용한다.
 
@@ -213,6 +213,17 @@
 - **결과**:
   - `ENT-CRT-17.1` `CONFLICT` 오류를 던진다
   - `ENT-CRT-17.2` `<collection>` 테이블의 행은 원래 하나 그대로이다
+
+</details>
+
+<details>
+<summary><strong><code>ENT-CRT-18</code></strong> 같은 컬렉션과 언어에 같은 슬러그로 글을 동시에 두 번 만들면 한 건만 성공하고 나머지는 거절된다</summary>
+
+- **전제**: 스키마에 컬렉션과 `locale`이 있고 컬렉션 테이블들이 비어 있다
+- **행동**: 같은 `collection`, 같은 `locale`, 같은 `slug`로 `entries.create` 두 건을, 두 호출이 모두 슬러그가 비어 있음을 확인한 뒤 어느 쪽도 행을 넣기 전에 겹치도록 실행한다
+- **결과**:
+  - `ENT-CRT-18.1` 한 건은 성공하고 나머지 한 건은 `CONFLICT` 오류를 던진다
+  - `ENT-CRT-18.2` `<collection>_data` 테이블에 해당 `locale`·`status: "draft"`·`slug`를 가진 활성 글 행이 정확히 하나만 남는다
 
 </details>
 
@@ -598,6 +609,53 @@
 
 </details>
 
+<details>
+<summary><strong><code>ENT-UPD-19</code></strong> 서로 다른 두 글의 작업본 슬러그를 같은 값으로 동시에 바꾸면 한 건만 성공하고 나머지는 거절된다</summary>
+
+- **전제**: 같은 컬렉션·언어에 서로 다른 `slug`의 활성 글 두 개가 있다
+- **행동**: 두 글의 `slug`를 같은 새 값으로 바꾸는 `entries.update` 두 건을, 두 호출이 모두 새 슬러그가 비어 있음을 확인한 뒤 어느 쪽도 쓰기 전에 겹치도록 실행한다
+- **결과**:
+  - `ENT-UPD-19.1` 한 건은 성공하고 나머지 한 건은 `CONFLICT` 오류를 던진다
+  - `ENT-UPD-19.2` `<collection>_data` 테이블에 해당 `locale`·`status: "draft"`·새 `slug`를 가진 활성 글 행이 정확히 하나만 남는다
+
+</details>
+
+<details>
+<summary><strong><code>ENT-UPD-20</code></strong> 같은 글의 필드와 본문을 동시에 각각 수정해도 두 변경이 모두 남고 미디어 사용처가 일치한다</summary>
+
+- **전제**: `storage`가 설정되어 있고 `body: true`와 `text` 필드가 있는 컬렉션의 활성 글 하나와 활성 미디어 하나가 있다
+- **행동**: 해당 글의 `fields`만 바꾸는 `entries.update`와 해당 미디어를 참조하는 `body`만 바꾸는 `entries.update`를, 두 호출이 모두 변경 전 작업본을 읽은 뒤 어느 쪽도 `<collection>_data`에 쓰기 전에 겹치도록 실행한다
+- **결과**:
+  - `ENT-UPD-20.1` 두 호출 모두 오류 없이 끝난다
+  - `ENT-UPD-20.2` `<collection>_data` 테이블의 작업본에 바뀐 `fields`와 바뀐 `body`가 모두 저장되어 있다
+  - `ENT-UPD-20.3` `media_uses`에 해당 글의 `"body"` 경로로 그 미디어 행이 정확히 하나 있다
+
+</details>
+
+<details>
+<summary><strong><code>ENT-UPD-21</code></strong> 같은 글의 서로 다른 두 언어를 동시에 수정해도 두 언어 내용과 미디어 사용처가 모두 남는다</summary>
+
+- **전제**: `storage`가 설정되어 있고 `ko` 원문과 `en` 번역 언어 작업본을 가진 활성 글 하나와 활성 미디어 둘(첫 번째 미디어, 두 번째 미디어)이 있다
+- **행동**: `ko` 작업본에 첫 번째 미디어를 넣는 `entries.update`와 `en` 작업본에 두 번째 미디어를 넣는 `entries.update`를, 두 호출이 모두 작업본을 읽은 뒤 어느 쪽도 `<collection>_data`와 `media_uses`에 쓰기 전에 겹치도록 실행한다
+- **결과**:
+  - `ENT-UPD-21.1` 두 호출 모두 오류 없이 끝난다
+  - `ENT-UPD-21.2` `<collection>_data` 테이블의 `ko` 작업본에는 첫 번째 미디어가, `en` 작업본에는 두 번째 미디어가 저장되어 있다
+  - `ENT-UPD-21.3` `media_uses`에 해당 글의 사용처로 첫 번째 미디어와 두 번째 미디어가 각각 정확히 하나씩 남아 있다
+
+</details>
+
+<details>
+<summary><strong><code>ENT-UPD-22</code></strong> 글을 휴지통에 보내는 동안 그 글을 수정해도 휴지통에 들어간 글의 작업본과 미디어 사용처가 지워지지 않는다</summary>
+
+- **전제**: `storage`가 설정되어 있고 활성 미디어를 참조해 `media_uses` 행이 있는 활성 글 하나가 있다
+- **행동**: 해당 글의 미디어 참조를 유지한 채 다른 필드를 바꾸는 `entries.update`가 작업본을 읽은 뒤 `media_uses`를 갱신하기 전에, 그 글의 `trash.move`가 별도 연결에서 커밋되도록 실행한다
+- **결과**:
+  - `ENT-UPD-22.1` `trash.move`가 성공해 `<collection>` 테이블에 `trashed_at`이 설정된다
+  - `ENT-UPD-22.2` `entries.update`는 `NOT_FOUND` 오류를 던진다
+  - `ENT-UPD-22.3` 작업본 내용과 `media_uses`의 미디어 사용처 행이 휴지통 이동 전 그대로 남아 있다
+
+</details>
+
 ## 4. 발행 (`publish`)
 
 ### 핵심 요구사항
@@ -884,6 +942,17 @@
 
 </details>
 
+<details>
+<summary><strong><code>ENT-DUP-8</code></strong> 같은 글을 슬러그 없이 동시에 두 번 복제하면 서로 다른 번호의 슬러그를 배정받는다</summary>
+
+- **전제**: 원문 작업본 `slug`가 `"hello"`인 활성 글 하나가 있다
+- **행동**: `slug`를 생략해 같은 글의 `entries.duplicate` 두 건을, 두 호출이 모두 비어 있는 번호 슬러그를 확인한 뒤 어느 쪽도 행을 넣기 전에 겹치도록 실행한다
+- **결과**:
+  - `ENT-DUP-8.1` 두 호출 모두 오류 없이 끝난다
+  - `ENT-DUP-8.2` 생성된 두 복제 글의 작업본 `slug`가 `"hello-copy"`와 `"hello-copy-2"`이다
+
+</details>
+
 ## 7. 참조 교체 (`replaceReferences`)
 
 ### 핵심 요구사항
@@ -1000,6 +1069,17 @@
 
 </details>
 
+<details>
+<summary><strong><code>ENT-REF-11</code></strong> 다건 관계 필드를 편집하는 동안 참조 교체가 동시에 실행되어도 새로 추가한 관계가 사라지지 않는다</summary>
+
+- **전제**: `authors` 컬렉션에 활성 글 셋(옛 작성자, 새 작성자, 추가 작성자)이 있고, `posts` 컬렉션의 글 하나가 다건 `relation` 필드에 `[옛 작성자]`를 가지고 있다
+- **행동**: `from_id: 옛 작성자`, `into_id: 새 작성자`로 실행한 `entries.replaceReferences`가 `[옛 작성자]`를 읽은 뒤 교체 쓰기를 실행하기 전에, `posts` 글의 다건 `relation`을 `[옛 작성자, 추가 작성자]`로 바꾸는 `entries.update`가 별도 연결에서 커밋되도록 실행한다
+- **결과**:
+  - `ENT-REF-11.1` 두 호출 모두 오류 없이 끝난다
+  - `ENT-REF-11.2` `posts` 글의 최종 다건 `relation` 목록이 `[새 작성자, 추가 작성자]`이다
+
+</details>
+
 ## 8. 언어 추가 (`addLocale`)
 
 ### 핵심 요구사항
@@ -1106,6 +1186,28 @@
 
 </details>
 
+<details>
+<summary><strong><code>ENT-LOC-10</code></strong> 한 글에 같은 번역 언어를 동시에 두 번 추가하면 한 건만 성공하고 나머지는 거절된다</summary>
+
+- **전제**: `ko` 원문 작업본만 가진 활성 글 하나가 있다
+- **행동**: 같은 글의 `id`와 `locale: "en"`으로 서로 다른 필드 값을 넣어 `entries.addLocale` 두 건을, 두 호출이 모두 `"en"` 작업본이 없음을 확인한 뒤 어느 쪽도 쓰기 전에 겹치도록 실행한다
+- **결과**:
+  - `ENT-LOC-10.1` 한 건은 성공하고 나머지 한 건은 `CONFLICT` 오류를 던진다
+  - `ENT-LOC-10.2` `<collection>_data` 테이블의 `"en"` 작업본 내용이 성공한 호출의 입력과 같다
+
+</details>
+
+<details>
+<summary><strong><code>ENT-LOC-11</code></strong> 서로 다른 두 글에 같은 번역 언어와 같은 슬러그를 동시에 추가하면 한 건만 성공하고 나머지는 거절된다</summary>
+
+- **전제**: 같은 컬렉션에 `ko` 원문 작업본만 가진 활성 글 두 개가 있다
+- **행동**: 두 글에 `locale: "en"`과 같은 `slug`로 `entries.addLocale` 두 건을, 두 호출이 모두 해당 `"en"` 슬러그가 비어 있음을 확인한 뒤 어느 쪽도 쓰기 전에 겹치도록 실행한다
+- **결과**:
+  - `ENT-LOC-11.1` 한 건은 성공하고 나머지 한 건은 `CONFLICT` 오류를 던진다
+  - `ENT-LOC-11.2` `<collection>_data` 테이블에 `"en"`·`status: "draft"`·해당 `slug`를 가진 활성 글 행이 정확히 하나만 남는다
+
+</details>
+
 ## 9. 언어 삭제 (`removeLocale`)
 
 ### 핵심 요구사항
@@ -1169,6 +1271,39 @@
 
 </details>
 
+<details>
+<summary><strong><code>ENT-RLOC-6</code></strong> 번역 언어 삭제가 원문 언어 변경보다 먼저 반영되면 원문 변경이 거절되고 기존 원문 작업본이 유지된다</summary>
+
+- **전제**: `ko` 원문 작업본과 `en` 번역 언어 작업본을 가진 활성 글 하나가 있다
+- **행동**: `entries.setSourceLocale({ id, locale: "en" })`이 `"en"` 작업본을 확인한 뒤 원문 언어를 바꾸기 전에, `entries.removeLocale({ id, locale: "en" })`이 별도 연결에서 커밋되도록 실행한다
+- **결과**:
+  - `ENT-RLOC-6.1` `removeLocale`은 성공하고 `setSourceLocale`은 `NOT_FOUND` 오류를 던진다
+  - `ENT-RLOC-6.2` `<collection>` 테이블의 `source_locale`이 `"ko"` 그대로이고 `"ko"` 작업본이 `<collection>_data`에 남아 있다
+
+</details>
+
+<details>
+<summary><strong><code>ENT-RLOC-7</code></strong> 번역 언어를 삭제하는 동안 그 언어의 수정이 겹쳐도 지운 언어가 되살아나지 않는다</summary>
+
+- **전제**: `ko` 원문 작업본과 `en` 번역 언어 작업본을 가진 활성 글 하나가 있다
+- **행동**: `locale: "en"`으로 실행한 `entries.update`가 `"en"` 작업본을 읽은 뒤 저장하기 전에, `entries.removeLocale({ id, locale: "en" })`이 별도 연결에서 커밋되도록 실행한다
+- **결과**:
+  - `ENT-RLOC-7.1` `removeLocale`은 성공하고 `update`는 `NOT_FOUND` 오류를 던진다
+  - `ENT-RLOC-7.2` `<collection>_data` 테이블에 `"en"` 언어의 `draft` 행이 없다
+
+</details>
+
+<details>
+<summary><strong><code>ENT-RLOC-8</code></strong> 번역 언어를 삭제하는 동안 그 언어의 발행이 겹쳐도 발행본만 남지 않는다</summary>
+
+- **전제**: `ko` 원문 작업본과 발행 가능한 `en` 번역 언어 작업본을 가진 활성 글 하나가 있다
+- **행동**: `locale: "en"`으로 실행한 `entries.publish`가 `"en"` 작업본을 읽은 뒤 발행본을 저장하기 전에, `entries.removeLocale({ id, locale: "en" })`이 별도 연결에서 커밋되도록 실행한다
+- **결과**:
+  - `ENT-RLOC-8.1` `removeLocale`은 성공하고 `publish`는 `NOT_FOUND` 오류를 던진다
+  - `ENT-RLOC-8.2` `<collection>_data` 테이블에 `"en"` 언어의 `draft` 행과 `published` 행이 모두 없다
+
+</details>
+
 ## 10. 원문 언어 변경 (`setSourceLocale`)
 
 ### 핵심 요구사항
@@ -1218,5 +1353,16 @@
 - **결과**:
   - `ENT-SRC-4.1` `NOT_FOUND` 오류를 던진다
   - `ENT-SRC-4.2` 휴지통 글의 `source_locale`과 `"en"` 작업본 행의 `translation_seen`이 원래 그대로이다
+
+</details>
+
+<details>
+<summary><strong><code>ENT-SRC-5</code></strong> 원문 언어 변경이 번역 언어 삭제보다 먼저 반영되면 삭제가 거절되고 새 원문 작업본이 유지된다</summary>
+
+- **전제**: `ko` 원문 작업본과 `en` 번역 언어 작업본을 가진 활성 글 하나가 있다
+- **행동**: `entries.removeLocale({ id, locale: "en" })`이 `"en"`이 원문 언어가 아님을 확인한 뒤 삭제하기 전에, `entries.setSourceLocale({ id, locale: "en" })`이 별도 연결에서 커밋되도록 실행한다
+- **결과**:
+  - `ENT-SRC-5.1` `setSourceLocale`은 성공하고 `removeLocale`은 `BAD_REQUEST` 오류를 던진다
+  - `ENT-SRC-5.2` `<collection>` 테이블의 `source_locale`이 `"en"`이고 `"en"` 작업본이 `<collection>_data`에 남아 있다
 
 </details>
