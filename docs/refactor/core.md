@@ -44,8 +44,13 @@
 |---|---|
 | 읽기 `monti.a.b(input)` | 입력 검사 후 `run` 실행. 트랜잭션 없음. |
 | 쓰기 `monti.a.b(input)` | 입력 검사, 트랜잭션 시작, `run`, 커밋, 파일 반영(스키마·설정 변경 시), 이벤트 통지. |
-| `monti.transaction(async (tx) => …)` | 콜백 안의 호출들이 한 트랜잭션을 공유한다. 커밋된 뒤 쌓인 이벤트를 호출 순서대로 통지한다. 실패하면 롤백하고 파일 쓰기와 이벤트는 일어나지 않는다. |
-| `monti.dryRun(async (tx) => …)` | `tx`에는 쓰기만 보인다. 실제와 같이 실행한 뒤 마지막에 무조건 롤백한다. 파일 쓰기와 이벤트는 일어나지 않으며, 롤백할 수 없는 외부 티켓 발급·삭제(`storage.ticket`·`remove`)는 `BAD_REQUEST`로 거절한다. |
+| `monti.transaction(async (tx, trx) => …)` | 콜백 안의 호출들이 한 트랜잭션을 공유한다. 커밋된 뒤 쌓인 이벤트를 호출 순서대로 통지한다. 실패하면 롤백하고 파일 쓰기와 이벤트는 일어나지 않는다. |
+| `monti.dryRun(async (tx, trx) => …)` | `tx`에는 쓰기만 보인다. 실제와 같이 실행한 뒤 마지막에 무조건 롤백한다. 파일 쓰기와 이벤트는 일어나지 않으며, 롤백할 수 없는 외부 티켓 발급·삭제(`storage.ticket`·`remove`)는 `BAD_REQUEST`로 거절한다. |
+| `monti.withStoredKey({ id, service }, use)` | 서버 전용 메서드. 저장된 키의 복호화한 비밀값을 `use`에 넘기고 `use`의 결과를 돌려준다. Operation이 아니다. |
+
+- **트랜잭션 DB(`trx`)**: `transaction`과 `dryRun`의 콜백은 두 번째 인자로 그 트랜잭션의 Kysely DB(`Transaction<Database>`)를 받는다. 플러그인은 `trx`로 자기 테이블에 쓴 것을 `tx`의 Operation 쓰기와 함께 커밋하거나 함께 롤백한다. 인자를 하나만 받는 콜백은 그대로 동작한다 (소유자 승인 2026-11-23).
+- **중단된 트랜잭션 확인**: 콜백이 `trx`로 직접 실행한 쿼리의 DB 오류를 잡고 정상 반환하면, PostgreSQL은 그 뒤의 `COMMIT`에 오류 없이 `ROLLBACK`으로 답한다. 확인하지 않으면 core가 저장되지 않은 쓰기를 성공으로 알리고 이벤트까지 통지하게 되므로, 엔진은 콜백이 정상 반환한 뒤 커밋 전에 트랜잭션이 중단됐는지 확인해 `transaction`을 실패시키고 이벤트를 통지하지 않는다. `dryRun`도 같은 경우에 실패한다 (소유자 승인 2026-11-23). 확인은 `trx`에 `select 1`을 실행하는 것이고, 중단된 트랜잭션이 내는 PostgreSQL 오류(`25P02`)를 감싸지 않고 그대로 던진다(만들며 정함, 2026-11-23). Operation 쓰기가 낸 DB 오류가 있으면 3.4절대로 그 첫 오류가 먼저다.
+- **`monti.withStoredKey`**: `startMonti`는 엔진에 `withStoredKey`를 더한 새 객체를 돌려준다. Operation이 아니므로 `monti.spec()`에 나오지 않고, 플러그인의 `onEvent`가 받는 `monti`에도 없다 (소유자 승인 2026-11-23). 암호화 비밀값(`secret`)이 없거나 저장된 키의 `service`가 넘긴 `service`와 다르면 `BAD_REQUEST`, 그 `id`의 키가 없으면 `NOT_FOUND`다. `use`가 던진 오류는 core가 감싸지 않고 그대로 내보내므로, 그 오류에 키 원문을 담지 않는 것은 `use`를 쓴 플러그인의 책임이다.
 
 ```mermaid
 sequenceDiagram
@@ -98,15 +103,15 @@ sequenceDiagram
 import type { Kysely, Transaction } from "kysely";
 import type { z } from "zod";
 
-export interface ReadContext<TTables = {}> {
-  db: Kysely<Database & TTables> | Transaction<Database & TTables>;
+export interface ReadContext {
+  db: Kysely<Database> | Transaction<Database>; // 플러그인은 ctx.db.$extendTables<PluginTables>()로 자기 테이블 타입을 더한다
   schema: Schema;
   config: MontiConfig;
   storage?: StorageAdapter;
 }
 
-export interface WriteContext<TTables = {}> extends ReadContext<TTables> {
-  db: Transaction<Database & TTables>;
+export interface WriteContext extends ReadContext {
+  db: Transaction<Database>;
   setSchema: (schema: Schema) => Promise<Schema>;                  // 개발 서버가 아니면 FORBIDDEN. 차례를 받은 뒤의 이전 스키마를 돌려준다
   setConfig: (config: Pick<MontiConfig, "name">) => Promise<void>; // 개발 서버가 아니면 FORBIDDEN
 }
@@ -130,9 +135,14 @@ export interface MontiEvent<TInput = unknown, TOutput = unknown> {
 }
 
 export type Monti<R extends ResourceTree = ResourceTree> = MontiClient<R> & {
-  transaction<T>(fn: (tx: MontiClient<R>) => Promise<T>): Promise<T>;
-  dryRun<T>(fn: (tx: MontiWriteClient<R>) => Promise<T>): Promise<T>;
+  transaction<T>(fn: (tx: MontiClient<R>, trx: Transaction<Database>) => Promise<T>): Promise<T>;
+  dryRun<T>(fn: (tx: MontiWriteClient<R>, trx: Transaction<Database>) => Promise<T>): Promise<T>;
   onEvent(listener: (event: MontiEvent) => void | Promise<void>): () => void;
+};
+
+// startMonti가 돌려주는 것: 엔진(Monti)에 서버 전용 메서드를 더한 새 객체
+export function startMonti(options: StartOptions): Monti & {
+  withStoredKey<T>(key: { id: string; service: string }, use: (apiKey: string) => Promise<T>): Promise<T>;
 };
 
 export interface Migration {
@@ -170,7 +180,7 @@ export interface MontiConfig {
 - **개발 서버 판정**: `config.dev === true`일 때만 개발 서버다. 코어는 환경 변수를 직접 읽지 않는다.
 - **스키마·설정 수정**: `schema.update`와 `config.update`는 개발 서버에서만 허용되며 운영 서버에서는 `FORBIDDEN`이다. `schema.get`·`config.get`은 내부 상태를 밖에서 고칠 수 없도록 독립 사본을 돌려준다. `schema.update`·`config.update`는 동시 호출을 직렬화하고, 파일 쓰기 가능 여부를 커밋 전에 검증·임시 준비한 뒤 원자적으로 교체해 파일 쓰기에 실패하면 DB 변경과 공유 상태도 남기지 않는다. 롤백이나 `dryRun`이면 버린다.
 - **저장소(`storage`)**: 선택 설정이다. `storage`가 없을 때 `media` 리소스를 호출하면 `BAD_REQUEST`로 거절한다.
-- **암호화 비밀값(`secret`)**: `MontiConfig`(`ctx.config`)에 두지 않고 `startMonti({ ..., secret })` 시작 옵션으로만 받아 `keys` 리소스 클로저에 격리해 전달한다. `secret`이 없으면 키 생성(`keys.create`), 새 비밀값이 포함된 키 수정(`keys.update`), 저장된 키 ID로 실행하는 연결 확인(`keys.check({ id })`)만 `BAD_REQUEST`로 거절하고 나머지 코어는 정상 동작한다.
+- **암호화 비밀값(`secret`)**: `MontiConfig`(`ctx.config`)에 두지 않고 `startMonti({ ..., secret })` 시작 옵션으로만 받아 `keys` 리소스 클로저에 격리해 전달한다. `secret`이 없으면 키 생성(`keys.create`), 새 비밀값이 포함된 키 수정(`keys.update`), 저장된 키 ID로 실행하는 연결 확인(`keys.check({ id })`), 저장된 키를 꺼내 쓰는 `monti.withStoredKey`만 `BAD_REQUEST`로 거절하고 나머지 코어는 정상 동작한다.
 
 ## 5. 플러그인
 
@@ -178,7 +188,8 @@ export interface MontiConfig {
 
 - **이름·경로 충돌 차단**: 플러그인 Operation 경로는 기존 경로뿐 아니라 엔진 기본 메서드 이름(`spec`, `transaction`, `dryRun`, `onEvent`)과도 겹칠 수 없다(`CONFLICT`). `migrateMonti`에서는 플러그인 이름이 서로 겹치면 `CONFLICT`, 예약된 출처 이름(`"@monti-cms/core"`, `"project"`)이면 `BAD_REQUEST`로 DB를 건드리기 전에 거절한다.
 - **마이그레이션(`migrations`)**: DB 준비 함수 `migrateMonti({ db, schema, config })`가 core(`"@monti-cms/core"`) 먼저, 그다음 플러그인(`plugin.name`) 순서로 한 번씩 실행하고 `migrations` 테이블(`(source, name)`)에 기록한다(`config.dev === true`이면 현재 DB 스키마 기준으로 컬렉션 테이블까지 동기화). 동시 `migrate`·`migrateMonti` 호출은 직렬화해 각 단계가 한 번만 실행되게 하며, 한 배열에 이름이 같은 단계가 중복되면 실행 전에 거절한다. `startMonti`는 DB를 변경하지 않고 스키마 검사와 엔진 조립만 수행한다.
-- **DB 타입 확장**: `defineRead`·`defineWrite`에 플러그인 테이블 타입(`TTables`)을 넘기면 `ctx.db`에서 core 테이블과 함께 조회할 수 있다.
+- **DB 타입 확장**: core는 플러그인 테이블 타입을 받는 제네릭을 두지 않는다. 플러그인 코드가 Kysely 0.29.8의 `ctx.db.$extendTables<PluginTables>()`(트랜잭션 콜백에서는 `trx.$extendTables<PluginTables>()`)로 자기 테이블 타입을 직접 더해 core 테이블과 함께 조회한다.
+- **DB 스키마 분리**: PostgreSQL `public` 스키마는 core의 고정 테이블과 사용자 컬렉션 테이블 전용이다. 플러그인은 자기 전용 PostgreSQL 스키마(예: `ai`)에 테이블을 둔다.
 
 ## 6. 데이터베이스와 컬렉션 테이블 구조
 
@@ -446,11 +457,11 @@ packages/core/src/
 | 2026-11-23 | 쓰기는 기본으로 이벤트를 보내고, 비밀값을 돌려주는 쓰기(admin·session·keys·`media.startUpload`)만 제외 목록으로 뺀다 (소유자 승인 2026-11-23) |
 | 2026-11-23 | 인증·키·폴더·템플릿 보강: `0001-initial`에 `admin` 단일 행·`api_keys(name)`·활성 `folders` 위치별 이름·`templates(collection, name)` DB 고유 제약을 추가한다. `session.create`는 미등록 이메일에서도 타이밍 노출을 막기 위해 더미 `verifyPassword`를 실행하고, `admin.update`는 `admin` 행 잠금으로 동시 로그인·수정 경합을 차단한다. `keys.check`는 복호화 실패를 비밀값 노출 없이 `BAD_REQUEST`로 변환한다. `folders.update`와 `templates.update`는 행·범위 잠금으로 순환 이동·휴지통 이동·영구 삭제·동시 필드 편집 경합을 막는다. |
 | 2026-11-23 | 글·휴지통·번역 상태·리치 텍스트·미디어 보강: `entries`·`trash`·`translationStatus`의 동시 슬러그/언어/복제/참조 교체/필드·다언어 편집/휴지통 이동·복원·영구 삭제 경합을 잠금으로 차단한다. `rich-text`는 블록 최대 중첩 32단계와 내장 `link` 마크 `href` 허용 스킴(`http:`, `https:`, `mailto:`, `/`, `#`)을 강제한다. `media.create`/`update`는 `media.startUpload`로 발급된 티켓 키만 허용하고(교체·삭제 대기 키는 구분해 차단, 이미 등록된 키는 `CONFLICT` 우선, 동일 키 재전달은 성공 유지) 이미지 `width`·`height` 상한을 PostgreSQL `integer` 최대치(`2_147_483_647`)로 제한한다. |
+| 2026-11-23 | 서버 플러그인(`ai`) 선행 변경: `monti.transaction`·`monti.dryRun` 콜백은 두 번째 인자로 그 트랜잭션의 DB(`trx`)를 받고, 콜백이 `trx`의 DB 오류를 잡고 정상 반환해도 엔진이 커밋 전에 중단된 트랜잭션을 확인해 실패시키며 이벤트를 통지하지 않는다. `startMonti`는 서버 전용 `monti.withStoredKey`를 더한 새 객체를 돌려주고, 이 메서드는 명세와 플러그인의 `onEvent`가 받는 `monti`에 없다. 플러그인 테이블 타입은 `TTables` 제네릭 없이 Kysely `$extendTables`로 플러그인이 직접 더하며, `public` 스키마는 core와 사용자 컬렉션 전용이고 플러그인은 자기 PostgreSQL 스키마에 테이블을 둔다 (소유자 승인 2026-11-23) |
 
 ## 11. 정하지 않은 것
 
 - **블록 속성 검사를 동기·JSON 값으로 제한할지**: `blocks.md`를 다룰 때 함께 정한다.
 - **콜백 안에서 리소스 코드가 던진 쓰기 오류를 잡았을 때 부분 변경 처리**: 세이브포인트 없이 모든 쓰기 오류를 트랜잭션 실패로 볼지 필요할 때 정한다.
 - **배포용 npm 빌드 도구**: `exports`는 현재 `./src/index.ts`를 가리키며 배포 단계에서 정한다.
-- **플러그인 테이블 타입(`TTables`) 호출 형태와 외부 호출 타입**: 첫 서버 플러그인을 만들 때 확정한다.
 - **표 블록 칸 단위 번역 상태와 컨테이너 블록 자체 속성의 번역 대상 지정**: 블록 정의(`blocks.md`) 단계에서 정한다.
