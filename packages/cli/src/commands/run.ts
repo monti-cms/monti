@@ -37,8 +37,8 @@ export async function runCli(argv: readonly string[], io: CliIo): Promise<number
 		await dispatch(parseArgs(argv), io);
 		return 0;
 	} catch (error) {
-		const { exitCode, message } = describeError(error);
-		io.stderr(`${redact(message, io)}\n`);
+		const { exitCode, prefix, message } = describeError(error);
+		io.stderr(`${prefix}${redact(message, io)}\n`);
 		return exitCode;
 	}
 }
@@ -56,14 +56,14 @@ async function dispatch(parsed: ParsedArgs, io: CliIo): Promise<void> {
 }
 
 /**
- * 오류로 끝낼 종료 코드와 `stderr`에 쓸 메시지. CLI 오류는 그 종료 코드로, core 오류는 `[코드] 메시지`로, 그 밖의 오류(DB·파일
- * 오류 등)와 오류 객체가 아닌 값(`throw null` 등)은 메시지만 쓰고 `1`로 끝낸다.
+ * 오류로 끝낼 종료 코드와 `stderr`에 쓸 머리말·메시지. CLI 오류는 그 종료 코드로, core 오류는 머리말 `[코드] `를 붙여, 그 밖의
+ * 오류(DB·파일 오류 등)와 오류 객체가 아닌 값(`throw null` 등)은 메시지만 쓰고 `1`로 끝낸다. 비밀값은 메시지에서만 가리므로
+ * (`redact`), 짧은 비밀값이 머리말의 오류 코드를 바꾸지 못한다.
  */
-function describeError(error: unknown): { exitCode: number; message: string } {
-	if (error instanceof CliError) return { exitCode: error.exitCode, message: error.message };
+function describeError(error: unknown): { exitCode: number; prefix: string; message: string } {
+	if (error instanceof CliError) return { exitCode: error.exitCode, prefix: "", message: error.message };
 	const { code } = Object(error) as { code?: unknown };
-	const message = messageOf(error);
-	return { exitCode: 1, message: isErrorCode(code) ? `[${code}] ${message}` : message };
+	return { exitCode: 1, prefix: isErrorCode(code) ? `[${code}] ` : "", message: messageOf(error) };
 }
 
 /**
@@ -88,19 +88,32 @@ function isErrorCode(code: unknown): code is ErrorCode {
 	return typeof code === "string" && Object.hasOwn(errorCodes, code);
 }
 
-/** `message`에서 비밀값(`secretsOf`)을 모두 `mask`로 바꾼 글. */
+/** `message`에서 비밀값(`secretsOf`)을 긴 것부터 모두 `mask`로 바꾼 글. */
 function redact(message: string, io: CliIo): string {
 	return secretsOf(io).reduce((text, secret) => text.replaceAll(secret, mask), message);
 }
 
 /**
- * 오류 출력에 나가면 안 되는 비밀값: 명령이 읽는 환경 변수(`loadEnv`)의 `DATABASE_URL` 비밀번호(URL에 쓰인 그대로와 풀어 쓴
- * 것)와 `MONTI_SECRET`. 빈 값은 뺀다. `.env` 파일을 읽지 못하면 실행 환경 변수만 본다.
+ * 오류 출력에 나가면 안 되는 비밀값을 긴 것부터: 명령이 읽는 환경 변수(`loadEnv`)의 `DATABASE_URL` 비밀번호(사용자 정보 자리와
+ * `?password=` 자리 모두, URL에 쓰인 그대로와 풀어 쓴 것)와 `MONTI_SECRET`. 빈 값은 뺀다. 긴 것부터 바꿔야 다른 비밀값의 일부인
+ * 짧은 비밀값이 먼저 바뀌어 긴 비밀값이 가려지지 않는 일이 없다. `.env` 파일을 읽지 못하면 실행 환경 변수만 본다.
  */
 function secretsOf(io: CliIo): string[] {
 	const env = envOf(io);
-	const password = URL.parse(env.DATABASE_URL ?? "")?.password ?? "";
-	return [password, decoded(password), env.MONTI_SECRET ?? ""].filter((secret) => secret !== "");
+	const url = URL.parse(env.DATABASE_URL ?? "");
+	const passwords = [url?.password ?? "", rawQueryPassword(url), url?.searchParams.get("password") ?? ""];
+	return [...passwords.flatMap((password) => [password, decoded(password)]), env.MONTI_SECRET ?? ""]
+		.filter((secret) => secret !== "")
+		.sort((a, b) => b.length - a.length);
+}
+
+/** URL의 `?password=` 값을 URL에 쓰인 그대로. 없으면 빈 글이다. */
+function rawQueryPassword(url: URL | null): string {
+	const pair = url?.search
+		.slice(1)
+		.split("&")
+		.find((part) => part.startsWith("password="));
+	return pair?.slice("password=".length) ?? "";
 }
 
 /** 명령이 읽는 환경 변수. 오류를 쓰는 중이므로, `.env` 파일을 읽지 못해도 던지지 않고 실행 환경 변수를 돌려준다. */

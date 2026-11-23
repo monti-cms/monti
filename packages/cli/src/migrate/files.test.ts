@@ -118,8 +118,8 @@ it("CLI-MGF-7 같은 디렉터리에서 마이그레이션 파일 생성이 겹�
 	await generateMigration({ dir, schema: posts, name: "init" });
 
 	const results = await Promise.allSettled([
-		generateMigration({ dir, schema: postsWithSubtitle }),
-		generateMigration({ dir, schema: postsWithSubtitle }),
+		generateMigration({ dir, schema: postsWithSubtitle, name: "first" }),
+		generateMigration({ dir, schema: postsWithSubtitle, name: "second" }),
 	]);
 
 	const generated = results.flatMap((result) => (result.status === "fulfilled" ? [result.value] : []));

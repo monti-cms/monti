@@ -270,7 +270,10 @@ it("CLI-MGR-10 트랜잭션을 끝내는 `COMMIT`이나 `ROLLBACK` 문장이 들
 
 it("CLI-MGR-11 마이그레이션 디렉터리 밖을 가리키는 심볼릭 링크 `.sql` 파일은 실행할 수 없다", async () => {
 	await migrateBuiltIns();
-	const outside = path.join(root, "outside.sql");
+	// 이름이 마이그레이션 폴더 경로로 시작하는 옆 폴더(`migrations2`)도 폴더 밖이다.
+	const sibling = `${dir}2`;
+	await mkdir(sibling);
+	const outside = path.join(sibling, "outside.sql");
 	await writeFile(outside, "create table outside_table (id integer);\n");
 	await symlink(outside, path.join(dir, "0001_link.sql"));
 
