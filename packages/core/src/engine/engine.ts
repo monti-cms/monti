@@ -164,26 +164,31 @@ function transactionOf<R extends ResourceTree>(
 	};
 }
 
+/** `dryRun`이 콜백을 끝낸 뒤 트랜잭션을 되돌리려고 던지는 표시. 바깥으로 나가지 않는다. */
+class DryRunRollback extends Error {}
+
 /**
- * 쓰기만 보이는 콜백을 실제와 같이 실행한 뒤 롤백한다. 콜백은 그 트랜잭션의 DB(`trx`)도 받는다. 쌓인 이벤트와 단계는
- * 버린다. 단계의 저장소는 롤백으로 되돌릴 수 없는 티켓 발급(`ticket`)과 삭제(`remove`)를 `BAD_REQUEST`로 거절한다. 롤백이
- * 실패해도 단계의 차례는 넘긴다.
+ * 쓰기만 보이는 콜백을 실제와 같이 실행한 뒤 롤백한다. 콜백은 그 트랜잭션의 DB(`trx`)도 받는다. `trx`는 직접 커밋할 수
+ * 있는 트랜잭션이 아니라, 엔진이 끝을 정하는 트랜잭션이다. 쌓인 이벤트와 단계는 버린다. 단계의 저장소는 롤백으로 되돌릴
+ * 수 없는 티켓 발급(`ticket`)과 삭제(`remove`)를 `BAD_REQUEST`로 거절한다. 롤백이 실패해도 단계의 차례는 넘긴다.
  */
 function dryRunOf<R extends ResourceTree>(db: Kysely<Database>, state: State, tree: ResourceTree) {
 	return async function dryRun<T>(fn: (tx: MontiWriteClient<R>, trx: Transaction<Database>) => Promise<T>): Promise<T> {
-		const trx = await db.startTransaction().execute();
 		const stage = state.stage(true);
 		const aborts: unknown[] = [];
+		const outcome: { value?: T } = {};
 		try {
-			const client = buildClient(tree, "", callbackRunner(trx, stage, [], aborts), false);
-			return await runSettled(() => fn(client as MontiWriteClient<R>, trx), aborts, trx);
+			await db.transaction().execute(async (trx) => {
+				const client = buildClient(tree, "", callbackRunner(trx, stage, [], aborts), false);
+				outcome.value = await runSettled(() => fn(client as MontiWriteClient<R>, trx), aborts, trx);
+				throw new DryRunRollback();
+			});
+		} catch (error) {
+			if (!(error instanceof DryRunRollback)) throw error;
 		} finally {
-			try {
-				await trx.rollback().execute();
-			} finally {
-				await stage.release();
-			}
+			await stage.release();
 		}
+		return outcome.value as T;
 	};
 }
 

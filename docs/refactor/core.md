@@ -49,6 +49,7 @@
 | `monti.withStoredKey({ id, service }, use)` | 서버 전용 메서드. 저장된 키의 복호화한 비밀값을 `use`에 넘기고 `use`의 결과를 돌려준다. Operation이 아니다. |
 
 - **트랜잭션 DB(`trx`)**: `transaction`과 `dryRun`의 콜백은 두 번째 인자로 그 트랜잭션의 Kysely DB(`Transaction<Database>`)를 받는다. 플러그인은 `trx`로 자기 테이블에 쓴 것을 `tx`의 Operation 쓰기와 함께 커밋하거나 함께 롤백한다. 인자를 하나만 받는 콜백은 그대로 동작한다 (소유자 승인 2026-11-23).
+- **`trx`를 쓰는 범위**: `trx`는 콜백이 돌려준 Promise가 끝나기 전까지만 쓴다. 콜백 안에서 시작한 쿼리는 모두 기다리고, 트랜잭션을 직접 끝내는 SQL(`COMMIT`·`ROLLBACK`)은 실행하지 않는다. 엔진은 이것을 막지 않는다: 플러그인은 서버 개발자가 쓰는 신뢰된 코드다. 다만 `dryRun`이 넘기는 `trx`에는 직접 커밋하는 메서드가 없어, 시험 실행이 실수로 커밋되지 않는다 (만들며 정함, 2026-11-23).
 - **중단된 트랜잭션 확인**: 콜백이 `trx`로 직접 실행한 쿼리의 DB 오류를 잡고 정상 반환해도 그 `transaction`과 `dryRun`은 실패하고 이벤트를 통지하지 않는다 (소유자 승인 2026-11-23). PostgreSQL은 DB 오류가 난 트랜잭션을 중단시키고 그 뒤의 `COMMIT`에 오류 없이 `ROLLBACK`으로 답해, 콜백이 쓴 것은 하나도 저장되지 않기 때문이다. 엔진은 콜백이 정상 반환한 뒤 커밋 전에 `trx`에 `select 1`을 실행해 확인하고, 중단된 트랜잭션이 내는 PostgreSQL 오류(`25P02`)를 감싸지 않고 그대로 던진다(만들며 정함, 2026-11-23). 커밋하지 않는 `dryRun`은 이 확인이 없으면 성공으로 끝난다. `transaction`은 Kysely 0.29.8이 `COMMIT`의 `ROLLBACK` 응답을 `AbortedTransactionError`로 알리지만, 같은 확인을 거쳐 `dryRun`과 같은 오류로, 스키마·설정 파일 변경을 준비하기 전에 실패한다. Operation 쓰기가 낸 DB 오류가 있으면 3.4절대로 그 첫 오류가 먼저다.
 - **`monti.withStoredKey`**: `startMonti`는 엔진에 `withStoredKey`를 더한 새 객체를 돌려준다. Operation이 아니므로 `monti.spec()`에 나오지 않고, 플러그인의 `onEvent`가 받는 `monti`에도 없다 (소유자 승인 2026-11-23). 암호화 비밀값(`secret`)이 없거나 저장된 키의 `service`가 넘긴 `service`와 다르면 `BAD_REQUEST`, 그 `id`의 키가 없으면 `NOT_FOUND`다. `use`가 던진 오류는 core가 감싸지 않고 그대로 내보내므로, 그 오류에 키 원문을 담지 않는 것은 `use`를 쓴 플러그인의 책임이다.
 
