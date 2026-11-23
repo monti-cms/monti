@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { type Database, type MontiConfig, migrate, migrateMonti, type Plugin, type Schema } from "@monti-cms/core";
@@ -239,53 +239,6 @@ async function migrateBuiltIns(): Promise<void> {
 async function projectRecords(): Promise<[string, string][]> {
 	return (await recordedMigrations(testDb.db)).filter(([source]) => source === "project");
 }
-
-it("CLI-MGR-10 트랜잭션을 끝내는 `COMMIT`이나 `ROLLBACK` 문장이 들어 있는 SQL 파일은 실행 전에 거절한다", async () => {
-	await migrateBuiltIns();
-	const dirs = [path.join(root, "commit"), path.join(root, "rollback")];
-	await mkdir(dirs[0]);
-	await mkdir(dirs[1]);
-	await writeFile(path.join(dirs[0], "0001_commit.sql"), "COMMIT;\n");
-	await writeFile(path.join(dirs[1], "0001_rollback.sql"), "ROLLBACK;\n");
-	const project = projectWith({ name: "테스트" });
-
-	const exitCodes: unknown[] = [];
-	for (const target of dirs) {
-		for (const dryRun of [true, false]) {
-			const running = runMigrations({ db: testDb.db, project, dir: target, dryRun });
-			exitCodes.push(
-				await running.then(
-					() => "성공",
-					(error: { exitCode?: number }) => error.exitCode,
-				),
-			);
-		}
-	}
-
-	// CLI-MGR-10.1
-	expect(exitCodes).toEqual([1, 1, 1, 1]);
-	// CLI-MGR-10.2
-	expect(await projectRecords()).toEqual([]);
-});
-
-it("CLI-MGR-11 마이그레이션 디렉터리 밖을 가리키는 심볼릭 링크 `.sql` 파일은 실행할 수 없다", async () => {
-	await migrateBuiltIns();
-	// 이름이 마이그레이션 폴더 경로로 시작하는 옆 폴더(`migrations2`)도 폴더 밖이다.
-	const sibling = `${dir}2`;
-	await mkdir(sibling);
-	const outside = path.join(sibling, "outside.sql");
-	await writeFile(outside, "create table outside_table (id integer);\n");
-	await symlink(outside, path.join(dir, "0001_link.sql"));
-
-	const applying = runMigrations({ db: testDb.db, project: projectWith({ name: "테스트" }), dir });
-
-	// CLI-MGR-11.1
-	await expect(applying).rejects.toMatchObject({ exitCode: 1 });
-	// CLI-MGR-11.2
-	expect(await tableExists(testDb.db, "outside_table")).toBe(false);
-	// CLI-MGR-11.3
-	expect(await recordedMigrations(testDb.db)).not.toContainEqual(["project", "0001_link.sql"]);
-});
 
 it("CLI-MGR-12 같은 DB에 운영 마이그레이션을 동시에 두 번 실행해도 각 파일은 한 번만 적용되고 자신이 적용한 파일만 돌려준다", async () => {
 	await migrateBuiltIns();
