@@ -158,10 +158,15 @@ it("CFG-UPD-6 사이트 이름을 빈 문자열로 바꿀 수 없다", async () 
 it("CFG-UPD-7 설정 파일에 플러그인 이름이 사이트 이름보다 먼저 적혀 있어도 사이트 이름만 바뀐다", async () => {
 	await writeFile(
 		configFile,
-		`export default {
-	plugins: [{ name: "monti-plugin-search" }],
-	name: "Monti Blog", dev: true,
+		`const defineConfig = (config: object) => {
+	return config;
 };
+
+export default defineConfig({
+	plugins: [{ name: "monti-plugin-search" }],
+	dev: true, // 개발 서버
+	/* 사이트 이름 */ name: 'Monti Blog'
+});
 `,
 	);
 	const monti = montiOf(true);

@@ -27,7 +27,7 @@ function objectStart(tokens: Token[]): number {
 
 /** `i`의 조각이 객체 속성 `name:`의 키인지. */
 function isNameKey(tokens: Token[], i: number): boolean {
-	const key = ["name", '"name"', "'name'"].includes(tokens[i]?.text ?? "");
+	const key = tokens[i]?.text === "name";
 	return key && tokens[i + 1]?.text === ":" && ["{", ","].includes(tokens[i - 1]?.text ?? "");
 }
 
