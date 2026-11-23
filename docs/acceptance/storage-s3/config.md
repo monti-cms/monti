@@ -4,7 +4,7 @@
 
 | 기능 | 하는 일 | 주요 거절 |
 |---|---|---|
-| `resolveS3Config` | `S3StorageOptions`와 환경 변수(`S3_*`)에서 버킷·인증·공개 URL(끝 `/` 제거)·리전/엔드포인트(`endpoint`만 있으면 `region: "auto"`)·경로 스타일(`"true"`·`"1"`)·티켓 만료 시간·업로드 정책을 해석한다 | 필수 값 누락(공백 포함), `region`·`endpoint` 둘 다 누락, 잘못된 `publicUrl`, `ticketSeconds`(1~3600)·`maxSize`(1~`2_147_483_647`) 범위/정수 위반, `allowedMimeTypes` 빈 배열·잘못된 형식 시 `Error` |
+| `resolveS3Config` | `S3StorageOptions`와 환경 변수(`S3_*`)에서 버킷·인증·공개 URL(끝 `/` 제거)·리전/엔드포인트(`endpoint`만 있으면 `region: "auto"`)·경로 스타일(`"true"`·`"1"`)·티켓 만료 시간·업로드 정책을 해석한다 | 필수 값 누락(공백 포함), `region`·`endpoint` 둘 다 누락, 잘못된 `publicUrl`(거절 오류에 `S3_PUBLIC_URL` 원문·계정 정보 미포함), `ticketSeconds`(1~3600)·`maxSize`(1~`2_147_483_647`) 범위/정수 위반, `allowedMimeTypes` 빈 배열·잘못된 형식 시 `Error` |
 | 지연 초기화 (`s3Storage`) | `s3Storage()` 호출 시에는 환경 변수를 읽지 않고, 어댑터 메서드 첫 호출 시 설정을 해석한다 | 첫 호출 시 필수 값 누락 시 누락된 변수 이름을 모두 담은 `Error` |
 
 ---
@@ -141,5 +141,17 @@
   - `S3-CFG-11.1` 빈 배열 `[]` 호출이 `Error`를 던진다
   - `S3-CFG-11.2` 빈 문자열이 든 배열 `[""]` 호출이 `Error`를 던진다
   - `S3-CFG-11.3` 파라미터나 앞쪽 잘못된 문자가 붙은 항목이 `Error`를 던진다
+
+</details>
+
+<details>
+<summary><strong><code>S3-CFG-12</code></strong> 공개 주소가 거절될 때 오류 메시지와 오류 객체에 계정 정보나 주소 원문이 노출되지 않는다</summary>
+
+- **전제**: 나머지 필수 환경 변수는 유효하다. `S3_PUBLIC_URL`이 `"https://user:s3cret@cdn.example.com"`인 입력과, 파싱되지 않는 `"https://user:s3cret@"`인 입력이 있다
+- **행동**: 각 입력으로 `resolveS3Config`를 실행한다
+- **결과**:
+  - `S3-CFG-12.1` 계정 정보가 있는 주소는 `S3_PUBLIC_URL`을 포함한 `Error`를 던진다
+  - `S3-CFG-12.2` 파싱되지 않는 주소도 `S3_PUBLIC_URL`을 포함한 `Error`를 던진다
+  - `S3-CFG-12.3` 두 오류의 `message`, `input`, `cause` 체인에 `"s3cret"`과 입력 URL 원문이 없다
 
 </details>
