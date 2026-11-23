@@ -19,5 +19,5 @@ async function getStatus(input: z.infer<typeof entryLocaleInput>, ctx: ReadConte
 export const translationStatus = {
 	get: defineRead({ input: entryLocaleInput, run: getStatus }),
 	list: defineRead({ input: listInput, run: listStatus }),
-	update: defineWrite({ emit: true, input: updateInput, run: updateStatus }),
+	update: defineWrite({ input: updateInput, run: updateStatus }),
 };

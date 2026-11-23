@@ -6,6 +6,7 @@ import { type Kysely, sql } from "kysely";
 import { afterEach, beforeEach, expect, it } from "vitest";
 import { columnsOf, createTestDatabase, type TestDatabase, tableExists } from "../../__test__/database";
 import { createMemoryStorage } from "../../__test__/memory-storage";
+import { codeOf, overlap } from "../../__test__/race";
 import { migrate } from "../../db/migrate";
 import { initial } from "../../db/migrations/0001-initial";
 import type { Database } from "../../db/types";
@@ -110,14 +111,6 @@ async function tablesExisting(names: string[]): Promise<string[]> {
 	const found: string[] = [];
 	for (const name of names) if (await tableExists(testDb.db, name)) found.push(name);
 	return found;
-}
-
-/** 실행해서 던진 오류 코드. 오류가 없으면 `null`. */
-async function codeOf(run: Promise<unknown>): Promise<string | null> {
-	return run.then(
-		() => null,
-		(error: { code: string }) => error.code,
-	);
 }
 
 beforeEach(async () => {
@@ -398,13 +391,35 @@ it("SCH-UPD-7 필드의 종류나 관계 대상을 바꾸면 데이터 테이블
 	});
 });
 
+/** `applied` 스키마가 적용된 개발 서버에서 `media` 리소스까지 가진 엔진과, DB에 넣어 둔 미디어 하나의 `id`. */
+async function montiWithMedia(applied: Schema) {
+	await writeFile(schemaFile, `export default ${JSON.stringify(applied)};\n`);
+	await syncSchemaTables(db, applied);
+	const monti = createMonti(db, { schema, entries, media }, [], {
+		schema: applied,
+		config: { name: "Monti Blog", dev: true, storage: createMemoryStorage() },
+		schemaFile,
+		configFile,
+	});
+	const mediaId = randomUUID();
+	await db
+		.insertInto("media")
+		.values({ id: mediaId, key: mediaId, filename: "a.png", mime_type: "image/png", size: 1 })
+		.execute();
+	return { monti, mediaId };
+}
+
 it("SCH-UPD-8 스키마에서 컬렉션을 지우면 그 컬렉션의 테이블들이 모두 삭제된다", async () => {
-	const monti = await montiOf(true);
+	const { monti, mediaId } = await montiWithMedia(withCollections({ posts: { fields: { cover: { type: "media" } } } }));
+	await monti.entries.create({ collection: "posts", locale: "ko", fields: { cover: mediaId } });
 
 	await monti.schema.update(empty);
+	const { uses } = await monti.media.get({ id: mediaId });
 
 	// SCH-UPD-8.1
 	expect(await tablesExisting(["posts", "posts_data", "posts_rels"])).toEqual([]);
+	// SCH-UPD-8.2
+	expect(uses).toEqual([]);
 });
 
 /** `authors`·`members`와, 다건 `relation` 필드 `contributors`가 `to` 컬렉션을 가리키는 `posts`가 있는 스키마. */
@@ -611,14 +626,23 @@ it("SCH-UPD-18 개발 서버에서 서로 다른 스키마를 동시에 저장�
 	const withTitle = withCollections({ posts: { fields: { title: { type: "text" } } } });
 	const withSummary = withCollections({ posts: { fields: { summary: { type: "text" } } } });
 
-	const runs = await Promise.allSettled([monti.schema.update(withTitle), monti.schema.update(withSummary)]);
+	// 첫 저장을 커밋 직전에 멈춰 두고 두 번째 저장을 시작한다.
+	const runs = await overlap(
+		db,
+		(hold) =>
+			monti.transaction(async (tx) => {
+				await tx.schema.update(withTitle);
+				await hold();
+			}),
+		() => monti.schema.update(withSummary),
+	);
 	const current = await monti.schema.get({});
 	const userColumns = (await columnsOf(testDb.db, "posts_data")).filter(
 		(column) => !(fixedDataColumns as readonly string[]).includes(column),
 	);
 
 	// SCH-UPD-18.1
-	expect(runs.map((run) => run.status)).toEqual(["fulfilled", "fulfilled"]);
+	expect(runs.map((run) => run.code)).toEqual([null, null]);
 	// SCH-UPD-18.2
 	expect([withTitle, withSummary]).toContainEqual(current);
 	// SCH-UPD-18.3
@@ -647,20 +671,9 @@ it("SCH-UPD-19 이름이 빈 컬렉션이나 필드는 스키마에 넣을 수 �
 
 it("SCH-UPD-20 여러 개를 고르는 미디어 필드를 지우면 연결 기록과 미디어 사용처도 함께 지워진다", async () => {
 	const cover = { type: "media" as const, many: true };
-	const applied = withCollections({ posts: { fields: { gallery: { type: "media", many: true }, cover } } });
-	await writeFile(schemaFile, `export default ${JSON.stringify(applied)};\n`);
-	await syncSchemaTables(db, applied);
-	const monti = createMonti(db, { schema, entries, media }, [], {
-		schema: applied,
-		config: { name: "Monti Blog", dev: true, storage: createMemoryStorage() },
-		schemaFile,
-		configFile,
-	});
-	const mediaId = randomUUID();
-	await db
-		.insertInto("media")
-		.values({ id: mediaId, key: mediaId, filename: "a.png", mime_type: "image/png", size: 1 })
-		.execute();
+	const { monti, mediaId } = await montiWithMedia(
+		withCollections({ posts: { fields: { gallery: { type: "media", many: true }, cover } } }),
+	);
 	const post = await monti.entries.create({
 		collection: "posts",
 		locale: "ko",

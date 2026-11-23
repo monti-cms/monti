@@ -102,7 +102,7 @@ async function deleteTemplate(input: z.infer<typeof idInput>, ctx: WriteContext)
 export const templates = {
 	list: defineRead({ input: listInput, run: listTemplates }),
 	get: defineRead({ input: idInput, run: getTemplate }),
-	create: defineWrite({ emit: true, input: createInput, run: createTemplate }),
-	update: defineWrite({ emit: true, input: updateInput, run: updateTemplate }),
-	delete: defineWrite({ emit: true, input: idInput, run: deleteTemplate }),
+	create: defineWrite({ input: createInput, run: createTemplate }),
+	update: defineWrite({ input: updateInput, run: updateTemplate }),
+	delete: defineWrite({ input: idInput, run: deleteTemplate }),
 };

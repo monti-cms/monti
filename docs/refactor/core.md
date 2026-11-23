@@ -80,8 +80,8 @@ sequenceDiagram
 
 ### 3.3 이벤트 (`onEvent`)
 
-- 쓰기 Operation(`defineWrite`)은 기본이 무통지이며, 도메인 상태 변경을 외부에 알릴 쓰기만 `emit: true`로 명시한다. `emit: true`인 쓰기가 커밋된 직후 `{ operation, input, output }`을 구독자마다 독립된 값(사본)으로 통지해, 한 구독자가 받은 값을 바꿔도 호출자 반환값이나 다른 구독자에 영향을 주지 않는다. 읽기와 `dryRun`, 그리고 `emit: true`가 없는 쓰기는 통지하지 않는다.
-- 비밀번호·세션 토큰·외부 API 키 원문·업로드 티켓(서명된 URL·헤더)이 오가는 `admin`·`session`·`keys` 리소스의 쓰기와 `media.startUpload`는 `emit`을 켜지 않으므로 `onEvent`로 통지하지 않는다.
+- 쓰기가 커밋된 직후 `{ operation, input, output }`을 구독자마다 독립된 값(사본)으로 통지해, 한 구독자가 받은 값을 바꿔도 호출자 반환값이나 다른 구독자에 영향을 주지 않는다. 읽기와 `dryRun`은 통지하지 않는다.
+- 비밀번호·세션 토큰·외부 API 키 원문·업로드 티켓(서명된 URL·헤더)이 구독자에게 새어 나가지 않도록 `admin`·`session`·`keys` 리소스의 쓰기와 `media.startUpload`는 `onEvent`로 통지하지 않는다.
 - core는 통지만 발행하고 구독자 완료를 기다리지 않는다. 한 구독자의 실패가 커밋 결과나 다른 구독자의 통지에 영향을 주지 않게 격리해 호출한다.
 
 ### 3.4 오류 (`MontiError`)
@@ -89,6 +89,7 @@ sequenceDiagram
 - 오류는 `MontiError` 하나로 통일하며 코드는 `BAD_REQUEST`, `UNAUTHORIZED`, `FORBIDDEN`, `NOT_FOUND`, `CONFLICT` 다섯 가지다.
 - 입력 검사 실패는 `BAD_REQUEST`다.
 - 쓰기 중 발생하는 PostgreSQL 고유 제약 위반(`23505`, 중복 `id` 등)은 엔진이 `CONFLICT`로 변환한다. DB 쓰기 오류는 트랜잭션 자체를 중단시키므로 콜백이 잡아도 해당 `transaction`·`dryRun`은 끝에서 그 오류로 실패한다.
+- 이것은 의도한 동작이다: `monti.transaction` 안에서는 고유 제약 위반의 `CONFLICT`를 포함해 어떤 DB 오류든 트랜잭션 전체를 실패시킨다. 호출자가 `CONFLICT`를 잡고 같은 트랜잭션에서 이어 갈 수 없다 (소유자 승인 2026-11-23).
 
 ### 3.5 주요 타입 계약
 
@@ -439,7 +440,8 @@ packages/core/src/
 | 2026-11-22 | `slug`도 초안(`draft`)에서는 비워 둘 수 있고(`null`) 발행(`publish`)할 때 `required` 필드와 함께 검사한다. `addLocale`은 원문 언어의 `slug`를 기본으로 복사한다. |
 | 2026-11-22 | 영구 삭제 시 참조 정리는 DB 외래 키(`ON DELETE SET NULL` / `CASCADE`)가 맡는다. 휴지통 항목 참조는 복원을 위해 DB에 남기되, 발행본(`status: "published"`) 조회에서만 빈칸으로 걸러 돌려주고 초안(`status: "draft"`) 조회에서는 원래 참조 ID를 그대로 돌려준다. 새로 참조를 넣거나(`create`·`addLocale`·`duplicate` 및 `update`의 신규 참조) 발행(`publish`)할 때는 필드나 본문이 휴지통·없는 대상을 가리키면 `BAD_REQUEST`로 거절하되, 초안·템플릿 수정(`update`)에서 이미 들어 있던 휴지통 참조를 그대로 유지한 채 임시저장하는 것은 허용한다. |
 | 2026-11-23 | 미디어 안전성을 위해 `media.key`에 DB 고유 제약을 두고, `media.size` 상한을 PostgreSQL `integer` 최대값(`2_147_483_647`)으로 `startUpload`와 `stat` 검증에 통일 적용한다. `dryRun`에서는 저장소 래퍼로 `storage.ticket`·`remove`를 `BAD_REQUEST`로 차단하며, `media` 등록·교체·영구 삭제·`removeLooseFiles`는 키 단위 트랜잭션 잠금(`pg_advisory_xact_lock`)과 `FOR NO KEY UPDATE` 행 잠금으로 경합을 방지한다. `removeLooseFiles`는 `{ removed, failed }`를 반환한다. |
-| 2026-11-23 | 기반 계층 보강: 동시 `migrate`·`migrateMonti`·`schema.update`·`config.update` 직렬화 및 원자적 파일 교체(파일 쓰기 실패 시 DB 롤백), `media_uses` 복합 기본 키, `schema.get`·`config.get`·`onEvent` 값 사본 격리, 콜백 안 모든 DB 오류의 트랜잭션·드라이런 실패 보장, 플러그인 이름·기본 메서드 충돌 차단, `planSchemaDiff` 이전 스냅샷 식별자 검증, `current_schema()` 기준 카탈로그 조회, `defineWrite` 기본 무통지(`emit: true` 화이트리스트) 및 `media.startUpload` 이벤트 미통지를 확정한다. |
+| 2026-11-23 | 기반 계층 보강: 동시 `migrate`·`migrateMonti`·`schema.update`·`config.update` 직렬화 및 원자적 파일 교체(파일 쓰기 실패 시 DB 롤백), `media_uses` 복합 기본 키, `schema.get`·`config.get`·`onEvent` 값 사본 격리, 콜백 안 모든 DB 오류의 트랜잭션·드라이런 실패 보장, 플러그인 이름·기본 메서드 충돌 차단, `planSchemaDiff` 이전 스냅샷 식별자 검증, `current_schema()` 기준 카탈로그 조회, `media.startUpload` 이벤트 미통지를 확정한다. |
+| 2026-11-23 | 쓰기는 기본으로 이벤트를 보내고, 비밀값을 돌려주는 쓰기(admin·session·keys·`media.startUpload`)만 제외 목록으로 뺀다 (소유자 승인 2026-11-23) |
 
 ## 11. 정하지 않은 것
 

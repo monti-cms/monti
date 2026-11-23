@@ -14,6 +14,7 @@ import {
 	tableExists,
 	testServer,
 } from "./__test__/database";
+import { holdingAfter, overlap } from "./__test__/race";
 import { initial } from "./db/migrations/0001-initial";
 import type { Database, Migration } from "./db/types";
 import { defineWrite } from "./engine/operation";
@@ -445,10 +446,20 @@ it("START-12 스키마 변경 SQL은 열 추가·타입 변환·외래 키 대�
 });
 
 it("START-15 개발 서버를 동시에 두 번 띄워도 컬렉션 테이블 준비가 둘 다 성공한다", async () => {
-	const runs = await Promise.allSettled([prepare([], schema, { dev: true }), prepare([], schema, { dev: true })]);
+	// 첫 준비를 `posts` 테이블을 만든 직후(커밋 전)에 멈춰 두고 두 번째 준비를 시작한다.
+	const runs = await overlap(
+		db,
+		(hold) =>
+			migrateMonti({
+				db: holdingAfter(db, /^create table "posts" /, hold),
+				schema,
+				config: { name: "Monti Blog", dev: true },
+			}),
+		() => prepare([], schema, { dev: true }),
+	);
 
 	// START-15.1
-	expect(runs.map((run) => run.status)).toEqual(["fulfilled", "fulfilled"]);
+	expect(runs.map((run) => run.code)).toEqual([null, null]);
 	// START-15.2
 	expect([await tableExists(testDb.db, "posts"), await tableExists(testDb.db, "posts_data")]).toEqual([true, true]);
 });

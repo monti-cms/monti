@@ -180,8 +180,8 @@ async function updateMany(input: z.infer<typeof updateManyInput>, ctx: WriteCont
 /** `media` 리소스: 스토리지에 올라간 파일과 그 파일 정보. */
 export const media = {
 	startUpload: defineWrite({ input: startUploadInput, run: startUpload }),
-	create: defineWrite({ emit: true, input: createInput, run: createMedia }),
+	create: defineWrite({ input: createInput, run: createMedia }),
 	list: defineRead({ input: listInput, run: listMedia }),
 	get: defineRead({ input: getInput, run: getMedia }),
-	update: defineWrite({ emit: true, input: updateInput, run: updateMedia }),
+	update: defineWrite({ input: updateInput, run: updateMedia }),
 };

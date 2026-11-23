@@ -2,8 +2,8 @@
 
 | 기능 | 하는 일 | 주요 거절 |
 |---|---|---|
-| 직접 호출 | 읽기는 트랜잭션 없이, 쓰기는 트랜잭션·커밋·(`emit: true`일 때) `onEvent` 통지 순으로 실행한다 | 입력 스키마 불일치 `BAD_REQUEST` |
-| `onEvent` | `emit: true`로 선언한 커밋된 쓰기 이벤트만 구독자마다 독립된 값으로 비동기 격리 통지한다(해제 가능) | 구독자 오류가 커밋을 막지 않음, `emit` 생략 쓰기 미통지 |
+| 직접 호출 | 읽기는 트랜잭션 없이, 쓰기는 트랜잭션·커밋·`onEvent` 통지 순으로 실행한다 | 입력 스키마 불일치 `BAD_REQUEST` |
+| `onEvent` | 커밋된 쓰기 이벤트를 구독자마다 독립된 값으로 비동기 격리 통지한다(해제 가능) | 구독자 오류가 커밋을 막지 않음 |
 | `transaction` · `dryRun` | 여러 호출을 한 트랜잭션으로 묶거나(`transaction`), 쓰기만 시험 실행 후 롤백(`dryRun`)한다 | DB 고유 제약 위반(`23505`) `CONFLICT`, 콜백이 잡아도 DB 오류면 실패 |
 | `plugins` · `spec` | 플러그인 작업·이벤트를 연결하고 모든 Operation의 이름·종류·JSON Schema를 반환한다 | 중복 경로·엔진 기본 메서드 이름 충돌 시 `CONFLICT` |
 
@@ -26,9 +26,9 @@
 </details>
 
 <details>
-<summary><strong><code>ENG-OP-2</code></strong> `emit: true` 쓰기 작업을 직접 호출하면 트랜잭션 안에서 실행하고 커밋 뒤 이벤트를 통지한다</summary>
+<summary><strong><code>ENG-OP-2</code></strong> 쓰기 작업을 직접 호출하면 트랜잭션 안에서 실행하고 커밋 뒤 이벤트를 통지한다</summary>
 
-- **전제**: DB에 행을 추가하는 `emit: true` 쓰기 Operation과 `onEvent` 구독자가 등록되어 있다
+- **전제**: DB에 행을 추가하는 쓰기 Operation과 `onEvent` 구독자가 등록되어 있다
 - **행동**: 유효한 입력으로 쓰기 Operation을 호출한다
 - **결과**:
   - `ENG-OP-2.1` 트랜잭션 안에서(`ctx.db.isTransaction === true`) `run`이 실행된다
@@ -71,8 +71,8 @@
 <details>
 <summary><strong><code>ENG-EVT-1</code></strong> 이벤트 구독자의 오류가 쓰기 결과와 다른 구독자의 통지를 막지 않는다</summary>
 
-- **전제**: `emit: true` 쓰기 Operation과 함께 동기 예외를 던지는 구독자, 실패하는 Promise를 돌려주는 구독자, 정상 구독자가 순서대로 등록되어 있다
-- **행동**: 해당 쓰기 Operation을 호출한다
+- **전제**: 동기 예외를 던지는 구독자, 실패하는 Promise를 돌려주는 구독자, 정상 구독자가 순서대로 등록되어 있다
+- **행동**: 쓰기 Operation을 호출한다
 - **결과**:
   - `ENG-EVT-1.1` `run`의 결과가 반환된다
   - `ENG-EVT-1.2` DB에 행이 커밋된다
@@ -83,8 +83,8 @@
 <details>
 <summary><strong><code>ENG-EVT-2</code></strong> 해제한 이벤트 구독자는 통지를 받지 않는다</summary>
 
-- **전제**: `emit: true` 쓰기 Operation이 있고 `onEvent`로 등록한 구독자를 반환된 함수로 해제했다
-- **행동**: 해당 쓰기 Operation을 호출한다
+- **전제**: `onEvent`로 등록한 구독자를 반환된 함수로 해제했다
+- **행동**: 쓰기 Operation을 호출한다
 - **결과**:
   - `ENG-EVT-2.1` 해제한 구독자가 호출되지 않는다
 
@@ -95,22 +95,11 @@
 <details>
 <summary><strong><code>ENG-EVT-3</code></strong> 구독자가 받은 이벤트 값을 고치려 해도 다른 구독자와 호출자의 반환값은 바뀌지 않는다</summary>
 
-- **전제**: 객체를 돌려주는 `emit: true` 쓰기 Operation과, 받은 `event.output`의 속성을 바꾸려 하는 첫 번째 구독자, 받은 값을 기록하는 두 번째 구독자가 순서대로 등록되어 있다
+- **전제**: 객체를 돌려주는 쓰기 Operation과, 받은 `event.output`의 속성을 바꾸려 하는 첫 번째 구독자, 받은 값을 기록하는 두 번째 구독자가 순서대로 등록되어 있다
 - **행동**: 해당 쓰기 Operation을 호출한다
 - **결과**:
   - `ENG-EVT-3.1` 호출자가 돌려받은 반환값은 원래 값 그대로이다
   - `ENG-EVT-3.2` 두 번째 구독자가 받은 `event.output`도 원래 값 그대로이다
-
-</details>
-
-<details>
-<summary><strong><code>ENG-EVT-4</code></strong> `emit: true`를 켜지 않은 쓰기 Operation은 커밋되어도 이벤트 구독자에게 통지하지 않는다</summary>
-
-- **전제**: DB에 행을 추가하지만 `emit`을 생략한 쓰기 Operation과 `onEvent` 구독자가 등록되어 있다
-- **행동**: 유효한 입력으로 해당 쓰기 Operation을 호출한다
-- **결과**:
-  - `ENG-EVT-4.1` DB에 행이 커밋되고 `run`의 결과가 반환된다
-  - `ENG-EVT-4.2` `onEvent` 구독자가 호출되지 않는다
 
 </details>
 
@@ -121,7 +110,7 @@
 <details>
 <summary><strong><code>ENG-TX-1</code></strong> `transaction` 콜백 안의 호출은 한 트랜잭션을 공유하고 커밋된 뒤 호출 순서대로 이벤트를 통지한다</summary>
 
-- **전제**: DB에 행을 추가하는 `emit: true` 쓰기 두 개, 행을 조회하는 읽기, `onEvent` 구독자가 등록되어 있다
+- **전제**: DB에 행을 추가하는 쓰기 두 개, 행을 조회하는 읽기, `onEvent` 구독자가 등록되어 있다
 - **행동**: `monti.transaction` 안에서 `tx`로 첫 번째 쓰기, 읽기, 두 번째 쓰기를 순서대로 호출한다
 - **결과**:
   - `ENG-TX-1.1` 세 호출 모두 같은 트랜잭션(`ctx.db`)을 공유한다
@@ -202,7 +191,7 @@
 <details>
 <summary><strong><code>ENG-PLG-1</code></strong> 플러그인의 작업과 이벤트 구독자를 엔진에 연결한다</summary>
 
-- **전제**: `emit: true` 쓰기 Operation과 `onEvent`를 가진 플러그인이 등록되어 있다
+- **전제**: 쓰기 Operation과 `onEvent`를 가진 플러그인이 등록되어 있다
 - **행동**: 플러그인이 등록한 쓰기 Operation을 `monti.<resource>.<action>`으로 호출한다
 - **결과**:
   - `ENG-PLG-1.1` 플러그인의 쓰기 Operation이 실행되어 결과가 반환된다

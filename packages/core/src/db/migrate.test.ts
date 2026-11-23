@@ -8,6 +8,7 @@ import {
 	type TestDatabase,
 	tableExists,
 } from "../__test__/database";
+import { overlap } from "../__test__/race";
 import { migrate } from "./migrate";
 import { initial } from "./migrations/0001-initial";
 import type { Migration } from "./types";
@@ -152,15 +153,23 @@ function counting(name: string, table: string, counts: Map<string, number>): Mig
 
 it("DB-MIG-5 같은 DB에 마이그레이션을 동시에 두 번 실행해도 각 단계는 한 번만 실행되고 둘 다 성공한다", async () => {
 	const counts = new Map<string, number>();
-	const steps = [counting("first", "first_table", counts), counting("second", "second_table", counts)];
+	const [first, second] = [counting("first", "first_table", counts), counting("second", "second_table", counts)];
 
-	const runs = await Promise.allSettled([
-		migrate(testDb.db, "@monti-cms/core", steps),
-		migrate(testDb.db, "@monti-cms/core", steps),
-	]);
+	// 첫 실행을 첫 단계 안에서 멈춰 두고 두 번째 실행을 시작한다.
+	const runs = await overlap(
+		testDb.db,
+		(hold) => {
+			async function up(db: Kysely<unknown>): Promise<void> {
+				await hold();
+				await first.up(db);
+			}
+			return migrate(testDb.db, "@monti-cms/core", [{ name: first.name, up }, second]);
+		},
+		() => migrate(testDb.db, "@monti-cms/core", [first, second]),
+	);
 
 	// DB-MIG-5.1
-	expect(runs.map((run) => run.status)).toEqual(["fulfilled", "fulfilled"]);
+	expect(runs.map((run) => run.code)).toEqual([null, null]);
 	// DB-MIG-5.2
 	expect(Object.fromEntries(counts)).toEqual({ first: 1, second: 1 });
 	// DB-MIG-5.3

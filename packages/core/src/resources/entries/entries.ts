@@ -36,15 +36,15 @@ const listInput = z.object({
 
 /** `entries` 리소스: 모든 컬렉션 글의 언어별 작업본과 발행본. */
 export const entries = {
-	create: defineWrite({ emit: true, input: createInput, run: createEntry }),
+	create: defineWrite({ input: createInput, run: createEntry }),
 	get: defineRead({ input: getInput, run: getEntry }),
 	list: defineRead({ input: listInput, run: listEntries }),
-	update: defineWrite({ emit: true, input: updateInput, run: updateEntries }),
-	publish: defineWrite({ emit: true, input: publishInput, run: publishEntry }),
-	unpublish: defineWrite({ emit: true, input: unpublishInput, run: unpublishEntry }),
-	duplicate: defineWrite({ emit: true, input: duplicateInput, run: duplicateEntry }),
-	replaceReferences: defineWrite({ emit: true, input: replaceInput, run: replaceReferences }),
-	addLocale: defineWrite({ emit: true, input: addLocaleInput, run: addLocale }),
-	removeLocale: defineWrite({ emit: true, input: entryLocaleInput, run: removeLocale }),
-	setSourceLocale: defineWrite({ emit: true, input: entryLocaleInput, run: setSourceLocale }),
+	update: defineWrite({ input: updateInput, run: updateEntries }),
+	publish: defineWrite({ input: publishInput, run: publishEntry }),
+	unpublish: defineWrite({ input: unpublishInput, run: unpublishEntry }),
+	duplicate: defineWrite({ input: duplicateInput, run: duplicateEntry }),
+	replaceReferences: defineWrite({ input: replaceInput, run: replaceReferences }),
+	addLocale: defineWrite({ input: addLocaleInput, run: addLocale }),
+	removeLocale: defineWrite({ input: entryLocaleInput, run: removeLocale }),
+	setSourceLocale: defineWrite({ input: entryLocaleInput, run: setSourceLocale }),
 };

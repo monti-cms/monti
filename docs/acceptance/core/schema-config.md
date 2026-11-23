@@ -127,10 +127,11 @@
 <details>
 <summary><strong><code>SCH-UPD-8</code></strong> 스키마에서 컬렉션을 지우면 그 컬렉션의 테이블들이 모두 삭제된다</summary>
 
-- **전제**: `config.dev`가 `true`이고 `posts` 컬렉션이 적용되어 `posts`, `posts_data`, `posts_rels` 테이블이 있다
+- **전제**: `config.dev`가 `true`이고 `posts` 컬렉션이 적용되어 `posts`, `posts_data`, `posts_rels` 테이블이 있으며, 미디어 필드에 미디어를 넣은 `posts` 글이 있다
 - **행동**: `posts` 컬렉션을 제거한 스키마로 `schema.update`를 실행한다
 - **결과**:
   - `SCH-UPD-8.1` DB에 `posts`, `posts_data`, `posts_rels` 테이블이 없다
+  - `SCH-UPD-8.2` 그 미디어의 `media.get` 결과 `uses`에 지운 컬렉션의 글이 없다
 
 </details>
 

@@ -9,13 +9,12 @@ export function defineRead<TInput, TOutput>(def: {
 	return { kind: "read", input: def.input, run: def.run };
 }
 
-/** 쓰기 Operation을 정의한다: 트랜잭션 안에서 실행되며 `emit: true`일 때만 커밋 뒤 이벤트를 통지한다. */
+/** 쓰기 Operation을 정의한다: 트랜잭션 안에서 실행되며 커밋 뒤 이벤트를 통지한다. */
 export function defineWrite<TInput, TOutput>(def: {
 	input: z.ZodType<TInput>;
 	run: (input: TInput, ctx: WriteContext) => Promise<TOutput>;
-	emit?: boolean;
 }): WriteOperation<TInput, TOutput> {
-	return { kind: "write", emit: def.emit, input: def.input, run: def.run };
+	return { kind: "write", input: def.input, run: def.run };
 }
 
 /** Whether a node of the resource tree is an operation rather than a resource holding more nodes. */

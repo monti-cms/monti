@@ -4,6 +4,7 @@ import path from "node:path";
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, expect, it } from "vitest";
 import { createTestDatabase, type TestDatabase } from "../../__test__/database";
+import { gate, waitForLockWaits } from "../../__test__/race";
 import { migrate } from "../../db/migrate";
 import { initial } from "../../db/migrations/0001-initial";
 import type { Database } from "../../db/types";
@@ -182,11 +183,21 @@ export default defineConfig({
 
 it("CFG-UPD-8 개발 서버에서 사이트 이름을 동시에 두 번 바꿔도 설정 파일이 깨지지 않고 조회 결과와 일치한다", async () => {
 	const monti = montiOf(true);
+	const held = gate();
 
-	const runs = await Promise.allSettled([
-		monti.config.update({ name: "가 사이트" }),
-		monti.config.update({ name: "나 사이트" }),
-	]);
+	// 첫 변경을 커밋 직전에 멈춰 두고 두 번째 변경을 시작한다. 두 번째는 첫 변경이 끝나기를 기다려야 한다.
+	const first = monti.transaction(async (tx) => {
+		await tx.config.update({ name: "가 사이트" });
+		await held.pass();
+	});
+	await held.reached;
+	const second = monti.config.update({ name: "나 사이트" });
+	try {
+		await waitForLockWaits(db, 1);
+	} finally {
+		held.open();
+	}
+	const runs = await Promise.allSettled([first, second]);
 	const { name } = await monti.config.get({});
 
 	// CFG-UPD-8.1
