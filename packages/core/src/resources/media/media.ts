@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
+import { lockFolderScope } from "../../db/locks";
 import type { MediaUsesTable } from "../../db/types";
 import { MontiError } from "../../engine/errors";
 import { defineRead, defineWrite } from "../../engine/operation";
@@ -49,10 +50,12 @@ const createInput = z.object({
 /**
  * 업로드 티켓으로 올라간 파일을 미디어로 등록한다. `mime_type`과 `size`는 스토리지의 값이고 `filename`을 생략하면 `key`다.
  * 키를 잠가 임시 파일 정리·같은 키의 등록과 겹치지 않게 한다. 이미 등록된 키는 `CONFLICT`, 발급받지 않았거나 삭제 대기 중인
- * 키는 `BAD_REQUEST`다.
+ * 키는 `BAD_REQUEST`다. 폴더에 넣을 때는 `"media"` `scope` 잠금을 키보다 먼저 잡고 그 뒤에 폴더를 확인해, 겹친 폴더의
+ * 휴지통 이동이 커밋된 뒤의 폴더를 본다. 영구 삭제와 같은 순서(`scope`, 키, 행)라 서로 기다리다 멈추지 않는다.
  */
 async function createMedia(input: z.infer<typeof createInput>, ctx: WriteContext): Promise<MediaItem> {
 	const storage = storageOf(ctx);
+	if (typeof input.folder_id === "string") await lockFolderScope(ctx.db, "media");
 	await lockStorageKey(ctx.db, input.key);
 	await rejectRegisteredKey(ctx, input.key);
 	await rejectUnissuedKey(ctx, input.key);
@@ -127,11 +130,13 @@ async function updateMedia(input: z.infer<typeof updateInput>, ctx: WriteContext
 /**
  * 생략한 필드는 그대로다. 새 `key`는 업로드 티켓이어야 하고 그 파일의 `mime_type`과 `size`를 가져오며, 이전 키는 더는 쓰지
  * 않는 파일로 `loose_files`에서 기다린다. 새 키를 먼저 잠그고 미디어 행을 잠가, 같은 미디어의 동시 교체는 앞 교체가 끝난
- * 행을 보고 그 키를 임시 목록에 넣는다.
+ * 행을 보고 그 키를 임시 목록에 넣는다. 폴더를 바꿀 때(루트로 꺼낼 때도)는 `"media"` `scope` 잠금을 그보다 먼저 잡아,
+ * 겹친 폴더의 휴지통 이동이 커밋된 뒤의 폴더와 미디어를 본다.
  */
 async function updateOne(input: z.infer<typeof updateOneInput>, ctx: WriteContext): Promise<MediaItem> {
 	const storage = storageOf(ctx);
 	const { id, key, ...fields } = input;
+	if (fields.folder_id !== undefined) await lockFolderScope(ctx.db, "media");
 	if (key !== undefined) await lockStorageKey(ctx.db, key);
 	const existing = await lockActiveMedia(ctx, id);
 	if (typeof fields.folder_id === "string") await rejectFolder(ctx, fields.folder_id);
@@ -153,38 +158,39 @@ async function updateOne(input: z.infer<typeof updateOneInput>, ctx: WriteContex
 	return itemOf(row, storage);
 }
 
-/** 업로드 티켓으로 올라간 새 파일을 확인하고 파일과 함께 바뀌는 열들을 돌려준다. */
+/**
+ * 업로드 티켓으로 올라간 새 파일을 확인하고 파일과 함께 바뀌는 열들을 돌려준다. 등록과 같은 순서로 거절한다: 다른 미디어가
+ * 이미 쓰는 키는 `CONFLICT`, 발급받지 않았거나 삭제 대기 중인 키는 `BAD_REQUEST`다.
+ */
 async function fileOf(
 	ctx: WriteContext,
 	storage: StorageAdapter,
 	key: string,
 ): Promise<{ key: string; mime_type: string; size: number }> {
+	await rejectRegisteredKey(ctx, key);
 	await rejectUnissuedKey(ctx, key);
 	const stat = await statOf(storage, key);
 	return { key, mime_type: stat.mime, size: stat.size };
 }
 
-/** `ids`를 모두 옮기거나 하나도 옮기지 않는다: 없거나 휴지통에 있는 것이 하나라도 있으면 이동 전체를 거절한다. */
+/**
+ * `ids`를 모두 옮기거나 하나도 옮기지 않는다: 없거나 휴지통에 있는 것이 하나라도 있으면 이동 전체를 거절한다. `"media"`
+ * `scope` 잠금 아래에서 폴더를 확인하고 아직 활성인 행만 옮겨, 겹친 폴더의 휴지통 이동·다른 다건 이동이 커밋된 뒤의 상태를
+ * 본다.
+ */
 async function updateMany(input: z.infer<typeof updateManyInput>, ctx: WriteContext): Promise<MediaItem[]> {
 	const storage = storageOf(ctx);
+	await lockFolderScope(ctx.db, "media");
 	if (input.folder_id !== null) await rejectFolder(ctx, input.folder_id);
-	// 행을 `id` 순으로 잠가 겹치는 다건 이동끼리 교착하지 않게 한다.
-	const ids = [...new Set(input.ids)].sort();
-	const active = await ctx.db
-		.selectFrom("media")
-		.select("id")
-		.where("id", "in", ids)
-		.where("trashed_at", "is", null)
-		.orderBy("id", "asc")
-		.forNoKeyUpdate()
-		.execute();
-	if (active.length !== ids.length) throw new MontiError("NOT_FOUND", "Some of the ids are not active media items");
+	const ids = [...new Set(input.ids)];
 	const rows = await ctx.db
 		.updateTable("media")
 		.set({ folder_id: input.folder_id })
 		.where("id", "in", ids)
+		.where("trashed_at", "is", null)
 		.returning(SHOWN)
 		.execute();
+	if (rows.length !== ids.length) throw new MontiError("NOT_FOUND", "활성 미디어가 아닌 `id`가 있다");
 	return rows.map((row) => itemOf(row, storage));
 }
 
