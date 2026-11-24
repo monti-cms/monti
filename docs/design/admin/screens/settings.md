@@ -123,6 +123,8 @@
 
 "번역" 스위치와 "주소" 절(관리자 주소)은 없다(12 화면 승인, 16).
 
+편집기 도구 절(`Section`("편집기 도구", `last`), 시안 `settings-toolbar*.html`)의 첫 줄은 서식 막대 · / 블록 메뉴를 고르는 `Segmented inline`이고, 그 줄 끝에 `TextButton variant="quiet" size="caption"` "기본값으로 되돌리기"(앞에 `Reset` 아이콘)가 늘 있다. 글자 상자의 끝이 절의 끝선에 닿고(넘지 않는다), 글자는 고르는 칸(32px)의 가운데 높이에 선다. 기본값과 다른 곳이 없으면 `disabled`로 흐리게 두고(시안의 흐린 글자), 숨기거나 옮긴 항목이 생기면 누를 수 있다. 있다 없다 하지 않으니 줄이 움직이지 않는다(2026-11-24). 스토리: Screens/Settings › SettingsToolbar · SettingsToolbarDrag(흐림), SettingsToolbarHidden(누를 수 있음).
+
 스토리: Patterns/Frame/Section, Controls/Field/Field, Controls/Field/Select, Controls/Choice/Option, Controls/Choice/Switch. 화면 스토리: Screens/Settings/Tabs › Admin, AdminEnglish.
 
 ## 설정 · AI 제안 (SettingsProposal)

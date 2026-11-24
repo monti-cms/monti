@@ -239,12 +239,11 @@ function ToolsSection({ view, dragging }: { view: ToolsView; dragging: boolean }
 						{ value: "menu", label: "/ 블록 메뉴" },
 					]}
 				/>
-				{changed ? (
-					<TextButton variant="quiet" size="caption">
-						<Reset aria-hidden />
-						기본값으로 되돌리기
-					</TextButton>
-				) : null}
+				{/* 시안처럼 늘 그 자리에 있다: 기본값 그대로면 흐리게 눌리지 않고, 바뀐 곳이 생겨도 줄이 움직이지 않는다. */}
+				<TextButton variant="quiet" size="caption" disabled={!changed}>
+					<Reset aria-hidden />
+					기본값으로 되돌리기
+				</TextButton>
 			</Inline>
 			<Grid columns="preview" gap={24} align="start">
 				{view === "bar" ? (
