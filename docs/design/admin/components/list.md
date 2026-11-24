@@ -325,4 +325,6 @@
 
 ### 코드
 
+`LanguageList`는 2026-11 개편 시안(`settings-lang.html`)의 언어 목록이다: `border-default` 테두리의 `radius-lg` 상자, 종이 바탕, 안의 버튼은 6px 모서리(`data-shape="square"`). 줄 `LanguageListRow`는 40px(`height-row`), 양끝 12px 안이라 손잡이와 ⋯ 상자가 상자의 시작 · 끝에서 12px 떨어진다. 손잡이 16px 열, 그 언어로 쓴 이름(14px 먹색), 코드(mono 12px `fg-subtle`), 화면 언어로 쓴 이름(13px 흐림), 끝에 번역 수(`LanguageListNote`, 수는 mono)와 ⋯. 원문 줄(`source`)은 도구 바탕에 손잡이 자리를 비우고 끝에 `LanguageListFlag` "원문"(20px, 고른 바탕, 11px 600)과 작은 ghost 버튼 "원문 바꾸기"가 선다. 옮길 수 있는 줄은 가리키거나 그 줄의 메뉴가 열린 동안 `bg-muted`다. 맨 아래 `LanguageListAdd`는 줄 전체가 버튼이고 + 아이콘이 이름들의 시작선에 선다. 시안은 이름을 그 언어로 먼저 쓴다(TR-01의 "화면 언어로 쓴 이름이 앞"과 다르다: 소유자 확인을 기다린다).
+
 `LanguageRow`(이름, `code`, `label`, `dot`과 제안이면 파란 점을 만드는 `dotTone="proposal"`, 고칠 수 없는 목록에서 이름 뒤에 자물쇠를 붙이는 `locked`, 손잡이 열을 위한 `handle`과 `handled`, 정렬 가능 항목의 변형을 위한 `drag`)와 `DragHandle`(손잡이), `LanguageSource`(굵은 표시와 작은 ghost 버튼 하나 "바꾸기"). 행은 양 끝 8px 안에 내용을 두고, 옮길 수 있는 행(`handle`이 있는 행)만 가리키면 `bg-muted`가 깔린다. 원문 행은 고정이라 반응하지 않는다. 행은 36px(`height-control-lg`, 아래 선 포함)로 선다. 언어를 빼는 ×는 행 끝의 `IconButton`(`Close`, 32px)이고, 원문 행의 "바꾸기"는 작은 버튼(28px)이다. 둘 다 행 안에 그대로 들어가고, 음수 여백으로 행에 맞추지 않는다. 언어 고르기는 `Command`(`shouldFilter={false}`, 거르기는 화면이 한다)를 담은 `Popover`이고, 원문 메뉴는 라디오 묶음을 담은 `DropdownMenu`다. "직접 입력" 창은 없다(소유자, 2026-11-11: "직접 입력이 필요한가 의문인데"). 뺀 언어의 행 끝에는 × 대신 "되돌리기"(`TextButton variant="underline" quiet`)가 있다.
