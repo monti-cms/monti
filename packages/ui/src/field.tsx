@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import { ChangeDot } from "./change-dot";
 import { cn } from "./cn";
+import { FIELD_INSET_STACKED } from "./hover";
 import { Label } from "./label";
 import { Del } from "./proposal-marks";
 import { TextButton } from "./text-button";
@@ -75,7 +76,10 @@ function FormField({
 	className,
 	...props
 }: React.ComponentProps<"div"> & {
-	/** `label`: 6px between the label, the control and its hint (the settings pages and the API key dialog of the 2026-11 redesign); `tight` (the default) 4px. */
+	/**
+	 * `label`: a stacked form's field (the settings pages and the API key dialog of the 2026-11 redesign): 6px between the label, the control and its
+	 * hint, and the control's words start on the label's line (`FIELD_INSET`). `tight` (the default) 4px, the words 8px in.
+	 */
 	spacing?: "tight" | "label";
 }) {
 	return (
@@ -84,7 +88,7 @@ function FormField({
 			data-slot="field"
 			className={cn(
 				"group/field flex w-full flex-col data-[invalid=true]:text-monti-danger",
-				spacing === "label" ? "gap-monti-6" : "gap-monti-4",
+				spacing === "label" ? cn("gap-monti-6", FIELD_INSET_STACKED) : "gap-monti-4",
 				className,
 			)}
 			{...props}
@@ -155,7 +159,7 @@ function FormFieldLabel({
 					) : (
 						<span className="inline-flex items-center gap-monti-4">
 							{children}
-							<span data-slot="field-label-aside" className="text-monti-faint text-monti-note">
+							<span data-slot="field-label-aside" className="font-normal text-monti-faint">
 								{aside}
 							</span>
 						</span>

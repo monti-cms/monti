@@ -8,9 +8,19 @@ export const FIELD_HOVER =
 	"hover:not-focus-within:not-disabled:not-data-disabled:not-has-[:disabled]:not-aria-readonly:not-has-[[readonly]]:bg-monti-muted hover:not-focus-within:not-disabled:not-data-disabled:not-has-[:disabled]:not-aria-readonly:not-has-[[readonly]]:not-aria-invalid:not-has-[[aria-invalid=true]]:not-data-proposal:not-has-data-proposal:border-monti-default";
 
 /**
- * An underline field's room for that tint: 8px inside at each side. The field starts where its label starts; the words sit 8px in from both.
+ * An underline field's room for that tint: 8px inside at each side. The field starts where its label starts; the words sit 8px in from both (a
+ * label column's field, a panel's row). In a stacked form (`FormField spacing="label"`: the settings pages and the API key dialog of the 2026-11
+ * redesign, 시안 v7.1) the words start on the underline's start, with the label and the hint (no room before them), and the end keeps 4px so a
+ * trailing control ({@link FIELD_ACTION}) still ends inside the line. Only the place sets it, never the state: nothing moves under the pointer or the focus.
  */
-export const FIELD_INSET = "px-monti-8";
+export const FIELD_INSET =
+	"pl-[var(--monti-field-start,var(--monti-space-8))] pr-[var(--monti-field-end,var(--monti-space-8))]";
+
+/** What a stacked form's field sets for {@link FIELD_INSET}: the words on the underline's start, 4px kept at the end. */
+export const FIELD_INSET_STACKED = "[--monti-field-end:var(--monti-space-4)] [--monti-field-start:0px]";
+
+/** Where a mark that stands before an underline field's words (a finder's magnifier) starts: at the words' own start, {@link FIELD_INSET}. */
+export const FIELD_LEAD = "left-[var(--monti-field-start,var(--monti-space-8))]";
 
 /**
  * The pointer over a checkbox, or over the option row that holds it: a soft round halo (`bg-selected`, a step stronger than a field's tint: no picked state shares it) around the box, and an empty box's border a

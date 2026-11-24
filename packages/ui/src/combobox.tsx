@@ -5,7 +5,7 @@ import * as React from "react";
 import { Caret } from "./caret";
 import { CHIP, CHIP_REMOVABLE, CHIP_REMOVE, CHIP_SM, CHIPS_FIELD, CHIPS_INPUT } from "./chip";
 import { cn } from "./cn";
-import { FIELD_HOVER, FIELD_INSET } from "./hover";
+import { FIELD_HOVER, FIELD_INSET, FIELD_LEAD } from "./hover";
 import { ICON_BUTTON } from "./icon-button";
 import { Add, Close } from "./icons";
 import { Input } from "./input";
@@ -112,7 +112,7 @@ function ComboboxInput({
 			{icon && (
 				<span
 					data-slot="combobox-icon"
-					className="pointer-events-none absolute left-monti-8 flex text-monti-faint [&_svg]:size-3.5"
+					className={cn("pointer-events-none absolute flex text-monti-faint [&_svg]:size-3.5", FIELD_LEAD)}
 				>
 					{icon}
 				</span>
