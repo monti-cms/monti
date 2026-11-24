@@ -157,7 +157,7 @@ function ServicePicker({ query }: { query?: string }) {
 				aria-label="서비스"
 				autoFocus
 			/>
-			<ComboboxContent sideOffset={5} width="field">
+			<ComboboxContent sideOffset={4} width="field">
 				<ComboboxList fit="content">
 					{found ? (
 						<ComboboxGroup>

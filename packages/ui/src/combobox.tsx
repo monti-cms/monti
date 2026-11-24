@@ -18,20 +18,30 @@ import { FIRST_PASS, FIT_HEIGHT, FIT_LIST, usePlacementPadding } from "./placeme
  * The combobox. `readOnly` is a value to read, the same in a field of one and of many: full ink, the keyboard stops on it and its words can be
  * picked and copied, and nothing changes it (no typing, no list, no clear, no × on a chip).
  */
+/** The field's own box (the element that draws the underline), where a `ComboboxContent width="field"` stands. */
+const ComboboxFieldContext = React.createContext<React.RefObject<HTMLDivElement | null> | null>(null);
+
 const Combobox = ((props: ComboboxPrimitive.Root.Props<unknown, boolean | undefined>) => (
-	<ComboboxPrimitive.Root
-		{...props}
-		// Base UI's own read-only list opens to be looked through: here the opening is refused. `open` is left as it was given: whether it is
-		// held from outside is settled on the first drawing, so a field that turns read-only, or stops being it, would keep the wrong one.
-		onOpenChange={(next, details) => {
-			if (props.readOnly && next) {
-				details.cancel();
-				return;
-			}
-			props.onOpenChange?.(next, details);
-		}}
-	/>
+	<ComboboxField>
+		<ComboboxPrimitive.Root
+			{...props}
+			// Base UI's own read-only list opens to be looked through: here the opening is refused. `open` is left as it was given: whether it is
+			// held from outside is settled on the first drawing, so a field that turns read-only, or stops being it, would keep the wrong one.
+			onOpenChange={(next, details) => {
+				if (props.readOnly && next) {
+					details.cancel();
+					return;
+				}
+				props.onOpenChange?.(next, details);
+			}}
+		/>
+	</ComboboxField>
 )) as typeof ComboboxPrimitive.Root;
+
+function ComboboxField({ children }: { children: React.ReactNode }) {
+	const field = React.useRef<HTMLDivElement | null>(null);
+	return <ComboboxFieldContext.Provider value={field}>{children}</ComboboxFieldContext.Provider>;
+}
 
 function ComboboxValue({ ...props }: ComboboxPrimitive.Value.Props) {
 	return <ComboboxPrimitive.Value data-slot="combobox-value" {...props} />;
@@ -96,8 +106,10 @@ function ComboboxInput({
 	/** The picked value is one the assistant chose and nobody has touched: blue text and a 1.5px blue line, as `Input proposal`. */
 	proposal?: boolean;
 }) {
+	const field = React.useContext(ComboboxFieldContext);
 	return (
 		<div
+			ref={field}
 			data-slot="combobox-input"
 			className={cn(
 				cn(
@@ -168,13 +180,14 @@ function ComboboxContent({
 }: ComboboxPrimitive.Popup.Props &
 	Pick<ComboboxPrimitive.Positioner.Props, "side" | "align" | "sideOffset" | "alignOffset" | "anchor"> & {
 		/**
-		 * `default`: 28px wider than the field, so the rows' words line up with the field's. `field`: edge to edge with its field's underline (8px past the words on each side), a list that stands
+		 * `default`: 28px wider than the field, so the rows' words line up with the field's. `field`: edge to edge with its field's underline (wherever the field's words start in it), a list that stands
 		 * under a dialog's field as part of it (the service picker of the API key dialog). Its rows are 13px in ink, its group names 12px on a 28px row,
 		 * and its rules stand inside the card's padding, as wide as the rows.
 		 */
 		width?: "default" | "field";
 	}) {
 	const placement = usePlacementPadding();
+	const field = React.useContext(ComboboxFieldContext);
 	return (
 		<ComboboxPrimitive.Portal>
 			<ComboboxPrimitive.Positioner
@@ -183,9 +196,9 @@ function ComboboxContent({
 				side={side}
 				sideOffset={sideOffset}
 				align={align}
-				// The field's underline runs 8px past its words on each side (`FIELD_INSET`): a list as wide as the field starts there.
-				alignOffset={alignOffset ?? (width === "field" ? -8 : 0)}
-				anchor={anchor}
+				alignOffset={alignOffset}
+				// A list as wide as the field stands under the field's own box, not its words: the words' inset (`FIELD_INSET`) changes with the place.
+				anchor={anchor ?? (width === "field" ? field : undefined)}
 				className="isolate z-50"
 			>
 				<ComboboxPrimitive.Popup
@@ -197,7 +210,7 @@ function ComboboxContent({
 						MENU_MOTION,
 						"group/combobox-content relative",
 						FIT_HEIGHT,
-						"w-(--anchor-width) min-w-[calc(var(--anchor-width)+--spacing(7))] max-w-(--available-width) overflow-hidden data-[width=field]:w-[calc(var(--anchor-width)+--spacing(4))] data-[chips=true]:min-w-(--anchor-width) data-[width=field]:min-w-0",
+						"w-(--anchor-width) min-w-[calc(var(--anchor-width)+--spacing(7))] max-w-(--available-width) overflow-hidden data-[chips=true]:min-w-(--anchor-width) data-[width=field]:min-w-0",
 						className,
 					)}
 					{...props}
