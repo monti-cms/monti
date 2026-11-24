@@ -51,6 +51,8 @@
 
 `FloatingBar`는 선택한 글자 위에 뜨는 바다. 인라인 서식을 글자로 보이고(`FormatButton`, 그 서식이 주는 글자 B, I, U …로 그린다. `pressed`는 선택한 글자에 이미 있는 서식을 표시한다. `more`는 사이트가 더한 서식을 여는 ⋯이고 `trigger`를 받는다. `clear`는 서식 지우기 지우개(Carbon `Erase`)로, 눌린 상태가 없다), 그룹 사이에 `Separator orientation="vertical" length="bar"`를, 끝에 `FormatBarRequest`(파란 ✦, 선택한 글자에 대해 어시스턴트에게 묻는 말, 그 키 조합)를 둔다. `FloatingBarButton`은 바의 28px 버튼이다. 이름을 툴팁으로 보이고(키 조합이 있으면 함께), `pressed`와, 무언가를 지우는 버튼에 쓰는 `danger`를 가진다. 눌러도 글자의 선택이나 포커스를 가져가지 않는다. `FormatMark`는 표시의 타입이다. 서식 지우기는 글자 서식 묶음(B, I, U, S, 코드) 끝에 있고, 고른 글자에 서식이 하나라도 있을 때만 보인다. 누르면 고른 범위 안의 서식이 모두 빠진다. 링크와 사이트가 더는 정의하지 않는 서식(그대로 두는 것, 03)은 남는다. ⌘\도 같고, 고른 글자가 없으면 커서가 있는 서식 덩어리를 지운다(보이는 버튼 없이 키로만). 일부만 서식이 있는 범위의 버튼은 꺼진 모양이고 누르면 전부에 준다. 반쯤 켜진 모양은 두지 않는다(2026-11-06 소유자: 켜짐 · 꺼짐 말고 세 번째 상태는 헷갈린다. 빼기는 서식 지우기가 맡는다). 커서가 서식 안에 들어갔다고 카드를 띄우지 않는다(쓰는 동안 깜빡이므로).
 
+`FloatingBarButton`의 `tone="proposal"`은 막대 끝 AI의 ✦다(아이콘만, 파랑이고 가리켜도 파랑). `marked`는 먹색 2px 고리로, 설정에서 방금 옮긴 버튼을 미리보기에서 짚는다(편집기 도구를 끄는 중).
+
 `EditorToolbar`는 머리 줄 아래에 붙어 서는 고정 도구 막대다(2026-11 개편 시안 `editor-docked.html`). 40px 줄, 종이 바탕, 아래 `border-default` 선과 그 아래 흐린 선 하나. 단추는 뜨는 바의 것(`FloatingBarButton`, 28px, `radius-md`)이고 종류별로 `EditorToolbarGroup`(2px 간격)에 묶이며, 묶음 사이는 `EditorToolbarSeparator`(1 × 16, 양옆 6px, `border-default`)다. 막대는 글 단(`width-reading`, 가운데) 6px 앞에서 시작해 첫 아이콘의 잉크가 글 단 시작선에 서고, 창이 좁아 그 자리가 없으면 창 끝에서 12px에서 시작한다(1024 폭에서도 글 단에 맞는다). 어시스턴트 단추는 막대에 두지 않는다(머리 줄 끝의 ✦ 하나). 어두운 바탕에서 켜진 `FloatingBarButton`(`pressed`)은 `border-emphasis` 1px 안쪽 고리를 더해 켜진 것이 보인다(시안의 다크 모드 토글).
 
 ## 표

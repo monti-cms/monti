@@ -125,14 +125,25 @@ function ControlRow({
 	);
 }
 
-/** A service's mark where it has no logo: its first letter in a 20px square (`radius-sm`, the muted ground, 11px 600). */
-function LetterMark({ children, className, ...props }: React.ComponentProps<"span">) {
+/**
+ * A service's mark where it has no logo: its first letter in a 20px square (`radius-sm`, the muted ground, 11px 600). `person`: a person's mark where
+ * there is no picture (the signed-in account): a 32px circle on the selected ground, 13px 600 in the muted ink.
+ */
+function LetterMark({
+	person = false,
+	children,
+	className,
+	...props
+}: React.ComponentProps<"span"> & { person?: boolean }) {
 	return (
 		<span
 			aria-hidden
 			data-slot="letter-mark"
 			className={cn(
-				"inline-flex size-5 shrink-0 items-center justify-center rounded-monti-sm bg-monti-muted font-semibold text-monti-micro text-monti-muted",
+				"inline-flex shrink-0 items-center justify-center font-semibold",
+				person
+					? "size-8 rounded-monti-full bg-monti-selected text-monti-label text-monti-muted"
+					: "size-5 rounded-monti-sm bg-monti-muted text-monti-micro text-monti-muted",
 				className,
 			)}
 			{...props}

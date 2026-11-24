@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent } from "storybook/test";
 import { SettingsSiteScreen } from "./settings";
+import { SettingsAdminScreen } from "./settings-admin";
 import { SettingsLanguagesScreen } from "./settings-languages";
 
 /**
@@ -28,3 +29,13 @@ export const SettingsLang: Story = {
 };
 /** 시안 `settings-lang-source.html`: 번역 열하나, 원문을 English로 바꿀지 묻는 창. */
 export const SettingsLangSource: Story = { render: () => <SettingsLanguagesScreen source /> };
+/** 시안 `settings-admin.html`: 화면 언어, 본문 템플릿, 계정. */
+export const SettingsAdmin: Story = { render: () => <SettingsAdminScreen /> };
+/** 시안 `settings-toolbar.html`: 편집기 도구의 서식 막대, 기본값 그대로. */
+export const SettingsToolbar: Story = { render: () => <SettingsAdminScreen tools={{ view: "bar" }} /> };
+/** 시안 `settings-toolbar-hidden.html`: / 블록 메뉴, 숨긴 항목 둘(저장하지 않은 바뀐 곳). */
+export const SettingsToolbarHidden: Story = { render: () => <SettingsAdminScreen tools={{ view: "menu" }} /> };
+/** 시안 `settings-toolbar-drag.html`: 링크를 굵게 뒤로 끄는 중. 미리보기는 놓였을 때의 막대다. */
+export const SettingsToolbarDrag: Story = {
+	render: () => <SettingsAdminScreen tools={{ view: "bar", dragging: true }} />,
+};

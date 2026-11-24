@@ -296,6 +296,7 @@ export {
 	SelectValue,
 } from "./select";
 export { Separator } from "./separator";
+export { SettingRow } from "./setting-row";
 export {
 	Sheet,
 	SheetBody,
@@ -367,6 +368,17 @@ export { Toaster, toast } from "./toast";
 export { TodoDone, TodoItem } from "./todo-item";
 export type { Background, Spacing } from "./tokens.generated";
 export { type ToolCallDetail, ToolCallLine, type ToolCallStatus } from "./tool-call-line";
+export {
+	ToolList,
+	ToolListAdd,
+	ToolListHead,
+	ToolListItem,
+	ToolListSeparator,
+	ToolPreview,
+	ToolPreviewMenu,
+	ToolPreviewMenuItem,
+	ToolPreviewSelection,
+} from "./tool-list";
 export { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./tooltip";
 export { TrashRowDate, TrashRowTitle } from "./trash-row";
 export { UploadingImage } from "./uploading-image";

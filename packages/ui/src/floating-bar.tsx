@@ -46,6 +46,7 @@ function FloatingBarButton({
 	tone,
 	trigger,
 	named = false,
+	marked = false,
 	className,
 	children,
 	...props
@@ -57,8 +58,10 @@ function FloatingBarButton({
 	/** The key combination that does the same (`["mod", "B"]`), shown in the tooltip. */
 	shortcut?: ShortcutKeys;
 	pressed?: boolean;
-	/** `danger` for a button that removes something. */
-	tone?: "danger";
+	/** `danger` for a button that removes something; `proposal` for the assistant's ✦ (blue, and blue under the pointer too: blue is the assistant's only). */
+	tone?: "danger" | "proposal";
+	/** A 2px ink ring: the button a setting just moved (the editor tools' preview, while a row is dragged). */
+	marked?: boolean;
 	trigger?: (button: ReactElement) => ReactElement;
 	children: ReactNode;
 }) {
@@ -71,7 +74,13 @@ function FloatingBarButton({
 			data-tone={tone}
 			// Do not take the selection or the focus from the text on press.
 			onMouseDown={(event) => event.preventDefault()}
-			className={cn(BAR_BUTTON, "min-w-7 px-monti-4 text-monti-body", named && "gap-monti-4 px-monti-8", className)}
+			data-marked={marked || undefined}
+			className={cn(
+				BAR_BUTTON,
+				"min-w-7 px-monti-4 text-monti-body data-[tone=proposal]:text-monti-proposal data-marked:shadow-[0_0_0_2px_var(--monti-border-contrast)] data-[tone=proposal]:not-disabled:hover:text-monti-proposal",
+				named && "gap-monti-4 px-monti-8",
+				className,
+			)}
 			{...props}
 		/>
 	);

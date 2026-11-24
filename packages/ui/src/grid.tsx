@@ -36,6 +36,8 @@ const gridVariants = cva("grid", {
 			 * them in the same columns.
 			 */
 			media: "grid-cols-4",
+			/** A list beside its preview (the editor tools in Settings › Admin, 2026-11 redesign): the list takes the room, the preview is 420px. */
+			preview: "grid-cols-[minmax(0,1fr)_420px]",
 		},
 		responsive: { true: "max-md:grid-cols-1" },
 		/** For `tiles` and `folders` beside a docked panel: columns of at least 150px, so a 730px column still holds four. */
