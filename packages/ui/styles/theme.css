@@ -100,6 +100,7 @@
 	--text-color-monti-muted: var(--monti-fg-muted);
 	--text-color-monti-subtle: var(--monti-fg-subtle);
 	--text-color-monti-faint: var(--monti-fg-faint);
+	--text-color-monti-disabled: var(--monti-fg-disabled);
 	--text-color-monti-success: var(--monti-fg-success);
 	--text-color-monti-warning: var(--monti-fg-warning);
 	--text-color-monti-danger: var(--monti-fg-danger);

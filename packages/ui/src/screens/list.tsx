@@ -267,7 +267,10 @@ export function ListScreen({
 						note ??
 						(total === undefined ? undefined : (
 							<>
-								<Num>{posts}</Num> / <Num>{total}</Num>편
+								<Num>{posts}</Num>{" "}
+								<Text tone="disabled">
+									/ <Num>{total}</Num>편
+								</Text>
 							</>
 						))
 					}

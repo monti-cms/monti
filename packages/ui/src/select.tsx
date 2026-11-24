@@ -77,9 +77,16 @@ function SelectTrigger({
 	size = "default",
 	width = "fit",
 	proposal = false,
+	caret = "always",
 	children,
 	...props
 }: SelectPrimitive.Trigger.Props & {
+	/**
+	 * `always`: the chevron stands at the end at rest (a settings row's model select). `active`: it shows only under the pointer, with the focus and
+	 * while the list is open, as a property panel's values read as plain words at rest (the 2026-11 redesign's `media.html`, `panel.html`). Its room
+	 * is kept either way, so nothing moves when it shows.
+	 */
+	caret?: "always" | "active";
 	size?: "sm" | "md" | "default";
 	/** `full` in a form, beside full-width inputs; `fit` in a toolbar, a filter or at the end of a row (a review's choice, a field's rule). */
 	width?: "fit" | "full";
@@ -92,10 +99,11 @@ function SelectTrigger({
 			data-size={size}
 			data-width={width}
 			data-proposal={proposal || undefined}
+			data-caret={caret}
 			aria-description={useProposalDescription(proposal)}
 			className={cn(
 				SELECT_TRIGGER,
-				"data-proposal:border-monti-proposal data-proposal:border-b-[1.5px] data-placeholder:text-monti-faint data-proposal:text-monti-proposal data-proposal:focus-visible:shadow-[inset_0_-0.5px_0_var(--monti-fg-proposal)]",
+				"data-proposal:border-monti-proposal data-proposal:border-b-[1.5px] data-placeholder:text-monti-faint data-proposal:text-monti-proposal data-proposal:focus-visible:shadow-[inset_0_-0.5px_0_var(--monti-fg-proposal)] [&[data-caret=active]:focus-visible_[data-slot=select-icon]]:visible [&[data-caret=active]:hover_[data-slot=select-icon]]:visible [&[data-caret=active][aria-expanded=true]_[data-slot=select-icon]]:visible [&[data-caret=active]_[data-slot=select-icon]]:invisible",
 				width === "full" ? "w-full" : "w-fit",
 				className,
 			)}

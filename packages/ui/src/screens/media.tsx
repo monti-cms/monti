@@ -126,7 +126,11 @@ export function MediaScreen() {
 					title="미디어"
 					note={
 						<>
-							파일 <Num>6</Num> / <Num>9</Num> · 폴더 <Num>3</Num>
+							파일 <Num>6</Num>{" "}
+							<Text tone="disabled">
+								/ <Num>9</Num>
+							</Text>{" "}
+							· 폴더 <Num>3</Num>
 						</>
 					}
 				>

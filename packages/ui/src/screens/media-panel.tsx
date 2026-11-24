@@ -103,7 +103,7 @@ export function MediaPanel() {
 						]}
 						defaultValue="root"
 					>
-						<SelectTrigger size="md" width="full" aria-label="폴더">
+						<SelectTrigger size="md" width="full" caret="active" aria-label="폴더">
 							<SelectValue />
 						</SelectTrigger>
 						<SelectContent>

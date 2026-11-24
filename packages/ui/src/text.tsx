@@ -33,6 +33,8 @@ export const textVariants = cva("", {
 			muted: "text-monti-muted",
 			subtle: "text-monti-subtle",
 			faint: "text-monti-faint",
+			/** Below `faint`, never read alone: the whole beside a count that already says it ("/ 9" in a page head's note). */
+			disabled: "text-monti-disabled",
 			proposal: "text-monti-proposal",
 			danger: "text-monti-danger",
 			warning: "text-monti-warning",

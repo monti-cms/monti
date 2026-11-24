@@ -46,6 +46,7 @@
 	--monti-fg-muted: var(--monti-gray-11);
 	--monti-fg-subtle: var(--monti-gray-10);
 	--monti-fg-faint: var(--monti-gray-9);
+	--monti-fg-disabled: var(--monti-gray-8);
 	--monti-border-muted: var(--monti-gray-5);
 	--monti-border-default: var(--monti-gray-6);
 	--monti-border-emphasis: var(--monti-gray-7);
