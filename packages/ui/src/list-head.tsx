@@ -25,9 +25,9 @@ type ListHeadColumn = {
 	/** A filter is on in this column: a dot follows its name. */
 	filtered?: boolean;
 	/**
-	 * The filter on this column, shown in the head where the name was (no filter button): a 24px chip on the selected ground, its left
-	 * edge on the column's start line where the name stood (nothing sticks out of it, 2026-11-24), with an ink dot, the column's name in the subtle tone when `named` ("상태 · 초안", a value that does not say its
-	 * column) or the value alone ("김하늘"), and an × that clears it (`clearLabel` names it). The chip opens the column's menu as the name did.
+	 * 이 열의 필터. 이름이 서던 자리의 칩으로 보인다(필터 버튼 없음): `bg-selected` 바탕의 24px 칩이 칸의 왼쪽 변(열의 시작 선)에서 시작해 칸의 안쪽
+	 * 여백을 덮고, 글자는 필터가 꺼졌을 때의 이름과 같은 x에 선다. `named`면 흐린 열 이름("상태 · 초안"), 아니면 값만("김하늘"), 그 뒤에 잉크 점과
+	 * 지우는 ×(`clearLabel`). 켜고 꺼도 th 안의 글자가 움직이지 않는다(2026-11-24 소유자 결정). 칩은 이름처럼 열의 메뉴를 연다.
 	 */
 	filter?: { value: React.ReactNode; named?: boolean; clearLabel: string; onClear?: () => void };
 	/** What the menu under the name holds: the rows of a menu (sort, values to filter by, hide). Without it the name is plain. */
@@ -332,10 +332,11 @@ function ListHead({
 					const isOpen = open?.id === column.id;
 					const name = column.filter ? (
 						<>
-							<span aria-hidden className="size-[6px] shrink-0 rounded-monti-full bg-monti-emphasis" />
 							{column.filter.named && <span className="shrink-0 font-normal text-monti-subtle">{column.label} ·</span>}
 							{!column.filter.named && <span className="sr-only">{column.label}</span>}
 							<CutWords className="truncate">{column.filter.value}</CutWords>
+							{/* 점은 값 뒤에: 앞에 두면 이름이 밀린다(2026-11-24 소유자 결정, th 안에서 밀림 없음). */}
+							<span aria-hidden className="size-[6px] shrink-0 rounded-monti-full bg-monti-emphasis" />
 						</>
 					) : (
 						<>
@@ -360,7 +361,9 @@ function ListHead({
 						(column.sort || isOpen) && "text-monti-default",
 						// A name opens its menu on a press and moves on a drag: the hand of a press, and a grabbing one only while it is moved.
 						column.menu && "cursor-pointer",
-						column.filter && "h-monti-control-xs gap-monti-6 pl-monti-8 font-medium text-monti-default",
+						// 칩의 글자는 칸의 안쪽 여백만큼 들어가, 필터가 꺼졌을 때의 이름과 같은 x(그 열 칸의 글자 x)에 선다(2026-11-24).
+						column.filter &&
+							"h-monti-control-xs gap-monti-6 pl-monti-10 font-medium text-monti-default [th:first-child_&]:pl-monti-12",
 						onPlace && !column.menu && "cursor-grab",
 						held && "cursor-grabbing",
 					);
@@ -410,8 +413,8 @@ function ListHead({
 								</span>
 							)}
 							{column.filter ? (
-								// The chip: the ground, the name that opens the menu, and the ×.
-								<span className="-my-monti-4 inline-flex max-w-full items-center rounded-monti-md bg-monti-selected pr-[2px]">
+								// 칩: 바탕, 메뉴를 여는 이름, ×. 바탕은 칸의 왼쪽 변(열의 시작 선)에서 시작해 칸의 안쪽 여백을 덮고 그 왼쪽으로 나가지 않는다(2026-11-24).
+								<span className="-my-monti-4 -ml-monti-10 inline-flex max-w-full items-center rounded-monti-md bg-monti-selected pr-[2px] [th:first-child>&]:-ml-monti-12">
 									{column.menu ? (
 										<DropdownMenu
 											open={isOpen}
