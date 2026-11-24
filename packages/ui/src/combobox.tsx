@@ -415,6 +415,8 @@ function ComboboxChipsField({
 				"data-proposal:border-monti-proposal! data-proposal:border-b-[1.5px] data-proposal:**:data-[slot=combobox-chip]:bg-monti-proposal-muted data-proposal:**:data-[slot=combobox-chip-remove]:text-monti-proposal data-proposal:**:data-[slot=combobox-chip]:text-monti-proposal",
 				// The open button stands at the first line's end whatever the chips do: the room for it is the field's own padding.
 				"group/chips relative pr-monti-32",
+				// 속성 패널의 줄에서는 칩 사이가 4px다(시안 v5 `panel-extreme.html`: 태그가 한 줄에 넷).
+				"in-data-[slot=property-row]:gap-monti-4",
 				className,
 			)}
 			{...props}
@@ -473,8 +475,13 @@ function ComboboxChipsInput({ className, ...props }: ComboboxPrimitive.Input.Pro
 	return (
 		<ComboboxPrimitive.Input
 			data-slot="combobox-chip-input"
-			// 속성 패널의 줄에서는 치는 자리가 32px까지 좁아져, 친 글자가 칩 뒤 같은 줄에 선다(시안 v5 `panel-states.html` ③, 2026-11-24).
-			className={cn(CHIPS_INPUT, "in-data-[slot=property-row]:min-w-8", className)}
+			// 속성 패널의 줄에서는 치는 자리가 친 글자만큼만 자리를 요구한다: 친 글자는 칩 뒤 같은 줄에 서고, 비어 있으면 칩 아래 빈 줄을 만들지
+			// 않는다(시안 v5 `panel-states.html` ③ · `panel-extreme.html`, 2026-11-24).
+			className={cn(
+				CHIPS_INPUT,
+				"in-data-[slot=property-row]:field-sizing-content in-data-[slot=property-row]:min-w-auto",
+				className,
+			)}
 			// In a field that is only read the keyboard stops on this input, which holds nothing, and does not walk the chips: the values
 			// are said with it, as its description.
 			render={(given, state) => (
