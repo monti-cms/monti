@@ -55,6 +55,9 @@ function EntryStatus({
 				// Whole wherever it stands in a row of things (`shrink-0`). Only a table cell that cuts its words bounds it: there the name ends in "…" and the
 				// mark stays.
 				"inline-flex shrink-0 items-center gap-monti-6 whitespace-nowrap text-monti-label",
+				// In a table cell it fills the cell's 20px line from its top, its words at the line's middle (the mockup's `.status`, `list.html`): set on
+				// the middle of the line by the letters' x-height, its 18px box would sit 1.5px low.
+				"in-data-[slot=table-cell]:h-5 in-data-[slot=table-cell]:align-top!",
 				quiet ? "font-normal text-monti-subtle" : COLOR[status],
 				className,
 			)}

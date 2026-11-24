@@ -428,7 +428,14 @@ function RowTitle({
 		<span
 			data-slot="row-title"
 			data-untitled={untitled || undefined}
-			className={cn("group/row-title flex min-w-0 gap-monti-8", thumb ? "items-center" : "items-baseline", className)}
+			className={cn(
+				"group/row-title flex min-w-0 gap-monti-8",
+				thumb ? "items-center" : "items-baseline",
+				// A folder's icon, name and count stand on one middle, and the line sits on the text's baseline by the icon's foot, as the mockup's
+				// `.fold` does (`list.html`: the name and its "4편" 1.5px above a post title's line).
+				folder && !address && "inline-flex w-full items-center align-baseline!",
+				className,
+			)}
 			{...props}
 		>
 			{folder && <Folder aria-hidden size={16} className="shrink-0 self-center text-monti-subtle" />}
@@ -450,7 +457,8 @@ function RowTitle({
 				<span
 					className={cn(
 						// A note alone (a folder's count "4편") stands 8px after the title, as in the mockup; an address 12px.
-						"flex min-w-0 grow basis-0 items-baseline",
+						"flex min-w-0 grow basis-0",
+						folder && !address ? "items-center" : "items-baseline",
 						address ? "gap-x-monti-12" : "gap-x-monti-8",
 						!editing && "h-lh flex-wrap overflow-hidden",
 					)}
