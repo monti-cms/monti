@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { DropArea, FolderTile, Grid, Image, Stack, Tile } from "./index";
+import { Folder, Upload } from "./icons";
+import { Button, DropArea, DropEmpty, FolderTile, Grid, Image, Stack, Tile } from "./index";
 
 /** A sample picture: a warm gradient with a sun, drawn inline so the story needs no file. */
 const PHOTO = `data:image/svg+xml;utf8,${encodeURIComponent(
@@ -50,5 +51,28 @@ export const Fill: Story = {
 				{grid()}
 			</DropArea>
 		</div>
+	),
+};
+
+/** An empty folder: the frame files are dropped on, with what can go in and two ways to begin (2026-11 redesign, `media-empty.html`). */
+export const Empty: Story = {
+	render: () => (
+		<DropEmpty
+			icon={<Upload aria-hidden />}
+			title="이 폴더는 비어 있습니다"
+			hint="파일을 여기에 끌어 놓거나 올리기를 누르세요 · 이미지·PDF·CSV, 한 파일 50MB까지"
+			actions={
+				<>
+					<Button variant="secondary" size="sm">
+						<Upload aria-hidden />
+						파일 고르기
+					</Button>
+					<Button variant="ghost" size="sm">
+						<Folder aria-hidden />
+						하위 폴더 만들기
+					</Button>
+				</>
+			}
+		/>
 	),
 };

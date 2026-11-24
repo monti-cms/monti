@@ -26,6 +26,7 @@ function Segmented<T extends string>({
 	size = "md",
 	tone = "default",
 	inline = false,
+	icons = false,
 	disabled,
 	"aria-label": ariaLabel,
 }: {
@@ -37,6 +38,8 @@ function Segmented<T extends string>({
 	/** `tool` on a tool surface (the sidebar), where the selected ground is the hover: a cell under the pointer takes it and the pressed cell takes the current ground. */
 	tone?: "default" | "tool";
 	inline?: boolean;
+	/** Every cell holds an icon alone: 30px cells, and the frame as wide as they are (the media library's grid · list switch, 64px at `sm`, its icons 12px there). */
+	icons?: boolean;
 	disabled?: boolean;
 	"aria-label"?: string;
 }) {
@@ -54,7 +57,8 @@ function Segmented<T extends string>({
 			className={cn(
 				"flex overflow-hidden rounded-monti-md bg-monti-muted p-[2px]",
 				size === "sm" ? "h-monti-control-sm text-monti-caption" : "h-monti-control-md text-monti-note",
-				inline && "w-fit",
+				(inline || icons) && "w-fit",
+				icons && size === "sm" && "[&_svg]:size-3",
 			)}
 		>
 			{options.map((option) => (
@@ -67,7 +71,7 @@ function Segmented<T extends string>({
 						tone === "tool"
 							? "not-data-pressed:text-monti-faint not-data-pressed:hover:bg-monti-selected data-pressed:bg-monti-page data-pressed:shadow-[0_0_0_1px_var(--monti-border-default)]"
 							: "data-pressed:bg-monti-page data-pressed:shadow-[0_0_0_1px_var(--monti-border-default)]",
-						inline ? "flex-none px-monti-12" : "flex-1",
+						icons ? "w-[30px] flex-none px-0" : inline ? "flex-none px-monti-12" : "flex-1",
 					)}
 				>
 					{option.label}

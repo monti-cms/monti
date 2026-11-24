@@ -42,4 +42,42 @@ function DropArea({
 	);
 }
 
-export { DropArea };
+/**
+ * An empty folder as the place to drop files (the media library, 2026-11 redesign `media-empty.html`): a 520px frame with a 1.5px dashed line
+ * (`border-emphasis`, `radius-lg`), 16px under the head row, and in its middle a 40px box with `icon` (the upload arrow), the `title` in 14px 600, one
+ * faint `hint` line (what can go in, the size limit), and the `actions` (`Button size="sm"`, square in the frame), 6px apart.
+ */
+function DropEmpty({
+	icon,
+	title,
+	hint,
+	actions,
+	className,
+	...props
+}: Omit<React.ComponentProps<"div">, "title"> & {
+	icon: React.ReactNode;
+	title: React.ReactNode;
+	hint?: React.ReactNode;
+	actions?: React.ReactNode;
+}) {
+	return (
+		<div
+			data-slot="drop-empty"
+			data-shape="square"
+			className={cn(
+				"mt-monti-16 flex h-[520px] shrink-0 flex-col items-center justify-center gap-monti-8 rounded-monti-lg border-[1.5px] border-monti-emphasis border-dashed text-center",
+				className,
+			)}
+			{...props}
+		>
+			<span className="flex size-10 items-center justify-center rounded-monti-lg border border-monti-default bg-monti-tool text-monti-faint [&_svg]:size-4">
+				{icon}
+			</span>
+			<p className="m-0 mt-monti-4 font-semibold text-monti-body text-monti-default">{title}</p>
+			{hint && <p className="m-0 text-monti-faint text-monti-note leading-4">{hint}</p>}
+			{actions && <div className="mt-monti-8 flex gap-monti-6">{actions}</div>}
+		</div>
+	);
+}
+
+export { DropArea, DropEmpty };

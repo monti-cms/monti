@@ -91,8 +91,9 @@ function Tile({
 				<span
 					className={cn(
 						"relative block aspect-[4/3] overflow-hidden rounded-monti-md bg-monti-muted",
-						selected && (proposal ? "ring-2 ring-monti-proposal" : "ring-2 ring-monti-contrast"),
-						current && !selected && (proposal ? "ring-2 ring-monti-proposal" : "ring-2 ring-monti-contrast"),
+						// The ring stands 2px off the picture on the page's ground, so it reads on a dark picture too (2026-11 redesign, `media.html`).
+						(selected || current) && "ring-2 ring-offset-2 ring-offset-monti-page",
+						(selected || current) && (proposal ? "ring-monti-proposal" : "ring-monti-contrast"),
 					)}
 				>
 					<span className={cn("block size-full", uploading && "opacity-45", failed && "opacity-30")}>{preview}</span>
@@ -111,7 +112,9 @@ function Tile({
 					)}
 				</span>
 				<span className="flex min-w-0 flex-col gap-monti-2">
-					<CutWords className={cn("truncate text-monti-body", (uploading || failed) && "text-monti-subtle")}>
+					<CutWords
+						className={cn("truncate text-monti-note leading-[18px]", (uploading || failed) && "text-monti-subtle")}
+					>
 						{title}
 					</CutWords>
 					{proposal ? (
@@ -123,7 +126,7 @@ function Tile({
 					) : (
 						detail && (
 							<CutWords
-								className={cn("truncate text-monti-caption", failed ? "text-monti-danger" : "text-monti-subtle")}
+								className={cn("truncate text-monti-caption", failed ? "text-monti-danger" : "text-monti-faint")}
 							>
 								{detail}
 							</CutWords>
@@ -204,14 +207,14 @@ function FolderTile({
 }) {
 	const body = (
 		<>
-			<span className="flex shrink-0 text-monti-subtle [&_svg]:size-4">{icon}</span>
+			<span className="flex shrink-0 text-monti-faint [&_svg]:size-4">{icon}</span>
 			{children ?? (
 				<>
 					<CutWords className="min-w-0 grow truncate text-left">{name}</CutWords>
 					{count !== undefined && (
 						<Count
 							className={cn(
-								"ml-auto shrink-0",
+								"ml-auto shrink-0 text-monti-faint",
 								action &&
 									"in-data-popup-open:opacity-0 pointer-coarse:opacity-0 group-focus-within/folder:opacity-0 group-hover/folder:opacity-0 group-has-aria-expanded/folder:opacity-0",
 							)}
@@ -224,7 +227,8 @@ function FolderTile({
 		</>
 	);
 	const look = cn(
-		"flex h-13 w-full min-w-0 items-center gap-monti-10 rounded-monti-md border-0 bg-monti-muted px-[14px] text-monti-body text-monti-default outline-none focus-visible:ring-2 focus-visible:ring-monti-contrast/60 in-data-popup-open:bg-monti-selected",
+		// 40px on the tool ground with a faint line, 12px in, 13px words (2026-11 redesign, `media.html`).
+		"flex h-10 w-full min-w-0 items-center gap-monti-8 rounded-monti-md border border-monti-muted bg-monti-tool px-monti-12 text-monti-default text-monti-note outline-none hover:bg-monti-muted focus-visible:ring-2 focus-visible:ring-monti-contrast/60 in-data-popup-open:bg-monti-selected",
 		selected && "bg-monti-selected",
 		dropTarget && "bg-monti-selected ring-[1.5px] ring-monti-contrast ring-inset",
 		className,

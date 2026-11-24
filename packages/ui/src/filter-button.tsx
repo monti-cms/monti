@@ -5,6 +5,7 @@ import { Caret } from "./caret";
 import { cn } from "./cn";
 import { HIT_AREA } from "./hit-area";
 import { TEXT_HOVER } from "./hover";
+import { ArrowDown, ArrowUp } from "./icons";
 
 /**
  * A condition that is not on yet, in a filter row: its name and a caret, opening a list of values (tag ▾, language ▾, sort ▾). Once a value is
@@ -13,6 +14,8 @@ import { TEXT_HOVER } from "./hover";
 function FilterButton({
 	filled = false,
 	dot = false,
+	size = "inherit",
+	sort,
 	className,
 	children,
 	...props
@@ -21,6 +24,10 @@ function FilterButton({
 	filled?: boolean;
 	/** A filter is on and its button stays: its name is in ink with a dot after it, as a list's column name has (the menu's ticks say which). */
 	dot?: boolean;
+	/** `caption`: in a 36px head row (the media library's), 12px at 500, faint until pointed at, its caret 2px after the name. */
+	size?: "inherit" | "caption";
+	/** The order this button sets, shown in place of the caret: in ink with ↓ or ↑ ("올린 날 ↓"). */
+	sort?: "asc" | "desc";
 }) {
 	return (
 		<ButtonPrimitive
@@ -30,7 +37,10 @@ function FilterButton({
 				TEXT_HOVER,
 				HIT_AREA,
 				"inline-flex cursor-pointer items-center rounded-monti-full border-0 bg-transparent p-0 outline-none not-disabled:hover:text-monti-default disabled:pointer-events-none disabled:opacity-45 aria-expanded:text-monti-default",
-				filled || dot ? "text-monti-default" : "text-monti-subtle",
+				filled || dot || sort ? "text-monti-default" : size === "caption" ? "text-monti-faint" : "text-monti-subtle",
+				size === "caption" &&
+					"gap-monti-2 font-medium text-monti-caption [&>[data-slot=caret]]:ml-0 [&>[data-slot=caret]]:text-monti-faint [&>[data-slot=caret]]:opacity-70 [&>svg:not([data-slot])]:size-3",
+				sort && "gap-monti-4",
 				className,
 			)}
 			{...props}
@@ -43,7 +53,7 @@ function FilterButton({
 					className="ml-monti-4 size-[5px] shrink-0 rounded-monti-full bg-monti-emphasis"
 				/>
 			)}
-			<Caret />
+			{sort === "desc" ? <ArrowDown aria-hidden /> : sort === "asc" ? <ArrowUp aria-hidden /> : <Caret />}
 		</ButtonPrimitive>
 	);
 }

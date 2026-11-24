@@ -131,7 +131,7 @@ export {
 } from "./dialog";
 export { DialogFormFooter } from "./dialog-form-footer";
 export { DragHandle } from "./drag-handle";
-export { DropArea } from "./drop-area";
+export { DropArea, DropEmpty } from "./drop-area";
 export {
 	DropdownMenu,
 	DropdownMenuCheckboxItem,
@@ -175,6 +175,7 @@ export { FilePreview } from "./file-preview";
 export { FileTree, FileTreeRow } from "./file-tree";
 export { FileUseList, FileUseRow } from "./file-use-row";
 export { FilterButton } from "./filter-button";
+export { FilterChip } from "./filter-chip";
 export { FloatingBar, FloatingBarButton } from "./floating-bar";
 export {
 	FolderTab,
@@ -236,6 +237,7 @@ export {
 	type SelectAll,
 	type SelectAllState,
 } from "./page-header";
+export { PagePath, type PagePathStep } from "./page-path";
 export {
 	ListFooter,
 	ListFooterEnd,

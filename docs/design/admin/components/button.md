@@ -97,6 +97,8 @@ DS README는 이 부품을 `TextLink`라고 부른다. 그런 export는 없다. 
 
 `IconButton`: `label`은 접근성 이름이자 호버 툴팁이다. `variant`는 `ghost`(기본)나 `primary`(검은 바탕), `size`는 `md`(32px), `sm`(28px), `xs`(24px, 아이콘 14px, 모서리 `radius-sm`)다. 켜진 토글(`pressed`)은 `bg-selected`이고, 어두운 테마에서는 `border-emphasis` 안쪽 1px 선을 더한다. 20px 같은 그 밖의 크기는 없다. `pressed`는 켜져 있는 동안 배경을 유지하는 토글로 만든다. `tone="danger"`는 빨간 버전이고, `tone="quiet"`는 가리키기 전까지 `fg-faint`인 조용한 버전이다(메시지 아래 동작, 대기 중인 말). 자기가 그리지 않는 아이콘 버튼을 담는 부품은 `IconButtonContext`로 크기와 톤을 정해 준다. 입력 칸의 끝 컨트롤은 칸보다 한 단계 작고(`Input`, `Textarea`), 메시지 아래 줄은 `xs` + `quiet`다(`ChatMessageActions`). 버튼에 직접 준 prop이 이긴다. 부모가 자손 선택자로 버튼의 크기나 색을 덮어쓰지 않는다. 메뉴나 팝오버를 열려면 `trigger`를 넘긴다. 예: `trigger={(button) => <PopoverTrigger render={button} />}`.
 
+`IconButton tone="proposal"`은 필드를 채우는 어시스턴트의 ✦다(미디어 패널의 대체 글, 2026-11 개편 시안 `media.html`): 파랑이고, 포인터를 대도 파랑이다. 파랑은 어시스턴트만 쓰는 색이라 다른 아이콘 버튼에는 쓰지 않는다.
+
 ## 나뉜 알약
 
 주된 동작과 그 변형을 담는 알약 하나다. 지금은 편집기의 "발행하기 ▾" 하나뿐이다.

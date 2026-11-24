@@ -10,7 +10,8 @@ function FilePreview({
 	framed = false,
 	className,
 }: {
-	ext: string;
+	/** The extension under the icon; without it the icon alone, 16px and faint (a tile whose detail line already names the kind). */
+	ext?: string;
 	/** Draws its own 4:3 box with rounded corners and the neutral fill, for use outside a tile (a panel's preview). */
 	framed?: boolean;
 	className?: string;
@@ -27,8 +28,8 @@ function FilePreview({
 				className,
 			)}
 		>
-			<Document aria-hidden className="size-5" />
-			<span className="font-mono text-monti-micro">{ext}</span>
+			<Document aria-hidden className={ext ? "size-5" : "size-4 text-monti-faint"} />
+			{ext && <span className="font-mono text-monti-micro">{ext}</span>}
 		</span>
 	);
 }
