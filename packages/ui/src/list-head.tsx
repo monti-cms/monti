@@ -25,8 +25,8 @@ type ListHeadColumn = {
 	/** A filter is on in this column: a dot follows its name. */
 	filtered?: boolean;
 	/**
-	 * The filter on this column, shown in the head where the name was (no filter button, nothing moves): a 24px chip on the selected ground, its left
-	 * edge 8px out from where the name stood, with an ink dot, the column's name in the subtle tone when `named` ("상태 · 초안", a value that does not say its
+	 * The filter on this column, shown in the head where the name was (no filter button): a 24px chip on the selected ground, its left
+	 * edge on the column's start line where the name stood (nothing sticks out of it, 2026-11-24), with an ink dot, the column's name in the subtle tone when `named` ("상태 · 초안", a value that does not say its
 	 * column) or the value alone ("김하늘"), and an × that clears it (`clearLabel` names it). The chip opens the column's menu as the name did.
 	 */
 	filter?: { value: React.ReactNode; named?: boolean; clearLabel: string; onClear?: () => void };
@@ -409,7 +409,7 @@ function ListHead({
 							)}
 							{column.filter ? (
 								// The chip: the ground, the name that opens the menu, and the ×.
-								<span className="-my-monti-4 -ml-monti-8 inline-flex max-w-full items-center rounded-monti-md bg-monti-selected pr-[2px]">
+								<span className="-my-monti-4 inline-flex max-w-full items-center rounded-monti-md bg-monti-selected pr-[2px]">
 									{column.menu ? (
 										<DropdownMenu
 											open={isOpen}

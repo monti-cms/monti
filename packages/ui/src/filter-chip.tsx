@@ -7,8 +7,8 @@ import { CutWords } from "./cut-words";
 import { Close } from "./icons";
 
 /**
- * A filter that is on, in a filter row (the media library's head row) where its name stood: a 24px chip on the selected ground, its left edge 8px out from
- * where the name started (nothing moves when it comes or goes), with an ink dot, the condition's name in the subtle tone when `named` ("종류 · 이미지": a
+ * A filter that is on, in a filter row (the media library's head row) where its name stood: a 24px chip on the selected ground, its left edge on the
+ * start line where the name started (nothing sticks out of it; the dot sits 8px inside, 2026-11-24), with an ink dot, the condition's name in the subtle tone when `named` ("종류 · 이미지": a
  * value that does not say its condition) or the value alone, and at its end an × that clears it (`clearLabel` names it). The chip itself opens the
  * condition's menu: `render` on the trigger, `<DropdownMenuTrigger render={<FilterChip … />}>`, takes the chip's main part. The same look as a list's
  * filtered column head (`ListHeadColumn` `filter`).
@@ -34,7 +34,7 @@ function FilterChip({
 	return (
 		<span
 			data-slot="filter-chip"
-			className="-ml-monti-8 inline-flex h-monti-control-xs min-w-0 max-w-full shrink-0 items-center rounded-monti-md bg-monti-selected pr-[2px] font-medium text-monti-caption text-monti-default"
+			className="inline-flex h-monti-control-xs min-w-0 max-w-full shrink-0 items-center rounded-monti-md bg-monti-selected pr-[2px] font-medium text-monti-caption text-monti-default"
 		>
 			<ButtonPrimitive
 				type="button"
