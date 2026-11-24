@@ -282,9 +282,9 @@
 <summary><strong><code>ENG-PLG-3</code></strong> 서버가 이미 쓰는 이름은 플러그인 리소스 이름으로 쓸 수 없다</summary>
 
 - **전제**: 리소스 이름이 `spec`, `transaction`, `dryRun`, `onEvent`, `withStoredKey` 중 하나인 Operation을 가진 플러그인이 주어진다
-- **행동**: 해당 플러그인으로 `createMonti`를 호출한다
+- **행동**: 해당 플러그인으로 `createMonti`와 `specOf`를 각각 호출한다
 - **결과**:
-  - `ENG-PLG-3.1` `CONFLICT` 오류를 던진다
+  - `ENG-PLG-3.1` 두 호출 모두 `CONFLICT` 오류를 던진다
 
 </details>
 

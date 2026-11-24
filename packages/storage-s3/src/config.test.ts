@@ -143,11 +143,17 @@ it("S3-CFG-7 지역과 저장소 주소가 둘 다 없으면 설정을 거절한
 
 it("S3-CFG-8 공개 주소가 올바른 HTTP(S) 주소가 아니거나 쿼리·프래그먼트·계정 정보가 들어 있으면 설정을 거절한다", () => {
 	// 계정 정보가 든 주소는 비밀값 검사에 걸리지 않게 조각을 이어 만든다.
-	const userInfo = ["deploy-bot", "s3cret"].join(":");
-	const withCredentials = `https://${userInfo}@cdn.example.com`;
-	const unparseable = `https://${userInfo}@`;
+	const user = "deploy-bot";
+	const pass = "s3cret";
+	const userInfo = [user, pass].join(":");
+	const credentialUrls = [
+		`https://${userInfo}@cdn.example.com`,
+		`https://${user}@cdn.example.com`,
+		`https://:${pass}@cdn.example.com`,
+		`https://${userInfo}@`,
+	];
 	/** 주소마다 거절한 오류의 `message`, `input`, `cause` 사슬에서 읽은 글. */
-	const traces = [withCredentials, unparseable].flatMap((url) => {
+	const traces = credentialUrls.flatMap((url) => {
 		const found: string[] = [];
 		try {
 			resolveS3Config({ env: awsEnv({ S3_PUBLIC_URL: url }) });
@@ -161,7 +167,7 @@ it("S3-CFG-8 공개 주소가 올바른 HTTP(S) 주소가 아니거나 쿼리·�
 		}
 		return found;
 	});
-	const secrets = [withCredentials, unparseable, "deploy-bot", "s3cret"];
+	const secrets = [...credentialUrls, user, pass];
 
 	// S3-CFG-8.1
 	expect(resolveS3Config({ env: awsEnv({ S3_PUBLIC_URL: "http://localhost:9000/" }) }).publicUrl).toBe(
@@ -169,59 +175,25 @@ it("S3-CFG-8 공개 주소가 올바른 HTTP(S) 주소가 아니거나 쿼리·�
 	);
 	// S3-CFG-8.2
 	expect(
-		[
-			() => resolveS3Config({ env: awsEnv({ S3_PUBLIC_URL: "cdn.example.com" }) }),
-			() => resolveS3Config({ env: awsEnv({ S3_PUBLIC_URL: "ftp://cdn.example.com" }) }),
-		].every((fn) => {
-			try {
-				fn();
-				return false;
-			} catch {
-				return true;
-			}
-		}),
+		["cdn.example.com", "ftp://cdn.example.com"].every((url) =>
+			throwsError(() => resolveS3Config({ env: awsEnv({ S3_PUBLIC_URL: url }) })),
+		),
 	).toBe(true);
 	// S3-CFG-8.3
 	expect(
-		[
-			() => resolveS3Config({ env: awsEnv({ S3_PUBLIC_URL: "https://cdn.example.com?a=1" }) }),
-			() => resolveS3Config({ env: awsEnv({ S3_PUBLIC_URL: "https://cdn.example.com?" }) }),
-		].every((fn) => {
-			try {
-				fn();
-				return false;
-			} catch {
-				return true;
-			}
-		}),
+		["https://cdn.example.com?a=1", "https://cdn.example.com?"].every((url) =>
+			throwsError(() => resolveS3Config({ env: awsEnv({ S3_PUBLIC_URL: url }) })),
+		),
 	).toBe(true);
 	// S3-CFG-8.4
 	expect(
-		[
-			() => resolveS3Config({ env: awsEnv({ S3_PUBLIC_URL: "https://cdn.example.com#top" }) }),
-			() => resolveS3Config({ env: awsEnv({ S3_PUBLIC_URL: "https://cdn.example.com#" }) }),
-		].every((fn) => {
-			try {
-				fn();
-				return false;
-			} catch {
-				return true;
-			}
-		}),
+		["https://cdn.example.com#top", "https://cdn.example.com#"].every((url) =>
+			throwsError(() => resolveS3Config({ env: awsEnv({ S3_PUBLIC_URL: url }) })),
+		),
 	).toBe(true);
 	// S3-CFG-8.5
 	expect(
-		[
-			() => resolveS3Config({ env: awsEnv({ S3_PUBLIC_URL: withCredentials }) }),
-			() => resolveS3Config({ env: awsEnv({ S3_PUBLIC_URL: unparseable }) }),
-		].every((fn) => {
-			try {
-				fn();
-				return false;
-			} catch {
-				return true;
-			}
-		}),
+		credentialUrls.every((url) => throwsError(() => resolveS3Config({ env: awsEnv({ S3_PUBLIC_URL: url }) }))),
 	).toBe(true);
 	// S3-CFG-8.6
 	expect(traces.filter((text) => secrets.some((secret) => text.includes(secret)))).toEqual([]);

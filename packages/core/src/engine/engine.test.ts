@@ -525,23 +525,6 @@ it("ENG-TX-6 콜백 안에서 DB 쓰기가 실패하면 콜백이 그 오류를 
 	expect(listener).not.toHaveBeenCalled();
 });
 
-it("ENG-PLG-3 서버가 이미 쓰는 이름은 플러그인 리소스 이름으로 쓸 수 없다", () => {
-	const create = defineWrite({ input: folderInput, run: insertFolder });
-	const names = ["spec", "transaction", "dryRun", "onEvent", "withStoredKey"];
-	const codes = names.map((resource) => {
-		const plugin: Plugin = { name: "named-plugin", operations: { [resource]: { create } } };
-		try {
-			createMonti(db, { folders: { create } }, [plugin]);
-			return null;
-		} catch (error) {
-			return (error as MontiError).code;
-		}
-	});
-
-	// ENG-PLG-3.1
-	expect(codes).toEqual(names.map(() => "CONFLICT"));
-});
-
 /** 콜백이 받는 클라이언트 가운데 폴더 쓰기 `add` 하나. */
 type FolderAdd = Record<"folders", Pick<FolderWrites["folders"], "add">>;
 

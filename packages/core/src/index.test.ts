@@ -17,10 +17,12 @@ import {
 import { holdingAfter, overlap } from "./__test__/race";
 import { initial } from "./db/migrations/0001-initial";
 import type { Database, Migration } from "./db/types";
+import { createMonti } from "./engine/engine";
 import { defineWrite } from "./engine/operation";
 import {
 	coreMigrations,
 	type MontiConfig,
+	type MontiError,
 	migrate,
 	migrateMonti,
 	type Plugin,
@@ -589,6 +591,31 @@ it("START-23 플러그인의 이벤트 구독에는 저장된 키의 원문을 �
 	expect({ created, called: pluginMonti !== null }).toEqual({ created: true, called: true });
 	// START-23.2
 	expect(pluginMonti === null ? null : "withStoredKey" in pluginMonti).toBe(false);
+});
+
+/** `fn`이 던진 `MontiError`의 `code`, 던지지 않으면 `null`. */
+function conflictCode(fn: () => unknown): string | null {
+	try {
+		fn();
+		return null;
+	} catch (error) {
+		return (error as MontiError).code;
+	}
+}
+
+it("ENG-PLG-3 서버가 이미 쓰는 이름은 플러그인 리소스 이름으로 쓸 수 없다", () => {
+	const tag = defineWrite({ input: z.object({ name: z.string() }), run: tagRun });
+	const names = ["spec", "transaction", "dryRun", "onEvent", "withStoredKey"];
+	const codes = names.map((resource) => {
+		const plugin = { name: "named-plugin", operations: { [resource]: { tag } } };
+		return {
+			createMonti: conflictCode(() => createMonti(db, { folders: { tag } }, [plugin])),
+			specOf: conflictCode(() => specOf([plugin])),
+		};
+	});
+
+	// ENG-PLG-3.1
+	expect(codes).toEqual(names.map(() => ({ createMonti: "CONFLICT", specOf: "CONFLICT" })));
 });
 
 /** 암호화 비밀값으로 `startMonti`를 한 `monti`. `null`을 주면 암호화 비밀값이 없다. */
