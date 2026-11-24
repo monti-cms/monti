@@ -431,7 +431,7 @@ it("CLI-TLS-15 `migrate`·`clean-files`에 오타 옵션·남는 인자나 `migr
 	]);
 });
 
-it("CLI-TLS-17 명령 실행 중 오류가 나더라도 DB 연결 비밀번호와 `MONTI_SECRET` 원문은 표준 오류에 노출하지 않는다", async () => {
+it("CLI-TLS-17 명령이 실패해도 DB 비밀번호와 서비스 비밀값이 표준 오류에 나오지 않는다", async () => {
 	const password = ["super", "secret", "pw"].join("-");
 	const secret = ["monti", "raw", "secret", "value"].join("-");
 	// 연결 문자열 꼴의 글은 비밀값 검사(secretlint)가 잡으므로 조각을 이어 만든다.

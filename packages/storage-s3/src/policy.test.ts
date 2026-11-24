@@ -31,21 +31,18 @@ it("S3-POL-1 소문자 UUID 형식의 파일 키는 통과한다", () => {
 });
 
 it("S3-POL-2 UUID 형식이 아닌 파일 키는 사용할 수 없다", () => {
+	const keys = [
+		"",
+		"../secret",
+		`../${VALID_UUID}`,
+		"dir/file.png",
+		`${VALID_UUID}/extra`,
+		"index.html",
+		"550E8400-E29B-41D4-A716-446655440000",
+	];
+
 	// S3-POL-2.1
-	expect(errorCodeOf(() => assertSafeKey(""))).toBe("BAD_REQUEST");
-	// S3-POL-2.2
-	expect([errorCodeOf(() => assertSafeKey("../secret")), errorCodeOf(() => assertSafeKey(`../${VALID_UUID}`))]).toEqual(
-		["BAD_REQUEST", "BAD_REQUEST"],
-	);
-	// S3-POL-2.3
-	expect([
-		errorCodeOf(() => assertSafeKey("dir/file.png")),
-		errorCodeOf(() => assertSafeKey(`${VALID_UUID}/extra`)),
-	]).toEqual(["BAD_REQUEST", "BAD_REQUEST"]);
-	// S3-POL-2.4
-	expect(errorCodeOf(() => assertSafeKey("index.html"))).toBe("BAD_REQUEST");
-	// S3-POL-2.5
-	expect(errorCodeOf(() => assertSafeKey("550E8400-E29B-41D4-A716-446655440000"))).toBe("BAD_REQUEST");
+	expect(keys.map((key) => errorCodeOf(() => assertSafeKey(key)))).toEqual(Array(keys.length).fill("BAD_REQUEST"));
 });
 
 it("S3-POL-3 기본 허용 형식과 1바이트~최대 크기(10 MiB) 파일은 올릴 수 있고 형식 이름은 소문자로 통일된다", () => {
@@ -93,11 +90,9 @@ it("S3-POL-7 최대 크기를 넘는 파일은 올릴 수 없다", () => {
 
 it("S3-POL-8 크기가 0 이하이거나 정수가 아닌 파일은 올릴 수 없다", () => {
 	// S3-POL-8.1
-	expect(errorCodeOf(() => validateUploadPolicy({ mime: "image/png", size: 0 }, DEFAULT_POLICY))).toBe("BAD_REQUEST");
-	// S3-POL-8.2
-	expect(errorCodeOf(() => validateUploadPolicy({ mime: "image/png", size: -1 }, DEFAULT_POLICY))).toBe("BAD_REQUEST");
-	// S3-POL-8.3
-	expect(errorCodeOf(() => validateUploadPolicy({ mime: "image/png", size: 1.5 }, DEFAULT_POLICY))).toBe("BAD_REQUEST");
+	expect(
+		[0, -1, 1.5].map((size) => errorCodeOf(() => validateUploadPolicy({ mime: "image/png", size }, DEFAULT_POLICY))),
+	).toEqual(["BAD_REQUEST", "BAD_REQUEST", "BAD_REQUEST"]);
 });
 
 it("S3-POL-9 브라우저에서 바로 보여 줄 이미지와 내려받게 할 파일을 구분한다", () => {

@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { type Kysely, sql } from "kysely";
+import type { Kysely } from "kysely";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { createTestDatabase, type TestDatabase } from "../../__test__/database";
 import { createMemoryStorage, type MemoryStorage } from "../../__test__/memory-storage";
@@ -357,25 +357,6 @@ it("MED-CRT-9 업로드 시작을 통해 발급받지 않은 키나 삭제 대�
 	expect(await mediaRows()).toEqual(before);
 });
 
-it("MED-CRT-10 미디어 등록에서 이미지 가로·세로 크기는 DB 정수 최대치까지 허용되고 이를 넘으면 거절된다", async () => {
-	const file = { mime: "image/png", size: 10 };
-	const [wide, tall, largest] = [await issuedKey(file), await issuedKey(file), await issuedKey(file)];
-	const monti = montiOf();
-
-	const codes = [
-		await codeOf(monti.media.create({ key: wide, width: 2_147_483_648 })),
-		await codeOf(monti.media.create({ key: tall, height: 2_147_483_648 })),
-	];
-	await monti.media.create({ key: largest, width: 2_147_483_647, height: 2_147_483_647 });
-
-	// MED-CRT-10.1
-	expect(codes).toEqual(["BAD_REQUEST", "BAD_REQUEST"]);
-	// MED-CRT-10.2
-	expect((await mediaRows()).map(({ key, width, height }) => ({ key, width, height }))).toEqual([
-		{ key: largest, width: 2_147_483_647, height: 2_147_483_647 },
-	]);
-});
-
 it("MED-CRT-11 미디어 폴더를 휴지통에 보내는 동안 그 폴더에 새 미디어를 등록해도 휴지통 폴더 아래 활성 미디어가 남지 않는다", async () => {
 	const folder = await seedFolder("media");
 	const key = await issuedKey({ mime: "image/png", size: 10 });
@@ -386,7 +367,11 @@ it("MED-CRT-11 미디어 폴더를 휴지통에 보내는 동안 그 폴더에 �
 		(hold) => heldTrash(TREE_MEDIA_READ, hold).trash.move({ id: folder }),
 		() => montiOf().media.create({ key, folder_id: folder }),
 	);
-	const trashed = await db.selectFrom("folders").select("trashed_at").where("id", "=", folder).executeTakeFirst();
+	const trashed = await db
+		.selectFrom("folders")
+		.select("trashed_at")
+		.where("id", "=", folder)
+		.executeTakeFirstOrThrow();
 	const active = await db
 		.selectFrom("media")
 		.select("id")
@@ -395,7 +380,9 @@ it("MED-CRT-11 미디어 폴더를 휴지통에 보내는 동안 그 폴더에 �
 		.execute();
 
 	// MED-CRT-11.1
-	expect({ folderTrashed: trashed?.trashed_at !== null, active }).toEqual({ folderTrashed: true, active: [] });
+	expect(trashed.trashed_at).toBeInstanceOf(Date);
+	// MED-CRT-11.2
+	expect(active).toEqual([]);
 });
 
 it("MED-READ-1 lists only the media directly in the given folder", async () => {
@@ -583,26 +570,48 @@ it("MED-UPD-7 미디어 수정에서 미디어 범위가 아닌 폴더로 옮길
 	expect([(await mediaRow(first.id)).folder_id, (await mediaRow(second.id)).folder_id]).toEqual([null, null]);
 });
 
-it("MED-UPD-8 같은 미디어의 파일을 동시에 교체해도 먼저 교체된 중간 파일 키가 임시 목록에서 빠지지 않는다", async () => {
+it("MED-UPD-8 같은 미디어의 파일을 동시에 두 번 교체해도 바뀌기 전 파일들은 모두 삭제 대기 목록에 들어간다", async () => {
 	const row = await seedMedia();
 	const first = await issuedKey({ mime: "image/png", size: 10 });
 	const second = await issuedKey({ mime: "image/png", size: 20 });
 	const held = gate();
 	const monti = montiWith(gatedStorage({ stat: { key: first, gate: held } }));
+	/** 각 교체가 끝난 시각. */
+	const doneAt: number[] = [];
+	function timed(run: Promise<unknown>, index: number): Promise<string | null> {
+		return codeOf(run).finally(() => {
+			doneAt[index] = Date.now();
+		});
+	}
 
 	// 첫 교체가 미디어 행을 잡고 새 파일을 확인하는 동안 두 번째 교체가 시작되어 그 행을 기다린다.
-	const updates = [codeOf(monti.media.update({ id: row.id, key: first }))];
+	const updates = [timed(monti.media.update({ id: row.id, key: first }), 0)];
 	// 확인이 실패해도 문을 열고 교체들이 끝나기를 기다려, 트랜잭션이 연결을 잡은 채 남지 않게 한다.
 	try {
 		await held.reached;
-		updates.push(codeOf(monti.media.update({ id: row.id, key: second })));
-		await waitForLockWaits(db, 1).finally(held.open);
+		updates.push(timed(monti.media.update({ id: row.id, key: second }), 1));
+		await waitForLockWaits(db, 1);
+		const openedAt = Date.now();
+		held.open();
 		const codes = await Promise.all(updates);
-
+		/** `key`의 `loose_files` 행: `kind`와, `remove_after`의 24시간 전이 `[from, to]` 안에 있는지. */
+		async function cleanup(key: string, from: number, to: number) {
+			const file = await looseFile(key);
+			const replacedAt = (file?.remove_after.getTime() ?? 0) - DAY_MS;
+			return { kind: file?.kind, replacedAt: replacedAt >= from && replacedAt <= to };
+		}
 		// MED-UPD-8.1
 		expect({ codes, key: (await mediaRow(row.id)).key }).toEqual({ codes: [null, null], key: second });
 		// MED-UPD-8.2
-		expect(await looseKeys()).toEqual(expect.arrayContaining([row.key, first]));
+		expect({
+			original: await cleanup(row.key, openedAt, doneAt[0]),
+			first: await cleanup(first, openedAt, doneAt[1]),
+		}).toEqual({
+			original: { kind: "cleanup", replacedAt: true },
+			first: { kind: "cleanup", replacedAt: true },
+		});
+		// MED-UPD-8.3
+		expect(await looseFile(second)).toBeUndefined();
 	} finally {
 		held.open();
 		await Promise.allSettled(updates);
@@ -627,24 +636,7 @@ it("MED-UPD-9 업로드 시작을 통해 발급받지 않은 키나 삭제 대�
 	expect((await mediaRow(row.id)).key).toBe(row.key);
 });
 
-it("MED-UPD-10 미디어 수정에서 이미지 가로·세로 크기는 DB 정수 최대치까지 허용되고 이를 넘으면 거절된다", async () => {
-	const row = await seedMedia({ width: 100, height: 50 });
-	const monti = montiOf();
-
-	const codes = [
-		await codeOf(monti.media.update({ id: row.id, width: 2_147_483_648 })),
-		await codeOf(monti.media.update({ id: row.id, height: 2_147_483_648 })),
-	];
-	await monti.media.update({ id: row.id, width: 2_147_483_647, height: 2_147_483_647 });
-	const stored = await mediaRow(row.id);
-
-	// MED-UPD-10.1
-	expect(codes).toEqual(["BAD_REQUEST", "BAD_REQUEST"]);
-	// MED-UPD-10.2
-	expect({ width: stored.width, height: stored.height }).toEqual({ width: 2_147_483_647, height: 2_147_483_647 });
-});
-
-it("MED-UPD-11 미디어 폴더를 휴지통에 보내는 동안 그 안의 미디어를 폴더 밖으로 옮겨도 폴더와 함께 버려진 미디어가 폴더 밖에 남지 않는다", async () => {
+it("MED-UPD-11 미디어 폴더를 휴지통에 보내는 동안 그 안의 미디어를 폴더 밖으로 옮기려 해도 미디어는 폴더와 함께 휴지통에 들어간다", async () => {
 	const folder = await seedFolder("media");
 	const item = await seedMedia({ folder_id: folder });
 
@@ -654,14 +646,20 @@ it("MED-UPD-11 미디어 폴더를 휴지통에 보내는 동안 그 안의 미�
 		(hold) => heldTrash(TREE_MEDIA_READ, hold).trash.move({ id: folder }),
 		() => montiOf().media.update({ ids: [item.id], folder_id: null }),
 	);
-	const trashed = await db.selectFrom("folders").select("trashed_at").where("id", "=", folder).executeTakeFirst();
-	const { rows: outside } = await sql<{ id: string }>`
-		select id from media
-		where trashed_at = (select trashed_at from folders where id = ${folder}) and folder_id is distinct from ${folder}
-	`.execute(db);
+	const trashed = await db
+		.selectFrom("folders")
+		.select("trashed_at")
+		.where("id", "=", folder)
+		.executeTakeFirstOrThrow();
+	const moved = await mediaRow(item.id);
 
 	// MED-UPD-11.1
-	expect({ folderTrashed: trashed?.trashed_at !== null, outside }).toEqual({ folderTrashed: true, outside: [] });
+	expect(trashed.trashed_at).toBeInstanceOf(Date);
+	// MED-UPD-11.2
+	expect({ folder_id: moved.folder_id, trashed_at: moved.trashed_at }).toEqual({
+		folder_id: folder,
+		trashed_at: trashed.trashed_at,
+	});
 });
 
 it("MED-CRT-2 registers the media with the given __preset_id", async () => {

@@ -39,10 +39,10 @@
 <details>
 <summary><strong><code>S3-CFG-3</code></strong> 코드에서 직접 넘긴 설정이 환경 변수보다 우선한다</summary>
 
-- **전제**: `S3_BUCKET`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`, `S3_PUBLIC_URL`, `S3_REGION`, `S3_FORCE_PATH_STYLE="true"`가 담긴 `env`가 있다
-- **행동**: 다른 `bucket`, `region`, `publicUrl`, `forcePathStyle: false`를 옵션으로 함께 넘겨 `resolveS3Config`를 실행한다
+- **전제**: 필수 값과 `S3_FORCE_PATH_STYLE`이 담긴 `env`가 있다
+- **행동**: 같은 항목을 다른 값으로 옵션에 함께 넘겨 `resolveS3Config`를 실행한다
 - **결과**:
-  - `S3-CFG-3.1` 반환값의 `bucket`, `region`, `publicUrl`, `forcePathStyle`이 모두 직접 넘긴 옵션 값과 같다
+  - `S3-CFG-3.1` 반환값의 겹치는 항목이 모두 직접 넘긴 옵션 값과 같다
 
 </details>
 
@@ -50,12 +50,12 @@
 <summary><strong><code>S3-CFG-4</code></strong> 저장소를 만들 때는 환경 변수가 비어 있어도 실패하지 않고 실제 사용 시점에 환경 변수를 한 번만 읽는다</summary>
 
 - **전제**: 처음에는 비어 있는 가변 `env` 객체가 있다
-- **행동**: 빈 `env`로 `s3Storage({ env })` 어댑터를 만든 뒤, 비어 있는 상태에서 `adapter.url(uuid)`를 호출하고, `env`에 필수 값을 채워 `adapter.url(uuid)`를 호출한 다음, `env.S3_PUBLIC_URL`을 바꿔 한 번 더 호출한다
+- **행동**: 그 `env`로 `s3Storage({ env })` 어댑터를 만든 뒤, `env`가 빈 상태, 필수 값을 채운 상태, 값을 바꾼 상태에서 차례로 어댑터 메서드를 호출한다
 - **결과**:
-  - `S3-CFG-4.1` 빈 `env`로 `s3Storage({ env })` 호출 자체는 오류 없이 어댑터 객체를 돌려준다
-  - `S3-CFG-4.2` `env`가 비어 있을 때 `adapter.url(uuid)` 호출이 `S3_BUCKET`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`, `S3_PUBLIC_URL`, `S3_REGION`, `S3_ENDPOINT`를 모두 포함한 `Error`를 던진다
-  - `S3-CFG-4.3` `env`에 필수 값을 채운 뒤 `adapter.url(uuid)`를 호출하면 정상 읽기 주소를 돌려준다
-  - `S3-CFG-4.4` 첫 성공 뒤 `env.S3_PUBLIC_URL`을 바꿔도 다시 호출한 `adapter.url(uuid)`가 처음 해석한 주소를 그대로 돌려준다
+  - `S3-CFG-4.1` 어댑터 생성은 오류 없이 어댑터 객체를 돌려준다
+  - `S3-CFG-4.2` `env`가 빈 상태의 호출은 빠진 필수 환경 변수 이름을 모두 담은 `Error`를 던진다
+  - `S3-CFG-4.3` 필수 값을 채운 뒤의 호출은 정상 결과를 돌려준다
+  - `S3-CFG-4.4` 첫 성공 뒤 `env`를 바꿔도 처음 해석한 설정으로 결과를 돌려준다
 
 </details>
 
@@ -95,14 +95,15 @@
 <details>
 <summary><strong><code>S3-CFG-8</code></strong> 공개 주소가 올바른 HTTP(S) 주소가 아니거나 쿼리·프래그먼트·계정 정보가 들어 있으면 설정을 거절한다</summary>
 
-- **전제**: 나머지 필수 환경 변수는 유효하고 `publicUrl`이 각각 `"http://localhost:9000/"`, `"cdn.example.com"`, `"ftp://cdn.example.com"`, `"https://cdn.example.com?a=1"`, `"https://cdn.example.com?"`, `"https://cdn.example.com#top"`, `"https://cdn.example.com#"`, `"https://user@cdn.example.com"`인 입력이 있다
+- **전제**: 나머지 필수 환경 변수는 유효하고, `publicUrl`이 `http://` 주소, HTTP(S)가 아닌 주소, 쿼리나 프래그먼트가 붙은 주소, 계정 정보(사용자 이름·비밀번호 둘 다 또는 하나만, 파싱 실패 포함)가 든 주소인 입력이 있다
 - **행동**: 각 입력으로 `resolveS3Config`를 실행한다
 - **결과**:
-  - `S3-CFG-8.1` `http://` 주소는 정상 통과해 `"http://localhost:9000"`을 돌려준다
-  - `S3-CFG-8.2` 프로토콜 없는 `"cdn.example.com"`과 `ftp://` 주소가 `Error`를 던진다
-  - `S3-CFG-8.3` 쿼리(`?a=1`, 빈 `?`)가 붙은 주소가 `Error`를 던진다
-  - `S3-CFG-8.4` 프래그먼트(`#top`, 빈 `#`)가 붙은 주소가 `Error`를 던진다
+  - `S3-CFG-8.1` `http://` 주소는 정상 통과한다
+  - `S3-CFG-8.2` 프로토콜이 없거나 HTTP(S)가 아닌 주소가 `Error`를 던진다
+  - `S3-CFG-8.3` 쿼리(빈 `?` 포함)가 붙은 주소가 `Error`를 던진다
+  - `S3-CFG-8.4` 프래그먼트(빈 `#` 포함)가 붙은 주소가 `Error`를 던진다
   - `S3-CFG-8.5` 계정 정보가 들어간 주소가 `Error`를 던진다
+  - `S3-CFG-8.6` 계정 정보가 든 주소를 거절한 오류의 `message`, `input`, `cause` 사슬 어디에도 주소 원문, 사용자 이름, 비밀번호가 없다
 
 </details>
 
@@ -110,12 +111,10 @@
 <summary><strong><code>S3-CFG-9</code></strong> 업로드 허가 유효 시간이 1초~3600초 범위의 정수가 아니면 설정을 거절한다</summary>
 
 - **전제**: 필수 환경 변수가 모두 담긴 `env`가 있다
-- **행동**: `ticketSeconds`를 경계값(`1`, `3600`)과 범위 밖(`0`, `1.5`, `3601`)으로 각각 `resolveS3Config`를 실행한다
+- **행동**: 범위 안팎의 `ticketSeconds`로 `resolveS3Config`를 실행한다
 - **결과**:
-  - `S3-CFG-9.1` `1`과 `3600`은 정상 통과한다
-  - `S3-CFG-9.2` `ticketSeconds: 0` 호출이 `Error`를 던진다
-  - `S3-CFG-9.3` `ticketSeconds: 1.5` 호출이 `Error`를 던진다
-  - `S3-CFG-9.4` `ticketSeconds: 3601` 호출이 `Error`를 던진다
+  - `S3-CFG-9.1` 범위 끝값 `1`과 `3600`은 정상 통과한다
+  - `S3-CFG-9.2` 범위 밖이거나 정수가 아니면 `Error`를 던진다
 
 </details>
 
@@ -123,12 +122,10 @@
 <summary><strong><code>S3-CFG-10</code></strong> 최대 파일 크기가 1바이트~2,147,483,647바이트 범위의 정수가 아니면 설정을 거절한다</summary>
 
 - **전제**: 필수 환경 변수가 모두 담긴 `env`가 있다
-- **행동**: `maxSize`를 경계값(`1`, `2_147_483_647`)과 범위 밖(`0`, `10.5`, `2_147_483_648`)으로 각각 `resolveS3Config`를 실행한다
+- **행동**: 범위 안팎의 `maxSize`로 `resolveS3Config`를 실행한다
 - **결과**:
-  - `S3-CFG-10.1` `1`과 `2_147_483_647`은 정상 통과한다
-  - `S3-CFG-10.2` `maxSize: 0` 호출이 `Error`를 던진다
-  - `S3-CFG-10.3` `maxSize: 10.5` 호출이 `Error`를 던진다
-  - `S3-CFG-10.4` `maxSize: 2_147_483_648` 호출이 `Error`를 던진다
+  - `S3-CFG-10.1` 범위 끝값 `1`과 `2_147_483_647`은 정상 통과한다
+  - `S3-CFG-10.2` 범위 밖이거나 정수가 아니면 `Error`를 던진다
 
 </details>
 
@@ -136,22 +133,9 @@
 <summary><strong><code>S3-CFG-11</code></strong> 허용 파일 형식 목록이 비어 있거나 잘못된 형식 문자열을 포함하면 설정을 거절한다</summary>
 
 - **전제**: 필수 환경 변수가 모두 담긴 `env`가 있다
-- **행동**: `allowedMimeTypes`를 `[]`, `[""]`, `["image/png; charset=utf-8"]`, `["bad image/png"]`로 하여 각각 `resolveS3Config`를 실행한다
+- **행동**: 비어 있거나 잘못된 항목을 담은 `allowedMimeTypes`로 `resolveS3Config`를 실행한다
 - **결과**:
-  - `S3-CFG-11.1` 빈 배열 `[]` 호출이 `Error`를 던진다
-  - `S3-CFG-11.2` 빈 문자열이 든 배열 `[""]` 호출이 `Error`를 던진다
-  - `S3-CFG-11.3` 파라미터나 앞쪽 잘못된 문자가 붙은 항목이 `Error`를 던진다
-
-</details>
-
-<details>
-<summary><strong><code>S3-CFG-12</code></strong> 공개 주소가 거절될 때 오류 메시지와 오류 객체에 계정 정보나 주소 원문이 노출되지 않는다</summary>
-
-- **전제**: 나머지 필수 환경 변수는 유효하다. `S3_PUBLIC_URL`이 `"https://user:s3cret@cdn.example.com"`인 입력과, 파싱되지 않는 `"https://user:s3cret@"`인 입력이 있다
-- **행동**: 각 입력으로 `resolveS3Config`를 실행한다
-- **결과**:
-  - `S3-CFG-12.1` 계정 정보가 있는 주소는 `S3_PUBLIC_URL`을 포함한 `Error`를 던진다
-  - `S3-CFG-12.2` 파싱되지 않는 주소도 `S3_PUBLIC_URL`을 포함한 `Error`를 던진다
-  - `S3-CFG-12.3` 두 오류의 `message`, `input`, `cause` 체인에 `"s3cret"`과 입력 URL 원문이 없다
+  - `S3-CFG-11.1` 빈 배열은 `Error`를 던진다
+  - `S3-CFG-11.2` 빈 문자열이나 MIME 형식이 아닌 항목(파라미터가 붙은 것 포함)이 들어 있으면 `Error`를 던진다
 
 </details>

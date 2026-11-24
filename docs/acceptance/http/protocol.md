@@ -4,7 +4,7 @@
 
 | 기능 | 하는 일 | 주요 거절 |
 |---|---|---|
-| 쿠키 파싱·헤더 생성 (`cookie.ts`) | `Cookie` 헤더에서 세션 토큰을 읽고, 쿠키 옵션을 검증해 `HttpOnly` 세션 발급·만료 삭제 `Set-Cookie` 헤더를 만든다 | 헤더 없음·이름 미일치 시 빈 결과 반환, `sameSite: "none"` + `secure: false` 조합 시 설정 오류 |
+| 쿠키 파싱·헤더 생성 (`cookie.ts`) | `Cookie` 헤더에서 세션 토큰을 읽고, 쿠키 옵션을 검증해 `HttpOnly` 세션 발급·만료 삭제 `Set-Cookie` 헤더를 만든다 | 헤더 없음·이름 미일치 시 빈 결과 반환, `sameSite: "none"` + `secure: false` 조합·잘못된 쿠키 이름·경로·수명 시 설정 오류 |
 | 응답·오류 변환 (`response.ts`) | 성공(`200`·`201`·`204`), 안전 JSON 직렬화, 코어 `MontiError`(`400`·`401`·`403`·`404`·`409`), `405`(`Allow`), `500` JSON 응답을 만든다 | 예기치 않은 오류는 내부 상세를 숨기고 `500` 반환 |
 
 ---
@@ -47,12 +47,12 @@
 <details>
 <summary><strong><code>HTTP-PRO-4</code></strong> 사용자 지정 쿠키 옵션이 발급 헤더에 반영되고 `HttpOnly`는 유지된다</summary>
 
-- **전제**: 커스텀 옵션(`name: "sid"`, `path: "/admin"`, `sameSite: "strict"`, `maxAge: 3600`, `secure: true`), `secure: false`를 명시한 옵션, `sameSite: "none"`만 지정한 옵션이 있다
-- **행동**: 각 옵션으로 토큰 `"secret-token"`의 발급 헤더를 생성한다(`secure: false`는 HTTPS 기준, `sameSite: "none"`은 HTTP 기준)
+- **전제**: 이름·경로·`sameSite`·수명·`secure`를 지정한 옵션, `secure: false`를 명시한 옵션, `sameSite: "none"`만 지정한 옵션이 있다
+- **행동**: 각 옵션으로 세션 쿠키 발급 헤더를 생성한다
 - **결과**:
-  - `HTTP-PRO-4.1` 커스텀 옵션의 헤더가 `"sid=secret-token; HttpOnly; Path=/admin; SameSite=Strict; Max-Age=3600; Secure"`이다
-  - `HTTP-PRO-4.2` `secure: false`를 명시한 옵션은 HTTPS 요청에서도 `"monti_session=secret-token; HttpOnly; Path=/; SameSite=Lax; Max-Age=2592000"`으로 `; Secure`가 붙지 않는다
-  - `HTTP-PRO-4.3` `sameSite: "none"` 옵션은 HTTP 요청에서도 `"monti_session=secret-token; HttpOnly; Path=/; SameSite=None; Max-Age=2592000; Secure"`으로 `; Secure`가 자동으로 붙는다
+  - `HTTP-PRO-4.1` 지정한 값이 헤더에 반영되고 `HttpOnly`가 유지된다
+  - `HTTP-PRO-4.2` `secure: false`를 명시하면 HTTPS 요청에서도 `; Secure`가 붙지 않는다
+  - `HTTP-PRO-4.3` `sameSite: "none"`이면 HTTP 요청에서도 `; Secure`가 자동으로 붙는다
 
 </details>
 
@@ -81,12 +81,12 @@
 <details>
 <summary><strong><code>HTTP-PRO-7</code></strong> 함수·순환 참조·큰 정수가 섞인 값도 안전하게 JSON 응답으로 직렬화한다</summary>
 
-- **전제**: 함수 속성, 공유 참조(`first`, `second`), 조상 순환 참조(`self`), `bigint`(`123n`)가 든 객체, `toJSON()`이 새 객체로 자기 자신을 다시 가리키는 순환 객체, 그리고 최상위 함수 값이 있다
-- **행동**: 세 값으로 각각 `200` JSON 응답을 생성한다
+- **전제**: 함수·공유 참조·순환 참조·`bigint`가 섞인 객체, `toJSON()`이 순환 객체를 돌려주는 값, 최상위 함수 값이 있다
+- **행동**: 그 값들로 `200` JSON 응답을 생성한다
 - **결과**:
   - `HTTP-PRO-7.1` 오류 없이 모두 `200` 응답이 생성된다
-  - `HTTP-PRO-7.2` 첫 응답의 파싱한 본문이 `{ name: "Monti", count: "123", first: { tag: "x" }, second: { tag: "x" } }`와 일치한다
-  - `HTTP-PRO-7.3` `toJSON()` 순환 객체는 순환 속성이 끊긴 `{}`로, 최상위 함수 값은 `null` JSON으로 직렬화된다
+  - `HTTP-PRO-7.2` 섞인 객체는 함수와 순환 속성이 빠지고 `bigint`는 문자열로, 공유 참조는 각 자리에 값으로 직렬화된다
+  - `HTTP-PRO-7.3` `toJSON()` 순환 값은 순환 속성이 끊긴 `{}`로, 최상위 함수 값은 `null` JSON으로 직렬화된다
 
 </details>
 
@@ -108,32 +108,62 @@
 <details>
 <summary><strong><code>HTTP-PRO-9</code></strong> `Cookie` 헤더가 없거나 찾는 이름의 쿠키가 없으면 빈 결과를 돌려준다</summary>
 
-- **전제**: `null` 헤더, 빈 문자열 헤더, 다른 이름의 쿠키만 있는 헤더(`other=1`)가 있다
-- **행동**: 각 헤더에서 `monti_session` 쿠키 값을 읽는다
+- **전제**: `Cookie` 헤더가 없거나 비어 있거나 다른 이름의 쿠키만 담고 있다
+- **행동**: 그 헤더에서 세션 쿠키 값을 읽는다
 - **결과**:
-  - `HTTP-PRO-9.1` 세 경우 모두 `undefined`를 돌려준다
+  - `HTTP-PRO-9.1` `undefined`를 돌려준다
 
 </details>
 
 <details>
-<summary><strong><code>HTTP-PRO-10</code></strong> 잘못된 쿠키 옵션 조합이나 유효하지 않은 이름·경로·수명은 설정 오류로 거절한다</summary>
+<summary><strong><code>HTTP-PRO-10</code></strong> `SameSite=None` 쿠키는 `Secure`를 끈 채로 설정할 수 없다</summary>
 
-- **전제**: `{ sameSite: "none", secure: false }`, 빈 이름·세미콜론 포함 이름(`""`, `"a;b"`, `"a b"`), 빈 경로·세미콜론·제어문자 포함 경로(`""`, `"/;x"`, `"/admin\r\nX-Injected: 1"`), 양의 정수가 아닌 수명(`0`, `-1`, `1.5`, `NaN`) 옵션들이 있다
-- **행동**: 각 쿠키 옵션을 해석한다
+- **전제**: `{ sameSite: "none", secure: false }` 쿠키 옵션이 있다
+- **행동**: 그 쿠키 옵션을 해석한다
 - **결과**:
-  - `HTTP-PRO-10.1` 모든 잘못된 옵션이 쿠키 설정 오류를 던진다
+  - `HTTP-PRO-10.1` 쿠키 설정 오류를 던진다
+
+</details>
+
+<details>
+<summary><strong><code>HTTP-PRO-13</code></strong> 쿠키 이름이 비어 있거나 구분자(`;`, `=`, 공백)나 제어 문자가 들어 있으면 설정할 수 없다</summary>
+
+- **전제**: `name`이 비어 있거나 `;`, `=`, 공백, 줄바꿈 같은 제어 문자 중 하나가 들어 있는 쿠키 옵션이 있다
+- **행동**: 그 쿠키 옵션을 해석한다
+- **결과**:
+  - `HTTP-PRO-13.1` 쿠키 설정 오류를 던진다
+
+</details>
+
+<details>
+<summary><strong><code>HTTP-PRO-14</code></strong> 쿠키 경로가 비어 있거나 `;`나 제어 문자가 들어 있으면 설정할 수 없다</summary>
+
+- **전제**: `path`가 비어 있거나 `;` 또는 줄바꿈 같은 제어 문자가 들어 있는 쿠키 옵션이 있다
+- **행동**: 그 쿠키 옵션을 해석한다
+- **결과**:
+  - `HTTP-PRO-14.1` 쿠키 설정 오류를 던진다
+
+</details>
+
+<details>
+<summary><strong><code>HTTP-PRO-15</code></strong> 쿠키 수명이 양의 정수가 아니면 설정할 수 없다</summary>
+
+- **전제**: `maxAge`가 양의 정수가 아닌 쿠키 옵션이 있다
+- **행동**: 그 쿠키 옵션을 해석한다
+- **결과**:
+  - `HTTP-PRO-15.1` 쿠키 설정 오류를 던진다
 
 </details>
 
 <details>
 <summary><strong><code>HTTP-PRO-11</code></strong> 코어 오류가 아닌 예기치 않은 오류나 직렬화 불가능한 오류도 내부 상세를 숨기고 서버 오류(`500`)로 바꾼다</summary>
 
-- **전제**: 일반 `Error("db connection failed: internal detail")`, 문자열 예외 `"unexpected"`, `code`가 배열이거나 `message`가 빠진 비정상 오류 객체, 그리고 `details.toJSON()`이 예외를 던지는 코어 오류가 있다
+- **전제**: 코어 오류가 아닌 예외(일반 `Error`, 문자열 예외), 형식이 깨진 오류 객체, 직렬화 중 예외를 던지는 `details`를 가진 코어 오류가 있다
 - **행동**: 각 예외를 HTTP 오류 응답으로 변환한다
 - **결과**:
-  - `HTTP-PRO-11.1` 일반 오류와 문자열 예외는 모두 상태 `500`, `content-type`이 `application/json; charset=utf-8`, `cache-control`이 `no-store`, 본문의 `error.code`가 `"INTERNAL_ERROR"`이다
-  - `HTTP-PRO-11.2` 두 응답 본문 모두에 원본 오류 문자열(`"db connection failed: internal detail"`, `"unexpected"`)이 포함되지 않는다
-  - `HTTP-PRO-11.3` `code`가 배열이거나 `message`가 누락된 객체, 그리고 `details.toJSON()`이 예외를 던지는 오류도 예외를 전파하지 않고 `500` `INTERNAL_ERROR` JSON으로 응답한다
+  - `HTTP-PRO-11.1` 코어 오류가 아닌 예외는 상태 `500`, `content-type`이 `application/json; charset=utf-8`, `cache-control`이 `no-store`, 본문의 `error.code`가 `"INTERNAL_ERROR"`이다
+  - `HTTP-PRO-11.2` 응답 본문에 원본 오류 문자열이 포함되지 않는다
+  - `HTTP-PRO-11.3` 형식이 깨진 오류와 직렬화 중 예외를 던지는 오류도 예외를 전파하지 않고 `500` `INTERNAL_ERROR` JSON으로 응답한다
 
 </details>
 

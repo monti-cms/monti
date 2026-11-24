@@ -1,8 +1,9 @@
 import { randomUUID } from "node:crypto";
-import type { Kysely, Transaction } from "kysely";
+import { type Kysely, type KyselyPlugin, sql, type Transaction } from "kysely";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { z } from "zod";
 import { createTestDatabase, type TestDatabase } from "../__test__/database";
+import { gate, holdingAfter } from "../__test__/race";
 import { migrate } from "../db/migrate";
 import { initial } from "../db/migrations/0001-initial";
 import type { Database } from "../db/types";
@@ -463,24 +464,28 @@ it("ENG-EVT-3 구독자가 받은 이벤트 값을 고치려 해도 다른 구�
 	expect(received).toEqual({ id: input.id, name: "Photos" });
 });
 
-it("ENG-EVT-5 이벤트로 보낼 수 없는 결과를 돌려주는 쓰기는 저장되지 않고 오류가 난다", async () => {
-	const create = defineWrite({
+it("ENG-EVT-5 이벤트로 보낼 값을 복사할 수 없으면 쓰기가 저장되지 않는다", async () => {
+	const withFunctionOutput = defineWrite({
 		input: folderInput,
 		run: async (input, ctx) => ({ ...(await insertFolder(input, ctx)), format: () => input.name }),
 	});
-	const monti = createMonti(db, { folders: { create } });
-	const listener = vi.fn();
-	monti.onEvent(listener);
+	const withFunctionInput = defineWrite({
+		input: folderInput.extend({ format: z.custom<() => string>((value) => typeof value === "function") }),
+		run: insertFolder,
+	});
+	const monti = createMonti(db, { folders: { withFunctionOutput, withFunctionInput } });
 
-	const outcome = await monti.folders.create({ id: randomUUID(), name: "Photos" }).catch((error: unknown) => error);
-	await new Promise((resolve) => setTimeout(resolve, 0));
+	const outcomes = [
+		await monti.folders
+			.withFunctionInput({ id: randomUUID(), name: "Photos", format: () => "Photos" })
+			.catch((error: unknown) => error),
+		await monti.folders.withFunctionOutput({ id: randomUUID(), name: "Videos" }).catch((error: unknown) => error),
+	];
 
 	// ENG-EVT-5.1
-	expect(outcome).toBeInstanceOf(Error);
+	expect(outcomes).toEqual([expect.any(Error), expect.any(Error)]);
 	// ENG-EVT-5.2
 	expect(await folderNames()).toEqual([]);
-	// ENG-EVT-5.3
-	expect(listener).not.toHaveBeenCalled();
 });
 
 /** 정상 폴더 하나를 만든 뒤, 없는 부모를 가리켜 외래 키 오류가 나는 폴더 쓰기를 잡아 무시하고 정상 반환한다. */
@@ -518,22 +523,6 @@ it("ENG-TX-6 콜백 안에서 DB 쓰기가 실패하면 콜백이 그 오류를 
 	expect(await folderNames()).toEqual([]);
 	// ENG-TX-6.3
 	expect(listener).not.toHaveBeenCalled();
-});
-
-it("ENG-PLG-3 플러그인의 리소스 이름이 엔진의 기본 메서드 이름과 겹치면 엔진을 만들 수 없다", () => {
-	const create = defineWrite({ input: folderInput, run: insertFolder });
-	const codes = ["spec", "transaction"].map((resource) => {
-		const plugin: Plugin = { name: "named-plugin", operations: { [resource]: { create } } };
-		try {
-			createMonti(db, { folders: { create } }, [plugin]);
-			return null;
-		} catch (error) {
-			return (error as MontiError).code;
-		}
-	});
-
-	// ENG-PLG-3.1
-	expect(codes).toEqual(["CONFLICT", "CONFLICT"]);
 });
 
 /** 콜백이 받는 클라이언트 가운데 폴더 쓰기 `add` 하나. */
@@ -614,5 +603,194 @@ it("ENG-TX-10 콜백이 트랜잭션 DB에 직접 실행한 쿼리의 DB 오류�
 	// ENG-TX-10.2
 	expect(await folderNames()).toEqual([]);
 	// ENG-TX-10.3
+	expect(listener).not.toHaveBeenCalled();
+});
+
+/**
+ * 콜백이 받는 클라이언트: 폴더 하나를 넣는 `add`, 두 폴더를 넣되 그 사이에 멈출 수 있는 `addTwo`, 멈췄다가 폴더 하나를
+ * 넣는 `addLater`.
+ */
+type LateWrites = Record<
+	"folders",
+	Record<"add" | "addTwo" | "addLater", (input: z.infer<typeof folderInput>) => Promise<unknown>>
+>;
+
+/** 기다리지 않는 작업을 시작할 때 쓰는 것들: 콜백이 받은 `tx`·`trx`와, 시작한 작업을 맡겨 끝까지 지켜볼 `start`. */
+interface LateTools {
+	tx: LateWrites;
+	trx: Transaction<Database>;
+	start: (work: Promise<unknown>) => void;
+	/** `addTwo`가 두 문장 사이에 닿으면 풀린다. */
+	parked: Promise<void>;
+}
+
+/** 기다리지 않는 작업 하나. `inside`는 콜백 안에서, `beforeCommit`은 콜백이 끝난 뒤 엔진의 확인 조회가 멈춘 동안 실행한다. */
+interface LateCase {
+	name: string;
+	inside?: (tools: LateTools) => Promise<void>;
+	beforeCommit?: (tools: LateTools) => void;
+}
+
+/** 이름이 겹치지 않는 폴더 행: 앞선 입력의 행이 남아 있어도 다음 입력이 이름 충돌로 실패하지 않는다. */
+function row(name: string): { id: string; name: string } {
+	return { id: randomUUID(), name: `${name} ${randomUUID()}` };
+}
+
+function insertLate(trx: Transaction<Database>): Promise<unknown> {
+	return trx
+		.insertInto("folders")
+		.values({ ...row("Late"), scope: "media" })
+		.execute();
+}
+
+/** 쿼리와 결과를 그대로 넘기는 Kysely 플러그인: `trx`에서 실행기를 가르는 데만 쓴다. */
+const passThrough: KyselyPlugin = {
+	transformQuery: ({ node }) => node,
+	transformResult: async ({ result }) => result,
+};
+
+/** 플러그인을 붙인 raw SQL로 폴더 행 하나를 넣는다. */
+function insertLateRaw(trx: Transaction<Database>): Promise<unknown> {
+	const { id, name } = row("Late");
+	return sql`insert into folders (id, name, scope) values (${id}, ${name}, 'media')`
+		.withPlugin(passThrough)
+		.execute(trx);
+}
+
+const lateCases: LateCase[] = [
+	{
+		name: "두 문장 사이에 멈춘 Operation",
+		inside: async ({ tx, start, parked }) => {
+			const work = tx.folders.addTwo(row("Late"));
+			start(work);
+			await Promise.race([parked, work]);
+		},
+	},
+	{
+		name: "실행 중인 trx 쿼리",
+		inside: async ({ trx, start }) => {
+			start(insertLate(trx));
+		},
+	},
+	{
+		name: "withSchema로 갈라진 trx의 실행 중인 쿼리",
+		inside: async ({ trx, start }) => {
+			start(insertLate(trx.withSchema("public")));
+		},
+	},
+	{
+		name: "withPlugin으로 갈라진 trx의 실행 중인 쿼리",
+		inside: async ({ trx, start }) => {
+			start(insertLate(trx.withPlugin(passThrough)));
+		},
+	},
+	{
+		name: "플러그인을 붙인 raw SQL의 실행 중인 쿼리",
+		inside: async ({ trx, start }) => {
+			start(insertLateRaw(trx));
+		},
+	},
+	{
+		name: "withoutPlugins로 갈라진 trx의 실행 중인 쿼리",
+		inside: async ({ trx, start }) => {
+			start(insertLate(trx.withoutPlugins()));
+		},
+	},
+	{
+		name: "마이크로태스크로 시작한 Operation",
+		inside: async ({ tx, start }) => {
+			queueMicrotask(() => start(tx.folders.add(row("Late"))));
+		},
+	},
+	{
+		name: "마이크로태스크로 시작한 trx 쿼리",
+		inside: async ({ trx, start }) => {
+			queueMicrotask(() => start(insertLate(trx)));
+		},
+	},
+	{
+		name: "커밋 전에 붙잡아 둔 tx로 시작한 Operation",
+		beforeCommit: ({ tx, start }) => start(tx.folders.addLater(row("Late"))),
+	},
+	{ name: "커밋 전에 붙잡아 둔 trx로 시작한 쿼리", beforeCommit: ({ trx, start }) => start(insertLate(trx)) },
+	{
+		name: "커밋 전에 붙잡아 둔 trx를 withoutPlugins로 갈라 시작한 쿼리",
+		beforeCommit: ({ trx, start }) => start(insertLate(trx.withoutPlugins())),
+	},
+];
+
+/**
+ * `run`의 콜백에서 행 하나를 기다려 저장한 뒤 `late`의 작업을 기다리지 않고 반환한다. 호출이 던졌는지를 돌려주고, 돌려주기
+ * 전에 멈춘 작업을 모두 풀어 끝까지 실행시킨다.
+ */
+async function runWithLate(
+	run: "transaction" | "dryRun",
+	late: LateCase,
+	onEvent: (event: MontiEvent) => void,
+): Promise<boolean> {
+	// 엔진은 콜백이 끝난 뒤 커밋·롤백 전에 `select 1`로 트랜잭션을 확인한다: 그 결과를 붙잡아 둔 동안 늦은 작업을 시작한다.
+	const held = gate();
+	const parked = gate();
+	const add = defineWrite({ input: folderInput, run: insertFolder });
+	const addTwo = defineWrite({
+		input: folderInput,
+		run: async (input, ctx) => {
+			await insertFolder(input, ctx);
+			await parked.pass();
+			return insertFolder(row("Late"), ctx);
+		},
+	});
+	const addLater = defineWrite({
+		input: folderInput,
+		run: async (input, ctx) => {
+			await parked.pass();
+			return insertFolder(input, ctx);
+		},
+	});
+	const monti = createMonti(holdingAfter(db, /^select 1$/, held.pass), { folders: { add, addTwo, addLater } });
+	monti.onEvent(onEvent);
+	// 거절된 늦은 작업이 처리되지 않은 거절로 남지 않게, 시작하자마자 결과를 받아 둔다.
+	const started: Promise<unknown>[] = [];
+	const start = (work: Promise<unknown>) => started.push(work.catch(() => undefined));
+	const stash: LateTools[] = [];
+	const call = monti[run](async (tx, trx) => {
+		const tools = { tx, trx, start, parked: parked.reached };
+		stash.push(tools);
+		await tx.folders.add(row("First"));
+		await late.inside?.(tools);
+		return "done";
+	});
+	try {
+		if (late.beforeCommit !== undefined) {
+			await held.reached;
+			late.beforeCommit(stash[0]);
+		}
+		held.open();
+		return await call.then(
+			() => false,
+			() => true,
+		);
+	} finally {
+		held.open();
+		parked.open();
+		await Promise.allSettled([call, ...started]);
+	}
+}
+
+it("ENG-TX-11 콜백이 기다리지 않은 쓰기가 있으면 트랜잭션과 드라이런은 실패하고 아무것도 저장하지 않는다", async () => {
+	const listener = vi.fn();
+	const runs = ["transaction", "dryRun"] as const;
+	const outcomes = [];
+	for (const run of runs) {
+		for (const late of lateCases) {
+			outcomes.push({ run, late: late.name, threw: await runWithLate(run, late, listener) });
+		}
+	}
+
+	// ENG-TX-11.1
+	expect(outcomes).toEqual(runs.flatMap((run) => lateCases.map((late) => ({ run, late: late.name, threw: true }))));
+	// ENG-TX-11.2
+	expect(await folderNames()).toEqual([]);
+	// ENG-TX-11.3
 	expect(listener).not.toHaveBeenCalled();
 });

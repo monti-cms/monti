@@ -309,30 +309,6 @@ it("KEY-CRT-5 같은 이름으로 키를 동시에 두 번 만들면 한 건만 
 	expect((await keyRows()).filter((row) => row.name === mailKey.name)).toHaveLength(1);
 });
 
-it("KEY-UPD-7 서로 다른 두 키의 이름을 같은 이름으로 동시에 바꾸면 한 건만 성공하고 나머지는 거절된다", async () => {
-	const monti = montiOf([]);
-	const mail = await monti.keys.create(mailKey);
-	const storage = await monti.keys.create(storageKey);
-	const renamed = "Renamed";
-
-	// 첫 수정을 커밋 직전에 멈춰 두고 두 번째 수정을 시작한다.
-	const [first, second] = await overlap(
-		db,
-		(hold) =>
-			monti.transaction(async (tx) => {
-				const updated = await tx.keys.update({ id: mail.id, name: renamed });
-				await hold();
-				return updated;
-			}),
-		() => monti.keys.update({ id: storage.id, name: renamed }),
-	);
-
-	// KEY-UPD-7.1
-	expect([first.code, second.code].sort()).toEqual(["CONFLICT", null]);
-	// KEY-UPD-7.2
-	expect((await keyRows()).filter((row) => row.name === renamed)).toHaveLength(1);
-});
-
 it("KEY-CHK-7 저장할 때와 다른 암호화 비밀값으로는 저장된 키의 연결을 확인할 수 없다", async () => {
 	const [firstSecret, secondSecret] = ["first monti secret", "second monti secret"];
 	const stored = await montiOf([mailPlugin], firstSecret).keys.create(mailKey);

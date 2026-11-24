@@ -1,6 +1,7 @@
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, expect, it } from "vitest";
 import { createTestDatabase, type TestDatabase } from "../../__test__/database";
+import { codeOf } from "../../__test__/race";
 import { migrate } from "../../db/migrate";
 import { initial } from "../../db/migrations/0001-initial";
 import type { Database } from "../../db/types";
@@ -51,18 +52,17 @@ it("SES-CRT-1 이메일과 비밀번호가 맞으면 세션을 발급한다", as
 	expect(added[0]?.expires_at.getTime()).toBeGreaterThan(Date.now());
 });
 
-it("SES-CRT-2 비밀번호가 틀리면 로그인할 수 없다", async () => {
-	// SES-CRT-2.1
-	await expect(monti.session.create({ email: owner.email, password: "wrong password" })).rejects.toMatchObject({
-		code: "UNAUTHORIZED",
-	});
-});
+it("SES-CRT-2 등록된 이메일과 올바른 비밀번호로만 로그인할 수 있다", async () => {
+	const attempts = [
+		{ email: owner.email, password: "wrong password" },
+		{ email: "nobody@example.com", password: owner.password },
+	];
 
-it("SES-CRT-3 등록되지 않은 이메일로는 로그인할 수 없다", async () => {
-	// SES-CRT-3.1
-	await expect(monti.session.create({ email: "nobody@example.com", password: owner.password })).rejects.toMatchObject({
-		code: "UNAUTHORIZED",
-	});
+	const codes = [];
+	for (const attempt of attempts) codes.push(await codeOf(monti.session.create(attempt)));
+
+	// SES-CRT-2.1
+	expect(codes).toEqual(["UNAUTHORIZED", "UNAUTHORIZED"]);
 });
 
 it("SES-GET-1 유효한 토큰이면 관리자를 돌려준다", async () => {

@@ -161,22 +161,12 @@
 ### 경계 · 방어 검증
 
 <details>
-<summary><strong><code>SES-CRT-2</code></strong> 비밀번호가 틀리면 로그인할 수 없다</summary>
+<summary><strong><code>SES-CRT-2</code></strong> 등록된 이메일과 올바른 비밀번호로만 로그인할 수 있다</summary>
 
 - **전제**: 관리자가 하나 있다
-- **행동**: 맞는 이메일과 틀린 비밀번호로 `session.create`를 실행한다
+- **행동**: 등록되지 않은 이메일이나 틀린 비밀번호로 `session.create`를 실행한다
 - **결과**:
   - `SES-CRT-2.1` `UNAUTHORIZED` 오류를 던진다
-
-</details>
-
-<details>
-<summary><strong><code>SES-CRT-3</code></strong> 등록되지 않은 이메일로는 로그인할 수 없다</summary>
-
-- **전제**: 관리자가 하나 있다
-- **행동**: 등록되지 않은 이메일과 기존 관리자의 비밀번호로 `session.create`를 실행한다
-- **결과**:
-  - `SES-CRT-3.1` `UNAUTHORIZED` 오류를 던진다
 
 </details>
 

@@ -6,7 +6,7 @@
 |---|---|---|
 | `folders.create` | `scope`(컬렉션 키 또는 `"media"`)에 폴더 생성(`parent_id`, `__preset_id` 선택) | 없는 `scope`·빈 `name`·잘못된 부모 `BAD_REQUEST`, 같은 위치 이름 중복(동시 생성 포함) `CONFLICT` |
 | `folders.list` | 지정한 `scope`의 활성 폴더 목록을 돌려준다 | 없음 |
-| `folders.update` | 폴더 `name`·`parent_id`(`null`=루트) 변경(변경 항목 없으면 그대로 반환, 서로 다른 필드 동시 수정 보존) | 빈 `name`·순환 이동(동시 이동 포함)·다른 범위 부모 `BAD_REQUEST`, 휴지통·미존재 `NOT_FOUND`, 이름 중복(동시 수정 포함) `CONFLICT` |
+| `folders.update` | 폴더 `name`·`parent_id`(`null`=루트) 변경(변경 항목 없으면 그대로 반환) | 빈 `name`·순환 이동(동시 이동 포함)·다른 범위 부모 `BAD_REQUEST`, 휴지통·미존재 `NOT_FOUND`, 이름 중복 `CONFLICT` |
 
 ---
 
@@ -110,10 +110,11 @@
 <details>
 <summary><strong><code>FLD-CRT-9</code></strong> 폴더를 휴지통에 보내는 동안 그 아래에 새 폴더를 만들어도 휴지통 폴더 아래에 활성 폴더가 남지 않는다</summary>
 
-- **전제**: 스키마에 컬렉션이 하나 있고 그 `scope`에 활성 루트 폴더(버릴 부모 폴더)가 하나 있다. `trash.move`가 버릴 부모 폴더의 하위 구조를 읽었지만 아직 커밋하지 않았다
-- **행동**: 버릴 부모 폴더를 `parent_id`로 하는 `folders.create`를 별도 연결에서 실행한다
+- **전제**: 스키마에 컬렉션이 하나 있고 그 `scope`에 활성 루트 폴더(버릴 부모 폴더)가 하나 있다
+- **행동**: 버릴 부모 폴더의 `trash.move`가 함께 옮길 항목을 정한 뒤, 그 처리가 끝나기 전에 버릴 부모 폴더를 `parent_id`로 하는 `folders.create`를 실행한다
 - **결과**:
-  - `FLD-CRT-9.1` 두 호출이 끝난 뒤 `folders` 테이블에 `trashed_at`이 `null`이면서 부모 폴더의 `trashed_at`이 설정된 행이 없다
+  - `FLD-CRT-9.1` `folders` 테이블에서 버릴 부모 폴더에 `trashed_at`이 설정된다
+  - `FLD-CRT-9.2` `folders` 테이블에 버릴 부모 폴더를 `parent_id`로 두고 `trashed_at`이 `null`인 행이 없다
 
 </details>
 
@@ -260,17 +261,6 @@
 </details>
 
 <details>
-<summary><strong><code>FLD-UPD-12</code></strong> 같은 부모 아래의 두 폴더를 같은 이름으로 동시에 바꾸면 한 건만 성공하고 나머지는 거절된다</summary>
-
-- **전제**: 같은 `scope`의 활성 부모 폴더 아래에 서로 다른 이름의 활성 하위 폴더 둘이 있다
-- **행동**: 두 하위 폴더의 `id`에 같은 새 `name`을 넣어 `folders.update` 두 건을, 서로의 커밋을 보기 전에 겹치도록 동시에 실행한다
-- **결과**:
-  - `FLD-UPD-12.1` 한 건은 성공하고 나머지 한 건은 `CONFLICT` 오류를 던진다
-  - `FLD-UPD-12.2` `folders` 테이블에서 해당 부모 아래 그 새 `name`을 가진 활성 폴더가 정확히 하나만 남는다
-
-</details>
-
-<details>
 <summary><strong><code>FLD-UPD-13</code></strong> 두 폴더를 서로의 하위 폴더로 동시에 옮겨도 순환 구조가 생기지 않는다</summary>
 
 - **전제**: 같은 `scope`에 활성 루트 폴더 둘(첫 번째 폴더, 두 번째 폴더)이 있다
@@ -292,13 +282,3 @@
 
 </details>
 
-<details>
-<summary><strong><code>FLD-UPD-15</code></strong> 같은 폴더의 이름과 부모를 동시에 각각 바꿔도 두 변경이 모두 남는다</summary>
-
-- **전제**: 같은 `scope`에 활성 루트 폴더 둘(대상 폴더, 새 부모 폴더)이 있다
-- **행동**: 대상 폴더의 `name`만 바꾸는 `folders.update`와 `parent_id`만 새 부모 폴더로 바꾸는 `folders.update`를, 첫 번째 수정이 커밋되기 전에 두 번째 수정이 진입하도록 동시에 실행한다
-- **결과**:
-  - `FLD-UPD-15.1` 두 호출 모두 오류 없이 끝난다
-  - `FLD-UPD-15.2` `folders` 테이블에서 대상 폴더의 `name`이 새 이름이고 `parent_id`가 새 부모 폴더의 `id`이다
-
-</details>

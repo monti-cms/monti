@@ -68,47 +68,50 @@ const BAD_REQUEST = { code: "BAD_REQUEST" };
 /** 본문 허용 크기: 1 MiB. */
 const MIB = 1_048_576;
 
-/** `bytes`를 64 KiB 조각으로 흘려보내는 본문 스트림. `Content-Length` 헤더가 붙지 않는다. */
-function streamOf(bytes: Uint8Array): ReadableStream<Uint8Array> {
-	let offset = 0;
+/** 64 KiB씩 1 MiB를 넘길 때까지 내보낸 뒤 끝나지 않는 JSON 본문 스트림. */
+function unendingStream(): ReadableStream<Uint8Array> {
+	const chunk = new TextEncoder().encode("a".repeat(65_536));
+	let sent = 0;
 	return new ReadableStream({
 		pull(controller) {
-			if (offset >= bytes.byteLength) return controller.close();
-			controller.enqueue(bytes.slice(offset, offset + 65_536));
-			offset += 65_536;
+			if (sent > MIB) return new Promise<void>(() => {});
+			controller.enqueue(sent === 0 ? new TextEncoder().encode(`{"name":"${"a".repeat(65_536 - 9)}`) : chunk);
+			sent += 65_536;
 		},
 	});
 }
-
 it("HTTP-RUT-1 표준 동사(`list`, `get`, `create`, `update`, `delete`)를 각각의 HTTP 메서드와 경로로 매핑하고 `GET /<resource>`에서는 목록을 우선한다", () => {
 	// HTTP-RUT-1.1
-	expect(route(core, "GET", "/api/templates")).toMatchObject({ name: "templates.list" });
+	expect([
+		route(core, "GET", "/api/templates"),
+		route(core, "GET", "/api/templates/t1"),
+		route(core, "PATCH", "/api/templates/t1"),
+		route(core, "DELETE", "/api/templates/t1"),
+		route(core, "POST", "/api/templates"),
+	]).toMatchObject([
+		{ name: "templates.list" },
+		{ name: "templates.get", id: "t1" },
+		{ name: "templates.update", id: "t1" },
+		{ name: "templates.delete", id: "t1" },
+		{ name: "templates.create" },
+	]);
 	// HTTP-RUT-1.2
 	expect(route(core, "GET", "/api/entries")).toMatchObject({ name: "entries.list" });
-	// HTTP-RUT-1.3
-	expect(route(core, "GET", "/api/templates/t1")).toMatchObject({ name: "templates.get", id: "t1" });
-	// HTTP-RUT-1.4
-	expect(route(core, "POST", "/api/templates")).toMatchObject({ name: "templates.create" });
-	// HTTP-RUT-1.5
-	expect(route(core, "PATCH", "/api/templates/t1")).toMatchObject({ name: "templates.update", id: "t1" });
-	// HTTP-RUT-1.6
-	expect(route(core, "DELETE", "/api/templates/t1")).toMatchObject({ name: "templates.delete", id: "t1" });
 	// HTTP-RUT-1.7
 	expect(route(core, "patch", "/api/templates/t1")).toMatchObject({ name: "templates.update", id: "t1" });
 });
 
 it("HTTP-RUT-2 목록이 없는 단일 리소스는 `:id` 없는 경로로 조회·수정·삭제에 매핑한다", () => {
 	// HTTP-RUT-2.1
-	expect([route(withPlugin, "GET", "/api/schema"), route(withPlugin, "PATCH", "/api/schema")]).toEqual([
-		{ name: "schema.get", kind: "read", id: undefined },
-		{ name: "schema.update", kind: "write", id: undefined },
-	]);
-	// HTTP-RUT-2.2
 	expect([
+		route(withPlugin, "GET", "/api/schema"),
+		route(withPlugin, "PATCH", "/api/schema"),
 		route(withPlugin, "GET", "/api/session"),
 		route(withPlugin, "DELETE", "/api/session"),
 		route(withPlugin, "PATCH", "/api/admin"),
 	]).toEqual([
+		{ name: "schema.get", kind: "read", id: undefined },
+		{ name: "schema.update", kind: "write", id: undefined },
 		{ name: "session.get", kind: "read", id: undefined },
 		{ name: "session.delete", kind: "write", id: undefined },
 		{ name: "admin.update", kind: "write", id: undefined },
@@ -119,13 +122,15 @@ it("HTTP-RUT-2 목록이 없는 단일 리소스는 `:id` 없는 경로로 조�
 
 it("HTTP-RUT-3 단건과 다건 입력을 함께 받는 리소스는 `:id` 유무로 경로를 나눠 매핑한다", () => {
 	// HTTP-RUT-3.1
-	expect(route(core, "PATCH", "/api/entries/e1")).toMatchObject({ name: "entries.update", id: "e1" });
+	expect([route(core, "PATCH", "/api/entries/e1"), route(core, "DELETE", "/api/trash/t1")]).toMatchObject([
+		{ name: "entries.update", id: "e1" },
+		{ name: "trash.delete", id: "t1" },
+	]);
 	// HTTP-RUT-3.2
-	expect(route(core, "PATCH", "/api/entries")).toEqual({ name: "entries.update", kind: "write", id: undefined });
-	// HTTP-RUT-3.3
-	expect(route(core, "DELETE", "/api/trash/t1")).toMatchObject({ name: "trash.delete", id: "t1" });
-	// HTTP-RUT-3.4
-	expect(route(core, "DELETE", "/api/trash")).toEqual({ name: "trash.delete", kind: "write", id: undefined });
+	expect([route(core, "PATCH", "/api/entries"), route(core, "DELETE", "/api/trash")]).toEqual([
+		{ name: "entries.update", kind: "write", id: undefined },
+		{ name: "trash.delete", kind: "write", id: undefined },
+	]);
 	// HTTP-RUT-3.5
 	expect([route(withPlugin, "PATCH", "/api/items/i1"), route(withPlugin, "PATCH", "/api/items")]).toEqual([
 		{ name: "items.update", kind: "write", id: "i1" },
@@ -157,9 +162,10 @@ it('HTTP-RUT-5 사용자 지정 `basePath`와 루트 기준(`""`, `"/"`)에서 �
 	// HTTP-RUT-5.1
 	expect(route(nested, "GET", "/admin/api/templates")).toMatchObject({ name: "templates.list" });
 	// HTTP-RUT-5.2
-	expect(route(empty, "GET", "/entries/e1")).toMatchObject({ name: "entries.get", id: "e1" });
-	// HTTP-RUT-5.3
-	expect(route(slash, "GET", "/entries/e1")).toMatchObject({ name: "entries.get", id: "e1" });
+	expect([route(empty, "GET", "/entries/e1"), route(slash, "GET", "/entries/e1")]).toMatchObject([
+		{ name: "entries.get", id: "e1" },
+		{ name: "entries.get", id: "e1" },
+	]);
 });
 
 it("HTTP-RUT-6 경로 끝 슬래시를 제거하고 퍼센트 인코딩된 `:id` 세그먼트를 디코딩해 매칭한다", () => {
@@ -186,19 +192,17 @@ it("HTTP-RUT-7 API 밖의 경로, 경계가 다른 접두 경로, 없는 리소�
 
 it("HTTP-RUT-8 다른 메서드로 열린 경로에 허용되지 않은 메서드를 보내면 정해진 순서의 허용 목록과 함께 거절한다(`405`)", () => {
 	// HTTP-RUT-8.1
-	expect(matchRoute(core, "DELETE", "/api/schema")).toEqual({ kind: "method_not_allowed", allow: ["GET", "PATCH"] });
-	// HTTP-RUT-8.2
-	expect(matchRoute(core, "PATCH", "/api/templates")).toEqual({ kind: "method_not_allowed", allow: ["GET", "POST"] });
-	// HTTP-RUT-8.3
-	expect(matchRoute(core, "POST", "/api/entries/unknown")).toEqual({
-		kind: "method_not_allowed",
-		allow: ["GET", "PATCH"],
-	});
-	// HTTP-RUT-8.4
-	expect(matchRoute(core, "POST", "/api/templates/t1")).toEqual({
-		kind: "method_not_allowed",
-		allow: ["GET", "PATCH", "DELETE"],
-	});
+	expect([
+		matchRoute(core, "DELETE", "/api/schema"),
+		matchRoute(core, "PATCH", "/api/templates"),
+		matchRoute(core, "POST", "/api/entries/unknown"),
+		matchRoute(core, "POST", "/api/templates/t1"),
+	]).toEqual([
+		{ kind: "method_not_allowed", allow: ["GET", "PATCH"] },
+		{ kind: "method_not_allowed", allow: ["GET", "POST"] },
+		{ kind: "method_not_allowed", allow: ["GET", "PATCH"] },
+		{ kind: "method_not_allowed", allow: ["GET", "PATCH", "DELETE"] },
+	]);
 });
 
 it("HTTP-RUT-9 표준 동사를 `POST /<resource>/<verb>` 액션 경로로 호출하는 것을 허용하지 않는다", () => {
@@ -231,16 +235,17 @@ it("HTTP-RUT-11 `GET` 쿼리를 작업 명세 타입(`null`·숫자·참거짓)�
 	);
 	const second = await parse(withPlugin, "GET", "/api/probes?folder_id=abc&draft=false");
 	// HTTP-RUT-11.1
-	expect(first.input).toEqual({
-		folder_id: null,
-		limit: 20,
-		score: 3.5,
-		draft: true,
-		code: "123",
-		relation: { field: "author", id: "u1" },
-	});
-	// HTTP-RUT-11.2
-	expect(second.input).toEqual({ folder_id: "abc", draft: false });
+	expect([first.input, second.input]).toEqual([
+		{
+			folder_id: null,
+			limit: 20,
+			score: 3.5,
+			draft: true,
+			code: "123",
+			relation: { field: "author", id: "u1" },
+		},
+		{ folder_id: "abc", draft: false },
+	]);
 });
 
 it("HTTP-RUT-12 `GET` 쿼리의 배열 속성은 값이 하나만 와도 배열로, 여러 번 오면 모두 배열로 모은다", async () => {
@@ -284,10 +289,13 @@ it("HTTP-RUT-15 `GET` 쿼리에서 명세 타입으로 바꿀 수 없는 값은 
 });
 
 it("HTTP-RUT-16 읽기 작업에 `?dryRun=true`를 붙이면 거절한다(`400`)", async () => {
+	const results = await Promise.allSettled([
+		parse(core, "GET", "/api/entries?dryRun=true"),
+		parse(core, "POST", "/api/keys/check?dryRun=true"),
+	]);
+	const codes = results.map((result) => (result.status === "rejected" ? result.reason.code : "통과"));
 	// HTTP-RUT-16.1
-	await expect(parse(core, "GET", "/api/entries?dryRun=true")).rejects.toMatchObject(BAD_REQUEST);
-	// HTTP-RUT-16.2
-	await expect(parse(core, "POST", "/api/keys/check?dryRun=true")).rejects.toMatchObject(BAD_REQUEST);
+	expect(codes).toEqual(["BAD_REQUEST", "BAD_REQUEST"]);
 });
 
 it("HTTP-RUT-17 `dryRun` 값이 `true`나 `false`가 아니거나 두 번 이상 지정되면 거절한다(`400`)", async () => {
@@ -360,18 +368,12 @@ it("HTTP-RUT-22 점(`.`) 중첩 쿼리의 위험한 프로토타입 키와 키 �
 	expect(conflictCodes).toEqual(["BAD_REQUEST", "BAD_REQUEST"]);
 });
 
-it("HTTP-RUT-23 허용 크기(1 MiB)를 넘는 요청 본문은 거절하고 정확히 1 MiB인 JSON 본문은 조립한다", async () => {
-	// 64 KiB 조각 경계에 3바이트 글자("가")가 걸치게 채운 정확히 1 MiB짜리 JSON과, 글자 수는 1 MiB 이하이지만 바이트가 1 MiB + 1인 JSON.
-	const head = "a".repeat(65_536 - 10);
-	const over = new TextEncoder().encode(JSON.stringify({ name: `${head}가${"a".repeat(MIB + 1 - 14 - head.length)}` }));
-	if (over.byteLength !== MIB + 1) throw new Error(`테스트 준비 오류: 초과 본문이 ${over.byteLength}바이트다`);
-	const tooLarge = parse(core, "POST", "/api/templates", { body: streamOf(over), type: "application/json" });
-	const name = `${head}가${"a".repeat(MIB - 14 - head.length)}`;
-	const exact = new TextEncoder().encode(JSON.stringify({ name }));
-	if (exact.byteLength !== MIB) throw new Error(`테스트 준비 오류: 본문이 ${exact.byteLength}바이트다`);
-	const parsed = await parse(core, "POST", "/api/templates", { body: streamOf(exact), type: "application/json" });
+it("HTTP-RUT-23 허용 크기(1 MiB)를 넘는 요청 본문은 끝까지 읽지 않고 거절하고, 정확히 1 MiB인 JSON 본문은 조립한다", async () => {
+	const tooLarge = parse(core, "POST", "/api/templates", { body: unendingStream(), type: "application/json" });
+	const name = "a".repeat(MIB - JSON.stringify({ name: "" }).length);
+	const exact = await parse(core, "POST", "/api/templates", json({ name }));
 	// HTTP-RUT-23.1
 	await expect(tooLarge).rejects.toMatchObject({ code: "PAYLOAD_TOO_LARGE" });
 	// HTTP-RUT-23.2
-	expect(parsed.input).toEqual({ name });
+	expect(exact.input).toEqual({ name });
 });

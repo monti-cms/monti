@@ -57,11 +57,11 @@
 <summary><strong><code>SCH-UPD-2</code></strong> 컬렉션을 추가하면 글 기본 테이블과 글자·숫자·참거짓·날짜·선택지 열을 가진 데이터 테이블이 만들어진다</summary>
 
 - **전제**: `config.dev`가 `true`이고 초기 스키마에 컬렉션이 없다
-- **행동**: `body: true`와 `text`, `number`, `boolean`, `date`, 단건·다건 `select` 필드를 가진 `posts` 컬렉션과, `body`가 없는 `notes` 컬렉션 스키마로 `schema.update`를 실행한다
+- **행동**: `body: true`인 컬렉션과 `body`가 없는 컬렉션을 추가한 스키마로 `schema.update`를 실행한다
 - **결과**:
-  - `SCH-UPD-2.1` `posts` 테이블에 `id`, `source_locale`, `folder_id`, `trashed_at` 열이 있다
-  - `SCH-UPD-2.2` `posts_data` 테이블에 `entry_id`, `locale`, `status`, `slug`, `published_at`, `translation_seen`, `body`와 각 필드 열이 있다
-  - `SCH-UPD-2.3` `notes_data` 테이블에는 `body` 열이 없다
+  - `SCH-UPD-2.1` 글 기본 테이블에 `id`, `source_locale`, `folder_id`, `trashed_at` 열이 있다
+  - `SCH-UPD-2.2` `body: true` 컬렉션의 `<collection>_data` 테이블에 `entry_id`, `locale`, `status`, `slug`, `published_at`, `translation_seen`, `body`와 필드마다 열이 있다
+  - `SCH-UPD-2.3` `body`가 없는 컬렉션의 `<collection>_data` 테이블에는 `body` 열이 없다
 
 </details>
 
@@ -79,23 +79,23 @@
 <details>
 <summary><strong><code>SCH-UPD-4</code></strong> 여러 개를 고르는 미디어·관계 필드는 순서를 저장하는 연결 테이블로 만들어지고 데이터 테이블에는 열을 만들지 않는다</summary>
 
-- **전제**: `config.dev`가 `true`이고 `authors`·`tags` 컬렉션이 있는 스키마가 적용되어 있다
-- **행동**: `authors`를 가리키는 단건 `relation` 필드(`author`)와 `many: true`인 `media` 필드(`gallery`), `tags`를 가리키는 `many: true`인 `relation` 필드(`tags`)를 가진 `posts` 컬렉션 스키마로 `schema.update`를 실행한다
+- **전제**: `config.dev`가 `true`이고 관계 대상 컬렉션이 있는 스키마가 적용되어 있다
+- **행동**: 단건 `relation` 필드와 `many: true`인 `media`·`relation` 필드를 가진 컬렉션 스키마로 `schema.update`를 실행한다
 - **결과**:
-  - `SCH-UPD-4.1` `posts_rels` 테이블에 `entry_id`, `locale`, `status`, `path`, `position`, `media_id`, `tags_id` 열만 있고 `authors_id` 열은 없다
-  - `SCH-UPD-4.2` `posts_data` 테이블에 `gallery`와 `tags` 열은 없다
+  - `SCH-UPD-4.1` `<collection>_rels` 테이블에 `entry_id`, `locale`, `status`, `path`, `position`과 다건 필드 대상마다 `<대상>_id` 열만 있고 단건 관계 대상의 열은 없다
+  - `SCH-UPD-4.2` `<collection>_data` 테이블에 다건 필드의 열이 없다
 
 </details>
 
 <details>
 <summary><strong><code>SCH-UPD-5</code></strong> 조건부 필드는 선택한 분기 열과 각 분기의 하위 입력칸 열·연결 테이블로 펼쳐져 만들어진다</summary>
 
-- **전제**: `config.dev`가 `true`이고 `tags` 컬렉션이 있는 스키마가 적용되어 있다
-- **행동**: `yes` 분기에 숫자 하위 필드(`price`)와 `tags`를 가리키는 다건 `relation` 하위 필드(`badges`)를 가진 `conditional` 필드(`discount`)가 있는 `products` 컬렉션 스키마로 `schema.update`를 실행한다
+- **전제**: `config.dev`가 `true`이고 관계 대상 컬렉션이 있는 스키마가 적용되어 있다
+- **행동**: 분기에 단건 값 하위 필드와 다건 `relation` 하위 필드가 있는 `conditional` 필드를 가진 컬렉션 스키마로 `schema.update`를 실행한다
 - **결과**:
-  - `SCH-UPD-5.1` `products_data` 테이블에 선택한 분기를 담는 `discount` 열이 있다
-  - `SCH-UPD-5.2` `products_data` 테이블에 하위 필드 값을 담는 `discount__yes__price` 열이 있다
-  - `SCH-UPD-5.3` `products_rels` 테이블에 `tags_id` 열이 있다
+  - `SCH-UPD-5.1` `<collection>_data` 테이블에 선택한 분기를 담는 `<필드>` 열이 있다
+  - `SCH-UPD-5.2` `<collection>_data` 테이블에 하위 필드 값을 담는 `<필드>__<분기>__<하위필드>` 열이 있다
+  - `SCH-UPD-5.3` `<collection>_rels` 테이블에 다건 하위 관계 대상의 `<대상>_id` 열이 있다
 
 </details>
 
@@ -114,13 +114,13 @@
 <details>
 <summary><strong><code>SCH-UPD-7</code></strong> 필드의 종류나 관계 대상을 바꾸면 데이터 테이블의 열도 새 종류로 바뀌고 변환 가능한 값은 유지되며 호환되지 않는 값은 비워진다</summary>
 
-- **전제**: `config.dev`가 `true`이고 `authors`·`members` 컬렉션과, 숫자 `code`, 참거짓 `flag`, 참거짓 `active`, 날짜 `event_at`, 단건 `select` `category`, 다건 `select` `labels`, 글자 `score`·`note`(`score`는 숫자 모양 문자열, `note`는 일반 문자열), `authors`를 가리키는 단건 `relation` `owner`에 값이 저장된 글이 있는 `posts` 컬렉션이 적용되어 있다
-- **행동**: `code`·`active`·`event_at`을 글자(`text`)로, `flag`를 숫자(`number`)로, `category`를 다건 `select`로, `labels`를 단건 `select`로, `score`와 `note`를 숫자(`number`)로, `owner`의 `to`를 `members`로 바꾼 스키마로 `schema.update`를 실행한다
+- **전제**: `config.dev`가 `true`이고 여러 종류의 필드와 단건 `relation` 필드에 값이 저장된 글이 있는 컬렉션이 적용되어 있다
+- **행동**: 필드 종류와 관계 대상을 바꾼 스키마로 `schema.update`를 실행한다
 - **결과**:
-  - `SCH-UPD-7.1` `posts_data` 테이블에서 `code`, `active`, `event_at` 열의 데이터 타입이 `text`이고 기존 값이 문자열로 유지된다
-  - `SCH-UPD-7.2` `posts_data` 테이블에서 `flag` 열의 데이터 타입이 `double precision`이고 기존 값이 `null`로 비워진다
-  - `SCH-UPD-7.3` `posts_data` 테이블에서 `category` 열의 데이터 타입이 `text[]`이고 기존 단건 선택 값이 1개짜리 배열로 유지되며, `labels` 열의 데이터 타입은 `text`이고 기존 배열의 첫 번째 원소가 남는다
-  - `SCH-UPD-7.4` `posts_data` 테이블에서 `score` 열은 숫자로 변환된 값이 저장되고 `note`와 `owner` 열은 `null`로 비워진다
+  - `SCH-UPD-7.1` 숫자·참거짓·날짜 필드를 글자로 바꾸면 열의 데이터 타입이 `text`이고 기존 값이 문자열로 유지된다
+  - `SCH-UPD-7.2` 참거짓 필드를 숫자로 바꾸면 열의 데이터 타입이 `double precision`이고 기존 값이 `null`로 비워진다
+  - `SCH-UPD-7.3` 단건 `select`를 다건으로 바꾸면 열의 데이터 타입이 `text[]`이고 기존 값이 1개짜리 배열로 유지되며, 다건 `select`를 단건으로 바꾸면 데이터 타입이 `text`이고 기존 배열의 첫 번째 원소가 남는다
+  - `SCH-UPD-7.4` 글자 필드를 숫자로 바꾸면 숫자 모양 값은 숫자로 변환되고 그 밖의 값은 `null`로 비워지며, 관계 대상을 바꾼 필드의 값도 `null`로 비워진다
 
 </details>
 
@@ -200,7 +200,7 @@
 <summary><strong><code>SCH-UPD-13</code></strong> 코어 기본 테이블 이름이나 `_data`·`_rels`로 끝나는 이름은 컬렉션 이름으로 쓸 수 없다</summary>
 
 - **전제**: `config.dev`가 `true`이고 초기 스키마 파일이 있다
-- **행동**: 예약어(`media` 또는 `posts_data`)를 컬렉션 키로 가진 스키마로 `schema.update`를 실행한다
+- **행동**: 그런 이름을 컬렉션 키로 가진 스키마로 `schema.update`를 실행한다
 - **결과**:
   - `SCH-UPD-13.1` `BAD_REQUEST` 오류를 던진다
   - `SCH-UPD-13.2` `schema.get`을 실행하면 원래 스키마 그대로이다
@@ -211,7 +211,7 @@
 <summary><strong><code>SCH-UPD-14</code></strong> 데이터 테이블의 고정 열 이름은 컬렉션의 필드 이름으로 쓸 수 없다</summary>
 
 - **전제**: `config.dev`가 `true`이고 초기 스키마 파일이 있다
-- **행동**: 고정 열 이름(`status` 또는 `slug`)을 필드 키로 가진 컬렉션 스키마로 `schema.update`를 실행한다
+- **행동**: 고정 열 이름을 필드 키로 가진 컬렉션 스키마로 `schema.update`를 실행한다
 - **결과**:
   - `SCH-UPD-14.1` `BAD_REQUEST` 오류를 던진다
   - `SCH-UPD-14.2` `schema.get`을 실행하면 원래 스키마 그대로이다
@@ -222,7 +222,7 @@
 <summary><strong><code>SCH-UPD-15</code></strong> 키나 만들어질 테이블·열 이름이 63바이트를 넘거나 금지된 기호가 들어 있으면 스키마를 저장할 수 없다</summary>
 
 - **전제**: `config.dev`가 `true`이고 초기 스키마 파일이 있다
-- **행동**: 63바이트를 넘는 키·조건부 하위 열 이름, 또는 `"`, `.`, `__`가 들어간 키를 가진 컬렉션 스키마와 정확히 63바이트인 이름의 스키마로 `schema.update`를 실행한다
+- **행동**: 키나 만들어질 열 이름이 63바이트를 넘거나 `"`·`.`·`__`가 든 스키마와, 이름이 정확히 63바이트인 스키마로 `schema.update`를 실행한다
 - **결과**:
   - `SCH-UPD-15.1` 63바이트를 넘거나 금지된 기호가 들어간 스키마는 `BAD_REQUEST` 오류를 던진다
   - `SCH-UPD-15.2` 정확히 63바이트인 이름의 스키마는 정상 저장된다
@@ -234,7 +234,7 @@
 <summary><strong><code>SCH-UPD-16</code></strong> 관계 필드가 스키마에 없는 컬렉션을 가리키면 스키마를 저장할 수 없다</summary>
 
 - **전제**: `config.dev`가 `true`이고 초기 스키마 파일이 있다
-- **행동**: 올바른 `relation` 필드와 함께 스키마의 `collections`에 없는 이름(예: `"folders"` 또는 존재하지 않는 키)을 `to`로 가진 `relation` 필드가 포함된 스키마로 `schema.update`를 실행한다
+- **행동**: `to`가 스키마의 `collections`에 없는 이름인 `relation` 필드가 포함된 스키마로 `schema.update`를 실행한다
 - **결과**:
   - `SCH-UPD-16.1` `BAD_REQUEST` 오류를 던진다
   - `SCH-UPD-16.2` `schema.get`을 실행하면 원래 스키마 그대로이다
@@ -258,21 +258,21 @@
 <summary><strong><code>SCH-UPD-19</code></strong> 이름이 빈 컬렉션이나 필드는 스키마에 넣을 수 없다</summary>
 
 - **전제**: `config.dev`가 `true`이고 초기 스키마 파일이 있다
-- **행동**: 빈 문자열 `""`을 컬렉션 키로 쓴 스키마와 빈 문자열 `""`을 필드 키로 쓴 스키마로 각각 `schema.update`를 실행한다
+- **행동**: 컬렉션 키나 필드 키 하나가 빈 문자열 `""`인 스키마로 `schema.update`를 실행한다
 - **결과**:
-  - `SCH-UPD-19.1` 두 호출 모두 `BAD_REQUEST` 오류를 던진다
+  - `SCH-UPD-19.1` `BAD_REQUEST` 오류를 던진다
   - `SCH-UPD-19.2` `schema.get`이 원래 스키마 그대로이다
   - `SCH-UPD-19.3` 스키마 파일에서 읽은 값이 원래 스키마 그대로이다
 
 </details>
 
 <details>
-<summary><strong><code>SCH-UPD-20</code></strong> 여러 개를 고르는 미디어 필드를 지우면 연결 기록과 미디어 사용처도 함께 지워진다</summary>
+<summary><strong><code>SCH-UPD-20</code></strong> 여러 미디어를 고르는 필드를 지우면 그 필드의 연결만 정리된다</summary>
 
 - **전제**: `config.dev`가 `true`이고 `storage`가 설정되어 있으며, `media`를 가리키는 다건 필드 `gallery`와 `cover`를 가진 `posts` 컬렉션에 같은 미디어가 두 필드 모두에 연결된 글이 저장되어 있다
 - **행동**: `posts`에서 `gallery`만 제거하고 `cover`는 남긴 스키마로 `schema.update`를 실행한다
 - **결과**:
-  - `SCH-UPD-20.1` `posts_rels` 테이블에 경로 `gallery`의 행이 없다
+  - `SCH-UPD-20.1` `posts_rels` 테이블에 경로 `gallery`의 행은 없고 `cover`의 행은 남아 있다
   - `SCH-UPD-20.2` `media.get`의 `uses`에서 `gallery` 경로는 사라지고 `cover` 경로는 남아 있다
 
 </details>
@@ -391,13 +391,13 @@
 </details>
 
 <details>
-<summary><strong><code>CFG-UPD-7</code></strong> 설정 파일에 플러그인 이름이 사이트 이름보다 먼저 적혀 있어도 사이트 이름만 바뀐다</summary>
+<summary><strong><code>CFG-UPD-7</code></strong> 사이트 이름을 바꿔도 플러그인 이름은 그대로다</summary>
 
 - **전제**: `config.dev`가 `true`이고, 플러그인 객체의 `name`이 사이트 `name`보다 앞에 적힌 설정 파일이 있다
 - **행동**: 새 `name`으로 `config.update`를 실행한다
 - **결과**:
   - `CFG-UPD-7.1` 설정 파일의 플러그인 `name`은 원래 그대로이다
-  - `CFG-UPD-7.2` 설정 파일의 사이트 `name`만 새 이름으로 바뀐다
+  - `CFG-UPD-7.2` 설정 파일의 사이트 `name`이 새 이름으로 바뀐다
 
 </details>
 

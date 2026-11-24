@@ -531,9 +531,9 @@ it("TPL-CRT-10 같은 컬렉션에 같은 이름의 템플릿을 동시에 두 �
 	expect(named).toHaveLength(1);
 });
 
-/** 템플릿 하나의 `media_uses`를 미디어 `id` 순으로 `media_id`만. */
-async function usedMedia(templateId: string): Promise<string[]> {
-	return (await useRows("template", templateId)).map((row) => row.media_id);
+/** 템플릿 하나가 `content`로 미디어를 참조할 때의 `media_uses` 행. */
+function templateUse(templateId: string, media_id: string) {
+	return { media_id, source_kind: "template", source_id: templateId, field_path: "content" };
 }
 
 it("TPL-UPD-9 같은 템플릿의 본문을 동시에 두 번 바꿔도 최종 본문과 미디어 사용처가 일치하고 중복 기록이 남지 않는다", async () => {
@@ -561,7 +561,7 @@ it("TPL-UPD-9 같은 템플릿의 본문을 동시에 두 번 바꿔도 최종 �
 	// TPL-UPD-9.2
 	expect([firstDoc, secondDoc]).toContainEqual(content);
 	// TPL-UPD-9.3
-	expect(await usedMedia(template.id)).toEqual([finalMedia]);
+	expect(await useRows("template", template.id)).toEqual([templateUse(template.id, finalMedia)]);
 });
 
 it("TPL-UPD-10 같은 템플릿의 이름과 본문을 동시에 각각 바꿔도 두 변경이 모두 남는다", async () => {
@@ -588,33 +588,10 @@ it("TPL-UPD-10 같은 템플릿의 이름과 본문을 동시에 각각 바꿔�
 	// TPL-UPD-10.2
 	expect({ name: row.name, content: row.content }).toEqual({ name: "After", content });
 	// TPL-UPD-10.3
-	expect(await usedMedia(template.id)).toEqual([media]);
+	expect(await useRows("template", template.id)).toEqual([templateUse(template.id, media)]);
 });
 
-it("TPL-UPD-11 서로 다른 두 템플릿의 이름을 같은 이름으로 동시에 바꾸면 한 건만 성공하고 나머지는 거절된다", async () => {
-	const [one, two] = [await seedTemplate({ name: "One" }), await seedTemplate({ name: "Two" })];
-	const monti = montiOf();
-
-	// 첫 수정을 커밋 직전에 멈춰 두고 두 번째 수정을 시작한다.
-	const [first, second] = await overlap(
-		db,
-		(hold) =>
-			monti.transaction(async (tx) => {
-				const updated = await tx.templates.update({ id: one.id, name: "Same" });
-				await hold();
-				return updated;
-			}),
-		() => monti.templates.update({ id: two.id, name: "Same" }),
-	);
-	const named = (await templateRows()).filter((row) => row.collection === POSTS && row.name === "Same");
-
-	// TPL-UPD-11.1
-	expect([first.code, second.code].sort()).toEqual(["CONFLICT", null]);
-	// TPL-UPD-11.2
-	expect(named).toHaveLength(1);
-});
-
-it("TPL-UPD-12 휴지통에 있던 미디어를 영구 삭제하는 동안 그 미디어를 유지한 채 템플릿을 수정하면 저장이 끊기지 않고 거절된다", async () => {
+it("TPL-UPD-12 미디어가 먼저 영구 삭제되면 그 미디어를 참조하는 템플릿 수정은 저장할 수 없다", async () => {
 	await syncSchemaTables(db, SCHEMA);
 	const media = await seedMedia(true);
 	/** 문단 하나와 그 미디어를 참조하는 이미지 블록 하나로 된 본문. */

@@ -669,7 +669,7 @@ it("SCH-UPD-19 이름이 빈 컬렉션이나 필드는 스키마에 넣을 수 �
 	expect(await schemaInFile()).toEqual(original);
 });
 
-it("SCH-UPD-20 여러 개를 고르는 미디어 필드를 지우면 연결 기록과 미디어 사용처도 함께 지워진다", async () => {
+it("SCH-UPD-20 여러 미디어를 고르는 필드를 지우면 그 필드의 연결만 정리된다", async () => {
 	const cover = { type: "media" as const, many: true };
 	const { monti, mediaId } = await montiWithMedia(
 		withCollections({ posts: { fields: { gallery: { type: "media", many: true }, cover } } }),
@@ -681,11 +681,11 @@ it("SCH-UPD-20 여러 개를 고르는 미디어 필드를 지우면 연결 기�
 	});
 
 	await monti.schema.update(withCollections({ posts: { fields: { cover } } }));
-	const { rows } = await sql<{ path: string }>`select path from posts_rels where path = 'gallery'`.execute(db);
+	const { rows } = await sql<{ path: string }>`select distinct path from posts_rels order by path`.execute(db);
 	const { uses } = await monti.media.get({ id: mediaId });
 
 	// SCH-UPD-20.1
-	expect(rows).toEqual([]);
+	expect(rows).toEqual([{ path: "cover" }]);
 	// SCH-UPD-20.2
 	expect(uses).toEqual([{ source_kind: "entry", source_id: post.id, field_path: "cover" }]);
 });

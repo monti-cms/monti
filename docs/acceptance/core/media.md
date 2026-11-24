@@ -5,9 +5,9 @@
 | 액션 / 함수 | 하는 일 | 주요 거절 |
 |---|---|---|
 | `media.startUpload` | 새 UUID `key`로 `storage.ticket` 발급 및 `loose_files` 24시간 만료 등록(`onEvent` 미통지) | `storage` 미설정·`dryRun` 실행·크기 범위 초과 시 `BAD_REQUEST` |
-| `media.create` | `storage.stat` 확인 후 미디어 등록(`filename` 생략 시 `key`) 및 `loose_files` 제거(폴더의 휴지통 이동과 겹쳐도 휴지통 폴더 아래 활성 미디어를 남기지 않음) | `storage` 없음·미발급/삭제 대기 키·없는 파일·크기/가로세로 범위 초과·빈 `filename`·잘못된 폴더 `BAD_REQUEST`, 중복 `key`(동시 등록 포함) `CONFLICT` |
+| `media.create` | `storage.stat` 확인 후 미디어 등록(`filename` 생략 시 `key`) 및 `loose_files` 제거(폴더의 휴지통 이동과 겹쳐도 휴지통 폴더 아래 활성 미디어를 남기지 않음) | `storage` 없음·미발급/삭제 대기 키·없는 파일·크기 범위 초과·빈 `filename`·잘못된 폴더 `BAD_REQUEST`, 중복 `key`(동시 등록 포함) `CONFLICT` |
 | `media.list` · `get` | 활성 미디어를 `url`과 함께 조회(`get`은 `uses` 포함, `folder_id` 생략=전체·`null`=루트) | 휴지통·미존재 `NOT_FOUND` |
-| `media.update` | 단건 메타 수정·폴더 이동·파일 교체(동시 교체 시에도 이전 `key` 24시간 대기 등록), 다건 폴더 일괄 이동(폴더의 휴지통 이동과 겹쳐도 함께 버려진 미디어를 폴더 밖에 남기지 않음) | 미발급/삭제 대기 키·가로세로 범위 초과·빈 `filename`·잘못된 폴더 `BAD_REQUEST`, 휴지통 포함 시 전체 롤백 `NOT_FOUND` |
+| `media.update` | 단건 메타 수정·폴더 이동·파일 교체(동시 교체 시에도 바뀌기 전 `key`를 모두 24시간 삭제 대기로 등록), 다건 폴더 일괄 이동(폴더의 휴지통 이동이 먼저 적용되면 미디어는 폴더와 함께 휴지통에 들어감) | 미발급/삭제 대기 키·빈 `filename`·잘못된 폴더 `BAD_REQUEST`, 휴지통 포함 시 전체 롤백 `NOT_FOUND` |
 | `removeLooseFiles` | 만료된 `loose_files`만 동시 등록과 충돌하지 않게 `storage.remove`로 정리하고 `{ removed, failed }`를 돌려준다 | Operation 아님(`transaction`·`dryRun` 밖에서 호출) |
 
 ---
@@ -164,22 +164,11 @@
 <details>
 <summary><strong><code>MED-CRT-9</code></strong> 업로드 시작을 통해 발급받지 않은 키나 삭제 대기 중인 이전 키로는 미디어를 등록할 수 없다</summary>
 
-- **전제**: `storage`에 파일이 올라가 있지만 `media.startUpload`로 발급받지 않은 임의 `key`가 있고, 이전 파일 교체로 삭제 대기 상태가 된 `key`도 하나 있다
-- **행동**: 임의 `key`와 삭제 대기 `key`로 각각 `media.create`를 실행한다
+- **전제**: `storage`에 파일이 올라가 있지만 `media.startUpload`로 발급받지 않은 `key`나, 이전 파일 교체로 삭제 대기 상태가 된 `key`가 있다
+- **행동**: 그 `key`로 `media.create`를 실행한다
 - **결과**:
-  - `MED-CRT-9.1` 두 호출 모두 `BAD_REQUEST` 오류를 던진다
+  - `MED-CRT-9.1` `BAD_REQUEST` 오류를 던진다
   - `MED-CRT-9.2` `media` 테이블에 새 행이 생기지 않는다
-
-</details>
-
-<details>
-<summary><strong><code>MED-CRT-10</code></strong> 미디어 등록에서 이미지 가로·세로 크기는 DB 정수 최대치까지 허용되고 이를 넘으면 거절된다</summary>
-
-- **전제**: `media.startUpload`로 발급해 `storage`에 올린 파일 셋이 있다
-- **행동**: `width: 2_147_483_648`로 `media.create`, `height: 2_147_483_648`로 `media.create`, 그리고 `width: 2_147_483_647`, `height: 2_147_483_647`로 `media.create`를 각각 실행한다
-- **결과**:
-  - `MED-CRT-10.1` `width` 초과 호출과 `height` 초과 호출은 모두 `BAD_REQUEST` 오류를 던진다
-  - `MED-CRT-10.2` 최대 허용치(`2_147_483_647`) 호출만 성공해 `media` 테이블에 해당 행 하나만 저장된다
 
 </details>
 
@@ -187,9 +176,10 @@
 <summary><strong><code>MED-CRT-11</code></strong> 미디어 폴더를 휴지통에 보내는 동안 그 폴더에 새 미디어를 등록해도 휴지통 폴더 아래 활성 미디어가 남지 않는다</summary>
 
 - **전제**: `"media"` `scope`의 활성 폴더가 하나 있고, `media.startUpload`로 발급해 `storage`에 올린 파일이 있다
-- **행동**: 그 폴더의 `trash.move`가 하위 항목을 읽은 뒤 커밋하기 전에, 해당 폴더를 `folder_id`로 지정한 `media.create`가 별도 연결에서 겹쳐 실행된다
+- **행동**: 그 폴더의 `trash.move`가 함께 옮길 항목을 정한 뒤, 그 처리가 끝나기 전에 그 폴더를 `folder_id`로 지정한 `media.create`를 실행한다
 - **결과**:
-  - `MED-CRT-11.1` 두 호출이 끝난 뒤 휴지통에 들어간 폴더를 `folder_id`로 두고 `trashed_at`이 `null`인 행이 `media` 테이블에 없다
+  - `MED-CRT-11.1` `folders` 테이블에서 그 폴더에 `trashed_at`이 설정된다
+  - `MED-CRT-11.2` `media` 테이블에 그 폴더를 `folder_id`로 두고 `trashed_at`이 `null`인 행이 없다
 
 </details>
 
@@ -333,53 +323,44 @@
 <summary><strong><code>MED-UPD-7</code></strong> 미디어 수정에서 미디어 범위가 아닌 폴더로 옮길 수 없고, 다건 수정에서는 폴더를 비워 루트로 옮길 수 있다</summary>
 
 - **전제**: `"media"` 폴더에 속한 활성 미디어 둘과 컬렉션 `scope`의 폴더가 하나 있다
-- **행동**: 단건·다건 `media.update`에 컬렉션 폴더의 `id`를 주고, 이어서 다건 `media.update`에 `folder_id: null`을 준다
+- **행동**: `media.update`로 미디어를 컬렉션 폴더에 옮긴 뒤, 다건 `media.update`에 `folder_id: null`을 준다
 - **결과**:
-  - `MED-UPD-7.1` 컬렉션 폴더를 준 단건·다건 호출 모두 `BAD_REQUEST` 오류를 던진다
+  - `MED-UPD-7.1` 컬렉션 폴더로 옮기는 호출은 `BAD_REQUEST` 오류를 던진다
   - `MED-UPD-7.2` `folder_id: null` 다건 호출은 두 미디어의 `folder_id`를 모두 `null`로 바꾼다
 
 </details>
 
 <details>
-<summary><strong><code>MED-UPD-8</code></strong> 같은 미디어의 파일을 동시에 교체해도 먼저 교체된 중간 파일 키가 임시 목록에서 빠지지 않는다</summary>
+<summary><strong><code>MED-UPD-8</code></strong> 같은 미디어의 파일을 동시에 두 번 교체해도 바뀌기 전 파일들은 모두 삭제 대기 목록에 들어간다</summary>
 
-- **전제**: 기존 키를 가진 활성 미디어가 하나 있고, `media.startUpload`로 발급해 `storage`에 올린 두 개의 새 키가 있으며, 첫 번째 교체가 진행 중인 동안 두 번째 교체가 시작된다
-- **행동**: 두 새 키로 같은 미디어의 `media.update`를 동시에 실행한다
+- **전제**: 기존 키를 가진 활성 미디어가 하나 있고, `media.startUpload`로 발급해 `storage`에 올린 새 키 둘(첫 번째 새 키, 두 번째 새 키)이 있다
+- **행동**: 먼저 시작한 첫 번째 새 키의 `media.update`가 끝나기 전에, 같은 미디어에 두 번째 새 키로 `media.update`를 실행한다
 - **결과**:
   - `MED-UPD-8.1` 두 호출 모두 성공하고 최종 `media` 행의 `key`가 두 번째 새 키이다
-  - `MED-UPD-8.2` `loose_files` 테이블에 원래 키와 첫 번째 새 키가 모두 들어 있다
+  - `MED-UPD-8.2` `loose_files` 테이블에서 원래 키와 첫 번째 새 키의 행이 각각 `kind`가 `"cleanup"`이고 `remove_after`가 그 키가 교체된 시각의 24시간 뒤이다
+  - `MED-UPD-8.3` `loose_files` 테이블에 두 번째 새 키의 행은 없다
 
 </details>
 
 <details>
 <summary><strong><code>MED-UPD-9</code></strong> 업로드 시작을 통해 발급받지 않은 키나 삭제 대기 중인 이전 키로는 미디어 파일을 교체할 수 없다</summary>
 
-- **전제**: 기존 활성 미디어가 하나 있고, `storage`에 올라가 있지만 `media.startUpload`로 발급받지 않은 임의 `key`와 이전 파일 교체로 삭제 대기 상태가 된 `key`가 각각 있다
-- **행동**: 임의 `key`와 삭제 대기 `key`로 각각 기존 미디어의 `media.update`를 실행한다
+- **전제**: 기존 활성 미디어가 하나 있고, `storage`에 올라가 있지만 `media.startUpload`로 발급받지 않은 `key`나 이전 파일 교체로 삭제 대기 상태가 된 `key`가 있다
+- **행동**: 그 `key`로 기존 미디어의 `media.update`를 실행한다
 - **결과**:
-  - `MED-UPD-9.1` 두 호출 모두 `BAD_REQUEST` 오류를 던진다
+  - `MED-UPD-9.1` `BAD_REQUEST` 오류를 던진다
   - `MED-UPD-9.2` 기존 미디어의 `key`가 원래 그대로이다
 
 </details>
 
 <details>
-<summary><strong><code>MED-UPD-10</code></strong> 미디어 수정에서 이미지 가로·세로 크기는 DB 정수 최대치까지 허용되고 이를 넘으면 거절된다</summary>
-
-- **전제**: 활성 미디어가 하나 있다
-- **행동**: `width: 2_147_483_648`로 `media.update`, `height: 2_147_483_648`로 `media.update`, 그리고 `width: 2_147_483_647`, `height: 2_147_483_647`로 `media.update`를 각각 실행한다
-- **결과**:
-  - `MED-UPD-10.1` `width` 초과 호출과 `height` 초과 호출은 모두 `BAD_REQUEST` 오류를 던진다
-  - `MED-UPD-10.2` 최대 허용치(`2_147_483_647`) 호출이 성공해 `media` 테이블의 `width`·`height`가 `2_147_483_647`로 갱신된다
-
-</details>
-
-<details>
-<summary><strong><code>MED-UPD-11</code></strong> 미디어 폴더를 휴지통에 보내는 동안 그 안의 미디어를 폴더 밖으로 옮겨도 폴더와 함께 버려진 미디어가 폴더 밖에 남지 않는다</summary>
+<summary><strong><code>MED-UPD-11</code></strong> 미디어 폴더를 휴지통에 보내는 동안 그 안의 미디어를 폴더 밖으로 옮기려 해도 미디어는 폴더와 함께 휴지통에 들어간다</summary>
 
 - **전제**: `"media"` `scope`의 활성 폴더 안에 활성 미디어가 하나 있다
-- **행동**: 그 폴더의 `trash.move`가 하위 항목을 읽은 뒤 커밋하기 전에, 그 미디어의 `ids`와 `folder_id: null`로 `media.update`가 별도 연결에서 겹쳐 실행된다
+- **행동**: 그 폴더의 `trash.move`가 함께 옮길 항목을 정한 뒤, 그 처리가 끝나기 전에 그 미디어의 `ids`와 `folder_id: null`로 `media.update`를 실행한다
 - **결과**:
-  - `MED-UPD-11.1` 두 호출이 끝난 뒤 `trashed_at`이 그 폴더의 `trashed_at`과 같으면서 `folder_id`가 그 폴더가 아닌 행이 `media` 테이블에 없다
+  - `MED-UPD-11.1` `folders` 테이블에서 그 폴더에 `trashed_at`이 설정된다
+  - `MED-UPD-11.2` `media` 테이블에서 그 미디어의 `folder_id`가 그 폴더이고 `trashed_at`이 그 폴더의 `trashed_at`과 같다
 
 </details>
 

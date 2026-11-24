@@ -114,25 +114,19 @@ it("CLI-MGF-6 허용되지 않은 식별자가 들어 있는 `_snapshot.json`으
 	expect(await migrationText("_snapshot.json")).toBe(saved);
 });
 
-it("CLI-MGF-7 같은 디렉터리에서 마이그레이션 파일 생성이 겹치면 완성된 파일 하나만 남는다", async () => {
+it("CLI-MGF-7 같은 변경을 동시에 생성해도 새 SQL 파일 하나가 추가되고 스냅샷은 그 변경에 맞춰 갱신된다", async () => {
 	await generateMigration({ dir, schema: posts, name: "init" });
+	const change = { dir, schema: postsWithSubtitle, name: "subtitle" };
+	const planned = await generateMigration({ ...change, dryRun: true });
 
-	const results = await Promise.allSettled([
-		generateMigration({ dir, schema: postsWithSubtitle, name: "first" }),
-		generateMigration({ dir, schema: postsWithSubtitle, name: "second" }),
-	]);
+	// 이름을 달리해, 같은 파일 이름 때문에 두 번째 쓰기가 실패하는 것으로 디렉터리 잠금이 없는 것을 가리지 않게 한다.
+	await Promise.allSettled([generateMigration(change), generateMigration({ ...change, name: "subtitle_again" })]);
 
-	const generated = results.flatMap((result) => (result.status === "fulfilled" ? [result.value] : []));
-	// CLI-MGF-7.1
-	expect({ statuses: results.map((result) => result.status).sort(), generated }).toEqual({
-		statuses: ["fulfilled", "rejected"],
-		generated: [{ filename: expect.stringMatching(/^0002_/), sql: expect.stringMatching(/\S/) }],
-	});
 	const names = await readdir(dir);
-	const added = names.filter((name) => /^0002_.*\.sql$/.test(name));
-	const files = await Promise.all(added.map(async (name) => ({ filename: name, sql: await migrationText(name) })));
+	const added = names.filter((name) => name.endsWith(".sql") && name !== "0001_init.sql");
+	const sqls = await Promise.all(added.map((name) => migrationText(name)));
 	// CLI-MGF-7.2
-	expect(files).toEqual(generated);
+	expect(sqls).toEqual([planned?.sql]);
 	const temporary = names.filter((name) => name.endsWith(".tmp"));
 	// CLI-MGF-7.3
 	expect({ snapshot: await savedSnapshot(), temporary }).toEqual({

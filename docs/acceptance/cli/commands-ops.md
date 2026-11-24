@@ -7,6 +7,8 @@
 | `--help` · `--version` · `spec` | DB 연결 없이 도움말(인자 없는 실행 포함)·버전·`specOf(plugins)` JSON을 `stdout`에 출력한다 | 알 수 없는 리소스·작업의 `--help` 시 사용법 오류(`2`) |
 | `monti <resource> <action>` | 코어·플러그인 작업을 실행해 안전한 JSON(반환값 없으면 `null`)을 `stdout`에 출력하고, 쓰기 `--dry-run`과 대화형 필수 민감 필드 숨김 입력을 처리한다 | 읽기 `--dry-run`·알 수 없는 명령·잘못된 플래그 조합 시 `2`, 비대화형 필수 민감 필드 누락·코어 오류 시 `[코드] 메시지`를 `stderr`에 출력하고 `1` |
 
+> **공통 계약**: 어떤 명령이든 오류 출력(`stderr`)에는 `DATABASE_URL`의 연결 비밀번호와 `MONTI_SECRET` 원문이 나오지 않는다([`commands-tools.md`](commands-tools.md)의 `CLI-TLS-17`).
+
 ---
 
 ## 1. 도움말 · 버전 · 명세 (`--help` · `--version` · `spec`)
@@ -118,12 +120,12 @@
 <details>
 <summary><strong><code>CLI-OPS-9</code></strong> 함수나 순환 참조가 섞인 설정 객체도 비순환 공유 참조와 직렬화 가능한 값을 보존하며 JSON으로 출력한다</summary>
 
-- **전제**: 함수, 자기 자신에 대한 순환 참조 속성, 두 경로가 함께 가리키는 공유 객체와 `name: "custom"`을 가진 플러그인을 등록한 프로젝트와 유효한 `DATABASE_URL`이 있다
+- **전제**: 함수·순환 참조·두 경로가 함께 가리키는 공유 객체를 가진 플러그인을 등록한 프로젝트와 유효한 `DATABASE_URL`이 있다
 - **행동**: `runCli(["config", "get"], io)`를 실행한다
 - **결과**:
   - `CLI-OPS-9.1` 반환 종료 코드가 `0`이다
   - `CLI-OPS-9.2` `stdout`을 파싱한 JSON에 설정의 `name`과 공유 객체 값이 두 경로 모두 보존되어 있다
-  - `CLI-OPS-9.3` `stdout`을 파싱한 JSON의 `plugins`에 `"custom"` 이름이 보존되어 있다
+  - `CLI-OPS-9.3` `stdout`을 파싱한 JSON의 `plugins`에 플러그인 이름이 보존되어 있다
 
 </details>
 
@@ -252,9 +254,9 @@
 <summary><strong><code>CLI-OPS-20</code></strong> `spec --dry-run`이나 오타 옵션을 붙인 작업은 DB를 열지 않고 사용법 오류로 거절한다</summary>
 
 - **전제**: `posts` 컬렉션이 정의된 프로젝트와 `DATABASE_URL`이 비어 있는 `io`가 있다
-- **행동**: `runCli(["spec", "--dry-run"], io)`와 `runCli(["folders", "list", "--scoep", "posts"], io)`를 각각 실행한다
+- **행동**: `spec --dry-run`이나 오타 옵션을 붙인 작업을 `runCli`로 실행한다
 - **결과**:
-  - `CLI-OPS-20.1` 두 호출 모두 반환 종료 코드가 `2`이다
-  - `CLI-OPS-20.2` 두 호출 모두 `stderr`에 오류 메시지가 출력되고 `stdout`이 비어 있다
+  - `CLI-OPS-20.1` 반환 종료 코드가 `2`이다
+  - `CLI-OPS-20.2` `stderr`에 오류 메시지가 출력되고 `stdout`이 비어 있다
 
 </details>

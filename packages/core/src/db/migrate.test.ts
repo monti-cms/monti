@@ -230,18 +230,24 @@ function insertKey(name: string) {
 		values (${randomUUID()}, 'mail', ${name}, 'iv:tag:secret', '1234')`.execute(testDb.db);
 }
 
-it("DB-SCH-3 관리자 테이블에는 한 명을 초과하는 행을 저장할 수 없고, 키 테이블에는 같은 이름의 키를 두 번 저장할 수 없다", async () => {
+it("DB-SCH-3 관리자 계정은 하나만 저장할 수 있다", async () => {
 	await migrate(testDb.db, "@monti-cms/core", [initial]);
 	await insertAdmin("owner@example.com");
-	await insertKey("Mail");
 
-	const adminCode = await codeOf(insertAdmin("other@example.com"));
-	const keyCode = await codeOf(insertKey("Mail"));
+	const code = await codeOf(insertAdmin("other@example.com"));
 
 	// DB-SCH-3.1
-	expect({ code: adminCode, rows: await countOf("admin") }).toEqual({ code: "23505", rows: 1 });
-	// DB-SCH-3.2
-	expect({ code: keyCode, rows: await countOf("api_keys") }).toEqual({ code: "23505", rows: 1 });
+	expect({ code, rows: await countOf("admin") }).toEqual({ code: "23505", rows: 1 });
+});
+
+it("DB-SCH-5 같은 이름의 키를 두 번 저장할 수 없다", async () => {
+	await migrate(testDb.db, "@monti-cms/core", [initial]);
+	await insertKey("Mail");
+
+	const code = await codeOf(insertKey("Mail"));
+
+	// DB-SCH-5.1
+	expect({ code, rows: await countOf("api_keys") }).toEqual({ code: "23505", rows: 1 });
 });
 
 function insertFolder(name: string, parentId: string | null, id = randomUUID()) {
@@ -255,21 +261,34 @@ function insertTemplate(name: string) {
 		values (${randomUUID()}, 'posts', ${name}, '{"blocks":[]}')`.execute(testDb.db);
 }
 
-it("DB-SCH-4 폴더 테이블의 활성 이름과 템플릿 테이블의 컬렉션별 이름은 DB 수준에서 중복 저장을 막는다", async () => {
+it("DB-SCH-4 같은 컬렉션이나 미디어의 최상위에 같은 이름의 활성 폴더를 두 번 저장할 수 없다", async () => {
+	await migrate(testDb.db, "@monti-cms/core", [initial]);
+	await insertFolder("Root", null);
+
+	const code = await codeOf(insertFolder("Root", null));
+
+	// DB-SCH-4.1
+	expect(code).toBe("23505");
+});
+
+it("DB-SCH-6 같은 부모 폴더 아래에 같은 이름의 활성 폴더를 두 번 저장할 수 없다", async () => {
 	await migrate(testDb.db, "@monti-cms/core", [initial]);
 	const root = randomUUID();
 	await insertFolder("Root", null, root);
 	await insertFolder("Child", root);
+
+	const code = await codeOf(insertFolder("Child", root));
+
+	// DB-SCH-6.1
+	expect(code).toBe("23505");
+});
+
+it("DB-SCH-7 같은 컬렉션에 같은 이름의 템플릿을 두 번 저장할 수 없다", async () => {
+	await migrate(testDb.db, "@monti-cms/core", [initial]);
 	await insertTemplate("Template");
 
-	const rootCode = await codeOf(insertFolder("Root", null));
-	const childCode = await codeOf(insertFolder("Child", root));
-	const templateCode = await codeOf(insertTemplate("Template"));
+	const code = await codeOf(insertTemplate("Template"));
 
-	// DB-SCH-4.1
-	expect(rootCode).toBe("23505");
-	// DB-SCH-4.2
-	expect(childCode).toBe("23505");
-	// DB-SCH-4.3
-	expect(templateCode).toBe("23505");
+	// DB-SCH-7.1
+	expect(code).toBe("23505");
 });

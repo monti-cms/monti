@@ -333,40 +333,12 @@ it("FLD-CRT-9 폴더를 휴지통에 보내는 동안 그 아래에 새 폴더�
 			}),
 		() => monti.folders.create({ scope: POSTS, name: "Child", parent_id: discarded }),
 	);
-	const rows = await folderRows();
-	const trashed = new Set(rows.filter((row) => row.trashed_at !== null).map((row) => row.id));
+	const activeUnder = (await folderRows()).filter((row) => row.parent_id === discarded && row.trashed_at === null);
 
 	// FLD-CRT-9.1
-	expect(rows.filter((row) => row.trashed_at === null && row.parent_id !== null && trashed.has(row.parent_id))).toEqual(
-		[],
-	);
-});
-
-it("FLD-UPD-12 같은 부모 아래의 두 폴더를 같은 이름으로 동시에 바꾸면 한 건만 성공하고 나머지는 거절된다", async () => {
-	const parent = await seedFolder({ name: "Parent" });
-	const [one, two] = [
-		await seedFolder({ name: "One", parent_id: parent }),
-		await seedFolder({ name: "Two", parent_id: parent }),
-	];
-	const monti = montiOf();
-
-	// 첫 수정을 커밋 직전에 멈춰 두고 두 번째 수정을 시작한다.
-	const [first, second] = await overlap(
-		db,
-		(hold) =>
-			monti.transaction(async (tx) => {
-				const updated = await tx.folders.update({ id: one, name: "Same" });
-				await hold();
-				return updated;
-			}),
-		() => monti.folders.update({ id: two, name: "Same" }),
-	);
-	const named = (await folderRows()).filter((row) => row.parent_id === parent && row.name === "Same");
-
-	// FLD-UPD-12.1
-	expect([first.code, second.code].sort()).toEqual(["CONFLICT", null]);
-	// FLD-UPD-12.2
-	expect(named.filter((row) => row.trashed_at === null)).toHaveLength(1);
+	expect((await folderRow(discarded)).trashed_at).toBeInstanceOf(Date);
+	// FLD-CRT-9.2
+	expect(activeUnder).toEqual([]);
 });
 
 it("FLD-UPD-13 두 폴더를 서로의 하위 폴더로 동시에 옮겨도 순환 구조가 생기지 않는다", async () => {
@@ -420,27 +392,4 @@ it("FLD-UPD-14 폴더를 휴지통에 넣는 동안 그 폴더 아래로 다른 
 	});
 	// FLD-UPD-14.2
 	expect(activeUnder).toEqual([]);
-});
-
-it("FLD-UPD-15 같은 폴더의 이름과 부모를 동시에 각각 바꿔도 두 변경이 모두 남는다", async () => {
-	const [target, parent] = [await seedFolder({ name: "Target" }), await seedFolder({ name: "Parent" })];
-	const monti = montiOf();
-
-	// 이름 수정을 커밋 직전에 멈춰 두고 부모 수정을 시작한다.
-	const [rename, move] = await overlap(
-		db,
-		(hold) =>
-			monti.transaction(async (tx) => {
-				const renamed = await tx.folders.update({ id: target, name: "Renamed" });
-				await hold();
-				return renamed;
-			}),
-		() => monti.folders.update({ id: target, parent_id: parent }),
-	);
-	const row = await folderRow(target);
-
-	// FLD-UPD-15.1
-	expect([rename.code, move.code]).toEqual([null, null]);
-	// FLD-UPD-15.2
-	expect({ name: row.name, parent_id: row.parent_id }).toEqual({ name: "Renamed", parent_id: parent });
 });

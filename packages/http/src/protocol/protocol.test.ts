@@ -142,32 +142,39 @@ it("HTTP-PRO-9 `Cookie` 헤더가 없거나 찾는 이름의 쿠키가 없으면
 	expect(values).toEqual([undefined, undefined, undefined]);
 });
 
-it("HTTP-PRO-10 잘못된 쿠키 옵션 조합이나 유효하지 않은 이름·경로·수명은 설정 오류로 거절한다", () => {
-	const invalid = [
-		{ sameSite: "none" as const, secure: false },
-		{ name: "" },
-		{ name: "a;b" },
-		{ name: "a b" },
-		{ path: "" },
-		{ path: "/;x" },
-		{ path: "/admin\r\nX-Injected: 1" },
-		{ maxAge: 0 },
-		{ maxAge: -1 },
-		{ maxAge: 1.5 },
-		{ maxAge: Number.NaN },
-	];
-	const errors = invalid.map((options) => {
+/** 쿠키 옵션마다 `resolveCookie`가 쿠키 설정 오류를 던졌는지. */
+function cookieRejected(invalid: Parameters<typeof resolveCookie>[0][]): boolean[] {
+	return invalid.map((options) => {
 		try {
 			resolveCookie(options);
-			return null;
+			return false;
 		} catch (error) {
-			return (error as Error).message;
+			return (error as Error).message.includes("쿠키 설정이 잘못되었다");
 		}
 	});
+}
+
+it("HTTP-PRO-10 `SameSite=None` 쿠키는 `Secure`를 끈 채로 설정할 수 없다", () => {
 	// HTTP-PRO-10.1
-	expect(errors.every((message) => typeof message === "string" && message.includes("쿠키 설정이 잘못되었다"))).toBe(
-		true,
-	);
+	expect(cookieRejected([{ sameSite: "none", secure: false }])).toEqual([true]);
+});
+
+it("HTTP-PRO-13 쿠키 이름이 비어 있거나 구분자(`;`, `=`, 공백)나 제어 문자가 들어 있으면 설정할 수 없다", () => {
+	const names = ["", "a;b", "a=b", "a b", "a\r\nb"];
+	// HTTP-PRO-13.1
+	expect(cookieRejected(names.map((name) => ({ name })))).toEqual(names.map(() => true));
+});
+
+it("HTTP-PRO-14 쿠키 경로가 비어 있거나 `;`나 제어 문자가 들어 있으면 설정할 수 없다", () => {
+	const paths = ["", "/;x", "/admin\r\nX-Injected: 1"];
+	// HTTP-PRO-14.1
+	expect(cookieRejected(paths.map((path) => ({ path })))).toEqual(paths.map(() => true));
+});
+
+it("HTTP-PRO-15 쿠키 수명이 양의 정수가 아니면 설정할 수 없다", () => {
+	const ages = [0, -1, 1.5, Number.NaN];
+	// HTTP-PRO-15.1
+	expect(cookieRejected(ages.map((maxAge) => ({ maxAge })))).toEqual(ages.map(() => true));
 });
 
 it("HTTP-PRO-11 코어 오류가 아닌 예기치 않은 오류나 직렬화 불가능한 오류도 내부 상세를 숨기고 서버 오류(`500`)로 바꾼다", async () => {

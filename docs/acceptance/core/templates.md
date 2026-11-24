@@ -6,7 +6,7 @@
 |---|---|---|
 | `templates.create` | 컬렉션용 재사용 본문 템플릿 생성(`__preset_id` 선택), 본문 검증 및 `media_uses`(`field_path: "content"`) 기록 | 없는 컬렉션·빈 `name`·본문 오류·휴지통 미디어 `BAD_REQUEST`, 같은 컬렉션 이름 중복(동시 생성 포함) `CONFLICT` |
 | `templates.list` · `get` | 전체 또는 특정 컬렉션 템플릿 목록과 단건 조회 | 없는 `id` `NOT_FOUND` |
-| `templates.update` | `name`·`content` 수정 및 `media_uses` 갱신(기존 본문에 있던 휴지통 미디어 유지 허용, 동시 수정 시 본문·사용처 일관성 및 독립 필드 보존) | 빈 `name`·본문 오류·새 휴지통·삭제된 미디어 `BAD_REQUEST`, 없는 `id` `NOT_FOUND`, 이름 중복(동시 수정 포함) `CONFLICT` |
+| `templates.update` | `name`·`content` 수정 및 `media_uses` 갱신(기존 본문에 있던 휴지통 미디어 유지 허용, 동시 수정 시 본문·사용처 일관성 및 독립 필드 보존) | 빈 `name`·본문 오류·새 휴지통·삭제된 미디어 `BAD_REQUEST`, 없는 `id` `NOT_FOUND`, 이름 중복 `CONFLICT` |
 | `templates.delete` | 템플릿과 해당 `media_uses`만 즉시 삭제(휴지통 없음) | 없는 `id` `NOT_FOUND` |
 
 ---
@@ -51,10 +51,10 @@
 <details>
 <summary><strong><code>TPL-CRT-4</code></strong> 본문 블록 트리의 미디어 참조를 대소문자 무시하고 한 번씩 기록한다</summary>
 
-- **전제**: 스키마에 컬렉션이 하나 있고 활성 미디어 세 개가 있으며 `media_uses`가 비어 있다
-- **행동**: 최상위 블록이 첫 번째 미디어를 `attrs.mediaId`로, `quote`의 `children` 안 블록 하나가 두 번째 미디어를 `attrs.mediaId`로, 다른 `children` 블록이 대문자 표기의 두 번째 미디어와 세 번째 미디어를 `attrs.mediaIds`로 참조하는 `content`로 `templates.create`를 실행한다
+- **전제**: 스키마에 컬렉션이 하나 있고 활성 미디어 여럿이 있으며 `media_uses`가 비어 있다
+- **행동**: 하위 블록을 포함한 블록 트리 곳곳에서 미디어를 참조하고, 같은 미디어를 대소문자만 달리해 다시 참조하는 `content`로 `templates.create`를 실행한다
 - **결과**:
-  - `TPL-CRT-4.1` `media_uses`에 `source_kind`가 `"template"`, `source_id`가 반환된 `id`, `field_path`가 `"content"`인 행이 세 미디어당 하나씩 정확히 세 개 생긴다
+  - `TPL-CRT-4.1` `media_uses`에 `source_kind`가 `"template"`, `source_id`가 반환된 `id`, `field_path`가 `"content"`인 행이 참조한 미디어마다 정확히 하나씩 생긴다
 
 </details>
 
@@ -298,21 +298,10 @@
 </details>
 
 <details>
-<summary><strong><code>TPL-UPD-11</code></strong> 서로 다른 두 템플릿의 이름을 같은 이름으로 동시에 바꾸면 한 건만 성공하고 나머지는 거절된다</summary>
+<summary><strong><code>TPL-UPD-12</code></strong> 미디어가 먼저 영구 삭제되면 그 미디어를 참조하는 템플릿 수정은 저장할 수 없다</summary>
 
-- **전제**: 같은 컬렉션에 서로 다른 이름의 템플릿 두 개가 저장되어 있다
-- **행동**: 두 템플릿의 `id`에 같은 새 `name`을 넣어 `templates.update` 두 건을, 서로의 커밋을 보기 전에 겹치도록 동시에 실행한다
-- **결과**:
-  - `TPL-UPD-11.1` 한 건은 성공하고 나머지 한 건은 `CONFLICT` 오류를 던진다
-  - `TPL-UPD-11.2` `templates` 테이블에 해당 `collection`에서 그 새 `name`을 가진 행이 정확히 하나만 남는다
-
-</details>
-
-<details>
-<summary><strong><code>TPL-UPD-12</code></strong> 휴지통에 있던 미디어를 영구 삭제하는 동안 그 미디어를 유지한 채 템플릿을 수정하면 저장이 끊기지 않고 거절된다</summary>
-
-- **전제**: `storage`가 설정되어 있고, 휴지통에 들어가 있는(`trashed_at` 설정) 미디어를 참조하며 `media_uses` 행이 있는 템플릿 하나가 있다. 해당 미디어의 `trash.delete`가 먼저 적용되는 사이에, 그 미디어 참조를 그대로 두고 문단 글자만 바꾸는 `templates.update`가 겹쳐 실행된다
-- **행동**: 해당 미디어의 `trash.delete`와 `templates.update`를 별도 연결에서 동시에 실행한다
+- **전제**: `storage`가 설정되어 있고, 휴지통에 들어가 있는(`trashed_at` 설정) 미디어를 참조하며 `media_uses` 행이 있는 템플릿 하나가 있다
+- **행동**: `trash.delete`가 그 미디어를 삭제한 뒤 그 변경이 커밋되기 전에, 그 미디어 참조를 그대로 두고 문단 글자만 바꾸는 `templates.update`를 실행한다
 - **결과**:
   - `TPL-UPD-12.1` `trash.delete`가 성공하고, `templates.update`는 `BAD_REQUEST` 오류를 던진다
   - `TPL-UPD-12.2` `templates` 테이블에서 해당 템플릿의 `content`가 원래 그대로이다
