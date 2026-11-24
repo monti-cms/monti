@@ -253,7 +253,10 @@ function RowCheck({
 	proposal = false,
 	place = "margin",
 }: {
-	/** `margin` (the default): hung in the left margin. `cell`: in a column of its own at the row's start (`ListHead checkColumn`), 12px in. */
+	/**
+	 * `margin` (the default): hung in the left margin. `cell`: in a column of its own at the row's start (`ListHead checkColumn`), its box on the table's
+	 * start line (안쪽 여백 0). 줄의 바탕도 그 선에서 시작해, 제목·표·바탕·체크가 한 시작 선에 서고 그 왼쪽으로 나가는 것이 없다(2026-11-24 소유자 결정).
+	 */
 	place?: "margin" | "cell";
 	checked: boolean;
 	/** Without it the check is drawn and does nothing (a screen spec's look, before its behavior is wired). */
@@ -266,6 +269,7 @@ function RowCheck({
 	return (
 		<span
 			data-slot="row-check"
+			data-place={place}
 			className={cn("relative z-1 flex", place === "margin" && "absolute top-1/2 -left-[26px] -translate-y-1/2")}
 		>
 			<Checkbox
@@ -590,6 +594,8 @@ function TableCell({
 				// 행 끝 칸의 ⋯: 칸의 끝 여백을 두지 않고 버튼 상자가 안쪽 여백과 점 둘레의 빈 곳만큼 밖으로 나가, 보이는 점의 끝이 행의 선이 끝나는 곳에
 				// 선다(`IconButton edge="end"`, 2026-11-24 소유자 결정). 누르는 자리는 같은 상자다.
 				"last:has-[>[data-slot=row-actions]]:pr-0 last:[&>[data-slot=row-actions]>:last-child]:-me-(--monti-glyph-pull)",
+				// 칸에 선 체크(`RowCheck place="cell"`)는 안쪽 여백 없이 표의 시작 선에 선다(2026-11-24 소유자 결정: 체크 상자가 제목의 시작 선 272에).
+				"has-[>[data-slot=row-check][data-place=cell]]:pl-0",
 				ALIGN[align],
 				// The row's check hangs in the left margin, so its cell does not clip. In a row with a link the cells are static and the check stands on the row
 				// itself: there the cell clips as any other, and a first column dragged narrow keeps its words in.

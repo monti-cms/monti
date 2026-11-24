@@ -48,7 +48,9 @@ const LIST_COLUMN_SIZE = {
 	date: 84,
 	time: 120,
 	end: 38,
-	/** The column of the rows' checks (`RowCheck place="cell"`, `ListHead checkColumn`): the check 12px in, the next column's words 44px from the edge. */
+	/**
+	 * 행 체크의 열(`RowCheck place="cell"`, `ListHead checkColumn`): 체크 상자는 표의 시작 선에(안쪽 여백 0), 다음 열의 글자는 끝에서 44px(2026-11-24).
+	 */
 	check: 34,
 } as const;
 type ListColumnSize = keyof typeof LIST_COLUMN_SIZE;
@@ -310,7 +312,7 @@ function ListHead({
 				onPointerCancel={() => finish(false)}
 			>
 				{checkColumn && (
-					<TableHead size={LIST_COLUMN_SIZE.check}>
+					<TableHead size={LIST_COLUMN_SIZE.check} className="first:pl-0">
 						{selectAll && (
 							<span data-slot="select-all" className="flex">
 								<Checkbox
