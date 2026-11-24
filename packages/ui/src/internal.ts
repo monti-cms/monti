@@ -235,6 +235,7 @@ export {
 } from "./page-header";
 export {
 	ListFooter,
+	ListFooterEnd,
 	PageSizeMenu,
 	Pagination,
 	PaginationContent,

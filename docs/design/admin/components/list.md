@@ -125,7 +125,7 @@
 
 ### 코드
 
-`RowLink`로 폴더에 들어가면 고른 것은 풀린다. 목록 행의 링크는 모두 한 번 누르면 간다(`linkTo`): 두 번 누름(더블 클릭)의 둘째 누름은 아무 데도 가지 않는다. 첫 누름이 이미 갔고, 둘째는 그 사이 포인터 밑에 온 다른 행에 떨어지기 때문이다(폴더 행을 열면 그 안의 파일 행이 그 자리에 온다). 어느 목록이든 같다(MD-03, 만들며 정함 (2026-11-16)). `ListHead`의 이름은 메뉴가 있거나 옮길 수 있으면 버튼이고, 둘 다 없으면 글자다(미디어 목록의 "치수"). `LIST_COLUMN_SIZE`는 열 종류마다 시작 너비이고, `measure`(104px)는 mono로 쓴 그림 크기("3000×2000")의 자리이고, `time`(120px)은 mono로 쓴 날짜와 시각("10. 26 10:58")의 자리다. `ListHead`와 `BulkBar`는 `SelectAll` 타입의 `selectAll` prop을 받는다(`state`는 `none`, `some`, `all`). `SelectAllState`와 함께 `@monti-cms/ui`에서 내보낸다.
+`RowLink`로 폴더에 들어가면 고른 것은 풀린다. 목록 행의 링크는 모두 한 번 누르면 간다(`linkTo`): 두 번 누름(더블 클릭)의 둘째 누름은 아무 데도 가지 않는다. 첫 누름이 이미 갔고, 둘째는 그 사이 포인터 밑에 온 다른 행에 떨어지기 때문이다(폴더 행을 열면 그 안의 파일 행이 그 자리에 온다). 어느 목록이든 같다(MD-03, 만들며 정함 (2026-11-16)). `ListHead`의 이름은 메뉴가 있거나 옮길 수 있으면 버튼이고, 둘 다 없으면 글자다(미디어 목록의 "치수"). `LIST_COLUMN_SIZE`는 열 종류마다 시작 너비이고, `measure`(104px)는 mono로 쓴 그림 크기("3000×2000")의 자리이고, `time`(120px)은 mono로 쓴 날짜와 시각("10. 26 10:58")의 자리다. 2026-11 개편 시안(`list.html`, `list-filter.html`)의 목록: 체크는 왼쪽 여백이 아니라 첫 열에 선다(`ListHead checkColumn`, `RowCheck place="cell"`, `LIST_COLUMN_SIZE.check` 34px: 체크는 12px 안, 다음 열 글자는 44px). 메뉴가 있고 정렬이 아닌 열 이름 뒤에는 흐린 ▾가 붙고, 이름은 500이다. 켜진 필터는 열 머리의 칩이다(`ListHeadColumn`의 `filter`: 이름 자리에서 왼쪽으로 8px 나간 24px 칩, `bg-selected`, 잉크 점, `named`이면 흐린 "상태 ·" 뒤에 값, 끝의 ×). 필터 버튼이 따로 없고 아무것도 밀리지 않는다. 칩을 누르면 그 열의 메뉴가 칩 아래 4px에 200px로 열린다. 행의 ⋯는 `RowActions reveal="hover"`로 가리키거나 키보드가 그 행에 있을 때만 보인다. `ListHead`와 `BulkBar`는 `SelectAll` 타입의 `selectAll` prop을 받는다(`state`는 `none`, `some`, `all`). `SelectAllState`와 함께 `@monti-cms/ui`에서 내보낸다.
 
 ## 일괄 막대 (`.mt-bulk`)
 
@@ -151,7 +151,7 @@
 
 ### 코드
 
-`BulkBar`는 고르는 동안 목록의 머리를 같은 자리에서 대신한다. 굵은 `label`("3 selected"), 구분선, `request`(어시스턴트 요청: `TextButton tone="proposal"`에 반짝이와 그 라벨. 목록의 "✦ 요청", 미디어의 "✦ 대체 텍스트"), `children`인 가장 많이 쓰는 동작(텍스트 버튼과 메뉴 버튼), `more`(나머지를 담은 ⋯ `IconButton`. 위험한 것은 맨 끝에 빨강으로), 끝의 `clearLabel`과 `onClear`(고른 것을 푸는 흐린 글자 버튼, `TextButton variant="quiet"`. 고른 행에 하는 동작이 아니라서 알약이 아니다, 만들며 정함 (2026-11-14))를 받는다. `selectAll`은 왼쪽 여백의 체크 줄에 걸린다. 표 위에서는 `colSpan`(⋯ 열을 포함한 표의 열 수)을 준다. 그러면 표 머리의 한 행이 된다. 같은 40px에 아래 선도 같고, 표는 이 행이 아니라 자기 열에서 너비를 가져온다. 머리 행이 없는 격자에서는 `colSpan`을 주지 않는다. 그러면 도구 행 자리의 `PageToolbar` 행(48px, `inset`)이 된다.
+`BulkBar place="float"`는 2026-11 개편 시안(`list-extreme.html`)의 막대다: 머리와 전체 고르기는 그대로 두고, 페이지 영역 아래 20px 위에 가운데로 뜬다(떠 있는 면, `radius-lg`, 안쪽 4px). 굵은 개수, 작은 ghost 버튼(`Button variant="ghost" size="sm"`, 위험한 것은 선 뒤 맨 끝), 끝의 ×(`clearLabel`)이다. 기본(`place="head"`)은 아래 설명대로다. `BulkBar`는 고르는 동안 목록의 머리를 같은 자리에서 대신한다. 굵은 `label`("3 selected"), 구분선, `request`(어시스턴트 요청: `TextButton tone="proposal"`에 반짝이와 그 라벨. 목록의 "✦ 요청", 미디어의 "✦ 대체 텍스트"), `children`인 가장 많이 쓰는 동작(텍스트 버튼과 메뉴 버튼), `more`(나머지를 담은 ⋯ `IconButton`. 위험한 것은 맨 끝에 빨강으로), 끝의 `clearLabel`과 `onClear`(고른 것을 푸는 흐린 글자 버튼, `TextButton variant="quiet"`. 고른 행에 하는 동작이 아니라서 알약이 아니다, 만들며 정함 (2026-11-14))를 받는다. `selectAll`은 왼쪽 여백의 체크 줄에 걸린다. 표 위에서는 `colSpan`(⋯ 열을 포함한 표의 열 수)을 준다. 그러면 표 머리의 한 행이 된다. 같은 40px에 아래 선도 같고, 표는 이 행이 아니라 자기 열에서 너비를 가져온다. 머리 행이 없는 격자에서는 `colSpan`을 주지 않는다. 그러면 도구 행 자리의 `PageToolbar` 행(48px, `inset`)이 된다.
 
 ## 격자 칸
 
@@ -253,7 +253,7 @@
 
 ### 코드
 
-`Pagination`(`PaginationContent`, `PaginationItem`, `PaginationLink`, `PaginationPrevious`, `PaginationNext`, `PaginationEllipsis`와 함께)은 표 아래 행 오른쪽 끝의 페이지 넘기기다. 첫 페이지의 이전과 마지막 페이지의 다음은 .45로 흐려지고, 따라갈 수 없으며 키보드로도 닿지 않는다. `ListFooter`는 표 아래 행이다. 왼쪽에 보이는 범위("1–25 / 148", `Count`), 오른쪽에 페이지 나누기가 있고, 행처럼 안쪽 12px, 행 아래 12px이다. `PageSizeMenu`는 범위 옆의 sans "25 per page ▾"다(`TextButton variant="quiet" size="caption"`와 `Caret`). 메뉴는 위로 열리고, 크기를 고르면 적용하고 메뉴를 닫는다.
+`Pagination`(`PaginationContent`, `PaginationItem`, `PaginationLink`, `PaginationPrevious`, `PaginationNext`, `PaginationEllipsis`와 함께)은 표 아래 행 오른쪽 끝의 페이지 넘기기다. 첫 페이지의 이전과 마지막 페이지의 다음은 .45로 흐려지고, 따라갈 수 없으며 키보드로도 닿지 않는다. `ListFooter layout="bar"`는 2026-11 개편 시안의 바닥 줄이다: 표의 가장자리에서 시작하는 48px 한 줄, 조각 사이 12px. 줄 끝에 둘 것(켜진 필터 "필터 2개 · 모두 지우기"와 쪽 크기)은 `ListFooterEnd`에 넣는다. `ListFooter`는 표 아래 행이다. 왼쪽에 보이는 범위("1–25 / 148", `Count`), 오른쪽에 페이지 나누기가 있고, 행처럼 안쪽 12px, 행 아래 12px이다. `PageSizeMenu`는 범위 옆의 sans "25 per page ▾"다(`TextButton variant="quiet" size="caption"`와 `Caret`). 메뉴는 위로 열리고, 크기를 고르면 적용하고 메뉴를 닫는다.
 
 ## 제목 있는 표 (도구 › API 키)
 

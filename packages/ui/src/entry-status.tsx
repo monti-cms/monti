@@ -42,7 +42,7 @@ function EntryStatus({
 	...props
 }: Omit<React.ComponentProps<"span">, "children"> & {
 	status: EntryStatusKind;
-	/** The usual case in a column of statuses (a published entry in a list): the subtle tone and the normal weight, so the others stand out. */
+	/** A column of statuses (a list): the name in the subtle tone at the normal weight, the mark keeping its color. */
 	quiet?: boolean;
 	/** The status name. */
 	children?: React.ReactNode;
@@ -60,7 +60,11 @@ function EntryStatus({
 			)}
 			{...props}
 		>
-			<span aria-hidden="true" data-slot="entry-status-mark" className={markVariants({ status })} />
+			<span
+				aria-hidden="true"
+				data-slot="entry-status-mark"
+				className={cn(markVariants({ status }), quiet && COLOR[status])}
+			/>
 			{children !== undefined && children !== null && <span className="truncate">{children}</span>}
 		</span>
 	);

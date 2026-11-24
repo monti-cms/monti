@@ -29,7 +29,7 @@
 
 ### 코드
 
-`Segmented`: `bg-muted` 틀(`radius-md`, 안쪽 2px) 안에 붙은 칸들이다. 칸은 `radius-sm`이고, 고른 칸은 종이 바탕에 `border-default` 1px 선을 두르고 잉크 500이다(2026-11-24, 부품 시트). 밑줄 탭과 모양으로 갈린다. 높이는 테두리를 넣어 컨트롤 높이와 같다. `size="md"`(기본)는 32px(`height-control-md`, 13px 글자), `size="sm"`은 28px(`height-control-sm`, 12px 글자)로 필터 행과 좁은 패널에 쓴다. 아이콘만 든 칸도 같은 높이다. 위아래 여백으로 높이를 만들지 않는다. `inline`은 칸들만큼의 너비로 만든다. `disabled`는 지금 정말 고를 수 없을 때만 쓰고, 까닭은 사람이 고르려는 그 자리 옆에서 읽힌다(원칙 7). `tool` 바탕 변형은 도구 화면(사이드바의 화면 모드)용이다. 페이지 바탕의 알약 계열을 지켜 틀과 칸이 알약이고, 선택 바탕이 호버이며 눌린 칸은 종이 바탕에 선을 두른다. DS README는 이 부품을 `ToggleGroup`이라고 부르는데, 그것은 아래에 깔린 Base UI 기본 요소일 뿐이다.
+`Segmented`: `bg-muted` 틀(`radius-md`, 안쪽 2px) 안에 붙은 칸들이다. 칸은 `radius-sm`이고, 고른 칸은 종이 바탕에 `border-default` 1px 선을 두르고 잉크 500이다(2026-11-24, 부품 시트). 밑줄 탭과 모양으로 갈린다. 높이는 테두리를 넣어 컨트롤 높이와 같다. `size="md"`(기본)는 32px(`height-control-md`, 13px 글자), `size="sm"`은 28px(`height-control-sm`, 12px 글자)로 필터 행과 좁은 패널에 쓴다. 아이콘만 든 칸도 같은 높이다. 위아래 여백으로 높이를 만들지 않는다. `inline`은 칸들만큼의 너비로 만든다. `disabled`는 지금 정말 고를 수 없을 때만 쓰고, 까닭은 사람이 고르려는 그 자리 옆에서 읽힌다(원칙 7). `tool` 바탕 변형은 도구 화면(사이드바의 화면 모드)용이다. 틀과 칸은 기본과 같은 `radius-md` · `radius-sm`이고(2026-11 개편 시안 `parts/sidebar.html`: 알약이 아니다), 고르지 않은 칸은 `fg-faint`, 선택 바탕이 호버이며 눌린 칸은 종이 바탕에 선을 두른다. DS README는 이 부품을 `ToggleGroup`이라고 부르는데, 그것은 아래에 깔린 Base UI 기본 요소일 뿐이다.
 
 ## 선택 상자의 선택지 (`OptionTable`)
 

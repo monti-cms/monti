@@ -5,7 +5,7 @@ import { Checkbox } from "./checkbox";
 import { cn } from "./cn";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "./dropdown-menu";
 import { IconButton } from "./icon-button";
-import { OverflowMenuHorizontal } from "./icons";
+import { Close, OverflowMenuHorizontal } from "./icons";
 import { PageToolbar, type SelectAll } from "./page-header";
 import { Separator } from "./separator";
 import { Spark } from "./spark";
@@ -37,10 +37,18 @@ function BulkBar({
 	clearLabel,
 	onClear,
 	colSpan,
+	place = "head",
 	children,
 	className,
 	...props
 }: Omit<React.ComponentProps<"div">, "children"> & {
+	/**
+	 * `head` (the default): in the place of the list's head. `float`: a floating bar (the floating surface, `radius-lg`, 4px inside) that stands 20px above
+	 * the bottom of the page area, in the middle of the page, while the head and its select-all stay as they are (the list of the 2026-11 redesign): the
+	 * count, the actions as small ghost buttons (`Button variant="ghost" size="sm"`, the dangerous one last after a line), and an × that lets go. Put it last
+	 * in the page.
+	 */
+	place?: "head" | "float";
 	/** How many are picked ("3 selected"). */
 	label: string;
 	/** Asks the assistant to work on the picked rows ("✦ Ask", "✦ Alt text"): first after the count, in the proposal blue. */
@@ -124,6 +132,27 @@ function BulkBar({
 			</TextButton>
 		</>
 	);
+	if (place === "float")
+		return (
+			<div
+				ref={bar}
+				data-slot="bulk-bar"
+				data-shape="square"
+				role="toolbar"
+				aria-label={label}
+				className={cn(
+					"sticky bottom-monti-20 z-20 mx-auto mt-auto flex w-fit items-center gap-monti-4 whitespace-nowrap rounded-monti-lg border border-monti-default bg-monti-page p-monti-4 pl-monti-12 text-monti-label shadow-monti-floating",
+					className,
+				)}
+				{...props}
+			>
+				<span className="mr-monti-8 font-semibold text-monti-default">{label}</span>
+				{children}
+				<IconButton size="sm" label={clearLabel} onClick={onClear}>
+					<Close aria-hidden />
+				</IconButton>
+			</div>
+		);
 	if (colSpan === undefined)
 		return (
 			<PageToolbar

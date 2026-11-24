@@ -14,6 +14,7 @@ function PageHeader({
 	address,
 	note,
 	trail,
+	layout = "ruled",
 	className,
 	children,
 	...props
@@ -24,8 +25,40 @@ function PageHeader({
 	/** After the title, in sans: words a person reads (a count, the days left, a time). */
 	note?: React.ReactNode;
 	trail?: React.ReactNode;
+	/**
+	 * `ruled` (the default): the title over the ink rule. `bar`: the head of a page that runs the area's whole width (a list, the settings tabs): one row
+	 * 84px tall (12px of it above), the title and its slots on the row's middle, the actions 8px apart at its end, no rule under it.
+	 */
+	layout?: "ruled" | "bar";
 }) {
 	const assistant = useAssistantSlot();
+	if (layout === "bar")
+		return (
+			<header
+				data-slot="page-header"
+				data-layout="bar"
+				className={cn("flex h-[84px] shrink-0 items-center gap-monti-12 pt-monti-12", className)}
+				{...props}
+			>
+				<h1 className="min-w-0 text-monti-page">{title}</h1>
+				{address && (
+					<span data-slot="page-header-address" className="mt-[3px] font-mono text-monti-faint text-monti-note">
+						{address}
+					</span>
+				)}
+				{note && (
+					<span data-slot="page-header-note" className="mt-[3px] shrink-0 text-monti-faint text-monti-note">
+						{note}
+					</span>
+				)}
+				{(children || assistant) && (
+					<span className="ml-auto flex shrink-0 items-center gap-monti-8">
+						{children}
+						{assistant}
+					</span>
+				)}
+			</header>
+		);
 	return (
 		<header
 			data-slot="page-header"
@@ -67,6 +100,9 @@ function PageHeader({
  * scroller, not in it, so the scroller ends at the panel's edge and the table never runs under it. A row's ⋯ sticks to the scroller's right edge (`TableRow`),
  * so it stays in reach (AT-01). The area is what is beside the sidebar and any docked panel, measured on the
  * nearest `container` (the admin frame makes it), so a folded rail or an open panel runs the same rule on the room that is left.
+ *
+ * `width="full"` is the page that runs the area's whole width, 40px in at the sides and nothing above (its head is a `PageHeader layout="bar"`, which
+ * keeps its own room above): the list, media and settings screens of the 2026-11 redesign.
  */
 function PageColumn({
 	width = "content",
@@ -74,7 +110,7 @@ function PageColumn({
 	children,
 	ref,
 	...props
-}: React.ComponentProps<"div"> & { width?: "content" | "list" }) {
+}: React.ComponentProps<"div"> & { width?: "content" | "list" | "full" }) {
 	const own = React.useRef<HTMLDivElement | null>(null);
 	// Whether the table runs past the column (under the sticky cell of a row's ⋯, which stands at the page area's edge): `data-clipping`, which that cell's
 	// edge line reads.
@@ -108,7 +144,11 @@ function PageColumn({
 			}}
 			data-slot="page-column"
 			data-width={width}
-			className={cn("flex min-w-0 flex-1 flex-col px-monti-16 pt-monti-40 md:px-monti-48", className)}
+			className={cn(
+				"flex min-w-0 flex-1 flex-col",
+				width === "full" ? "px-monti-40" : "px-monti-16 pt-monti-40 md:px-monti-48",
+				className,
+			)}
 			{...props}
 		>
 			{/* The room below the page is this box's own, not the column's: the column is held to the page's height, and room that was the column's ended above
@@ -118,7 +158,7 @@ function PageColumn({
 					"mx-auto flex w-full flex-1 flex-col pb-monti-40",
 					width === "list"
 						? "max-w-[clamp(var(--monti-width-content),calc(100cqw_-_480px),var(--monti-width-list))]"
-						: "max-w-monti-content",
+						: width === "content" && "max-w-monti-content",
 				)}
 			>
 				{children}

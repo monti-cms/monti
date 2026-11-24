@@ -202,6 +202,7 @@ export const UiLabelsProvider = close(open.UiLabelsProvider);
 export const LanguageRow = close(open.LanguageRow);
 export const LanguageSource = close(open.LanguageSource);
 export const ListFooter = close(open.ListFooter);
+export const ListFooterEnd = close(open.ListFooterEnd);
 export const PageSizeMenu = close(open.PageSizeMenu);
 export const ListHead = close(open.ListHead);
 export const LockMark = close(open.LockMark);

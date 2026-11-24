@@ -251,7 +251,10 @@ function RowCheck({
 	onCheckedChange,
 	label,
 	proposal = false,
+	place = "margin",
 }: {
+	/** `margin` (the default): hung in the left margin. `cell`: in a column of its own at the row's start (`ListHead checkColumn`), 12px in. */
+	place?: "margin" | "cell";
 	checked: boolean;
 	/** Without it the check is drawn and does nothing (a screen spec's look, before its behavior is wired). */
 	onCheckedChange?: (checked: boolean) => void;
@@ -261,7 +264,10 @@ function RowCheck({
 	proposal?: boolean;
 }) {
 	return (
-		<span data-slot="row-check" className="absolute top-1/2 -left-[26px] z-1 flex -translate-y-1/2">
+		<span
+			data-slot="row-check"
+			className={cn("relative z-1 flex", place === "margin" && "absolute top-1/2 -left-[26px] -translate-y-1/2")}
+		>
 			<Checkbox
 				checked={checked}
 				onCheckedChange={(next) => onCheckedChange?.(next === true)}
@@ -324,9 +330,25 @@ function RowMore({
  * Where a row's ⋯ (and its other end buttons) stand: above the row's link, one line of the row tall (`h-lh`, 20px), so the 24px button stands out 2px above
  * and below and the row is never taller than its text.
  */
-function RowActions({ className, ...props }: React.ComponentProps<"span">) {
+function RowActions({
+	reveal = "always",
+	className,
+	...props
+}: React.ComponentProps<"span"> & {
+	/** `hover`: shown only while the pointer or the keyboard is on the row, or its menu is open (the list of the 2026-11 redesign). */
+	reveal?: "always" | "hover";
+}) {
 	return (
-		<span data-slot="row-actions" className={cn("relative z-1 inline-flex h-lh items-center", className)} {...props} />
+		<span
+			data-slot="row-actions"
+			className={cn(
+				"relative z-1 inline-flex h-lh items-center",
+				reveal === "hover" &&
+					"opacity-0 group-focus-within/row:opacity-100 group-hover/row:opacity-100 has-aria-expanded:opacity-100",
+				className,
+			)}
+			{...props}
+		/>
 	);
 }
 

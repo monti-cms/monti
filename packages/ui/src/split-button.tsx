@@ -13,7 +13,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "./tooltip";
 // The pill is one shape, so its focus ring goes round the whole pill (the container, which `overflow-hidden` does not clip: it clips what is inside it),
 // and the half that has the focus is marked by a lighter fill, not by a line of its own.
 const HALF =
-	"inline-flex items-center border-0 bg-transparent font-semibold text-current outline-none transition-colors focus-visible:bg-[color-mix(in_srgb,var(--monti-fg-on-emphasis)_16%,transparent)] cursor-pointer disabled:pointer-events-none aria-disabled:cursor-default";
+	"inline-flex items-center border-0 bg-transparent font-medium text-current outline-none transition-colors focus-visible:bg-[color-mix(in_srgb,var(--monti-fg-on-emphasis)_16%,transparent)] cursor-pointer disabled:pointer-events-none aria-disabled:cursor-default";
 
 /**
  * A main action with a menu of its variants ("Publish" + "Republish with today's date") in one ink pill. The menu holds only other ways of
@@ -76,7 +76,7 @@ function SplitButton({
 			role="group"
 			data-slot="split-button"
 			className={cn(
-				"inline-flex h-monti-control-lg shrink-0 items-stretch overflow-hidden rounded-monti-full bg-monti-emphasis text-monti-body text-monti-on-emphasis has-focus-visible:ring-2 has-focus-visible:ring-monti-contrast/60",
+				"inline-flex h-monti-control-md shrink-0 items-stretch overflow-hidden rounded-monti-full bg-monti-emphasis text-monti-label text-monti-on-emphasis has-focus-visible:ring-2 has-focus-visible:ring-monti-contrast/60",
 				disabled && "opacity-45",
 			)}
 		>
@@ -94,9 +94,9 @@ function SplitButton({
 				// A leading icon ("+" of "New post") is 16px and pulled 2px into the left padding, as on a `Button`; while it works the spinner takes its place.
 				className={cn(
 					HALF,
-					"gap-monti-6 rounded-l-monti-full pr-monti-12 pl-[18px] [&>svg:first-child]:-ml-[2px] [&_svg]:size-4 [&_svg]:shrink-0",
+					"gap-monti-6 rounded-l-monti-full pr-monti-12 pl-[16px] [&>svg:first-child]:-ml-[2px] [&_svg]:size-4 [&_svg]:shrink-0",
 					// A pill with `reserve` keeps its padding and gap while it works: the room is the stack's, and the spinner stands in its row.
-					loading && !(reserve && reserve.length > 0) && "gap-[7px] pl-[13px] [&>[data-slot=spinner]+svg]:hidden",
+					loading && !(reserve && reserve.length > 0) && "gap-[7px] pl-[9px] [&>[data-slot=spinner]+svg]:hidden",
 				)}
 			>
 				{loading && !(reserve && reserve.length > 0) && <Spinner />}
@@ -129,7 +129,7 @@ function SplitButton({
 										// Working: a publish started from the menu came back to this half, and it keeps the focus as the main half does.
 										focusableWhenDisabled={Boolean(loading) && !disabled}
 										{...(loading && !disabled ? BUSY_GUARD : {})}
-										className={cn(HALF, "relative rounded-r-monti-full pr-[13px] pl-monti-12")}
+										className={cn(HALF, "relative rounded-r-monti-full pr-monti-10 pl-monti-8")}
 									/>
 								}
 							/>
