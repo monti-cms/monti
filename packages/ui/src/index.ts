@@ -8,6 +8,9 @@ import * as open from "./internal";
 
 export const AiFailed = close(open.AiFailed);
 export const AiWorking = close(open.AiWorking);
+export const AddressExample = close(open.AddressExample);
+export const AddressExampleRow = open.AddressExampleRow;
+export const AddressPart = close(open.AddressPart);
 export const Affix = close(open.Affix);
 export const AlertDialog = close(open.AlertDialog);
 export const AlertDialogAction = close(open.AlertDialogAction);

@@ -109,6 +109,14 @@
 
 오류가 아닌 줄(13px, `fg-subtle`). 필드가 왜 나타났는지, 또는 대신 무엇을 채웠는지만 말한다. 예: "키 추가"의 이름 필드는 언제나 서비스 이름으로 채워진다. 그 이름의 키가 이미 있으면 "Anthropic 2"로 채우고, 아래에 "이름이 Anthropic인 키가 이미 있습니다."라고 적는다.
 
+## 주소 예시 (`AddressExample`)
+
+주소를 정하는 설정 아래에서 그 설정으로 공개 주소가 어떻게 되는지 보이는 상자(설정 › 사이트의 "주소에 언어 표시", 컬렉션의 공개 주소. 2026-11 개편 시안 `settings-site.html`, `settings-basics.html`). 도구 바탕, `radius-md`, 안쪽 위아래 10px · 양옆 12px, 줄 사이 4px. 줄마다 이름(12px `fg-subtle`, 72px 열; 한 글자 "예"는 `label="short"` 44px 열)과 주소(mono 12/16, `fg-muted`)가 있고, 설정이 정하는 토막(`AddressPart`: "en", "articles")은 먹색 600에 `bg-selected`, 3px 모서리다. 고칠 수 없는 보기라 누르는 곳이 없다.
+
+### 코드
+
+`AddressExample`(`label` "default" · "short") 안에 `AddressExampleRow`(`label`, 주소는 `children`), 바뀌는 토막은 `AddressPart`.
+
 ## 비밀 값 필드 (`.mt-secret`)
 
 API 키처럼 가려서 입력하는 값을 위한 필드. 밑줄 하나 위에 입력란과 눈 버튼(24px, `fg-subtle`)이 있다. 눈을 누르면 방금 입력한 값이 보이고, 다시 누르면 가려진다(이름: "키 보기" / "키 가리기"). 저장된 키는 다시 보여 주지 않는다("··· a1b2"만). 지우기 ×는 없다. 붙여 넣은 값을 고치려면 필드를 비운다. 버튼이 두 개면 필드 끝이 붐빈다.

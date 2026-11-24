@@ -6,6 +6,7 @@
  * Values come only from the tokens: see `styles/theme.css` for the names and the README for the rules.
  */
 
+export { AddressExample, AddressExampleRow, AddressPart } from "./address-example";
 export { Affix } from "./affix";
 export { AiFailed, AiWorking } from "./ai-status";
 export {
