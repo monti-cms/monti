@@ -190,8 +190,7 @@ function FileMenu({ name, open }: { name: string; open?: boolean }) {
 					</IconButton>
 				}
 			/>
-			{/* ⋯의 상자는 점이 끝선에 서도록 끝선 밖으로 7.5px 나가 있다: 메뉴는 상자가 아니라 끝선에 맞춘다. */}
-			<DropdownMenuContent align="end" alignOffset={7.5}>
+			<DropdownMenuContent align="end">
 				<DropdownMenuItem>
 					<Renew aria-hidden />
 					바꾸기

@@ -421,8 +421,8 @@ function ComboboxChipsField({
 		>
 			{children}
 			{/* The open button of every combobox, a field of one value or of many: at the end of the first line. Nothing opens a list that is only read. */}
-			{/* 속성 패널의 줄(`PropertyRow`)에서는 갈매기의 보이는 끝이 끝선에 선다: 상자가 그 안쪽 여백과 갈매기 둘레의 빈 곳만큼(7px) 칸 밖으로 나간다. */}
-			<span className="pointer-events-none absolute top-0 in-data-[slot=property-row]:-right-[7px] right-monti-4 flex h-[calc(var(--monti-height-control-md)-1px)] items-center group-has-[input[readonly]]/chips:hidden group-data-[size=md]/chips:h-[calc(var(--monti-height-control-md)-1px)] group-data-[size=sm]/chips:h-[calc(var(--monti-height-control-sm)-1px)]">
+			{/* 속성 패널의 줄(`PropertyRow`)에서는 여는 버튼의 상자가 칸의 끝(패널의 끝선)에서 끝난다. 갈매기는 상자 안에 서고 가리킨 바탕은 선을 넘지 않는다(2026-11-24 소유자). */}
+			<span className="pointer-events-none absolute top-0 in-data-[slot=property-row]:right-0 right-monti-4 flex h-[calc(var(--monti-height-control-md)-1px)] items-center group-has-[input[readonly]]/chips:hidden group-data-[size=md]/chips:h-[calc(var(--monti-height-control-md)-1px)] group-data-[size=sm]/chips:h-[calc(var(--monti-height-control-sm)-1px)]">
 				<ComboboxTrigger className="pointer-events-auto size-monti-control-xs disabled:opacity-100" />
 			</span>
 		</ComboboxPrimitive.Chips>

@@ -47,10 +47,10 @@ function PropertySection({
 				<span className="min-w-0 flex-1 text-right font-normal text-monti-caption text-monti-faint">
 					{summary && <CutWords className="block truncate">{summary}</CutWords>}
 				</span>
-				{/* 버튼이 아닌 갈매기도 `IconButton edge="end"`처럼 보이는 끝이 끝선에 선다: 16px 상자 안의 빈 곳(아래 3px, 오른쪽 5px)만큼 나간다. */}
+				{/* 갈매기의 16px 상자가 끝선에서 끝난다. 보이는 끝을 맞추려 밖으로 내밀지 않는다(2026-11-24 소유자). */}
 				<span aria-hidden className="flex shrink-0 text-monti-faint [&>svg]:size-4">
-					<ChevronDown className="-mr-[3px] hidden group-data-[open]/section:block" />
-					<ChevronRight className="-mr-[5px] group-data-[open]/section:hidden" />
+					<ChevronDown className="hidden group-data-[open]/section:block" />
+					<ChevronRight className="group-data-[open]/section:hidden" />
 				</span>
 			</CollapsibleTrigger>
 			<CollapsibleContent className="flex flex-col gap-monti-4 pb-monti-20">{children}</CollapsibleContent>

@@ -41,15 +41,13 @@ export const TEXT_HOVER =
  * 24px in a 28px one), so its ground stays inside the field's tint, and 4px from the field's end (pulled 4px into the field's 8px padding): every
  * trailing icon of a panel stands on one vertical line.
  */
-export const FIELD_ACTION =
-	"-mr-[var(--monti-field-action-end,var(--monti-space-4))] shrink-0 [&_[data-slot=icon-button]]:-me-[calc(var(--monti-glyph-pull)*var(--monti-field-glyph-end,0))]";
+export const FIELD_ACTION = "-mr-[var(--monti-field-action-end,var(--monti-space-4))] shrink-0";
 
 /**
- * 속성 패널의 줄(`PropertyRow`)이 {@link FIELD_ACTION}에 주는 값: 칸의 끝이 패널의 끝선이고, 칸을 끝내는 것은 보이는 끝이 거기 선다(2026-11-24). 글자(글자 수
- * "0/60")는 끝선에서 끝나고, 아이콘 버튼은 `IconButton edge="end"`와 같은 폭(`--monti-glyph-pull`: 상자의 안쪽 여백과 아이콘 안의 빈 곳)만큼 상자가
- * 끝선 밖으로 나가 아이콘의 끝이 거기 선다(바탕은 포인터가 올 때만 보인다).
+ * 속성 패널의 줄(`PropertyRow`)이 {@link FIELD_ACTION}에 주는 값: 칸의 끝이 패널의 끝선이고, 칸 끝의 컨트롤은 상자가 그 선에서 끝난다(글자 수 "0/60"의 글자,
+ * 아이콘 버튼의 상자). 아이콘은 상자의 안쪽 여백만큼 안에 서고, 가리킨 바탕은 끝선을 넘지 않는다(2026-11-24 소유자).
  */
-export const FIELD_ACTION_PANEL = "[--monti-field-action-end:var(--monti-space-8)] [--monti-field-glyph-end:1]";
+export const FIELD_ACTION_PANEL = "[--monti-field-action-end:var(--monti-space-8)]";
 
 /**
  * The icon button size under each field size, for {@link FIELD_ACTION}: the field gives it to the buttons in its end control (`IconButtonContext`), so a
