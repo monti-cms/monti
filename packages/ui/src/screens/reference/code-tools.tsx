@@ -242,39 +242,6 @@ function Lines({
 
 // --- The box ----------------------------------------------------------------------------------------------------------------------------------
 
-/** The box's head row: the language and the file name, as text (doc 17, 2026-11-14: the name is set from the tool row, not typed on the box). */
-function Head({
-	language = "TypeScript",
-	name,
-	copied = false,
-	readOnly = false,
-}: {
-	language?: string;
-	name?: string;
-	copied?: boolean;
-	readOnly?: boolean;
-}) {
-	return (
-		<>
-			<Inline gap={8} minWidth={0}>
-				<Text variant="caption" tone="muted">
-					{language}
-				</Text>
-				{name ? (
-					<Text variant="caption" mono truncate>
-						{name}
-					</Text>
-				) : null}
-			</Inline>
-			{readOnly ? (
-				<IconButton size="xs" label={copied ? "복사함" : "코드 복사"}>
-					{copied ? <Checkmark aria-hidden /> : <Copy aria-hidden />}
-				</IconButton>
-			) : null}
-		</>
-	);
-}
-
 /**
  * The code block's own tool row, over the box while the caret is in it (the image block's row, `BlockBarPlace` + `FloatingBar`): language, file name,
  * line numbers, line effects, rules; with words picked in the code, the tooltip and the folded words (and "처음부터 펼치기" once folded); copy.
@@ -397,7 +364,27 @@ function Code({
 	return (
 		<Box position="relative">
 			{readOnly ? null : <Tools language={language} copied={copied} {...tools} />}
-			<CodeFrame head={<Head language={language} name={name} readOnly={readOnly} copied={copied} />}>
+			<CodeFrame
+				language={
+					<Text variant="caption" tone="muted">
+						{language}
+					</Text>
+				}
+				file={
+					name ? (
+						<Text variant="caption" mono truncate>
+							{name}
+						</Text>
+					) : undefined
+				}
+				head={
+					readOnly ? (
+						<IconButton size="xs" label={copied ? "복사함" : "코드 복사"}>
+							{copied ? <Checkmark aria-hidden /> : <Copy aria-hidden />}
+						</IconButton>
+					) : undefined
+				}
+			>
 				<Box paddingY={8}>{children}</Box>
 			</CodeFrame>
 		</Box>

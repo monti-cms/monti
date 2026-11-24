@@ -66,18 +66,17 @@ function DocCode({
 }) {
 	return (
 		<CodeFrame
-			head={
+			language={
 				<Text variant="caption" tone="subtle">
 					{language}
-					{file ? (
-						<>
-							{" "}
-							<Text mono tone="muted">
-								{file}
-							</Text>
-						</>
-					) : null}
 				</Text>
+			}
+			file={
+				file ? (
+					<Text variant="caption" mono tone="muted">
+						{file}
+					</Text>
+				) : undefined
 			}
 		>
 			<CodeArea
