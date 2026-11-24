@@ -70,7 +70,7 @@ function Input({
 			data-proposal={proposal || undefined}
 			aria-description={useProposalDescription(proposal)}
 			className={cn(
-				"w-full min-w-0 rounded-none bg-transparent outline-none transition-colors placeholder:text-monti-faint disabled:pointer-events-none disabled:cursor-default disabled:opacity-45",
+				"w-full min-w-0 text-ellipsis rounded-none bg-transparent outline-none transition-colors placeholder:text-monti-faint disabled:pointer-events-none disabled:cursor-default disabled:opacity-45",
 				inline
 					? cn(
 							// A proposed value read as text is blue text: an inline input has no rule to turn blue.

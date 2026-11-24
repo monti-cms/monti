@@ -304,7 +304,7 @@ function ComboboxCreate({ className, children, ...props }: ComboboxPrimitive.Ite
 			data-slot="combobox-create"
 			className={cn(
 				MENU_ITEM,
-				"relative mt-monti-8 before:pointer-events-none before:absolute before:inset-x-monti-2 before:-top-monti-5 before:h-px before:bg-monti-divider first:mt-0 first:before:hidden",
+				"relative mt-monti-8 before:pointer-events-none before:absolute before:inset-x-monti-2 before:-top-[5px] before:h-px before:bg-monti-divider first:mt-0 first:before:hidden",
 				className,
 			)}
 			{...props}
