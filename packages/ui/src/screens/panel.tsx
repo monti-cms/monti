@@ -78,7 +78,7 @@ function PickField({
 			<SelectTrigger size="md" width="full" caret="active" aria-label={label}>
 				<SelectValue placeholder={placeholder} />
 			</SelectTrigger>
-			<SelectContent>
+			<SelectContent width="field">
 				{items.map((item) => (
 					<SelectItem key={item.value} value={item.value}>
 						{item.label}
@@ -189,7 +189,8 @@ function FileMenu({ name, open }: { name: string; open?: boolean }) {
 					</IconButton>
 				}
 			/>
-			<DropdownMenuContent align="end">
+			{/* ⋯의 상자는 점이 끝선에 서도록 끝선 밖으로 7.5px 나가 있다: 메뉴는 상자가 아니라 끝선에 맞춘다. */}
+			<DropdownMenuContent align="end" alignOffset={7.5}>
 				<DropdownMenuItem>
 					<Renew aria-hidden />
 					바꾸기

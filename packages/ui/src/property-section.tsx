@@ -5,7 +5,7 @@ import { ChangeDot } from "./change-dot";
 import { cn } from "./cn";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "./collapsible";
 import { CutWords } from "./cut-words";
-import { FIELD_INSET } from "./hover";
+import { FIELD_ACTION_PANEL, FIELD_INSET } from "./hover";
 import { IconButtonContext } from "./icon-button";
 import { ChevronDown, ChevronRight, Document, Image as ImageIcon } from "./icons";
 
@@ -47,9 +47,10 @@ function PropertySection({
 				<span className="min-w-0 flex-1 text-right font-normal text-monti-caption text-monti-faint">
 					{summary && <CutWords className="block truncate">{summary}</CutWords>}
 				</span>
+				{/* 버튼이 아닌 갈매기도 `IconButton edge="end"`처럼 보이는 끝이 끝선에 선다: 16px 상자 안의 빈 곳(아래 3px, 오른쪽 5px)만큼 나간다. */}
 				<span aria-hidden className="flex shrink-0 text-monti-faint [&>svg]:size-4">
-					<ChevronDown className="hidden group-data-[open]/section:block" />
-					<ChevronRight className="group-data-[open]/section:hidden" />
+					<ChevronDown className="-mr-[3px] hidden group-data-[open]/section:block" />
+					<ChevronRight className="-mr-[5px] group-data-[open]/section:hidden" />
 				</span>
 			</CollapsibleTrigger>
 			<CollapsibleContent className="flex flex-col gap-monti-4 pb-monti-20">{children}</CollapsibleContent>
@@ -72,10 +73,13 @@ function PropertyRow({
 	children: React.ReactNode;
 }) {
 	return (
-		<div data-slot="property-row" className="grid grid-cols-[var(--monti-width-label)_minmax(0,1fr)] gap-x-monti-8">
+		<div
+			data-slot="property-row"
+			className={cn("grid grid-cols-[var(--monti-width-label)_minmax(0,1fr)] gap-x-monti-8", FIELD_ACTION_PANEL)}
+		>
 			<label
 				htmlFor={htmlFor}
-				className="break-keep pt-monti-6 text-monti-note text-monti-subtle [overflow-wrap:anywhere]"
+				className="break-keep pt-[5.5px] text-monti-note text-monti-subtle [overflow-wrap:anywhere]"
 			>
 				{label}
 			</label>
@@ -101,7 +105,8 @@ function PropertyValue({
 		<div
 			data-slot="property-value"
 			className={cn(
-				"flex min-h-monti-control-md min-w-0 gap-monti-8 py-monti-6 text-monti-body text-monti-default",
+				// 입력 칸처럼 아래 1px(투명한 밑줄)를 두어 글자가 칸의 글자와 같은 높이에 선다.
+				"flex min-h-monti-control-md min-w-0 gap-monti-8 border-transparent border-b py-[5.5px] text-monti-body text-monti-default",
 				FIELD_INSET,
 				end && "pr-0",
 				stacked ? "flex-col gap-monti-2" : "items-center",
@@ -193,7 +198,12 @@ function PropertyFile({ name, size, action }: { name: string; size: string; acti
 	return (
 		<div
 			data-slot="property-file"
-			className={cn("flex h-monti-control-md min-w-0 items-center gap-monti-8 text-monti-body", FIELD_INSET, "pr-0")}
+			// 입력 칸처럼 아래 1px(투명한 밑줄)를 두어 이름이 라벨과 같은 높이에 선다.
+			className={cn(
+				"flex h-monti-control-md min-w-0 items-center gap-monti-8 border-transparent border-b text-monti-body",
+				FIELD_INSET,
+				"pr-0",
+			)}
 		>
 			<Document aria-hidden className="size-4 shrink-0 text-monti-faint" />
 			<button

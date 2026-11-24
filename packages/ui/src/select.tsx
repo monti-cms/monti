@@ -132,9 +132,13 @@ function SelectContent({
 	align = "start",
 	alignOffset = 0,
 	alignItemWithTrigger = false,
+	width = "default",
 	...props
 }: SelectPrimitive.Popup.Props &
-	Pick<SelectPrimitive.Positioner.Props, "align" | "alignOffset" | "side" | "sideOffset" | "alignItemWithTrigger">) {
+	Pick<SelectPrimitive.Positioner.Props, "align" | "alignOffset" | "side" | "sideOffset" | "alignItemWithTrigger"> & {
+		/** `default`: at least a menu's width (240px). `field`: as wide as its field, edge to edge with it (a property panel's value, 2026-11-24). */
+		width?: "default" | "field";
+	}) {
 	const placement = usePlacementPadding();
 	return (
 		<SelectPrimitive.Portal>
@@ -156,7 +160,8 @@ function SelectContent({
 						MENU_MOTION,
 						"relative isolate z-50",
 						FIT_HEIGHT,
-						"w-max min-w-[max(var(--monti-width-menu),var(--anchor-width))] max-w-(--available-width) overflow-y-auto overflow-x-hidden p-monti-4 data-[align-trigger=true]:animate-none",
+						width === "field" ? "w-(--anchor-width)" : "w-max min-w-[max(var(--monti-width-menu),var(--anchor-width))]",
+						"max-w-(--available-width) overflow-y-auto overflow-x-hidden p-monti-4 data-[align-trigger=true]:animate-none",
 						className,
 					)}
 					{...props}

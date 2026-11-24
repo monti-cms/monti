@@ -52,8 +52,8 @@ function Textarea({
 				size === "sm"
 					? "min-h-monti-control-sm py-[3px] text-monti-note"
 					: size === "md"
-						? // 패널의 값(속성 패널): 입력 칸 `md`와 같은 14/20 글자, 한 줄이 32px(위 6 · 아래 5와 밑줄 1).
-							"min-h-monti-control-md pt-monti-6 pb-[5px] text-monti-reading md:text-monti-body"
+						? // 패널의 값(속성 패널): 입력 칸 `md`와 같은 14/20 글자, 한 줄이 32px(위아래 5.5와 밑줄 1: 글자가 `Input`의 글자와 같은 높이에 선다).
+							"min-h-monti-control-md py-[5.5px] text-monti-reading md:text-monti-body"
 						: "min-h-monti-control-md py-monti-4 text-monti-reading md:text-monti-prose",
 				// What is typed is a value, in mono; the placeholder is words, and stays in the sans face (tokens.md).
 				mono && "font-mono placeholder:font-sans",
