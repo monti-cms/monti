@@ -50,6 +50,6 @@
 
 ### 코드
 
-`EditorHeader`가 그 띠다(`min-height: header`, 아래 선, 양 끝 정렬). 편집기처럼 사이드바 틀 밖에 서는 화면은 `StandalonePage` 안에 머리 줄부터 쌓고, 그 화면의 알림 띠는 `StandalonePage`의 `banner`로 머리 줄 위에 둔다([status.md](status.md)의 "알림 띠"). `EditorTitleRule`은 제목 아래 잉크색 선이다.
+`EditorHeader`가 그 띠다(`min-height: header`, 아래 선, 양 끝 정렬, 왼쪽 8 · 오른쪽 12, 묶음 사이 8, 끝의 ✦는 앞 단추에서 4px. 2026-11 개편 시안 `parts/topbar.html`). 맨 앞은 `EditorBackButton`(작은 ghost 단추, ‹와 목록 이름 "글", 안쪽 왼쪽 4 · 오른쪽 8이라 ‹가 머리 줄 시작에서 12px)이고, 그 뒤 `EditorPath`가 글이 사는 곳을 "/ 폴더 / 제목"으로 쓴다(13px, 2px 간격, 빗금은 `fg-disabled`, 폴더는 `fg-subtle`, 제목은 잉크 500이고 360px에서 "…"로 잘리며 가리키면 전부 말한다). 편집기처럼 사이드바 틀 밖에 서는 화면은 `StandalonePage` 안에 머리 줄부터 쌓고, 그 화면의 알림 띠는 `StandalonePage`의 `banner`로 머리 줄 위에 둔다([status.md](status.md)의 "알림 띠"). `EditorTitleRule`은 제목 아래 잉크색 선이다.
 
 `Section`은 설정 한 절이다(왼쪽에 제목, 오른쪽에 필드). `layout="grid"`는 설정과 도구 페이지의 절이다: 200px 열에 제목(14px 600)과 그 아래 6px의 `description`(12px, 흐림, 190px 안에서 줄을 바꿈), 40px 뒤에 20px 간격의 필드, 위아래 28px, 마지막 절이 아니면 아래 `border-muted` 선.

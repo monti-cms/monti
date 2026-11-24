@@ -32,7 +32,13 @@ function SplitButton({
 	menu,
 	reserve,
 	align = "end",
+	variant = "primary",
 }: {
+	/**
+	 * `primary` (the default): the ink pill. `secondary`: the gray pill (`bg-muted`, ink words; a half takes `bg-selected` under the pointer) for a state that
+	 * is not the screen's main action ("● 발행됨" of a published entry with no change, 2026-11 editor mockup).
+	 */
+	variant?: "primary" | "secondary";
 	/** The main action's label, with its leading icon first if it has one (`<Add aria-hidden />`). */
 	children: ReactNode;
 	onClick?: () => void;
@@ -76,7 +82,10 @@ function SplitButton({
 			role="group"
 			data-slot="split-button"
 			className={cn(
-				"inline-flex h-monti-control-md shrink-0 items-stretch overflow-hidden rounded-monti-full bg-monti-emphasis text-monti-label text-monti-on-emphasis has-focus-visible:ring-2 has-focus-visible:ring-monti-contrast/60",
+				"inline-flex h-monti-control-md shrink-0 items-stretch overflow-hidden rounded-monti-full text-monti-label has-focus-visible:ring-2 has-focus-visible:ring-monti-contrast/60",
+				variant === "primary"
+					? "bg-monti-emphasis text-monti-on-emphasis"
+					: "bg-monti-muted text-monti-default [&>button:hover]:bg-monti-selected [&_[data-slot=caret]]:text-monti-subtle",
 				disabled && "opacity-45",
 			)}
 		>
@@ -91,10 +100,11 @@ function SplitButton({
 				aria-busy={loading || undefined}
 				onClick={onClick}
 				{...(inert ? BUSY_GUARD : {})}
-				// A leading icon ("+" of "New post") is 16px and pulled 2px into the left padding, as on a `Button`; while it works the spinner takes its place.
+				// 14px before the words or the leading icon ("+" of "New post", 16px), as on a `Button` (2026-11 mockups `.split .btn`: `0 12px 0 14px`);
+				// while it works the spinner takes the icon's place.
 				className={cn(
 					HALF,
-					"gap-monti-6 rounded-l-monti-full pr-monti-12 pl-[16px] [&>svg:first-child]:-ml-[2px] [&_svg]:size-4 [&_svg]:shrink-0",
+					"gap-monti-6 rounded-l-monti-full pr-monti-12 pl-[14px] [&_svg]:size-4 [&_svg]:shrink-0",
 					// A pill with `reserve` keeps its padding and gap while it works: the room is the stack's, and the spinner stands in its row.
 					loading && !(reserve && reserve.length > 0) && "gap-[7px] pl-[9px] [&>[data-slot=spinner]+svg]:hidden",
 				)}
