@@ -8,7 +8,6 @@ import {
 	DropdownMenuSeparator,
 	LIST_COLUMN_SIZE,
 	ListHead,
-	RowCheck,
 	Stack,
 	Table,
 	TableBody,
@@ -74,44 +73,6 @@ export const Head: Story = {
 					<TableCell>발행됨</TableCell>
 					<TableCell>봄에 쓴 첫 글</TableCell>
 					<TableCell tone="muted">10. 28</TableCell>
-					<TableCell />
-				</TableRow>
-			</TableBody>
-		</Table>
-	),
-};
-
-/**
- * 체크 열(`checkColumn`, `RowCheck place="cell"`): 모두 고르기와 행의 체크 상자가 표의 시작 선에 안쪽 여백 없이 선다. 고른 줄과 가리킨 줄의 바탕은
- * 체크 열을 포함해 시작 선부터 깔리고, 그 왼쪽으로 나가는 것은 없다. 다음 열의 글자는 시작 선에서 44px(2026-11-24 소유자 결정).
- */
-export const CheckColumn: Story = {
-	render: () => (
-		<Table container="none" layout="fixed" columns={[LIST_COLUMN_SIZE.check, 120, undefined, LIST_COLUMN_SIZE.end]}>
-			<ListHead
-				checkColumn
-				columns={[
-					{ id: "status", label: "상태", menu: statusMenu },
-					{ id: "title", label: "제목" },
-				]}
-				end={LIST_COLUMN_SIZE.end}
-				selectAll={{ state: "some", onChange: () => {}, label: "이 페이지 모두 고르기" }}
-			/>
-			<TableBody>
-				<TableRow>
-					<TableCell>
-						<RowCheck place="cell" checked={false} label="봄에 쓴 첫 글 고르기" />
-					</TableCell>
-					<TableCell>초안</TableCell>
-					<TableCell>봄에 쓴 첫 글</TableCell>
-					<TableCell />
-				</TableRow>
-				<TableRow selected>
-					<TableCell>
-						<RowCheck place="cell" checked label="여름 메모 고르기" />
-					</TableCell>
-					<TableCell>발행됨</TableCell>
-					<TableCell>여름 메모</TableCell>
 					<TableCell />
 				</TableRow>
 			</TableBody>
