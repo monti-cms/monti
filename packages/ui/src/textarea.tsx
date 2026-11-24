@@ -1,6 +1,6 @@
 "use client";
 
-import type * as React from "react";
+import * as React from "react";
 import { cn } from "./cn";
 import { FIELD_ACTION, FIELD_ACTION_BUTTON, FIELD_HOVER, FIELD_INSET } from "./hover";
 import { IconButtonContext } from "./icon-button";
@@ -19,6 +19,7 @@ function Textarea({
 	tall = false,
 	action,
 	rows,
+	clamp,
 	style,
 	...props
 }: React.ComponentProps<"textarea"> & {
@@ -32,7 +33,22 @@ function Textarea({
 	tall?: boolean;
 	/** A control at the end of the first line. */
 	action?: React.ReactNode;
+	/**
+	 * 쉴 때 보이는 줄의 수: 글이 더 길면 그 줄까지만 보이고 마지막 줄 끝이 "…"로 잘린다. 포커스가 오면(누르면) 다 펼쳐진다
+	 * (속성 패널의 긴 요약, 시안 v5 `panel-extreme.html`, 2026-11-24).
+	 */
+	clamp?: number;
 }) {
+	const [text, setText] = React.useState(String(props.value ?? props.defaultValue ?? ""));
+	const shown = props.value === undefined ? text : String(props.value);
+	const sizeText =
+		size === "sm"
+			? "text-monti-note"
+			: size === "md"
+				? "text-monti-reading md:text-monti-body"
+				: "text-monti-reading md:text-monti-prose";
+	// 쉴 때 높이: 줄 `clamp`개와 위아래 여백, 밑줄 1px(아래 크기별 여백과 같다).
+	const clampPad = size === "sm" ? 7 : size === "md" ? 12 : 9;
 	const textarea = (
 		<textarea
 			data-slot="textarea"
@@ -58,6 +74,9 @@ function Textarea({
 				// What is typed is a value, in mono; the placeholder is words, and stays in the sans face (tokens.md).
 				mono && "font-mono placeholder:font-sans",
 				tall && "min-h-[52px]",
+				// 잘린 동안 글자는 위에 겹친 잘린 글(…)이 보이고, 칸은 그 줄 수만큼의 높이를 넘지 않는다.
+				clamp &&
+					"max-h-(--textarea-clamp) overflow-hidden text-transparent focus:max-h-none focus:overflow-y-auto focus:text-monti-default data-proposal:focus:text-monti-proposal",
 				// With an action the line around it draws the rule, so the box keeps the height less that 1px.
 				action &&
 					cn(
@@ -73,17 +92,51 @@ function Textarea({
 			rows={rows}
 			// The box grows with its text (`field-sizing`), so `rows` alone sets no height: it holds that many lines of 1.6 and its padding.
 			style={
-				rows === undefined
-					? style
-					: {
-							minHeight: `max(calc(var(--monti-height-control-${size === "sm" ? "sm" : size === "md" ? "md" : "lg"}) - ${action ? 1 : 0}px), calc(${rows} * 1.6em + ${size === "sm" ? 7 : size === "md" ? 9 : 13}px))`,
-							...style,
-						}
+				{
+					...(rows === undefined
+						? {}
+						: {
+								minHeight: `max(calc(var(--monti-height-control-${size === "sm" ? "sm" : size === "md" ? "md" : "lg"}) - ${action ? 1 : 0}px), calc(${rows} * 1.6em + ${size === "sm" ? 7 : size === "md" ? 9 : 13}px))`,
+							}),
+					...(clamp ? { "--textarea-clamp": `calc(${clamp}lh + ${clampPad}px)` } : {}),
+					...style,
+				} as React.CSSProperties
 			}
 			{...props}
+			onChange={(event) => {
+				setText(event.currentTarget.value);
+				props.onChange?.(event);
+			}}
 		/>
 	);
-	if (!action) return textarea;
+	const clamped = clamp ? (
+		<div data-slot="textarea-clamp" className="group/clamp relative w-full min-w-0">
+			{textarea}
+			{/* 쉴 때만 보이는 잘린 글: 칸의 글자와 같은 자리 · 크기로 겹치고, 포커스가 오면 사라져 칸의 글이 다 보인다. */}
+			<div
+				aria-hidden
+				className={cn(
+					"pointer-events-none absolute inset-x-0 top-0 text-monti-default group-focus-within/clamp:invisible",
+					FIELD_INSET,
+					sizeText,
+					size === "sm" ? "py-[3px]" : size === "md" ? "py-[5.5px]" : "py-monti-4",
+					mono && "font-mono",
+					props.disabled && "opacity-45",
+				)}
+			>
+				{/* 자르는 상자에는 여백이 없다: 여백이 있으면 잘린 뒤의 줄이 그 여백에 비친다. */}
+				<div
+					className="overflow-hidden"
+					style={{ display: "-webkit-box", WebkitBoxOrient: "vertical", WebkitLineClamp: clamp }}
+				>
+					{shown}
+				</div>
+			</div>
+		</div>
+	) : (
+		textarea
+	);
+	if (!action) return clamped;
 	return (
 		<div
 			data-slot="textarea-line"
@@ -96,7 +149,7 @@ function Textarea({
 				"items-start",
 			)}
 		>
-			{textarea}
+			{clamped}
 			{/* A 32px button over a 28px or 32px line reaches past it above and below, as at a small `Input`, and does not grow the line. */}
 			<span className={cn(FIELD_ACTION, "mt-monti-4")}>
 				<IconButtonContext value={FIELD_ACTION_BUTTON[size === "sm" ? "sm" : "md"]}>{action}</IconButtonContext>

@@ -588,6 +588,7 @@ function ExtremePanel() {
 				<PropertyRow label="요약">
 					<Textarea
 						size="md"
+						clamp={3}
 						aria-label="요약"
 						defaultValue="강원·경상·전라·제주의 숨은 산책로 120곳을 계절별로 묶고, 길마다 거리·걸리는 시간·준비물·가까운 역과 버스, 쉬어 갈 곳과 화장실 위치까지 한 장에 정리했습니다. 긴 요약은 세 줄까지만 보이고 누르면 다 펼칩니다."
 					/>
