@@ -106,7 +106,8 @@ export function MediaPanel() {
 						<SelectTrigger size="md" width="full" caret="active" aria-label="폴더">
 							<SelectValue />
 						</SelectTrigger>
-						<SelectContent>
+						{/* 속성 패널처럼 목록이 칸과 같은 폭으로 칸 아래 3px에 서서, 패널의 끝선을 넘지 않는다. */}
+						<SelectContent width="field" sideOffset={3}>
 							<SelectItem value="root">최상위</SelectItem>
 							<SelectItem value="cover">표지</SelectItem>
 						</SelectContent>
