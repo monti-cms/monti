@@ -123,8 +123,12 @@ function FormFieldLabel({
 	size = "caption",
 	count,
 	countTone,
+	aside,
+	children,
 	...props
 }: Omit<React.ComponentProps<typeof Label>, "size"> & {
+	/** With `size="label"`: quiet words after the label, 4px off, 13px 400 in the faint ink ("· 선택" for a field that may stay empty, 시안 `keys7-add-fail.html`). */
+	aside?: React.ReactNode;
 	action?: React.ReactNode;
 	changed?: FormFieldChange;
 	/**
@@ -145,7 +149,18 @@ function FormFieldLabel({
 					tone="muted"
 					className={cn("peer/field-label w-fit group-data-[disabled=true]/field:opacity-45", className)}
 					{...props}
-				/>
+				>
+					{aside === undefined ? (
+						children
+					) : (
+						<span className="inline-flex items-center gap-monti-4">
+							{children}
+							<span data-slot="field-label-aside" className="text-monti-faint text-monti-note">
+								{aside}
+							</span>
+						</span>
+					)}
+				</Label>
 				{changed && <ChangeDot tone={changed.tone} label={changed.label} />}
 				{count !== undefined && (
 					<span
@@ -169,7 +184,9 @@ function FormFieldLabel({
 			tone="subtle"
 			className={cn("peer/field-label w-fit group-data-[disabled=true]/field:opacity-45", className)}
 			{...props}
-		/>
+		>
+			{children}
+		</Label>
 	);
 	if (changed) {
 		return (

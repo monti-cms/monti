@@ -206,7 +206,7 @@ function ServicePicker({ query }: { query?: string }) {
 						</>
 					)}
 					<ComboboxSeparator />
-					<ComboboxItem value="compatible">
+					<ComboboxItem value="compatible" tone="exit">
 						<LinkIcon aria-hidden />
 						목록에 없나요? OpenAI 호환 주소 직접 넣기
 					</ComboboxItem>
@@ -270,11 +270,8 @@ function AddKeyDialog({ stage }: { stage: "pick" | "search" | "fail" }) {
 					</FormField>
 					{stage === "fail" && (
 						<FormField spacing="label">
-							<FormFieldLabel size="label" htmlFor="key-name">
+							<FormFieldLabel size="label" htmlFor="key-name" aside="· 선택">
 								이름
-								<Text tone="faint" weight="role">
-									· 선택
-								</Text>
 							</FormFieldLabel>
 							<Input id="key-name" placeholder="Anthropic" />
 						</FormField>

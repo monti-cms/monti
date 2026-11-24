@@ -247,13 +247,34 @@ function ComboboxScroll({ className, ...props }: React.ComponentProps<"div">) {
 
 /** A row and a group name in a `ComboboxContent width="field"` (see there). */
 const PICKER_ITEM =
-	"group-data-[width=field]/combobox-content:font-normal group-data-[width=field]/combobox-content:text-monti-default group-data-[width=field]/combobox-content:text-monti-label";
+	"group-data-[width=field]/combobox-content:[&>[data-slot=menu-value]]:text-monti-faint group-data-[width=field]/combobox-content:font-normal group-data-[width=field]/combobox-content:text-monti-default group-data-[width=field]/combobox-content:text-monti-label";
 const PICKER_LABEL =
 	"group-data-[width=field]/combobox-content:text-monti-caption group-data-[width=field]/combobox-content:font-medium";
 
-function ComboboxItem({ className, children, ...props }: ComboboxPrimitive.Item.Props) {
+function ComboboxItem({
+	className,
+	tone,
+	children,
+	...props
+}: ComboboxPrimitive.Item.Props & {
+	/**
+	 * `exit`: the row that leads out of the list ("목록에 없나요? …", under the last separator of a `width="field"` list), a step quieter than the
+	 * values: muted words, a 14px faint icon 10px before them (시안 `keys7-add.html`).
+	 */
+	tone?: "exit";
+}) {
 	return (
-		<ComboboxPrimitive.Item data-slot="combobox-item" className={cn(MENU_ITEM, PICKER_ITEM, className)} {...props}>
+		<ComboboxPrimitive.Item
+			data-slot="combobox-item"
+			data-tone={tone}
+			className={cn(
+				MENU_ITEM,
+				PICKER_ITEM,
+				"data-[tone=exit]:gap-monti-10 group-data-[width=field]/combobox-content:data-[tone=exit]:not-data-highlighted:text-monti-muted data-[tone=exit]:[&>svg]:size-3.5 data-[tone=exit]:[&>svg]:text-monti-faint",
+				className,
+			)}
+			{...props}
+		>
 			{menuWords(children)}
 			<ComboboxPrimitive.ItemIndicator render={<MenuTick />} />
 		</ComboboxPrimitive.Item>

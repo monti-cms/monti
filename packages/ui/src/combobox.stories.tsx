@@ -16,6 +16,7 @@ import {
 	ComboboxSeparator,
 	useComboboxAnchor,
 } from "./combobox";
+import { Link } from "./icons";
 import { Stack } from "./stack";
 import { StoryCaption } from "./story-caption";
 
@@ -274,7 +275,10 @@ export const FieldWidthScroll: Story = {
 							))}
 						</ComboboxScroll>
 						<ComboboxSeparator />
-						<ComboboxItem value="compatible">목록에 없나요? OpenAI 호환 주소 직접 넣기</ComboboxItem>
+						<ComboboxItem value="compatible" tone="exit">
+							<Link aria-hidden />
+							목록에 없나요? OpenAI 호환 주소 직접 넣기
+						</ComboboxItem>
 					</ComboboxList>
 				</ComboboxContent>
 			</Combobox>
