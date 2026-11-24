@@ -3,6 +3,7 @@
 import * as React from "react";
 import { useAssistantSlot } from "./assistant-slot";
 import { cn } from "./cn";
+import { IconButtonContext } from "./icon-button";
 
 /**
  * The head of a content page: the title (26px bold) with the ink rule under it, the only heavy line of a page. Two slots stand beside the title, one font each as `RowTitle`'s do: `address` is a list's address rule, a typed value, in mono; `note` is
@@ -31,7 +32,9 @@ function PageHeader({
 	 */
 	layout?: "ruled" | "bar";
 }) {
-	const assistant = useAssistantSlot();
+	// 줄 끝의 ✦는 상자가 아니라 보이는 별의 끝이 머리 줄의 끝선에 선다(`IconButton edge="end"`).
+	const slot = useAssistantSlot();
+	const assistant = slot && <IconButtonContext value={{ edge: "end" }}>{slot}</IconButtonContext>;
 	if (layout === "bar")
 		return (
 			<header

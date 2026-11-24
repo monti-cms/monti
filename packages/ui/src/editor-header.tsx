@@ -4,6 +4,7 @@ import { dockTop } from "./bottom-dock";
 import { Button } from "./button";
 import { cn } from "./cn";
 import { CutWords } from "./cut-words";
+import { IconButtonContext } from "./icon-button";
 import { ChevronLeft } from "./icons";
 
 /**
@@ -31,7 +32,8 @@ function EditorHeader({ className, children, ...props }: React.ComponentProps<"h
 			{/* The ✦ stands 4px after the tools before it, as the tools stand from one another (2026-11 editor mockup `parts/topbar.html`). */}
 			{assistant && (
 				<span data-slot="editor-header-assistant" className="-ml-monti-4 flex">
-					{assistant}
+					{/* 상자가 아니라 보이는 별의 끝이 머리 줄의 끝선(오른쪽 12px 안)에 선다(`IconButton edge="end"`). */}
+					<IconButtonContext value={{ edge: "end" }}>{assistant}</IconButtonContext>
 				</span>
 			)}
 		</header>

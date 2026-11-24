@@ -226,7 +226,8 @@ export function SidePanel({
 				className="max-sm:hidden"
 			/>
 			{title && (
-				<header data-slot="side-panel-header" className={PANEL_HEAD}>
+				// ×가 있으면 머리 줄의 끝선은 본문의 끝선(24px 안)이고, 보이는 ×의 끝이 그 선에 선다(`IconButton edge="end"`).
+				<header data-slot="side-panel-header" className={cn(PANEL_HEAD, (onClose || closable) && "pr-monti-24")}>
 					{back && (
 						<IconButton label={back.label} side="bottom" onClick={back.onClick} className="-ml-monti-12">
 							<ChevronLeft aria-hidden />
@@ -237,7 +238,7 @@ export function SidePanel({
 					</h2>
 					{actions}
 					{(onClose || closable) && (
-						<IconButton label={labels.close} side="bottom" onClick={onClose}>
+						<IconButton label={labels.close} side="bottom" onClick={onClose} edge="end">
 							<Close aria-hidden />
 						</IconButton>
 					)}
