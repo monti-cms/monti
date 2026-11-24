@@ -90,6 +90,7 @@ export const PropertyGroup = close(open.PropertyGroup);
 export const PropertyPanel = close(open.PropertyPanel);
 export const PropertyCover = close(open.PropertyCover);
 export const PropertyFile = close(open.PropertyFile);
+export const PropertyFileAdd = close(open.PropertyFileAdd);
 export const PropertyNote = close(open.PropertyNote);
 export const PropertyRow = close(open.PropertyRow);
 export const PropertySection = close(open.PropertySection);

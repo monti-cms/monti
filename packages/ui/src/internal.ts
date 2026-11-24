@@ -259,6 +259,7 @@ export { PropertyGroup, PropertyPanel } from "./property-list";
 export {
 	PropertyCover,
 	PropertyFile,
+	PropertyFileAdd,
 	PropertyNote,
 	PropertyRow,
 	PropertySection,

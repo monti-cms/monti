@@ -22,6 +22,7 @@ import {
 	MenuValue,
 	PropertyCover,
 	PropertyFile,
+	PropertyFileAdd,
 	PropertyNote,
 	PropertyRow,
 	PropertySection,
@@ -211,14 +212,7 @@ function FileMenu({ name, open }: { name: string; open?: boolean }) {
 
 /** "+ 파일 추가"(첨부 파일의 마지막 줄), 끝에 남은 파일 수. */
 function AddFile({ rest }: { rest?: string }) {
-	return (
-		<PropertyValue end={rest ? <TextButton variant="quiet">{rest}</TextButton> : undefined}>
-			<TextButton variant="quiet">
-				<Add aria-hidden />
-				파일 추가
-			</TextButton>
-		</PropertyValue>
-	);
+	return <PropertyFileAdd rest={rest}>파일 추가</PropertyFileAdd>;
 }
 
 /** 속성 패널: 머리 "속성"과 ×, 그 아래 절들. */

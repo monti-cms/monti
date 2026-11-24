@@ -7,7 +7,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "./collapsib
 import { CutWords } from "./cut-words";
 import { FIELD_ACTION_PANEL, FIELD_INSET } from "./hover";
 import { IconButtonContext } from "./icon-button";
-import { ChevronDown, ChevronRight, Document, Image as ImageIcon } from "./icons";
+import { Add, ChevronDown, ChevronRight, Document, Image as ImageIcon } from "./icons";
 
 /**
  * 속성 패널(2026-11 개편 시안 v5 `panel.html`)의 절: 44px 머리(13px 600 제목, 고칠 것이 있으면 주황 점, 끝에 갈매기)와 그 아래 줄들. 접으면 머리만
@@ -205,7 +205,8 @@ function PropertyFile({ name, size, action }: { name: string; size: string; acti
 				"pr-0",
 			)}
 		>
-			<Document aria-hidden className="size-4 shrink-0 text-monti-faint" />
+			{/* 파일 표시의 획은 16px 상자 안 3px에서 시작한다: 그만큼 당겨 획이 값의 글자선에 선다. */}
+			<Document aria-hidden className="-ml-[3px] size-4 shrink-0 text-monti-faint" />
 			<button
 				type="button"
 				className="min-w-0 cursor-pointer border-0 bg-transparent p-0 text-left text-monti-default underline-offset-3 outline-none hover:underline hover:decoration-(--monti-fg-subtle) focus-visible:underline"
@@ -217,6 +218,35 @@ function PropertyFile({ name, size, action }: { name: string; size: string; acti
 				<span className="flex shrink-0">
 					<IconButtonContext value={{ size: "xs" }}>{action}</IconButtonContext>
 				</span>
+			)}
+		</div>
+	);
+}
+
+/**
+ * 첨부 파일의 마지막 줄 "+ 파일 추가"(32px): 누르는 글(`fg-subtle`, 포인터에 잉크와 밑줄). + 의 획이 값의 글자선에서 시작한다(14px 상자 안 3.5px만큼
+ * 당긴다). `rest`는 보이지 않는 나머지 파일("외 21개 · 모두 보기")로, 끝선에서 끝난다.
+ */
+function PropertyFileAdd({ children, rest }: { children: React.ReactNode; rest?: React.ReactNode }) {
+	const press =
+		"cursor-pointer border-0 bg-transparent p-0 text-monti-subtle underline-offset-4 outline-none hover:text-monti-default hover:underline focus-visible:rounded-monti-sm focus-visible:outline-2 focus-visible:outline-monti-contrast/60 focus-visible:outline-offset-2";
+	return (
+		<div
+			data-slot="property-file-add"
+			className={cn(
+				"flex h-monti-control-md min-w-0 items-center gap-monti-8 border-transparent border-b text-monti-body",
+				FIELD_INSET,
+				"pr-0",
+			)}
+		>
+			<button type="button" className={cn(press, "flex shrink-0 items-center gap-monti-6")}>
+				<Add aria-hidden className="-ml-[3.5px] size-3.5" />
+				{children}
+			</button>
+			{rest && (
+				<button type="button" className={cn(press, "ml-auto min-w-0 truncate text-monti-note")}>
+					{rest}
+				</button>
 			)}
 		</div>
 	);
@@ -238,4 +268,13 @@ function SearchPreview({ title, url, description }: { title: string; url: string
 	);
 }
 
-export { PropertyCover, PropertyFile, PropertyNote, PropertyRow, PropertySection, PropertyValue, SearchPreview };
+export {
+	PropertyCover,
+	PropertyFile,
+	PropertyFileAdd,
+	PropertyNote,
+	PropertyRow,
+	PropertySection,
+	PropertyValue,
+	SearchPreview,
+};
