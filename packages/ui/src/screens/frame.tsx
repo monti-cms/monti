@@ -68,6 +68,7 @@ function Row({
 	name,
 	count,
 	tone,
+	countLabel,
 	folders,
 }: {
 	place: ScreenPlace;
@@ -76,6 +77,8 @@ function Row({
 	name: string;
 	count?: string;
 	tone?: "danger";
+	/** The word before the count ("실패"). */
+	countLabel?: string;
 	folders?: readonly ScreenFolder[];
 }) {
 	const active = place === open && !folders?.some((folder) => folder.active);
@@ -87,7 +90,11 @@ function Row({
 			>
 				{icon}
 				<span>{name}</span>
-				{count ? <SidebarMenuBadge tone={tone}>{count}</SidebarMenuBadge> : null}
+				{count ? (
+					<SidebarMenuBadge tone={tone} label={countLabel}>
+						{count}
+					</SidebarMenuBadge>
+				) : null}
 			</SidebarMenuButton>
 			{folders && folders.length > 0 && (
 				<SidebarMenuSub aria-label="폴더">
@@ -125,7 +132,14 @@ export function ScreenFrame({
 	panel?: React.ReactNode;
 	children?: React.ReactNode;
 }) {
-	const row = (place: ScreenPlace, icon: React.ReactNode, name: string, count?: string, tone?: "danger") => (
+	const row = (
+		place: ScreenPlace,
+		icon: React.ReactNode,
+		name: string,
+		count?: string,
+		tone?: "danger",
+		countLabel?: string,
+	) => (
 		<Row
 			place={place}
 			open={open}
@@ -133,6 +147,7 @@ export function ScreenFrame({
 			name={name}
 			count={count}
 			tone={tone}
+			countLabel={countLabel}
 			folders={place === open ? folders : undefined}
 		/>
 	);
@@ -157,7 +172,7 @@ export function ScreenFrame({
 						<SidebarMenu aria-label="관리">
 							{row("trash", <TrashCan />, "휴지통", "2")}
 							{/* 실패한 전송은 그것을 보이는 기록에서 센다(위험색, sidebar.md). */}
-							{row("activity", <RecentlyViewed />, "활동 기록", "25", "danger")}
+							{row("activity", <RecentlyViewed />, "활동 기록", "25", "danger", "실패")}
 							{row("tools", <Tools />, "도구")}
 							{row("settings", <SettingsAdjust />, "설정")}
 						</SidebarMenu>

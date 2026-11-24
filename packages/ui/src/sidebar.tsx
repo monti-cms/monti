@@ -533,11 +533,15 @@ const cutBox = (row: React.ReactElement) => row as React.ReactElement<React.HTML
 /** The count at the end of a row: mono, small and quiet, in the flow of the row, so a long name is cut before it. */
 function SidebarMenuBadge({
 	tone = "default",
+	label,
 	className,
+	children,
 	...props
 }: React.ComponentProps<"span"> & {
 	/** `danger` for a count of what failed (failed deliveries). */
 	tone?: "default" | "danger";
+	/** A word that says what the count counts, before it in the sans ("실패 25": the failed deliveries on "활동 기록"). The count stays mono. */
+	label?: React.ReactNode;
 }) {
 	return (
 		<span
@@ -545,7 +549,16 @@ function SidebarMenuBadge({
 			data-sidebar="menu-badge"
 			className={cn(NAV_ROW_END, tone === "danger" && "text-monti-danger", className)}
 			{...props}
-		/>
+		>
+			{label ? (
+				<>
+					<span data-slot="sidebar-menu-badge-label" className="font-sans">
+						{label}
+					</span>{" "}
+				</>
+			) : null}
+			{children}
+		</span>
 	);
 }
 

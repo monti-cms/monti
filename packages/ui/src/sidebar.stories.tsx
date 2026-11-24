@@ -126,10 +126,16 @@ function Nav({
 							</SidebarMenuButton>
 						</SidebarMenuItem>
 						<SidebarMenuItem>
-							<SidebarMenuButton tooltip="활동 기록 1" railDot="실패한 전송" render={<RouterLink href="#activity" />}>
+							<SidebarMenuButton
+								tooltip="활동 기록 실패 1"
+								railDot="실패한 전송"
+								render={<RouterLink href="#activity" />}
+							>
 								<RecentlyViewed />
 								<span>활동 기록</span>
-								<SidebarMenuBadge tone="danger">1</SidebarMenuBadge>
+								<SidebarMenuBadge tone="danger" label="실패">
+									1
+								</SidebarMenuBadge>
 							</SidebarMenuButton>
 						</SidebarMenuItem>
 						<SidebarMenuItem>
