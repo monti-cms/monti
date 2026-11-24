@@ -587,9 +587,6 @@ function TableCell({
 				// high by its own height, not by its padding and its line: the row is 40px with its rule, whatever the pieces are (measured in
 				// `layout.browser.test.tsx`). A cell that holds a picture or wraps over lines takes its height from them and keeps the 10px above and below.
 				"relative h-monti-row whitespace-nowrap px-monti-10 py-0 align-middle *:align-middle first:pl-monti-12 last:pr-monti-12 has-[[data-slot=row-thumb]]:h-auto has-[[data-slot=row-thumb]]:py-monti-10 [&:has([role=checkbox])]:pr-0",
-				// 행 끝 칸의 ⋯: 칸의 끝 여백을 두지 않고 버튼 상자가 안쪽 여백과 점 둘레의 빈 곳만큼 밖으로 나가, 보이는 점의 끝이 행의 선이 끝나는 곳에
-				// 선다(`IconButton edge="end"`, 2026-11-24 소유자 결정). 누르는 자리는 같은 상자다.
-				"last:has-[>[data-slot=row-actions]]:pr-0 last:[&>[data-slot=row-actions]>:last-child]:-me-(--monti-glyph-pull)",
 				ALIGN[align],
 				// The row's check hangs in the left margin, so its cell does not clip. In a row with a link the cells are static and the check stands on the row
 				// itself: there the cell clips as any other, and a first column dragged narrow keeps its words in.

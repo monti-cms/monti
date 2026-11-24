@@ -1,6 +1,5 @@
 import type * as React from "react";
 import { cn } from "./cn";
-import { IconButtonContext } from "./icon-button";
 
 /**
  * The saved keys of a tools page (API keys), as lines and space, no bordered table: a `border-muted` line above the first row and under every row.
@@ -70,10 +69,7 @@ function KeyRow({
 				{action}
 				{status}
 			</div>
-			{/* ⋯는 상자가 아니라 보이는 점의 끝이 목록의 선이 끝나는 곳에 선다(`IconButton edge="end"`). */}
-			<div className="flex justify-end [&_[data-slot=icon-button]]:text-monti-faint">
-				<IconButtonContext value={{ edge: "end" }}>{more}</IconButtonContext>
-			</div>
+			<div className="flex justify-end [&_[data-slot=icon-button]]:text-monti-faint">{more}</div>
 		</div>
 	);
 }

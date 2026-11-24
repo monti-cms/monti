@@ -181,7 +181,7 @@ function PageSizeMenu({
 				render={<TextButton variant="quiet" size="caption" />}
 			>
 				{options.find((option) => option.value === value)?.label ?? value}
-				<Caret edge="end" />
+				<Caret />
 			</DropdownMenuTrigger>
 			<DropdownMenuContent side="top" align="start">
 				<DropdownMenuRadioGroup value={String(value)} onValueChange={(next) => onValueChange?.(Number(next))}>
