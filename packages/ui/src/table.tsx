@@ -52,11 +52,11 @@ function Table({
 					layout === "fixed" && "table-fixed",
 					// With no widths set, the columns take their content's width and a column that ends in "…" (the title) takes what is left.
 					layout === "auto" && !columns && "[&_[data-truncate]]:w-full",
-					// The row's rule does not stay with stuck cells: each cell draws it at its own foot, so the rows pass under a line.
+					// The row's rule does not stay with stuck cells: each cell draws it just under its foot (where the row's own rule falls, as in the mockup), so the rows pass under a line.
 					// What the keyboard comes to in a row is scrolled out from under the stuck header, not left behind it: the head's 40px and the row's
 					// own room over its words. (The scroll box's own 8px only clears its edge, which the header covers.)
 					(stickyHeader ?? container === "none") &&
-						"[&_tbody_:is(a,button,input,[tabindex])]:scroll-mt-14 [&_thead_th]:sticky [&_thead_th]:top-0 [&_thead_th]:z-10 [&_thead_th]:bg-monti-page [&_thead_th]:shadow-[inset_0_-1px_0_var(--monti-border-default)] [&_thead_tr]:border-b-transparent",
+						"[&_tbody_:is(a,button,input,[tabindex])]:scroll-mt-14 [&_thead_th]:sticky [&_thead_th]:top-0 [&_thead_th]:z-10 [&_thead_th]:bg-monti-page [&_thead_th]:before:absolute [&_thead_th]:before:inset-x-0 [&_thead_th]:before:top-full [&_thead_th]:before:h-px [&_thead_th]:before:bg-(--monti-border-default) [&_thead_tr]:border-b-transparent",
 					// The head of the ⋯ column sticks with the ⋯ below it, so the head's + lines up with it.
 					"[&:has([data-slot=row-actions])_thead_th:last-child]:sticky [&:has([data-slot=row-actions])_thead_th:last-child]:right-0 [&:has([data-slot=row-actions])_thead_th:last-child]:z-11 [&:has([data-slot=row-actions])_thead_th:last-child]:bg-[var(--monti-ground,var(--monti-bg-page))] [[data-clipping]_&:has([data-slot=row-actions])_thead_th:last-child]:shadow-[inset_1px_0_0_var(--monti-border-muted)]",
 					className,
@@ -449,7 +449,9 @@ function RowTitle({
 				 */
 				<span
 					className={cn(
-						"flex min-w-0 grow basis-0 items-baseline gap-x-monti-12",
+						// A note alone (a folder's count "4편") stands 8px after the title, as in the mockup; an address 12px.
+						"flex min-w-0 grow basis-0 items-baseline",
+						address ? "gap-x-monti-12" : "gap-x-monti-8",
 						!editing && "h-lh flex-wrap overflow-hidden",
 					)}
 				>
