@@ -133,7 +133,7 @@ function Nav({
 							>
 								<RecentlyViewed />
 								<span>활동 기록</span>
-								<SidebarMenuBadge tone="danger" label="실패">
+								<SidebarMenuBadge tone="warning" label="실패">
 									1
 								</SidebarMenuBadge>
 							</SidebarMenuButton>

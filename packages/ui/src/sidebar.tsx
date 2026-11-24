@@ -538,8 +538,8 @@ function SidebarMenuBadge({
 	children,
 	...props
 }: React.ComponentProps<"span"> & {
-	/** `danger` for a count of what failed (failed deliveries). */
-	tone?: "default" | "danger";
+	/** `warning` for a count of what failed (failed deliveries: amber as the mockup draws "실패 25", 2026-11-24 owner). `danger` is kept for callers that still pass it. */
+	tone?: "default" | "warning" | "danger";
 	/** A word that says what the count counts, before it in the sans ("실패 25": the failed deliveries on "활동 기록"). The count stays mono. */
 	label?: React.ReactNode;
 }) {
@@ -547,7 +547,12 @@ function SidebarMenuBadge({
 		<span
 			data-slot="sidebar-menu-badge"
 			data-sidebar="menu-badge"
-			className={cn(NAV_ROW_END, tone === "danger" && "text-monti-danger", className)}
+			className={cn(
+				NAV_ROW_END,
+				tone === "warning" && "text-monti-warning",
+				tone === "danger" && "text-monti-danger",
+				className,
+			)}
 			{...props}
 		>
 			{label ? (

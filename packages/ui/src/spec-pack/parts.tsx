@@ -359,7 +359,7 @@ function SidebarItem({ active, children }: { active?: boolean; children?: React.
 }
 
 /** The count at the end of a row. */
-function SidebarCount({ tone, children }: { tone?: "default" | "danger"; children?: React.ReactNode }) {
+function SidebarCount({ tone, children }: { tone?: "default" | "warning" | "danger"; children?: React.ReactNode }) {
 	return <SidebarMenuBadge tone={tone}>{children}</SidebarMenuBadge>;
 }
 

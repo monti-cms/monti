@@ -76,7 +76,7 @@ function Row({
 	icon: React.ReactNode;
 	name: string;
 	count?: string;
-	tone?: "danger";
+	tone?: "warning";
 	/** The word before the count ("실패"). */
 	countLabel?: string;
 	folders?: readonly ScreenFolder[];
@@ -137,7 +137,7 @@ export function ScreenFrame({
 		icon: React.ReactNode,
 		name: string,
 		count?: string,
-		tone?: "danger",
+		tone?: "warning",
 		countLabel?: string,
 	) => (
 		<Row
@@ -171,8 +171,8 @@ export function ScreenFrame({
 					<SidebarFooter>
 						<SidebarMenu aria-label="관리">
 							{row("trash", <TrashCan />, "휴지통", "2")}
-							{/* 실패한 전송은 그것을 보이는 기록에서 센다(위험색, sidebar.md). */}
-							{row("activity", <RecentlyViewed />, "활동 기록", "25", "danger", "실패")}
+							{/* 실패한 전송은 그것을 보이는 기록에서 센다(시안의 호박색, 2026-11-24 소유자, sidebar.md). */}
+							{row("activity", <RecentlyViewed />, "활동 기록", "25", "warning", "실패")}
 							{row("tools", <Tools />, "도구")}
 							{row("settings", <SettingsAdjust />, "설정")}
 						</SidebarMenu>
