@@ -2,12 +2,21 @@
 
 import { Select as SelectPrimitive } from "@base-ui/react/select";
 import type * as React from "react";
-import { Caret } from "./caret";
 import { cn } from "./cn";
 import { CutWords } from "./cut-words";
 import { FIELD_HOVER, FIELD_INSET } from "./hover";
 import { ChevronDown, ChevronUp } from "./icons";
-import { MENU_CARD, MENU_ITEM, MENU_LABEL, MENU_MOTION, MENU_SEPARATOR, MenuTick } from "./menu-parts";
+import {
+	MENU_CARD,
+	MENU_ITEM,
+	MENU_LABEL,
+	MENU_MOTION,
+	MENU_SEPARATOR,
+	MenuTick,
+	PICK_CARD_PAD,
+	PICK_ROW_INSET,
+	PICK_SEPARATOR,
+} from "./menu-parts";
 import { menuWords } from "./menu-words";
 import { FIRST_PASS, FIT_HEIGHT, usePlacementPadding } from "./placement";
 import { useProposalDescription } from "./proposal-cue";
@@ -78,9 +87,16 @@ function SelectTrigger({
 	size = "default",
 	width = "fit",
 	proposal = false,
+	caret = "always",
 	children,
 	...props
 }: SelectPrimitive.Trigger.Props & {
+	/**
+	 * `always`: the chevron stands at the end at rest (a settings row's model select). `active`: it shows only under the pointer, with the focus and
+	 * while the list is open, as a property panel's values read as plain words at rest (the 2026-11 redesign's `media.html`, `panel.html`). Its room
+	 * is kept either way, so nothing moves when it shows.
+	 */
+	caret?: "always" | "active";
 	size?: "sm" | "md" | "default";
 	/** `full` in a form, beside full-width inputs; `fit` in a toolbar, a filter or at the end of a row (a review's choice, a field's rule). */
 	width?: "fit" | "full";
@@ -93,18 +109,26 @@ function SelectTrigger({
 			data-size={size}
 			data-width={width}
 			data-proposal={proposal || undefined}
+			data-caret={caret}
 			aria-description={useProposalDescription(proposal)}
 			className={cn(
 				SELECT_TRIGGER,
-				"data-proposal:border-monti-proposal data-proposal:border-b-[1.5px] data-placeholder:text-monti-faint data-proposal:text-monti-proposal data-proposal:focus-visible:shadow-[inset_0_-0.5px_0_var(--monti-fg-proposal)]",
+				"data-proposal:border-monti-proposal data-proposal:border-b-[1.5px] data-placeholder:text-monti-faint data-proposal:text-monti-proposal data-proposal:focus-visible:shadow-[inset_0_-0.5px_0_var(--monti-fg-proposal)] [&[data-caret=active]:focus-visible_[data-slot=select-icon]]:visible [&[data-caret=active]:hover_[data-slot=select-icon]]:visible [&[data-caret=active][aria-expanded=true]_[data-slot=select-icon]]:visible [&[data-caret=active]_[data-slot=select-icon]]:invisible",
 				width === "full" ? "w-full" : "w-fit",
 				className,
 			)}
 			{...props}
 		>
 			{children}
-			<SelectPrimitive.Icon data-slot="select-icon" className="flex">
-				<Caret solo className="size-3.5" />
+			{/*
+			 * 페이지의 선택 칸: 16px 갈매기가 밑줄 끝보다 3px 안에서 끝난다(2026-11 시안의 모델 선택). 대화상자 안(키 추가의 서비스): 14px로 작아지고
+			 * 오른쪽 끝이 밑줄 끝에 맞닿는다(시안 v7 keys7-add). 값 칸이 남는 폭을 받으므로 크기가 바뀌어도 아무것도 움직이지 않는다.
+			 */}
+			<SelectPrimitive.Icon
+				data-slot="select-icon"
+				className="-mr-[5px] in-data-[slot=dialog-content]:mr-[calc(var(--monti-field-end,var(--monti-space-8))*-1)] flex text-monti-faint"
+			>
+				<ChevronDown aria-hidden className="in-data-[slot=dialog-content]:size-monti-icon-sm size-monti-icon-md" />
 			</SelectPrimitive.Icon>
 		</SelectPrimitive.Trigger>
 	);
@@ -118,9 +142,13 @@ function SelectContent({
 	align = "start",
 	alignOffset = 0,
 	alignItemWithTrigger = false,
+	width = "default",
 	...props
 }: SelectPrimitive.Popup.Props &
-	Pick<SelectPrimitive.Positioner.Props, "align" | "alignOffset" | "side" | "sideOffset" | "alignItemWithTrigger">) {
+	Pick<SelectPrimitive.Positioner.Props, "align" | "alignOffset" | "side" | "sideOffset" | "alignItemWithTrigger"> & {
+		/** `default`: at least a menu's width (240px). `field`: as wide as its field, edge to edge with it (a property panel's value, 2026-11-24). */
+		width?: "default" | "field";
+	}) {
 	const placement = usePlacementPadding();
 	return (
 		<SelectPrimitive.Portal>
@@ -142,7 +170,9 @@ function SelectContent({
 						MENU_MOTION,
 						"relative isolate z-50",
 						FIT_HEIGHT,
-						"w-max min-w-[max(var(--monti-width-menu),var(--anchor-width))] max-w-(--available-width) overflow-y-auto overflow-x-hidden p-monti-4 data-[align-trigger=true]:animate-none",
+						width === "field" ? "w-(--anchor-width)" : "w-max min-w-[max(var(--monti-width-menu),var(--anchor-width))]",
+						"max-w-(--available-width) overflow-y-auto overflow-x-hidden data-[align-trigger=true]:animate-none",
+						PICK_CARD_PAD,
 						className,
 					)}
 					{...props}
@@ -157,13 +187,23 @@ function SelectContent({
 }
 
 function SelectLabel({ className, ...props }: SelectPrimitive.GroupLabel.Props) {
-	return <SelectPrimitive.GroupLabel data-slot="select-label" className={cn(MENU_LABEL, className)} {...props} />;
+	return (
+		<SelectPrimitive.GroupLabel
+			data-slot="select-label"
+			className={cn(MENU_LABEL, PICK_ROW_INSET, className)}
+			{...props}
+		/>
+	);
 }
 
 function SelectItem({ className, children, ...props }: SelectPrimitive.Item.Props) {
 	return (
-		<SelectPrimitive.Item data-slot="select-item" className={cn(MENU_ITEM, "w-full", className)} {...props}>
-			<SelectPrimitive.ItemText className="flex min-w-0 flex-1 gap-monti-8 whitespace-nowrap">
+		<SelectPrimitive.Item
+			data-slot="select-item"
+			className={cn(MENU_ITEM, PICK_ROW_INSET, "w-full", className)}
+			{...props}
+		>
+			<SelectPrimitive.ItemText className="flex min-w-0 flex-1 items-center gap-monti-8 whitespace-nowrap">
 				{menuWords(children)}
 			</SelectPrimitive.ItemText>
 			<SelectPrimitive.ItemIndicator render={<MenuTick />} />
@@ -175,7 +215,7 @@ function SelectSeparator({ className, ...props }: SelectPrimitive.Separator.Prop
 	return (
 		<SelectPrimitive.Separator
 			data-slot="select-separator"
-			className={cn("pointer-events-none", MENU_SEPARATOR, className)}
+			className={cn("pointer-events-none", MENU_SEPARATOR, PICK_SEPARATOR, className)}
 			{...props}
 		/>
 	);

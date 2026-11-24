@@ -14,6 +14,7 @@ function PageHeader({
 	address,
 	note,
 	trail,
+	layout = "ruled",
 	className,
 	children,
 	...props
@@ -24,8 +25,40 @@ function PageHeader({
 	/** After the title, in sans: words a person reads (a count, the days left, a time). */
 	note?: React.ReactNode;
 	trail?: React.ReactNode;
+	/**
+	 * `ruled` (the default): the title over the ink rule. `bar`: the head of a page that runs the area's whole width (a list, the settings tabs): one row
+	 * 84px tall (12px of it above), the title and its slots on the row's middle, the actions 8px apart at its end, no rule under it.
+	 */
+	layout?: "ruled" | "bar";
 }) {
 	const assistant = useAssistantSlot();
+	if (layout === "bar")
+		return (
+			<header
+				data-slot="page-header"
+				data-layout="bar"
+				className={cn("flex h-[84px] shrink-0 items-center gap-monti-12 pt-monti-12", className)}
+				{...props}
+			>
+				<h1 className="min-w-0 text-monti-page">{title}</h1>
+				{address && (
+					<span data-slot="page-header-address" className="mt-[3px] font-mono text-monti-faint text-monti-note">
+						{address}
+					</span>
+				)}
+				{note && (
+					<span data-slot="page-header-note" className="mt-[3px] shrink-0 text-monti-faint text-monti-note">
+						{note}
+					</span>
+				)}
+				{(children || assistant) && (
+					<span className="ml-auto flex shrink-0 items-center gap-monti-8">
+						{children}
+						{assistant}
+					</span>
+				)}
+			</header>
+		);
 	return (
 		<header
 			data-slot="page-header"
@@ -67,6 +100,9 @@ function PageHeader({
  * scroller, not in it, so the scroller ends at the panel's edge and the table never runs under it. A row's ⋯ sticks to the scroller's right edge (`TableRow`),
  * so it stays in reach (AT-01). The area is what is beside the sidebar and any docked panel, measured on the
  * nearest `container` (the admin frame makes it), so a folded rail or an open panel runs the same rule on the room that is left.
+ *
+ * `width="full"` is the page that runs the area's whole width, 40px in at the sides and nothing above (its head is a `PageHeader layout="bar"`, which
+ * keeps its own room above): the list, media and settings screens of the 2026-11 redesign.
  */
 function PageColumn({
 	width = "content",
@@ -74,7 +110,7 @@ function PageColumn({
 	children,
 	ref,
 	...props
-}: React.ComponentProps<"div"> & { width?: "content" | "list" }) {
+}: React.ComponentProps<"div"> & { width?: "content" | "list" | "full" }) {
 	const own = React.useRef<HTMLDivElement | null>(null);
 	// Whether the table runs past the column (under the sticky cell of a row's ⋯, which stands at the page area's edge): `data-clipping`, which that cell's
 	// edge line reads.
@@ -108,7 +144,11 @@ function PageColumn({
 			}}
 			data-slot="page-column"
 			data-width={width}
-			className={cn("flex min-w-0 flex-1 flex-col px-monti-16 pt-monti-40 md:px-monti-48", className)}
+			className={cn(
+				"flex min-w-0 flex-1 flex-col",
+				width === "full" ? "px-monti-40" : "px-monti-16 pt-monti-40 md:px-monti-48",
+				className,
+			)}
 			{...props}
 		>
 			{/* The room below the page is this box's own, not the column's: the column is held to the page's height, and room that was the column's ended above
@@ -118,7 +158,7 @@ function PageColumn({
 					"mx-auto flex w-full flex-1 flex-col pb-monti-40",
 					width === "list"
 						? "max-w-[clamp(var(--monti-width-content),calc(100cqw_-_480px),var(--monti-width-list))]"
-						: "max-w-monti-content",
+						: width === "content" && "max-w-monti-content",
 				)}
 			>
 				{children}
@@ -157,17 +197,28 @@ type SelectAll = {
  */
 function PageToolbar({
 	inset = false,
+	size = "toolbar",
 	className,
 	children,
 	...props
 }: React.ComponentProps<"div"> & {
 	inset?: boolean;
+	/**
+	 * `toolbar` (the default): 48px. `head`: as tall as a table's head (36px, `height-thead`), its words 12px at 500 and faint, one line under it, as a
+	 * list's column heads: the filter row of the media library (2026-11 redesign), which stands where a table's head would. 그 줄의 조건은 8px 안쪽 여백을 가진
+	 * 상자(`FilterButton size="caption"`, `FilterChip`)라 사이는 4px다: 이름 사이의 거리는 앞의 20px(끝 무리 12px)과 같다(2026-11-24).
+	 */
+	size?: "toolbar" | "head";
 }) {
 	return (
 		<div
 			data-slot="page-toolbar"
+			data-size={size}
 			className={cn(
-				"flex min-h-monti-toolbar flex-wrap items-center gap-monti-20 border-monti-default border-b",
+				"flex flex-wrap items-center gap-monti-20 border-monti-default border-b",
+				size === "head"
+					? "h-monti-thead shrink-0 flex-nowrap gap-monti-4 font-medium text-monti-caption text-monti-faint"
+					: "min-h-monti-toolbar",
 				inset && "px-monti-12",
 				className,
 			)}
@@ -183,7 +234,10 @@ function PageToolbarEnd({ className, ...props }: React.ComponentProps<"span">) {
 	return (
 		<span
 			data-slot="page-toolbar-end"
-			className={cn("ml-auto flex flex-wrap items-center justify-end gap-x-monti-20 gap-y-monti-8", className)}
+			className={cn(
+				"ml-auto flex flex-wrap items-center justify-end gap-x-monti-20 gap-y-monti-8 [[data-size=head]>&]:gap-x-monti-4",
+				className,
+			)}
 			{...props}
 		/>
 	);

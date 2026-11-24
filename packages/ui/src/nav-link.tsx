@@ -23,6 +23,7 @@ export const NAV_ROW_END =
  * shows in the left margin while the pointer or the keyboard is on the link; `drag` carries the sortable's transform while it is moved.
  */
 function NavLink({
+	icon,
 	active = false,
 	dot,
 	note,
@@ -33,6 +34,8 @@ function NavLink({
 	children,
 	...props
 }: Omit<React.ComponentProps<"div">, "children" | "onClick"> & {
+	/** An icon before the name (16px, the settings collections' rail: 2026-11 redesign `settings-basics.html`). */
+	icon?: React.ReactNode;
 	active?: boolean;
 	/** The name of the change dot for screen readers; the dot shows only when it is given. */
 	dot?: string;
@@ -63,6 +66,7 @@ function NavLink({
 				onClick={onSelect}
 				className={cn(NAV_ROW, "cursor-pointer text-monti-muted")}
 			>
+				{icon && <span className="flex shrink-0 [&_svg]:size-4">{icon}</span>}
 				<CutWords className="min-w-0 truncate">{children}</CutWords>
 				{dot && <ChangeDot label={dot} className="-ml-monti-4" />}
 				{note && <span className={NAV_ROW_END}>{note}</span>}

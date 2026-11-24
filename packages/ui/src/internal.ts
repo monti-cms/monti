@@ -6,6 +6,7 @@
  * Values come only from the tokens: see `styles/theme.css` for the names and the README for the rules.
  */
 
+export { AddressExample, AddressExampleRow, AddressPart } from "./address-example";
 export { Affix } from "./affix";
 export { AiFailed, AiWorking } from "./ai-status";
 export {
@@ -14,6 +15,8 @@ export {
 	AlertDialogCancel,
 	AlertDialogContent,
 	AlertDialogDescription,
+	AlertDialogEffect,
+	AlertDialogEffects,
 	AlertDialogFooter,
 	AlertDialogHeader,
 	AlertDialogOverlay,
@@ -71,6 +74,7 @@ export {
 	ComboboxItem,
 	ComboboxLabel,
 	ComboboxList,
+	ComboboxScroll,
 	ComboboxSeparator,
 	ComboboxTrigger,
 	ComboboxValue,
@@ -130,7 +134,7 @@ export {
 } from "./dialog";
 export { DialogFormFooter } from "./dialog-form-footer";
 export { DragHandle } from "./drag-handle";
-export { DropArea } from "./drop-area";
+export { DropArea, DropEmpty } from "./drop-area";
 export {
 	DropdownMenu,
 	DropdownMenuCheckboxItem,
@@ -150,8 +154,9 @@ export {
 	DropdownMenuTrigger,
 } from "./dropdown-menu";
 export { EditorBody } from "./editor-body";
-export { EditorHeader, EditorTitleRule } from "./editor-header";
+export { EditorBackButton, EditorHeader, EditorPath, EditorTitleRule } from "./editor-header";
 export { DropLine, EditorMargin, EditorMarginLine, HeldBlock } from "./editor-overlay";
+export { EditorToolbar, EditorToolbarGroup, EditorToolbarSeparator } from "./editor-toolbar";
 export { Empty, EmptyStep } from "./empty";
 export { EntryStatus, type EntryStatusKind } from "./entry-status";
 export { ErrorBox } from "./error-box";
@@ -161,6 +166,7 @@ export {
 	FormFieldDescription,
 	FormFieldError,
 	FormFieldGroup,
+	FormFieldHint,
 	FormFieldLabel,
 	FormFieldLegend,
 	FormFieldSet,
@@ -173,6 +179,7 @@ export { FilePreview } from "./file-preview";
 export { FileTree, FileTreeRow } from "./file-tree";
 export { FileUseList, FileUseRow } from "./file-use-row";
 export { FilterButton } from "./filter-button";
+export { FilterChip } from "./filter-chip";
 export { FloatingBar, FloatingBarButton } from "./floating-bar";
 export {
 	FolderTab,
@@ -195,8 +202,10 @@ export { Icon } from "./icon";
 export { IconButton } from "./icon-button";
 export { Image } from "./image";
 export { Input } from "./input";
+export { ControlRow, KeyList, KeyListEmpty, KeyRow, LetterMark } from "./key-list";
 export { Label, RequiredMark } from "./label";
 export { DEFAULT_UI_LABELS, type UiLabels, UiLabelsProvider, useUiLabels } from "./labels";
+export { LanguageList, LanguageListAdd, LanguageListFlag, LanguageListNote, LanguageListRow } from "./language-list";
 export { LanguageRow, LanguageSource } from "./language-row";
 export { type LayoutProps, layoutVariants } from "./layout";
 export { List, ListItem } from "./list";
@@ -233,8 +242,10 @@ export {
 	type SelectAll,
 	type SelectAllState,
 } from "./page-header";
+export { PagePath, type PagePathStep } from "./page-path";
 export {
 	ListFooter,
+	ListFooterEnd,
 	PageSizeMenu,
 	Pagination,
 	PaginationContent,
@@ -249,6 +260,16 @@ export { PickList, PickListItem, PickListLabel, PickListSeparator } from "./pick
 export { Popover, PopoverContent, PopoverDescription, PopoverHeader, PopoverTitle, PopoverTrigger } from "./popover";
 export { Progress } from "./progress";
 export { PropertyGroup, PropertyPanel } from "./property-list";
+export {
+	PropertyCover,
+	PropertyFile,
+	PropertyFileAdd,
+	PropertyNote,
+	PropertyRow,
+	PropertySection,
+	PropertyValue,
+	SearchPreview,
+} from "./property-section";
 export { ProposalBar } from "./proposal-bar";
 export { ProposalBubble, ProposalBubbleDock } from "./proposal-bubble";
 export { ProposalCard } from "./proposal-card";
@@ -275,6 +296,7 @@ export {
 	SelectValue,
 } from "./select";
 export { Separator } from "./separator";
+export { SettingRow } from "./setting-row";
 export {
 	Sheet,
 	SheetBody,
@@ -346,6 +368,17 @@ export { Toaster, toast } from "./toast";
 export { TodoDone, TodoItem } from "./todo-item";
 export type { Background, Spacing } from "./tokens.generated";
 export { type ToolCallDetail, ToolCallLine, type ToolCallStatus } from "./tool-call-line";
+export {
+	ToolList,
+	ToolListAdd,
+	ToolListHead,
+	ToolListItem,
+	ToolListSeparator,
+	ToolPreview,
+	ToolPreviewMenu,
+	ToolPreviewMenuItem,
+	ToolPreviewSelection,
+} from "./tool-list";
 export { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./tooltip";
 export { TrashRowDate, TrashRowTitle } from "./trash-row";
 export { UploadingImage } from "./uploading-image";

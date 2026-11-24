@@ -26,6 +26,11 @@ export const Typed: Story = { args: { defaultValue: "sk-ant-api03-Qx7mR2vLp9TzW4
 /** The service refused it: the line turns danger (the message under it is a `FormFieldError`). */
 export const Invalid: Story = { args: { defaultValue: "sk-ant-api03-Qx7mR2vLp9TzW4nB8cKd", "aria-invalid": true } };
 
+/** 서비스가 거부한 키를 다시 연 칸: 앞과 끝 글자만 보이고, 처음 치거나 붙여 넣은 것이 새 값을 시작한다. 가짜 키다. */
+export const Peek: Story = {
+	args: { defaultValue: "sk-ant-api03-not-a-real-key-Q2a", peek: { start: 13, end: 3 }, "aria-invalid": true },
+};
+
 /** A password (the login screen): the body font, and the browser's password manager may fill it. */
 export const Password: Story = {
 	args: {

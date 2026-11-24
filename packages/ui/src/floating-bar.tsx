@@ -12,10 +12,11 @@ export const BAR =
 
 /**
  * A 28px button of a bar; the width is the bar's part to set. Pointed at it takes `bg-muted` (a ghost button's ground), while pressed and while on
- * (a format that is on, a card it opened) `bg-selected` (tokens.md, the pointer's states): pointing never looks like on.
+ * (a format that is on, a card it opened) `bg-selected` (tokens.md, the pointer's states): pointing never looks like on. On dark a pressed one also
+ * takes a 1px `border-emphasis` ring inside, so the on state reads (as `IconButton`).
  */
 export const BAR_BUTTON =
-	"inline-flex h-monti-control-sm cursor-pointer items-center justify-center rounded-monti-md border-0 bg-transparent p-0 text-monti-muted outline-none transition-colors not-disabled:not-aria-pressed:not-aria-expanded:hover:bg-monti-muted not-disabled:hover:text-monti-default not-disabled:active:bg-monti-selected focus-visible:ring-2 focus-visible:ring-monti-contrast/60 disabled:pointer-events-none disabled:opacity-45 aria-expanded:bg-monti-selected aria-expanded:text-monti-default aria-pressed:bg-monti-selected aria-pressed:text-monti-default data-[tone=danger]:text-monti-danger data-[tone=danger]:not-disabled:hover:bg-monti-danger-muted data-[tone=danger]:not-disabled:hover:text-monti-danger [&_svg:not([class*='size-'])]:size-4";
+	"inline-flex h-monti-control-sm cursor-pointer items-center justify-center rounded-monti-md border-0 bg-transparent p-0 text-monti-muted outline-none transition-colors not-disabled:not-aria-pressed:not-aria-expanded:hover:bg-monti-muted not-disabled:hover:text-monti-default not-disabled:active:bg-monti-selected focus-visible:ring-2 focus-visible:ring-monti-contrast/60 disabled:pointer-events-none disabled:opacity-45 aria-expanded:bg-monti-selected aria-expanded:text-monti-default aria-pressed:bg-monti-selected aria-pressed:text-monti-default data-[tone=danger]:text-monti-danger data-[tone=danger]:not-disabled:hover:bg-monti-danger-muted data-[tone=danger]:not-disabled:hover:text-monti-danger monti-dark:aria-pressed:not-focus-visible:ring-1 monti-dark:aria-pressed:not-focus-visible:ring-inset monti-dark:aria-pressed:not-focus-visible:ring-monti-emphasis [&_svg:not([class*='size-'])]:size-4";
 
 /**
  * A small row of tools that floats over the text: above selected words (the inline formats, then the assistant's request) or at the top left of a block
@@ -45,6 +46,7 @@ function FloatingBarButton({
 	tone,
 	trigger,
 	named = false,
+	marked = false,
 	className,
 	children,
 	...props
@@ -56,8 +58,10 @@ function FloatingBarButton({
 	/** The key combination that does the same (`["mod", "B"]`), shown in the tooltip. */
 	shortcut?: ShortcutKeys;
 	pressed?: boolean;
-	/** `danger` for a button that removes something. */
-	tone?: "danger";
+	/** `danger` for a button that removes something; `proposal` for the assistant's ✦ (blue, and blue under the pointer too: blue is the assistant's only). */
+	tone?: "danger" | "proposal";
+	/** A 2px ink ring: the button a setting just moved (the editor tools' preview, while a row is dragged). */
+	marked?: boolean;
 	trigger?: (button: ReactElement) => ReactElement;
 	children: ReactNode;
 }) {
@@ -70,7 +74,13 @@ function FloatingBarButton({
 			data-tone={tone}
 			// Do not take the selection or the focus from the text on press.
 			onMouseDown={(event) => event.preventDefault()}
-			className={cn(BAR_BUTTON, "min-w-7 px-monti-4 text-monti-body", named && "gap-monti-4 px-monti-8", className)}
+			data-marked={marked || undefined}
+			className={cn(
+				BAR_BUTTON,
+				"min-w-7 px-monti-4 text-monti-body data-[tone=proposal]:text-monti-proposal data-marked:shadow-[0_0_0_2px_var(--monti-border-contrast)] data-[tone=proposal]:not-disabled:hover:text-monti-proposal",
+				named && "gap-monti-4 px-monti-8",
+				className,
+			)}
 			{...props}
 		/>
 	);

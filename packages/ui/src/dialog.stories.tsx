@@ -44,6 +44,28 @@ export const Form: Story = {
 	),
 };
 
+/** `size="md"` (480px) and `place="top"` (112px from the top): a form whose list opens downward keeps the room under it, and its head stays put. */
+export const Top: Story = {
+	render: () => (
+		<Dialog defaultOpen>
+			<DialogContent size="md" place="top" form>
+				<DialogHeader>
+					<DialogTitle>키 추가</DialogTitle>
+					<DialogDescription>추가하면 서비스에 한 번 접속해 키를 확인합니다.</DialogDescription>
+				</DialogHeader>
+				<FormField>
+					<FormFieldLabel htmlFor="top-key">키</FormFieldLabel>
+					<Input id="top-key" placeholder="서비스를 먼저 고르세요" />
+				</FormField>
+				<DialogFooter>
+					<Button variant="ghost">취소</Button>
+					<Button>추가</Button>
+				</DialogFooter>
+			</DialogContent>
+		</Dialog>
+	),
+};
+
 /** When the title alone does not say what the dialog is about, the name follows it after a dot, quiet. */
 export const Of: Story = {
 	render: () => (

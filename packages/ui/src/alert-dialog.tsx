@@ -109,12 +109,46 @@ function AlertDialogCancel({
 	);
 }
 
+/**
+ * 묻는 일이 무엇을 건드리는지 한 줄씩 적는 상자(시안 `settings-lang-source.html`의 원문 바꾸기): 설명 아래, 도구 바탕, `radius-md`, 안쪽 위아래 12px ·
+ * 양옆 14px, 줄 사이 8px, 13px `fg-muted`. 줄은 {@link AlertDialogEffect}다.
+ */
+function AlertDialogEffects({ className, ...props }: React.ComponentProps<"ul">) {
+	return (
+		<ul
+			data-slot="alert-dialog-effects"
+			className={cn(
+				"m-0 flex list-none flex-col gap-monti-8 rounded-monti-md bg-monti-tool px-[14px] py-monti-12 text-monti-label text-monti-muted",
+				className,
+			)}
+			{...props}
+		/>
+	);
+}
+
+/** 건드리는 것 한 줄: 앞에 16px 흐린 아이콘(첫 줄 가운데), 8px 뒤에 문장. 꼭 알아야 할 말은 문장 안에서 먹색 600으로 둔다. */
+function AlertDialogEffect({
+	icon,
+	className,
+	children,
+	...props
+}: React.ComponentProps<"li"> & { icon: React.ReactNode }) {
+	return (
+		<li data-slot="alert-dialog-effect" className={cn("flex items-start gap-monti-8", className)} {...props}>
+			<span className="flex h-[18px] shrink-0 items-center text-monti-faint [&_svg]:size-4">{icon}</span>
+			<span className="min-w-0">{children}</span>
+		</li>
+	);
+}
+
 export {
 	AlertDialog,
 	AlertDialogAction,
 	AlertDialogCancel,
 	AlertDialogContent,
 	AlertDialogDescription,
+	AlertDialogEffect,
+	AlertDialogEffects,
 	AlertDialogFooter,
 	AlertDialogHeader,
 	AlertDialogOverlay,

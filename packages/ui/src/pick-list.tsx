@@ -34,8 +34,9 @@ function PickListItem({
 			data-slot="pick-list-item"
 			className={cn(
 				MENU_ROW,
-				// On the sheet's ground, not in a floating menu: a one-line row there is a pill.
-				"w-full cursor-pointer rounded-monti-full border-0 bg-transparent px-[14px] text-left not-disabled:hover:bg-monti-selected not-disabled:hover:text-monti-default focus-visible:ring-2 focus-visible:ring-monti-contrast/60 focus-visible:ring-inset disabled:pointer-events-none disabled:opacity-45 aria-selected:bg-monti-current aria-selected:text-monti-default",
+				// On the sheet's ground, not in a floating menu: a one-line row there is a pill. Inside a square surface (a dialog) it takes that
+				// surface's family, `radius-md`, as a button does.
+				"w-full cursor-pointer in-data-[shape=square]:rounded-monti-md rounded-monti-full border-0 bg-transparent px-[14px] text-left not-disabled:hover:bg-monti-selected not-disabled:hover:text-monti-default focus-visible:ring-2 focus-visible:ring-monti-contrast/60 focus-visible:ring-inset disabled:pointer-events-none disabled:opacity-45 aria-selected:bg-monti-current aria-selected:text-monti-default",
 				className,
 			)}
 			{...props}

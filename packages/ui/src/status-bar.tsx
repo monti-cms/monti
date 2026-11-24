@@ -31,13 +31,17 @@ const RULE =
 	"bg-[linear-gradient(var(--monti-border-default),var(--monti-border-default))] bg-size-[1px_14px] bg-no-repeat";
 
 const cellVariants = cva(
-	"flex items-center gap-monti-6 whitespace-nowrap border-0 bg-transparent px-monti-16 font-[inherit] text-[length:inherit] text-inherit [&:not(:is([data-slot=status-bar-cell],[data-slot=status-bar-live])~*):not(:is([data-slot=status-bar-cell],[data-slot=status-bar-live])~[data-slot=status-bar-live]>*)]:pl-monti-24 outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-monti-contrast/60 [&:is(a,button):hover]:bg-monti-selected data-popup-open:bg-monti-selected data-popup-open:text-monti-default [&:is(a,button):hover]:text-monti-default [&:is(a,button)]:cursor-pointer",
+	"flex items-center gap-monti-6 whitespace-nowrap border-0 bg-transparent px-monti-16 font-[inherit] text-[length:inherit] text-inherit [&:not(:is([data-slot=status-bar-cell],[data-slot=status-bar-live])~*):not(:is([data-slot=status-bar-cell],[data-slot=status-bar-live])~[data-slot=status-bar-live]>*)]:pl-monti-16 outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-monti-contrast/60 [&:is(a,button):hover]:bg-monti-selected data-popup-open:bg-monti-selected data-popup-open:text-monti-default [&:is(a,button):hover]:text-monti-default [&:is(a,button)]:cursor-pointer",
 	{
 		variants: {
 			/** `end` cells sit after the spacer: the rule is on their left, the last one has room at the right edge (the cells are counted, not their neighbors: an open list leaves focus guards beside its trigger), and they hide first on a narrow screen. */
 			end: {
-				false: cn(RULE, "min-w-0 bg-right"),
-				true: cn(RULE, "shrink-0 bg-left [&:not(:has(~[data-slot=status-bar-cell]))]:pr-monti-24 max-sm:hidden"),
+				// Rules stand only between two cells of one side: not after the last start cell, not before the first end cell (2026-11 editor mockup).
+				false: cn(RULE, "min-w-0 bg-right [&:has(+[data-slot=status-bar-spacer])]:bg-none"),
+				true: cn(
+					RULE,
+					"shrink-0 bg-left [[data-slot=status-bar-spacer]+&]:bg-none [&:not(:has(~[data-slot=status-bar-cell]))]:pr-monti-16 max-sm:hidden",
+				),
 			},
 			/** Something needs attention: a 6px dot before the text, in the warning color, or red while it stops publishing. */
 			tone: {

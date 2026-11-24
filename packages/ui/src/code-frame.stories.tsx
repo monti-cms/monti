@@ -22,16 +22,19 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-const head = (
-	<>
+/** 머리 줄: 언어와 그 뒤 12px의 파일 이름. 글자는 줄 번호 열과 같은 선(상자 안쪽 8px)에서 시작한다(2026-11-24). */
+const name = {
+	language: (
 		<Text variant="caption" tone="muted">
 			TypeScript
 		</Text>
+	),
+	file: (
 		<Text variant="caption" mono>
 			src/counter.ts
 		</Text>
-	</>
-);
+	),
+};
 
 const LINES = [
 	"function count(list: number[]) {",
@@ -48,7 +51,8 @@ const LINES = [
  */
 export const Editing: Story = {
 	args: {
-		head,
+		...name,
+		folds: true,
 		children: (
 			<CodeArea
 				picking
@@ -88,7 +92,8 @@ export const Editing: Story = {
 /** A closed fold: its first line stays with its button turned, the summary of what is hidden after it. */
 export const Folded: Story = {
 	args: {
-		head,
+		...name,
+		folds: true,
 		children: (
 			<CodeArea
 				gutter={[0, 1, 2, 5, 6].map((line) => (
@@ -120,7 +125,7 @@ export const Folded: Story = {
 /** Read-only rows (a comparison): numbers fainter where the site hides them, a fold's button, the code's own marks. */
 export const Rows: Story = {
 	args: {
-		head,
+		...name,
 		children: (
 			<div className="py-monti-8">
 				<CodeLine number={1} readOnly numbersOff>

@@ -64,7 +64,7 @@ export const NothingPicked: Story = {
 	),
 };
 
-/** Full width `md` (32px, frame included), `sm` (28px), inline (as wide as its cells), icons only (as tall as words), disabled. */
+/** Full width `md` (32px, frame included), `sm` (28px), inline (as wide as its cells), icons only (as tall as words), `icons` at `sm` (30px cells, 12px icons: the media library's switch), disabled. */
 export const Variants: Story = {
 	args: { value: "same", onValueChange: () => {}, options: MODES },
 	render: () => (
@@ -81,6 +81,17 @@ export const Variants: Story = {
 				options={[
 					{ value: "grid", label: <Grid aria-hidden className="size-4" />, "aria-label": "격자" },
 					{ value: "list", label: <List aria-hidden className="size-4" />, "aria-label": "목록" },
+				]}
+			/>
+			<Segmented
+				aria-label="보기"
+				size="sm"
+				icons
+				value="grid"
+				onValueChange={() => {}}
+				options={[
+					{ value: "grid", label: <Grid aria-hidden />, "aria-label": "격자" },
+					{ value: "list", label: <List aria-hidden />, "aria-label": "목록" },
 				]}
 			/>
 			<Segmented aria-label="비활성" value="same" onValueChange={() => {}} options={MODES} disabled />

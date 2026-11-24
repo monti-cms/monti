@@ -52,11 +52,11 @@ function Table({
 					layout === "fixed" && "table-fixed",
 					// With no widths set, the columns take their content's width and a column that ends in "…" (the title) takes what is left.
 					layout === "auto" && !columns && "[&_[data-truncate]]:w-full",
-					// The row's rule does not stay with stuck cells: each cell draws it at its own foot, so the rows pass under a line.
+					// The row's rule does not stay with stuck cells: each cell draws it just under its foot (where the row's own rule falls, as in the mockup), so the rows pass under a line.
 					// What the keyboard comes to in a row is scrolled out from under the stuck header, not left behind it: the head's 40px and the row's
 					// own room over its words. (The scroll box's own 8px only clears its edge, which the header covers.)
 					(stickyHeader ?? container === "none") &&
-						"[&_tbody_:is(a,button,input,[tabindex])]:scroll-mt-14 [&_thead_th]:sticky [&_thead_th]:top-0 [&_thead_th]:z-10 [&_thead_th]:bg-monti-page [&_thead_th]:shadow-[inset_0_-1px_0_var(--monti-border-default)] [&_thead_tr]:border-b-transparent",
+						"[&_tbody_:is(a,button,input,[tabindex])]:scroll-mt-14 [&_thead_th]:sticky [&_thead_th]:top-0 [&_thead_th]:z-10 [&_thead_th]:bg-monti-page [&_thead_th]:before:absolute [&_thead_th]:before:inset-x-0 [&_thead_th]:before:top-full [&_thead_th]:before:h-px [&_thead_th]:before:bg-(--monti-border-default) [&_thead_tr]:border-b-transparent",
 					// The head of the ⋯ column sticks with the ⋯ below it, so the head's + lines up with it.
 					"[&:has([data-slot=row-actions])_thead_th:last-child]:sticky [&:has([data-slot=row-actions])_thead_th:last-child]:right-0 [&:has([data-slot=row-actions])_thead_th:last-child]:z-11 [&:has([data-slot=row-actions])_thead_th:last-child]:bg-[var(--monti-ground,var(--monti-bg-page))] [[data-clipping]_&:has([data-slot=row-actions])_thead_th:last-child]:shadow-[inset_1px_0_0_var(--monti-border-muted)]",
 					className,
@@ -251,7 +251,10 @@ function RowCheck({
 	onCheckedChange,
 	label,
 	proposal = false,
+	place = "margin",
 }: {
+	/** `margin` (the default): hung in the left margin. `cell`: in a column of its own at the row's start (`ListHead checkColumn`), 12px in. */
+	place?: "margin" | "cell";
 	checked: boolean;
 	/** Without it the check is drawn and does nothing (a screen spec's look, before its behavior is wired). */
 	onCheckedChange?: (checked: boolean) => void;
@@ -261,7 +264,10 @@ function RowCheck({
 	proposal?: boolean;
 }) {
 	return (
-		<span data-slot="row-check" className="absolute top-1/2 -left-[26px] z-1 flex -translate-y-1/2">
+		<span
+			data-slot="row-check"
+			className={cn("relative z-1 flex", place === "margin" && "absolute top-1/2 -left-[26px] -translate-y-1/2")}
+		>
 			<Checkbox
 				checked={checked}
 				onCheckedChange={(next) => onCheckedChange?.(next === true)}
@@ -324,9 +330,25 @@ function RowMore({
  * Where a row's ⋯ (and its other end buttons) stand: above the row's link, one line of the row tall (`h-lh`, 20px), so the 24px button stands out 2px above
  * and below and the row is never taller than its text.
  */
-function RowActions({ className, ...props }: React.ComponentProps<"span">) {
+function RowActions({
+	reveal = "always",
+	className,
+	...props
+}: React.ComponentProps<"span"> & {
+	/** `hover`: shown only while the pointer or the keyboard is on the row, or its menu is open (the list of the 2026-11 redesign). */
+	reveal?: "always" | "hover";
+}) {
 	return (
-		<span data-slot="row-actions" className={cn("relative z-1 inline-flex h-lh items-center", className)} {...props} />
+		<span
+			data-slot="row-actions"
+			className={cn(
+				"relative z-1 inline-flex h-lh items-center",
+				reveal === "hover" &&
+					"opacity-0 group-focus-within/row:opacity-100 group-hover/row:opacity-100 has-aria-expanded:opacity-100",
+				className,
+			)}
+			{...props}
+		/>
 	);
 }
 
@@ -406,7 +428,14 @@ function RowTitle({
 		<span
 			data-slot="row-title"
 			data-untitled={untitled || undefined}
-			className={cn("group/row-title flex min-w-0 gap-monti-8", thumb ? "items-center" : "items-baseline", className)}
+			className={cn(
+				"group/row-title flex min-w-0 gap-monti-8",
+				thumb ? "items-center" : "items-baseline",
+				// A folder's icon, name and count stand on one middle, and the line sits on the text's baseline by the icon's foot, as the mockup's
+				// `.fold` does (`list.html`: the name and its "4편" 1.5px above a post title's line).
+				folder && !address && "inline-flex w-full items-center align-baseline!",
+				className,
+			)}
 			{...props}
 		>
 			{folder && <Folder aria-hidden size={16} className="shrink-0 self-center text-monti-subtle" />}
@@ -427,7 +456,10 @@ function RowTitle({
 				 */
 				<span
 					className={cn(
-						"flex min-w-0 grow basis-0 items-baseline gap-x-monti-12",
+						// A note alone (a folder's count "4편") stands 8px after the title, as in the mockup; an address 12px.
+						"flex min-w-0 grow basis-0",
+						folder && !address ? "items-center" : "items-baseline",
+						address ? "gap-x-monti-12" : "gap-x-monti-8",
 						!editing && "h-lh flex-wrap overflow-hidden",
 					)}
 				>

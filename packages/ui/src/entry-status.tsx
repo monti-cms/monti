@@ -5,7 +5,7 @@ import { cn } from "./cn";
 /**
  * Where an entry stands, or a delivery. The meaning is the shape and the name together, never the color alone:
  * `published` a filled dot, `editing` a filled dot in the warning mark color (its name stays in the warning text color) (published, with changes not published yet), `draft` an empty ring,
- * `archived` a short bar, `failed` a filled dot in red.
+ * `archived` a short bar, `failed` a red triangle (8px wide, 7px tall, point up).
  */
 type EntryStatusKind = "published" | "editing" | "draft" | "archived" | "failed";
 
@@ -22,7 +22,7 @@ const markVariants = cva("box-border w-[7px] shrink-0 rounded-monti-full bg-curr
 		status: {
 			published: "h-[7px]",
 			editing: "h-[7px] bg-monti-warning-emphasis",
-			failed: "h-[7px]",
+			failed: "h-[7px] w-2 rounded-none [clip-path:polygon(50%_0,100%_100%,0_100%)]",
 			draft: "h-[7px] border-[1.5px] border-current bg-transparent",
 			archived: "h-0.5 rounded-none",
 		},
@@ -42,7 +42,7 @@ function EntryStatus({
 	...props
 }: Omit<React.ComponentProps<"span">, "children"> & {
 	status: EntryStatusKind;
-	/** The usual case in a column of statuses (a published entry in a list): the subtle tone and the normal weight, so the others stand out. */
+	/** A column of statuses (a list): the name in the subtle tone at the normal weight, the mark keeping its color. */
 	quiet?: boolean;
 	/** The status name. */
 	children?: React.ReactNode;
@@ -55,12 +55,19 @@ function EntryStatus({
 				// Whole wherever it stands in a row of things (`shrink-0`). Only a table cell that cuts its words bounds it: there the name ends in "…" and the
 				// mark stays.
 				"inline-flex shrink-0 items-center gap-monti-6 whitespace-nowrap text-monti-label",
+				// In a table cell it fills the cell's 20px line from its top, its words at the line's middle (the mockup's `.status`, `list.html`): set on
+				// the middle of the line by the letters' x-height, its 18px box would sit 1.5px low.
+				"in-data-[slot=table-cell]:h-5 in-data-[slot=table-cell]:align-top!",
 				quiet ? "font-normal text-monti-subtle" : COLOR[status],
 				className,
 			)}
 			{...props}
 		>
-			<span aria-hidden="true" data-slot="entry-status-mark" className={markVariants({ status })} />
+			<span
+				aria-hidden="true"
+				data-slot="entry-status-mark"
+				className={cn(markVariants({ status }), quiet && COLOR[status])}
+			/>
 			{children !== undefined && children !== null && <span className="truncate">{children}</span>}
 		</span>
 	);

@@ -7,7 +7,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "./tooltip";
 
 /** The look of a round icon button, for parts that render their own button (a combobox's open and clear buttons). */
 export const ICON_BUTTON =
-	"inline-flex size-monti-control-md shrink-0 items-center justify-center rounded-monti-full in-data-[shape=square]:rounded-monti-md border-0 bg-transparent p-0 text-monti-muted outline-none transition-colors not-disabled:hover:bg-monti-selected not-disabled:hover:text-monti-default not-disabled:active:bg-monti-current focus-visible:ring-2 focus-visible:ring-monti-contrast/60 cursor-pointer disabled:pointer-events-none disabled:opacity-45 aria-expanded:bg-monti-selected aria-expanded:text-monti-default aria-pressed:bg-monti-selected aria-pressed:text-monti-default monti-dark:aria-pressed:not-focus-visible:ring-1 monti-dark:aria-pressed:not-focus-visible:ring-inset monti-dark:aria-pressed:not-focus-visible:ring-monti-emphasis data-[tone=quiet]:text-monti-faint data-[tone=danger]:text-monti-danger data-[tone=danger]:not-disabled:hover:bg-monti-danger-muted data-[tone=danger]:not-disabled:hover:text-monti-danger [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4";
+	"inline-flex size-monti-control-md shrink-0 items-center justify-center rounded-monti-full in-data-[shape=square]:rounded-monti-md border-0 bg-transparent p-0 text-monti-muted outline-none transition-colors not-disabled:hover:bg-monti-selected not-disabled:hover:text-monti-default not-disabled:active:bg-monti-current focus-visible:ring-2 focus-visible:ring-monti-contrast/60 cursor-pointer disabled:pointer-events-none disabled:opacity-45 aria-expanded:bg-monti-selected aria-expanded:text-monti-default aria-pressed:bg-monti-selected aria-pressed:text-monti-default monti-dark:aria-pressed:not-focus-visible:ring-1 monti-dark:aria-pressed:not-focus-visible:ring-inset monti-dark:aria-pressed:not-focus-visible:ring-monti-emphasis data-[tone=quiet]:text-monti-faint data-[tone=proposal]:text-monti-proposal data-[tone=proposal]:not-disabled:hover:text-monti-proposal data-[tone=danger]:text-monti-danger data-[tone=danger]:not-disabled:hover:bg-monti-danger-muted data-[tone=danger]:not-disabled:hover:text-monti-danger [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4";
 
 /** The black round icon button: its ground stays black, a step lighter under the pointer and while pressed, and it dims when off. */
 const ICON_BUTTON_PRIMARY =
@@ -17,7 +17,9 @@ const ICON_BUTTON_PRIMARY =
  * What a part that holds icon buttons it does not draw tells them: their size and tone (a field's end control is one size under the field; a message's
  * actions are small and quiet). A button's own prop wins.
  */
-export const IconButtonContext = createContext<{ size?: "md" | "sm" | "xs"; tone?: "danger" | "quiet" }>({});
+export const IconButtonContext = createContext<{ size?: "md" | "sm" | "xs"; tone?: "danger" | "quiet" | "proposal" }>(
+	{},
+);
 
 /**
  * A round icon button, 32px (round on the page ground, `radius-md` inside a square surface, `radius-sm` at `xs`, the size that sits inside a field or a row): the header's more (⋯), properties and assistant, a panel's close. `label` is both the screen reader name and the
@@ -43,8 +45,11 @@ export function IconButton({
 }: Omit<ButtonPrimitive.Props, "aria-label" | "aria-pressed" | "children"> & {
 	label: string;
 	pressed?: boolean;
-	/** `danger` for a button that deletes or removes something; `quiet` for faint ink until pointed at. */
-	tone?: "danger" | "quiet";
+	/**
+	 * `danger` for a button that deletes or removes something; `quiet` for faint ink until pointed at; `proposal` for the assistant's ✦ that fills a
+	 * field (blue, the color the assistant alone uses).
+	 */
+	tone?: "danger" | "quiet" | "proposal";
 	/** `ghost` (no ground until pointed at) or `primary` (black, the one action that sends). */
 	variant?: "ghost" | "primary";
 	/** `md` 32px, `sm` 28px, `xs` 24px. */

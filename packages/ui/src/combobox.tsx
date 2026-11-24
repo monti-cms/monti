@@ -5,12 +5,23 @@ import * as React from "react";
 import { Caret } from "./caret";
 import { CHIP, CHIP_REMOVABLE, CHIP_REMOVE, CHIP_SM, CHIPS_FIELD, CHIPS_INPUT } from "./chip";
 import { cn } from "./cn";
-import { FIELD_HOVER, FIELD_INSET } from "./hover";
+import { FIELD_HOVER, FIELD_INSET, FIELD_LEAD } from "./hover";
 import { ICON_BUTTON } from "./icon-button";
 import { Add, Close } from "./icons";
 import { Input } from "./input";
 import { useUiLabels } from "./labels";
-import { MENU_CARD, MENU_EMPTY, MENU_ITEM, MENU_LABEL, MENU_MOTION, MENU_SEPARATOR, MenuTick } from "./menu-parts";
+import {
+	MENU_CARD,
+	MENU_EMPTY,
+	MENU_ITEM,
+	MENU_LABEL,
+	MENU_MOTION,
+	MENU_SEPARATOR,
+	MenuTick,
+	PICK_CARD_PAD,
+	PICK_ROW_INSET,
+	PICK_SEPARATOR,
+} from "./menu-parts";
 import { menuWords } from "./menu-words";
 import { FIRST_PASS, FIT_HEIGHT, FIT_LIST, usePlacementPadding } from "./placement";
 
@@ -18,20 +29,30 @@ import { FIRST_PASS, FIT_HEIGHT, FIT_LIST, usePlacementPadding } from "./placeme
  * The combobox. `readOnly` is a value to read, the same in a field of one and of many: full ink, the keyboard stops on it and its words can be
  * picked and copied, and nothing changes it (no typing, no list, no clear, no × on a chip).
  */
+/** The field's own box (the element that draws the underline), where a `ComboboxContent width="field"` stands. */
+const ComboboxFieldContext = React.createContext<React.RefObject<HTMLDivElement | null> | null>(null);
+
 const Combobox = ((props: ComboboxPrimitive.Root.Props<unknown, boolean | undefined>) => (
-	<ComboboxPrimitive.Root
-		{...props}
-		// Base UI's own read-only list opens to be looked through: here the opening is refused. `open` is left as it was given: whether it is
-		// held from outside is settled on the first drawing, so a field that turns read-only, or stops being it, would keep the wrong one.
-		onOpenChange={(next, details) => {
-			if (props.readOnly && next) {
-				details.cancel();
-				return;
-			}
-			props.onOpenChange?.(next, details);
-		}}
-	/>
+	<ComboboxField>
+		<ComboboxPrimitive.Root
+			{...props}
+			// Base UI's own read-only list opens to be looked through: here the opening is refused. `open` is left as it was given: whether it is
+			// held from outside is settled on the first drawing, so a field that turns read-only, or stops being it, would keep the wrong one.
+			onOpenChange={(next, details) => {
+				if (props.readOnly && next) {
+					details.cancel();
+					return;
+				}
+				props.onOpenChange?.(next, details);
+			}}
+		/>
+	</ComboboxField>
 )) as typeof ComboboxPrimitive.Root;
+
+function ComboboxField({ children }: { children: React.ReactNode }) {
+	const field = React.useRef<HTMLDivElement | null>(null);
+	return <ComboboxFieldContext.Provider value={field}>{children}</ComboboxFieldContext.Provider>;
+}
 
 function ComboboxValue({ ...props }: ComboboxPrimitive.Value.Props) {
 	return <ComboboxPrimitive.Value data-slot="combobox-value" {...props} />;
@@ -81,8 +102,14 @@ function ComboboxInput({
 	size = "default",
 	mono = false,
 	proposal = false,
+	icon,
 	...props
 }: Omit<ComboboxPrimitive.Input.Props, "size"> & {
+	/**
+	 * A 14px mark before the words, 8px from them, in the faint ink (the magnifier of a field that finds). It stands in the input's own room, so the
+	 * list still opens from the field's start.
+	 */
+	icon?: React.ReactNode;
 	showTrigger?: boolean;
 	showClear?: boolean;
 	size?: "sm" | "md" | "default";
@@ -90,19 +117,29 @@ function ComboboxInput({
 	/** The picked value is one the assistant chose and nobody has touched: blue text and a 1.5px blue line, as `Input proposal`. */
 	proposal?: boolean;
 }) {
+	const field = React.useContext(ComboboxFieldContext);
 	return (
 		<div
+			ref={field}
 			data-slot="combobox-input"
 			className={cn(
 				cn(
 					FIELD_HOVER,
-					"group/combobox-input flex w-full min-w-0 items-center gap-monti-4 border-transparent border-b transition-colors focus-within:border-monti-contrast has-[input[readonly]]:has-focus-visible:ring-2 has-[input[readonly]]:has-focus-visible:ring-monti-contrast/60 has-[input:disabled]:pointer-events-none has-[[aria-invalid=true]]:border-monti-danger has-data-proposal:border-monti-proposal has-data-proposal:border-b-[1.5px] has-[input:disabled]:opacity-45 has-[input[readonly]]:focus-within:border-transparent",
+					"group/combobox-input relative flex w-full min-w-0 items-center gap-monti-4 border-transparent border-b transition-colors focus-within:border-monti-contrast has-[input[readonly]]:has-focus-visible:ring-2 has-[input[readonly]]:has-focus-visible:ring-monti-contrast/60 has-[input:disabled]:pointer-events-none has-[[aria-invalid=true]]:border-monti-danger has-data-proposal:border-monti-proposal has-data-proposal:border-b-[1.5px] has-[input:disabled]:opacity-45 has-[input[readonly]]:focus-within:border-transparent",
 					FIELD_INSET,
 				),
 				size === "sm" ? "h-monti-control-sm" : "h-monti-control-md",
 				className,
 			)}
 		>
+			{icon && (
+				<span
+					data-slot="combobox-icon"
+					className={cn("pointer-events-none absolute flex text-monti-faint [&_svg]:size-3.5", FIELD_LEAD)}
+				>
+					{icon}
+				</span>
+			)}
 			<ComboboxPrimitive.Input
 				// A combobox that is off (`Combobox disabled`) marks its input but leaves it in the Tab order: the input itself is turned off here, so the field is
 				// off for the keyboard too, as an `Input disabled` is.
@@ -116,6 +153,7 @@ function ComboboxInput({
 						// The field around it holds the room, the tint and the dimming of a field that is off; the input inside takes none of them.
 						className={cn(
 							"h-full flex-1 border-b-0 px-0 hover:bg-transparent disabled:opacity-100 data-proposal:border-b-0",
+							icon && "pl-[22px]",
 							given.className,
 						)}
 					/>
@@ -146,12 +184,22 @@ function ComboboxContent({
 	side = "bottom",
 	sideOffset = 6,
 	align = "start",
-	alignOffset = 0,
+	alignOffset,
 	anchor,
+	width = "default",
 	...props
 }: ComboboxPrimitive.Popup.Props &
-	Pick<ComboboxPrimitive.Positioner.Props, "side" | "align" | "sideOffset" | "alignOffset" | "anchor">) {
+	Pick<ComboboxPrimitive.Positioner.Props, "side" | "align" | "sideOffset" | "alignOffset" | "anchor"> & {
+		/**
+		 * 어느 쪽이든 목록은 칸의 상자 시작에서 칸과 같은 폭으로 연다. 칸 안에서 글자가 어디서 시작하든 상자는 칸 밖으로 나가지 않고, 행의 글자는
+		 * 상자에서 8px 안(칸의 `FIELD_INSET`과 같은 줄)에 선다({@link PICK_CARD_PAD}, 2026-11-24 소유자). `field`: 대화상자의 칸에 딸린 목록(API 키
+		 * 대화상자의 서비스 고르기). Its rows are 13px in ink, its group names 12px on a 28px row, and its rules stand inside the card's padding, as wide
+		 * as the rows.
+		 */
+		width?: "default" | "field";
+	}) {
 	const placement = usePlacementPadding();
+	const field = React.useContext(ComboboxFieldContext);
 	return (
 		<ComboboxPrimitive.Portal>
 			<ComboboxPrimitive.Positioner
@@ -161,18 +209,20 @@ function ComboboxContent({
 				sideOffset={sideOffset}
 				align={align}
 				alignOffset={alignOffset}
-				anchor={anchor}
+				// 목록은 칸의 글자가 아니라 칸의 상자 아래에 선다: 글자의 안쪽 여백(`FIELD_INSET`)은 자리마다 다르다.
+				anchor={anchor ?? field ?? undefined}
 				className="isolate z-50"
 			>
 				<ComboboxPrimitive.Popup
 					data-slot="combobox-content"
 					data-chips={!!anchor}
+					data-width={width}
 					className={cn(
 						MENU_CARD,
 						MENU_MOTION,
 						"group/combobox-content relative",
 						FIT_HEIGHT,
-						"w-(--anchor-width) min-w-[calc(var(--anchor-width)+--spacing(7))] max-w-(--available-width) overflow-hidden data-[chips=true]:min-w-(--anchor-width)",
+						"w-(--anchor-width) max-w-(--available-width) overflow-hidden",
 						className,
 					)}
 					{...props}
@@ -182,13 +232,24 @@ function ComboboxContent({
 	);
 }
 
-function ComboboxList({ className, ...props }: ComboboxPrimitive.List.Props) {
+function ComboboxList({
+	className,
+	fit = "scroll",
+	...props
+}: ComboboxPrimitive.List.Props & {
+	/**
+	 * `scroll`: the whole list scrolls, up to 252px. `content`: the list stands at its full height and only a long group inside it scrolls, in a
+	 * {@link ComboboxScroll}: the few rows above it (the often used) and the row under it (the way out of the list) stay in view.
+	 */
+	fit?: "scroll" | "content";
+}) {
 	return (
 		<ComboboxPrimitive.List
 			data-slot="combobox-list"
 			className={cn(
-				"no-scrollbar scroll-py-1 overflow-y-auto overscroll-contain p-monti-4 data-empty:p-0",
-				FIT_LIST,
+				PICK_CARD_PAD,
+				"data-empty:p-0",
+				fit === "scroll" && cn("no-scrollbar scroll-py-1 overflow-y-auto overscroll-contain", FIT_LIST),
 				className,
 			)}
 			{...props}
@@ -196,9 +257,51 @@ function ComboboxList({ className, ...props }: ComboboxPrimitive.List.Props) {
 	);
 }
 
-function ComboboxItem({ className, children, ...props }: ComboboxPrimitive.Item.Props) {
+/** The long group of a `ComboboxList fit="content"`: it scrolls by itself, up to 252px, and its last rows fade out so the list reads as going on. */
+function ComboboxScroll({ className, ...props }: React.ComponentProps<"div">) {
 	return (
-		<ComboboxPrimitive.Item data-slot="combobox-item" className={cn(MENU_ITEM, className)} {...props}>
+		<div
+			data-slot="combobox-scroll"
+			className={cn(
+				"no-scrollbar mask-b-from-85% mask-b-to-100% max-h-[252px] scroll-py-1 overflow-y-auto overscroll-contain",
+				className,
+			)}
+			{...props}
+		/>
+	);
+}
+
+/** A row and a group name in a `ComboboxContent width="field"` (see there). */
+const PICKER_ITEM =
+	"group-data-[width=field]/combobox-content:[&>[data-slot=menu-value]]:text-monti-faint group-data-[width=field]/combobox-content:font-normal group-data-[width=field]/combobox-content:text-monti-default group-data-[width=field]/combobox-content:text-monti-label";
+const PICKER_LABEL =
+	"group-data-[width=field]/combobox-content:text-monti-caption group-data-[width=field]/combobox-content:font-medium";
+
+function ComboboxItem({
+	className,
+	tone,
+	children,
+	...props
+}: ComboboxPrimitive.Item.Props & {
+	/**
+	 * `exit`: the row that leads out of the list ("목록에 없나요? …", under the last separator of a `width="field"` list), a step quieter than the
+	 * values: muted words, a 14px faint icon 10px before them (시안 `keys7-add.html`).
+	 */
+	tone?: "exit";
+}) {
+	return (
+		<ComboboxPrimitive.Item
+			data-slot="combobox-item"
+			data-tone={tone}
+			className={cn(
+				MENU_ITEM,
+				PICK_ROW_INSET,
+				PICKER_ITEM,
+				"data-[tone=exit]:gap-monti-10 group-data-[width=field]/combobox-content:data-[tone=exit]:not-data-highlighted:text-monti-muted data-[tone=exit]:[&>svg]:size-3.5 data-[tone=exit]:[&>svg]:text-monti-faint",
+				className,
+			)}
+			{...props}
+		>
 			{menuWords(children)}
 			<ComboboxPrimitive.ItemIndicator render={<MenuTick />} />
 		</ComboboxPrimitive.Item>
@@ -215,7 +318,8 @@ function ComboboxCreate({ className, children, ...props }: ComboboxPrimitive.Ite
 			data-slot="combobox-create"
 			className={cn(
 				MENU_ITEM,
-				"relative mt-monti-8 before:pointer-events-none before:absolute before:inset-x-monti-2 before:-top-monti-5 before:h-px before:bg-monti-divider first:mt-0 first:before:hidden",
+				PICK_ROW_INSET,
+				"relative mt-monti-8 before:pointer-events-none before:absolute before:inset-x-monti-2 before:-top-[5px] before:h-px before:bg-monti-divider first:mt-0 first:before:hidden",
 				className,
 			)}
 			{...props}
@@ -231,7 +335,13 @@ function ComboboxGroup({ className, ...props }: ComboboxPrimitive.Group.Props) {
 }
 
 function ComboboxLabel({ className, ...props }: ComboboxPrimitive.GroupLabel.Props) {
-	return <ComboboxPrimitive.GroupLabel data-slot="combobox-label" className={cn(MENU_LABEL, className)} {...props} />;
+	return (
+		<ComboboxPrimitive.GroupLabel
+			data-slot="combobox-label"
+			className={cn(MENU_LABEL, PICK_ROW_INSET, PICKER_LABEL, className)}
+			{...props}
+		/>
+	);
 }
 
 function ComboboxCollection({ ...props }: ComboboxPrimitive.Collection.Props) {
@@ -250,7 +360,11 @@ function ComboboxEmpty({ className, ...props }: ComboboxPrimitive.Empty.Props) {
 
 function ComboboxSeparator({ className, ...props }: ComboboxPrimitive.Separator.Props) {
 	return (
-		<ComboboxPrimitive.Separator data-slot="combobox-separator" className={cn(MENU_SEPARATOR, className)} {...props} />
+		<ComboboxPrimitive.Separator
+			data-slot="combobox-separator"
+			className={cn(MENU_SEPARATOR, PICK_SEPARATOR, "group-data-[width=field]/combobox-content:mx-0", className)}
+			{...props}
+		/>
 	);
 }
 
@@ -316,13 +430,16 @@ function ComboboxChipsField({
 				"data-proposal:border-monti-proposal! data-proposal:border-b-[1.5px] data-proposal:**:data-[slot=combobox-chip]:bg-monti-proposal-muted data-proposal:**:data-[slot=combobox-chip-remove]:text-monti-proposal data-proposal:**:data-[slot=combobox-chip]:text-monti-proposal",
 				// The open button stands at the first line's end whatever the chips do: the room for it is the field's own padding.
 				"group/chips relative pr-monti-32",
+				// 속성 패널의 줄에서는 칩 사이가 4px다(시안 v5 `panel-extreme.html`: 태그가 한 줄에 넷).
+				"in-data-[slot=property-row]:gap-monti-4",
 				className,
 			)}
 			{...props}
 		>
 			{children}
 			{/* The open button of every combobox, a field of one value or of many: at the end of the first line. Nothing opens a list that is only read. */}
-			<span className="pointer-events-none absolute top-0 right-monti-4 flex h-monti-control-md items-center group-has-[input[readonly]]/chips:hidden group-data-[size=md]/chips:h-monti-control-md group-data-[size=sm]/chips:h-monti-control-sm">
+			{/* 속성 패널의 줄(`PropertyRow`)에서는 여는 버튼의 상자가 칸의 끝(패널의 끝선)에서 끝난다. 갈매기는 상자 안에 서고 가리킨 바탕은 선을 넘지 않는다(2026-11-24 소유자). */}
+			<span className="pointer-events-none absolute top-0 in-data-[slot=property-row]:right-0 right-monti-4 flex h-[calc(var(--monti-height-control-md)-1px)] items-center group-has-[input[readonly]]/chips:hidden group-data-[size=md]/chips:h-[calc(var(--monti-height-control-md)-1px)] group-data-[size=sm]/chips:h-[calc(var(--monti-height-control-sm)-1px)]">
 				<ComboboxTrigger className="pointer-events-auto size-monti-control-xs disabled:opacity-100" />
 			</span>
 		</ComboboxPrimitive.Chips>
@@ -373,7 +490,13 @@ function ComboboxChipsInput({ className, ...props }: ComboboxPrimitive.Input.Pro
 	return (
 		<ComboboxPrimitive.Input
 			data-slot="combobox-chip-input"
-			className={cn(CHIPS_INPUT, className)}
+			// 속성 패널의 줄에서는 치는 자리가 친 글자만큼만 자리를 요구한다: 친 글자는 칩 뒤 같은 줄에 서고, 비어 있으면 칩 아래 빈 줄을 만들지
+			// 않는다(시안 v5 `panel-states.html` ③ · `panel-extreme.html`, 2026-11-24).
+			className={cn(
+				CHIPS_INPUT,
+				"in-data-[slot=property-row]:field-sizing-content in-data-[slot=property-row]:min-w-auto",
+				className,
+			)}
 			// In a field that is only read the keyboard stops on this input, which holds nothing, and does not walk the chips: the values
 			// are said with it, as its description.
 			render={(given, state) => (
@@ -406,6 +529,7 @@ export {
 	ComboboxLabel,
 	ComboboxCollection,
 	ComboboxEmpty,
+	ComboboxScroll,
 	ComboboxSeparator,
 	ComboboxChips,
 	ComboboxChip,

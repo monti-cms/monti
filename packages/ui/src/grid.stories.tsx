@@ -44,3 +44,14 @@ export const SpanAll: Story = {
 		</Grid>
 	),
 };
+
+/** `columns="media"`: four equal columns 16px apart and rows 20px apart (the media library, 2026-11 redesign). */
+export const Media: Story = {
+	render: () => (
+		<Grid columns="media" responsive={false}>
+			{CELLS.map((cell) => (
+				<Cell key={cell}>{cell}</Cell>
+			))}
+		</Grid>
+	),
+};

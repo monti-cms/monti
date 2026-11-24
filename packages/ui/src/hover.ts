@@ -8,9 +8,19 @@ export const FIELD_HOVER =
 	"hover:not-focus-within:not-disabled:not-data-disabled:not-has-[:disabled]:not-aria-readonly:not-has-[[readonly]]:bg-monti-muted hover:not-focus-within:not-disabled:not-data-disabled:not-has-[:disabled]:not-aria-readonly:not-has-[[readonly]]:not-aria-invalid:not-has-[[aria-invalid=true]]:not-data-proposal:not-has-data-proposal:border-monti-default";
 
 /**
- * An underline field's room for that tint: 8px inside at each side. The field starts where its label starts; the words sit 8px in from both.
+ * An underline field's room for that tint: 8px inside at each side. The field starts where its label starts; the words sit 8px in from both (a
+ * label column's field, a panel's row). In a stacked form (`FormField spacing="label"`: the settings pages and the API key dialog of the 2026-11
+ * redesign, 시안 v7.1) the words start on the underline's start, with the label and the hint (no room before them), and the end keeps 4px so a
+ * trailing control ({@link FIELD_ACTION}) still ends inside the line. Only the place sets it, never the state: nothing moves under the pointer or the focus.
  */
-export const FIELD_INSET = "px-monti-8";
+export const FIELD_INSET =
+	"pl-[var(--monti-field-start,var(--monti-space-8))] pr-[var(--monti-field-end,var(--monti-space-8))]";
+
+/** What a stacked form's field sets for {@link FIELD_INSET}: the words on the underline's start, 4px kept at the end. */
+export const FIELD_INSET_STACKED = "[--monti-field-end:var(--monti-space-4)] [--monti-field-start:0px]";
+
+/** Where a mark that stands before an underline field's words (a finder's magnifier) starts: at the words' own start, {@link FIELD_INSET}. */
+export const FIELD_LEAD = "left-[var(--monti-field-start,var(--monti-space-8))]";
 
 /**
  * The pointer over a checkbox, or over the option row that holds it: a soft round halo (`bg-selected`, a step stronger than a field's tint: no picked state shares it) around the box, and an empty box's border a
@@ -31,7 +41,13 @@ export const TEXT_HOVER =
  * 24px in a 28px one), so its ground stays inside the field's tint, and 4px from the field's end (pulled 4px into the field's 8px padding): every
  * trailing icon of a panel stands on one vertical line.
  */
-export const FIELD_ACTION = "-mr-monti-4 shrink-0";
+export const FIELD_ACTION = "-mr-[var(--monti-field-action-end,var(--monti-space-4))] shrink-0";
+
+/**
+ * 속성 패널의 줄(`PropertyRow`)이 {@link FIELD_ACTION}에 주는 값: 칸의 끝이 패널의 끝선이고, 칸 끝의 컨트롤은 상자가 그 선에서 끝난다(글자 수 "0/60"의 글자,
+ * 아이콘 버튼의 상자). 아이콘은 상자의 안쪽 여백만큼 안에 서고, 가리킨 바탕은 끝선을 넘지 않는다(2026-11-24 소유자).
+ */
+export const FIELD_ACTION_PANEL = "[--monti-field-action-end:var(--monti-space-8)]";
 
 /**
  * The icon button size under each field size, for {@link FIELD_ACTION}: the field gives it to the buttons in its end control (`IconButtonContext`), so a

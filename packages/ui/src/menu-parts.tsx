@@ -37,6 +37,19 @@ export const MENU_ITEM = cn(
 	"data-highlighted:bg-monti-muted data-highlighted:text-monti-default data-popup-open:bg-monti-selected data-popup-open:text-monti-default data-disabled:pointer-events-none data-disabled:text-monti-faint data-disabled:[&>svg]:text-monti-faint data-[variant=danger]:text-monti-danger data-[variant=danger]:data-highlighted:text-monti-danger data-[variant=danger]:[&>svg]:text-monti-danger",
 );
 
+/**
+ * 칸 아래에 여는 고르기 목록(`SelectContent`, `ComboboxList`)의 카드 여백: 옆 2px, 위아래 4px. 목록 카드는 칸의 상자 시작에 서고, 칸의 글자는 그
+ * 상자에서 8px 안에 선다(`FIELD_INSET`). 행의 글자도 그 8px에 서도록(테두리 1 + 여백 2 + 행 여백 5) 메뉴 카드의 4px보다 좁다. 가리킨 바탕은
+ * 테두리에서 2px 떨어지고 글자 앞에 5px를 남긴다(2026-11-24 소유자: 값과 목록의 글자가 한 시작선).
+ */
+export const PICK_CARD_PAD = "px-monti-2 py-monti-4";
+
+/** {@link PICK_CARD_PAD} 카드 안의 행과 묶음 이름의 옆 여백: 8 − 2 − 1 = 5px. 행의 ✓도 카드 끝에서 같은 8px 안에서 끝난다. */
+export const PICK_ROW_INSET = "px-[calc(var(--monti-space-8)-var(--monti-space-2)-1px)]";
+
+/** {@link PICK_CARD_PAD} 카드의 묶음 사이 선: 메뉴 카드처럼 카드 끝에서 끝까지. */
+export const PICK_SEPARATOR = "-mx-monti-2";
+
 /** The same row inside a searchable list (cmdk marks the row it is on with `data-selected`). */
 export const COMMAND_ITEM = cn(
 	MENU_ROW,

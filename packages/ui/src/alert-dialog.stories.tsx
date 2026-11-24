@@ -1,10 +1,13 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { Document, Link } from "./icons";
 import {
 	AlertDialog,
 	AlertDialogAction,
 	AlertDialogCancel,
 	AlertDialogContent,
 	AlertDialogDescription,
+	AlertDialogEffect,
+	AlertDialogEffects,
 	AlertDialogFooter,
 	AlertDialogHeader,
 	AlertDialogTitle,
@@ -95,6 +98,32 @@ export const Wide: Story = {
 				<AlertDialogFooter>
 					<AlertDialogCancel>취소</AlertDialogCancel>
 					<AlertDialogAction variant="danger">영구 삭제</AlertDialogAction>
+				</AlertDialogFooter>
+			</AlertDialogContent>
+		</AlertDialog>
+	),
+};
+
+/** 무엇을 건드리는지 한 줄씩 적는 상자(`AlertDialogEffects`): 원문 언어 바꾸기. */
+export const Effects: Story = {
+	render: () => (
+		<AlertDialog defaultOpen>
+			<AlertDialogContent size="wide">
+				<AlertDialogHeader>
+					<AlertDialogTitle>원문 언어를 English로 바꿀까요?</AlertDialogTitle>
+					<AlertDialogDescription>
+						모든 글의 기준이 English가 됩니다. 글 내용은 지워지지 않습니다.
+					</AlertDialogDescription>
+				</AlertDialogHeader>
+				<AlertDialogEffects>
+					<AlertDialogEffect icon={<Document aria-hidden />}>
+						English 글이 있는 24편은 그 글이 원문이 됩니다.
+					</AlertDialogEffect>
+					<AlertDialogEffect icon={<Link aria-hidden />}>공개 주소 50개가 바뀝니다.</AlertDialogEffect>
+				</AlertDialogEffects>
+				<AlertDialogFooter>
+					<AlertDialogCancel>취소</AlertDialogCancel>
+					<AlertDialogAction>English를 원문으로</AlertDialogAction>
 				</AlertDialogFooter>
 			</AlertDialogContent>
 		</AlertDialog>

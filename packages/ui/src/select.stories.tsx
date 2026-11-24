@@ -133,6 +133,31 @@ export const States: Story = {
 	),
 };
 
+/**
+ * `caret="active"`: a property panel's select reads as its value at rest, and the chevron shows under the pointer, with the keyboard's focus and
+ * while the list is open (the folder of a media file's panel). Its room is kept, so the value does not move. The second is hovered.
+ */
+export const CaretActive: Story = {
+	tags: ["visual"],
+	parameters: { pseudo: { hover: ["#caret-hovered"] } },
+	render: () => (
+		<Stack gap={8} className="w-60">
+			<Select items={CATEGORIES} defaultValue="dev">
+				<SelectTrigger size="md" width="full" caret="active">
+					<SelectValue />
+				</SelectTrigger>
+				<Items />
+			</Select>
+			<Select items={CATEGORIES} defaultValue="dev">
+				<SelectTrigger size="md" width="full" caret="active" id="caret-hovered">
+					<SelectValue />
+				</SelectTrigger>
+				<Items />
+			</Select>
+		</Stack>
+	),
+};
+
 /** The list open, with a selected item, a group label, a separator and a disabled item. */
 export const Open: Story = {
 	render: () => (

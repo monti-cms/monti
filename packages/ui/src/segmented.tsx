@@ -17,7 +17,7 @@ type SegmentedOption<T extends string> = {
  * (`radius-md`, 2px inside), the picked cell lifted onto the page ground with a `border-default` line, in ink and 500 (`value={null}` while none is
  * picked yet). Cells are `radius-sm`, so the shape tells it apart from the underline tabs. It stands at a control's height, frame included: `md` 32px
  * (13px words), `sm` 28px (12px words) for filter rows and tight panels. `inline` makes it as wide as its cells instead of its container. On the
- * tool ground (`tone="tool"`, the sidebar's theme switch) it keeps the pill of the page-ground family.
+ * tool ground (`tone="tool"`, the sidebar's theme switch) the cells off the pick are faint and take the selected ground under the pointer.
  */
 function Segmented<T extends string>({
 	value,
@@ -26,6 +26,7 @@ function Segmented<T extends string>({
 	size = "md",
 	tone = "default",
 	inline = false,
+	icons = false,
 	disabled,
 	"aria-label": ariaLabel,
 }: {
@@ -37,6 +38,8 @@ function Segmented<T extends string>({
 	/** `tool` on a tool surface (the sidebar), where the selected ground is the hover: a cell under the pointer takes it and the pressed cell takes the current ground. */
 	tone?: "default" | "tool";
 	inline?: boolean;
+	/** Every cell holds an icon alone: 30px cells, and the frame as wide as they are (the media library's grid · list switch, 64px at `sm`, its icons 12px there). */
+	icons?: boolean;
 	disabled?: boolean;
 	"aria-label"?: string;
 }) {
@@ -53,9 +56,9 @@ function Segmented<T extends string>({
 			}}
 			className={cn(
 				"flex overflow-hidden rounded-monti-md bg-monti-muted p-[2px]",
-				tone === "tool" && "rounded-monti-full",
 				size === "sm" ? "h-monti-control-sm text-monti-caption" : "h-monti-control-md text-monti-note",
-				inline && "w-fit",
+				(inline || icons) && "w-fit",
+				icons && size === "sm" && "[&_svg]:size-3",
 			)}
 		>
 			{options.map((option) => (
@@ -66,9 +69,9 @@ function Segmented<T extends string>({
 					className={cn(
 						"flex items-center justify-center whitespace-nowrap rounded-monti-sm border-0 bg-transparent px-monti-4 text-center text-monti-subtle outline-none transition-colors hover:text-monti-default focus-visible:ring-2 focus-visible:ring-monti-contrast/60 focus-visible:ring-inset disabled:opacity-45 data-pressed:font-medium data-pressed:text-monti-default",
 						tone === "tool"
-							? "rounded-monti-full not-data-pressed:hover:bg-monti-selected data-pressed:bg-monti-page data-pressed:shadow-[0_0_0_1px_var(--monti-border-default)]"
+							? "not-data-pressed:text-monti-faint not-data-pressed:hover:bg-monti-selected data-pressed:bg-monti-page data-pressed:shadow-[0_0_0_1px_var(--monti-border-default)]"
 							: "data-pressed:bg-monti-page data-pressed:shadow-[0_0_0_1px_var(--monti-border-default)]",
-						inline ? "flex-none px-monti-12" : "flex-1",
+						icons ? "w-[30px] flex-none px-0" : inline ? "flex-none px-monti-12" : "flex-1",
 					)}
 				>
 					{option.label}

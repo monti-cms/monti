@@ -204,6 +204,8 @@ export const WIDTH = {
 	rail: "w-monti-rail",
 	menu: "w-monti-menu",
 	panel: "w-monti-panel",
+	/** The label column of a panel's rows (72px). */
+	label: "w-monti-label",
 	"side-panel": "w-monti-side-panel",
 	assistant: "w-monti-assistant",
 	sheet: "w-monti-sheet",

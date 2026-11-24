@@ -21,11 +21,11 @@ import { Inline } from "./stack";
 import { Text } from "./text";
 
 /**
- * The look of a tool panel, shared by `SidePanel` and `Sheet`: a cream ground, a 48px head (`height-panebar`: title 13px 600 at the start, icon buttons
- * at the end, 24px in and 16 out, so a 32px button's middle stands 32px from the edge, on the column of every trailing icon), a body with 20px above and 24 at the sides, and a foot that holds the one pill.
+ * 도구 패널의 모양(`SidePanel`과 `Sheet`가 함께 쓴다): 크림색 바탕, 48px 머리(`height-panebar`: 시작에 13px 600 제목, 끝에 아이콘 버튼. 양쪽 24px 안이라
+ * 끝 버튼의 상자가 본문의 칸 · 선과 같은 끝선에서 끝나고 가리킨 바탕도 그 선을 넘지 않는다, 2026-11-24 소유자), 위 20px · 양옆 24px의 본문, 알약 하나를 담는 바닥.
  */
 export const PANEL_HEAD =
-	"flex h-monti-panebar shrink-0 items-center gap-monti-4 border-monti-default border-b pr-monti-16 pl-monti-24";
+	"flex h-monti-panebar shrink-0 items-center gap-monti-4 border-monti-default border-b px-monti-24";
 export const PANEL_TITLE = "min-w-0 grow font-semibold text-monti-default text-monti-label";
 export const PANEL_BODY = "flex flex-col gap-monti-20 px-monti-24 py-monti-20";
 export const PANEL_FOOT =
@@ -44,12 +44,14 @@ const SIDE_PANEL_WIDTH = {
 	side: 360,
 	panel: 300,
 	assistant: 380,
+	fill: 360,
 } as const;
 /** The same start widths as a floor: short of room a panel gives way to them, never below (the tokens themselves). */
 const MIN_WIDTH = {
 	side: "sm:min-w-monti-side-panel",
 	panel: "sm:min-w-monti-panel",
 	assistant: "sm:min-w-monti-assistant",
+	fill: "",
 } as const;
 
 /**
@@ -100,6 +102,10 @@ export function SidePanel({
 	footer?: ReactNode;
 	/** The box to type in, pinned under the body with no line over it (the assistant's chat input), 12px above it and 16 at the sides and below. */
 	composer?: ReactNode;
+	/**
+	 * `fill` takes the box it stands in and cannot be dragged: a panel drawn on a page or a board, not docked at the window's edge. It is framed all round
+	 * by the 1px line with `radius-lg` corners, and its buttons are of the square family (2026-11-24, 시안 v5 `panel-states.html`).
+	 */
 	width?: keyof typeof SIDE_PANEL_WIDTH;
 	/** The body keeps no padding or gap of its own: for content that lays out its own sections edge to edge (tabs, bands). */
 	bleed?: boolean;
@@ -196,9 +202,13 @@ export function SidePanel({
 	return (
 		<aside
 			data-slot="side-panel"
+			data-shape={width === "fill" ? "square" : undefined}
 			aria-labelledby={title ? titleId : undefined}
 			className={cn(
-				"relative z-20 flex min-h-0 w-full min-w-0 shrink flex-col bg-monti-tool shadow-[inset_1px_0_0_var(--monti-border-default)] [--monti-ground:var(--monti-bg-tool)] sm:w-(--side-panel-width)",
+				"relative z-20 flex min-h-0 w-full min-w-0 shrink flex-col bg-monti-tool [--monti-ground:var(--monti-bg-tool)]",
+				width === "fill"
+					? "h-full overflow-hidden rounded-monti-lg border border-monti-default"
+					: "border-monti-default border-l sm:w-(--side-panel-width)",
 				// Never narrower than its start: what was dragged wider gives way first, then the page, and the panel does not go under its start.
 				MIN_WIDTH[width],
 				className,
@@ -215,16 +225,19 @@ export function SidePanel({
 				props.onPointerDownCapture?.(event);
 			}}
 		>
-			<ResizeHandle
-				value={resize.width}
-				min={resize.min}
-				max={resize.max}
-				onChange={resize.setWidth}
-				onReset={resize.reset}
-				edge="start"
-				resizing={resize.resizing}
-				className="max-sm:hidden"
-			/>
+			{width !== "fill" && (
+				<ResizeHandle
+					value={resize.width}
+					min={resize.min}
+					max={resize.max}
+					onChange={resize.setWidth}
+					onReset={resize.reset}
+					edge="start"
+					resizing={resize.resizing}
+					// 패널의 선은 상자 안의 진짜 1px 선이라 손잡이를 그 선 위로 1px 당긴다.
+					className="-left-px max-sm:hidden"
+				/>
+			)}
 			{title && (
 				<header data-slot="side-panel-header" className={PANEL_HEAD}>
 					{back && (

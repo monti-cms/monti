@@ -31,6 +31,13 @@ const gridVariants = cva("grid", {
 			tiles: "grid-cols-[repeat(auto-fill,minmax(180px,1fr))]",
 			/** The same columns for the folder tiles above a grid of files: closer rows, 12px apart (`.mt-tiles--folders`). */
 			folders: "grid-cols-[repeat(auto-fill,minmax(180px,1fr))]",
+			/**
+			 * The media library of the 2026-11 redesign: four equal columns 16px apart, rows 20px apart, the folder tiles in the first row and the files after
+			 * them in the same columns.
+			 */
+			media: "grid-cols-4",
+			/** A list beside its preview (the editor tools in Settings › Admin, 2026-11 redesign): the list takes the room, the preview is 420px. */
+			preview: "grid-cols-[minmax(0,1fr)_420px]",
 		},
 		responsive: { true: "max-md:grid-cols-1" },
 		/** For `tiles` and `folders` beside a docked panel: columns of at least 150px, so a 730px column still holds four. */
@@ -44,6 +51,7 @@ const gridVariants = cva("grid", {
 		{ columns: "tiles", class: "gap-x-monti-20 gap-y-monti-24" },
 		{ columns: "tiles", responsive: true, class: "max-md:grid-cols-2" },
 		{ columns: "folders", class: "gap-x-monti-20 gap-y-monti-12" },
+		{ columns: "media", class: "gap-x-monti-16 gap-y-monti-20" },
 		{ columns: "tiles", dense: true, class: "grid-cols-[repeat(auto-fill,minmax(150px,1fr))]" },
 		{ columns: "folders", dense: true, class: "grid-cols-[repeat(auto-fill,minmax(150px,1fr))]" },
 		{ columns: "folders", responsive: true, class: "max-md:grid-cols-2" },

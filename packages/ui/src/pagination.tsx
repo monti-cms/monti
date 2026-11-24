@@ -123,13 +123,35 @@ function PaginationEllipsis({ className, ...props }: React.ComponentProps<"span"
  * The row under a table: the shown range ("1–25 / 148", a `Count`) at the left, the {@link Pagination} at the right. It sits 12px inside like the rows, so
  * the range starts under the first letters of the table, and 12px under it.
  */
-function ListFooter({ className, ...props }: React.ComponentProps<"footer">) {
+function ListFooter({
+	layout = "inset",
+	className,
+	...props
+}: React.ComponentProps<"footer"> & {
+	/**
+	 * `inset` (the default): 12px inside and 12px under the table. `bar`: a 48px row from the table's own edge, its pieces 12px apart on its middle (the
+	 * lists of the 2026-11 redesign, whose checks stand in a column). What goes to the row's end sits in a {@link ListFooterEnd}.
+	 */
+	layout?: "inset" | "bar";
+}) {
 	return (
 		<footer
 			data-slot="list-footer"
-			className={cn("flex items-center gap-monti-16 px-monti-12 pt-monti-12", className)}
+			data-layout={layout}
+			className={cn(
+				"flex items-center",
+				layout === "bar" ? "h-12 gap-monti-12 text-monti-caption" : "gap-monti-16 px-monti-12 pt-monti-12",
+				className,
+			)}
 			{...props}
 		/>
+	);
+}
+
+/** The end of a {@link ListFooter}: the filters in force and the way to clear them, then the page size, 8px apart. */
+function ListFooterEnd({ className, ...props }: React.ComponentProps<"span">) {
+	return (
+		<span data-slot="list-footer-end" className={cn("ml-auto flex items-center gap-monti-8", className)} {...props} />
 	);
 }
 
@@ -176,6 +198,7 @@ function PageSizeMenu({
 
 export {
 	ListFooter,
+	ListFooterEnd,
 	PageSizeMenu,
 	Pagination,
 	PaginationContent,

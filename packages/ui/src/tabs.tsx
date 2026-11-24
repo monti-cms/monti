@@ -63,7 +63,7 @@ function TabsList({
 }
 
 /** The look of one tab, shared by the tab of a tab list and the link of a link list. */
-const TAB = `${HIT_AREA} inline-flex cursor-pointer items-baseline gap-monti-4 whitespace-nowrap border-0 border-transparent border-b-2 bg-transparent px-0 pt-monti-4 pb-monti-2 text-monti-subtle no-underline outline-none transition-colors not-disabled:hover:text-monti-default focus-visible:rounded-monti-sm focus-visible:ring-2 focus-visible:ring-monti-contrast/60 disabled:pointer-events-none disabled:opacity-45 aria-disabled:pointer-events-none aria-disabled:opacity-45 aria-[current=page]:cursor-default data-active:border-monti-contrast data-active:font-medium data-active:text-monti-default [&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg]:self-center group-data-[variant=toolbar]/tabs-list:border-b-0 group-data-[variant=toolbar]/tabs-list:p-0 group-data-[variant=toolbar]/tabs-list:data-active:font-bold group-data-[variant=bar]/tabs-list:-mb-px group-data-[variant=bar]/tabs-list:items-center group-data-[variant=bar]/tabs-list:gap-monti-6 group-data-[variant=bar]/tabs-list:pb-monti-12`;
+const TAB = `${HIT_AREA} inline-flex cursor-pointer items-baseline gap-monti-4 whitespace-nowrap border-0 border-transparent border-b-2 bg-transparent px-0 pt-monti-4 pb-monti-2 text-monti-subtle no-underline outline-none transition-colors not-disabled:hover:text-monti-default focus-visible:rounded-monti-sm focus-visible:ring-2 focus-visible:ring-monti-contrast/60 disabled:pointer-events-none disabled:opacity-45 aria-disabled:pointer-events-none aria-disabled:opacity-45 aria-[current=page]:cursor-default data-active:border-monti-contrast data-active:font-medium data-active:text-monti-default [&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg]:self-center group-data-[variant=toolbar]/tabs-list:border-b-0 group-data-[variant=toolbar]/tabs-list:p-0 group-data-[variant=toolbar]/tabs-list:data-active:font-bold group-data-[variant=bar]/tabs-list:-mb-px group-data-[variant=bar]/tabs-list:items-center group-data-[variant=bar]/tabs-list:gap-monti-6 group-data-[variant=bar]/tabs-list:pb-monti-12 group-data-[variant=page]/tabs-list:-mb-px group-data-[variant=page]/tabs-list:items-center group-data-[variant=page]/tabs-list:p-0 group-data-[variant=page]/tabs-list:font-medium group-data-[variant=entry]/tabs-list:-mb-px group-data-[variant=entry]/tabs-list:items-center group-data-[variant=entry]/tabs-list:p-0 group-data-[variant=entry]/tabs-list:font-medium`;
 
 type TabExtras = {
 	count?: React.ReactNode;
@@ -126,14 +126,28 @@ function TabLinks({
 	variant = "line",
 	className,
 	...props
-}: React.ComponentProps<"div"> & { variant?: "line" | "toolbar" }) {
+}: React.ComponentProps<"div"> & {
+	/**
+	 * `page`: the tab bar under a page head that runs the area's width (the settings and tools pages of the 2026-11 redesign): 40px (`height-tabs`), a
+	 * `border-default` line across, 13px 500 words 20px apart, the picked one in ink with its 2px underline on the line.
+	 */
+	/**
+	 * `entry`: the languages over an entry's title in the editor (2026-11 editor mockup `editor.html`, `.doc .langs`): a 32px row with no line across,
+	 * 13px 500 words 20px apart, the picked one's 2px underline across the row's bottom edge.
+	 */
+	variant?: "line" | "toolbar" | "page" | "entry";
+}) {
 	return (
 		<div
 			data-slot="tab-links"
 			data-variant={variant}
 			className={cn(
 				"group/tabs-list flex w-fit gap-monti-20",
-				variant === "line" ? "items-end text-monti-label" : "items-baseline text-monti-body",
+				variant === "line" && "items-end text-monti-label",
+				variant === "toolbar" && "items-baseline text-monti-body",
+				variant === "page" &&
+					"h-monti-tabs w-full shrink-0 items-stretch border-monti-default border-b text-monti-label",
+				variant === "entry" && "h-monti-control-md shrink-0 items-stretch text-monti-label",
 				className,
 			)}
 			{...props}

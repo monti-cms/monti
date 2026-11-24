@@ -19,6 +19,7 @@ import { useProposalDescription } from "./proposal-cue";
 function Affix({
 	prefix,
 	suffix,
+	suffixWords = false,
 	action,
 	proposal = false,
 	width = "full",
@@ -30,6 +31,8 @@ function Affix({
 	prefix?: React.ReactNode;
 	/** Fixed text after the input. */
 	suffix?: React.ReactNode;
+	/** The suffix is words, not an address ("/글 주소" for each entry's own address): in sans, at the field's end. */
+	suffixWords?: boolean;
 	/** A control at the end of the line. */
 	action?: React.ReactNode;
 	/** The assistant wrote this value and nobody has touched it yet: blue text and a 1.5px blue underline. */
@@ -59,7 +62,7 @@ function Affix({
 				FIELD_HOVER,
 				"group/affix flex h-monti-control-md cursor-text items-center border-transparent border-b font-mono text-monti-body transition-colors focus-within:border-monti-contrast has-[:disabled]:cursor-default has-[[aria-invalid=true]]:border-monti-danger has-[:disabled]:opacity-45 data-proposal:border-monti-proposal data-proposal:border-b-[1.5px]",
 				// The fixed text before the input has the field's inset; with none, the input's own is the only one, as in any other field.
-				prefix && "pl-monti-8",
+				prefix && "pl-[var(--monti-field-start,var(--monti-space-8))]",
 				className,
 			)}
 		>
@@ -68,12 +71,24 @@ function Affix({
 				data-slot="affix-input"
 				aria-description={useProposalDescription(proposal)}
 				className={cn(
-					"h-full min-w-[3ch] rounded-none border-0 bg-transparent px-monti-8 py-0 text-monti-default outline-none placeholder:text-monti-faint group-data-proposal/affix:text-monti-proposal",
+					"h-full min-w-[3ch] rounded-none border-0 bg-transparent px-monti-8 py-0 text-monti-default outline-none placeholder:font-sans placeholder:text-monti-faint group-data-proposal/affix:text-monti-proposal",
 					width === "fit" ? "field-sizing-content flex-initial" : "flex-1",
+					// The fixed parts touch the typed part, so the address reads as one ("example.com/articles"); a suffix of words keeps the room.
+					prefix && "pl-0",
+					suffix && !suffixWords && "pr-0",
 				)}
 				{...props}
 			/>
-			{suffix && <span className="shrink-0 whitespace-nowrap text-monti-subtle">{suffix}</span>}
+			{suffix && (
+				<span
+					className={cn(
+						"shrink-0 whitespace-nowrap text-monti-subtle",
+						suffixWords && "pr-[var(--monti-field-end,var(--monti-space-8))] font-sans",
+					)}
+				>
+					{suffix}
+				</span>
+			)}
 			{action && <span className={cn("ml-auto cursor-auto self-center", FIELD_ACTION)}>{action}</span>}
 		</div>
 	);

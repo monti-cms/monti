@@ -71,3 +71,5 @@
 ### 코드
 
 `NavLink`는 목록의 링크 하나다. 사이드바 행과 같은 행(`NAV_ROW`)을 종이 위에 둔 것이다. 36px, 이름, 끝에 식별자(사이드바의 개수와 같은 mono, 조용히)가 있고, 알약 모양이다. 종이 바탕 위의 목록이라 열린 링크는 `bg-selected`에 semibold이고, 가리키면 `bg-muted`다([button.md](button.md) "모양 기준": 종이 위에서 `bg-current`는 너무 무겁다. 사이드바는 도구 바탕이라 한 단계씩 진하다). `dot`은 이름 뒤의 변경 점에 이름을 붙이고, `handle`(`DragHandle`)은 포인터가 링크 위에 있는 동안 왼쪽 여백에 보이는 끌기 핸들이다. `RailLayout`은 링크(`nav`)를 내용 옆에 둔다. 좁으면 내용이 그 아래로 내려간다. `RailAction`은 링크 아래의 조용한 텍스트 버튼("+ 새 컬렉션")이다. 12px 아래에 두고, 글자는 링크 이름과 같은 10px 안쪽에서 시작한다. `ChangeDot`(상태 참고)과 필드 윤곽을 위한 `FieldRow changed`(목록 참고). 취소선 행은 없다. 지울 컬렉션은 목록에서 빠진다.
+
+`NavLink`의 `icon`은 이름 앞 16px 아이콘이다(설정 › 컬렉션 목록, 2026-11 개편 시안 `settings-basics.html`). 끝의 `note`는 mono라 수만 둔다(필드 수 "22": "필드 22"처럼 한국어를 mono에 넣지 않는다). `RailLayout layout="grid"`는 200px 목록, 40px, 내용이고 둘 다 탭 아래 20px에서 시작한다. 그 아래 `RailAction row`는 링크와 같은 행이고, 링크 8px 아래의 `border-muted` 선 아래에 선다.

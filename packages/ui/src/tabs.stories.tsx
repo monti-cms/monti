@@ -95,3 +95,17 @@ export const Links: Story = {
 		</nav>
 	),
 };
+
+/** `TabLinks variant="page"`: the tab bar under a page head that runs the area's width (the settings and tools pages). */
+export const PageLinks: Story = {
+	render: () => (
+		<nav aria-label="도구">
+			<TabLinks variant="page">
+				<TabLink href="#">템플릿</TabLink>
+				<TabLink href="#" current>
+					API 키
+				</TabLink>
+			</TabLinks>
+		</nav>
+	),
+};

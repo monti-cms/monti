@@ -8,6 +8,7 @@ import {
 	DropdownMenuSeparator,
 	LIST_COLUMN_SIZE,
 	ListHead,
+	Stack,
 	Table,
 	TableBody,
 	TableCell,
@@ -76,6 +77,47 @@ export const Head: Story = {
 				</TableRow>
 			</TableBody>
 		</Table>
+	),
+};
+
+/**
+ * 필터를 끈 열 머리와 켠 열 머리를 위아래로 놓았다. 켠 열의 칩은 칸의 왼쪽 변에서 시작해 칸의 안쪽 여백을 덮고, 칩의 글자("상태", "김하늘")는 끈
+ * 쪽의 이름과 같은 x와 y에 선다. 칩에는 점이 없다: 바탕만으로 필터가 켜졌음을 말한다(2026-11-24 소유자 결정: th 안에서 밀림 없음).
+ */
+export const FilterOnOff: Story = {
+	render: () => (
+		<Stack gap={24}>
+			{[false, true].map((on) => (
+				<Table key={String(on)} container="none" layout="fixed" columns={[128, undefined, 112, LIST_COLUMN_SIZE.end]}>
+					<ListHead
+						columns={[
+							{
+								id: "status",
+								label: "상태",
+								menu: statusMenu,
+								filter: on ? { value: "초안", named: true, clearLabel: "상태 필터 지우기" } : undefined,
+							},
+							{ id: "title", label: "제목" },
+							{
+								id: "author",
+								label: "글쓴이",
+								menu: statusMenu,
+								filter: on ? { value: "김하늘", clearLabel: "글쓴이 필터 지우기" } : undefined,
+							},
+						]}
+						end={LIST_COLUMN_SIZE.end}
+					/>
+					<TableBody>
+						<TableRow>
+							<TableCell>초안</TableCell>
+							<TableCell>봄에 쓴 첫 글</TableCell>
+							<TableCell tone="muted">김하늘</TableCell>
+							<TableCell />
+						</TableRow>
+					</TableBody>
+				</Table>
+			))}
+		</Stack>
 	),
 };
 

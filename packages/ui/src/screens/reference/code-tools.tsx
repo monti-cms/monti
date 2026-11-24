@@ -242,39 +242,6 @@ function Lines({
 
 // --- The box ----------------------------------------------------------------------------------------------------------------------------------
 
-/** The box's head row: the language and the file name, as text (doc 17, 2026-11-14: the name is set from the tool row, not typed on the box). */
-function Head({
-	language = "TypeScript",
-	name,
-	copied = false,
-	readOnly = false,
-}: {
-	language?: string;
-	name?: string;
-	copied?: boolean;
-	readOnly?: boolean;
-}) {
-	return (
-		<>
-			<Inline gap={8} minWidth={0}>
-				<Text variant="caption" tone="muted">
-					{language}
-				</Text>
-				{name ? (
-					<Text variant="caption" mono truncate>
-						{name}
-					</Text>
-				) : null}
-			</Inline>
-			{readOnly ? (
-				<IconButton size="xs" label={copied ? "복사함" : "코드 복사"}>
-					{copied ? <Checkmark aria-hidden /> : <Copy aria-hidden />}
-				</IconButton>
-			) : null}
-		</>
-	);
-}
-
 /**
  * The code block's own tool row, over the box while the caret is in it (the image block's row, `BlockBarPlace` + `FloatingBar`): language, file name,
  * line numbers, line effects, rules; with words picked in the code, the tooltip and the folded words (and "처음부터 펼치기" once folded); copy.
@@ -391,13 +358,43 @@ function Code({
 	language,
 	readOnly = false,
 	copied = false,
+	folds = true,
 	children,
 	...tools
-}: React.ComponentProps<typeof Tools> & { name?: string; readOnly?: boolean; children: React.ReactNode }) {
+}: React.ComponentProps<typeof Tools> & {
+	name?: string;
+	readOnly?: boolean;
+	/** The lines carry the fold column (`Lines fold` is not "none"). */
+	folds?: boolean;
+	children: React.ReactNode;
+}) {
 	return (
 		<Box position="relative">
 			{readOnly ? null : <Tools language={language} copied={copied} {...tools} />}
-			<CodeFrame head={<Head language={language} name={name} readOnly={readOnly} copied={copied} />}>
+			<CodeFrame
+				folds={folds}
+				language={
+					language ? (
+						<Text variant="caption" tone="muted">
+							{language}
+						</Text>
+					) : undefined
+				}
+				file={
+					name ? (
+						<Text variant="caption" mono truncate>
+							{name}
+						</Text>
+					) : undefined
+				}
+				head={
+					readOnly ? (
+						<IconButton size="xs" label={copied ? "복사함" : "코드 복사"}>
+							{copied ? <Checkmark aria-hidden /> : <Copy aria-hidden />}
+						</IconButton>
+					) : undefined
+				}
+			>
 				<Box paddingY={8}>{children}</Box>
 			</CodeFrame>
 		</Box>
@@ -470,7 +467,7 @@ export function CodeBoxScreen({
 	if (state === "unknown")
 		return (
 			<Page>
-				<Code name="lib/counter.ex" language="elixir">
+				<Code name="lib/counter.ex" language="elixir" folds={false}>
 					<Lines
 						fold="none"
 						looks={{}}
@@ -680,6 +677,7 @@ export function FormatInCodeScreen({ state }: { state: "more" | "tooltip" | "fol
 			<Box position="relative">
 				<Code
 					name="src/counter.tsx"
+					folds={false}
 					words={state === "fold" ? "fold" : state === "marked" ? "tip" : "picked"}
 					tipOpen={
 						state === "tooltip" ? (
@@ -817,7 +815,7 @@ export function RulesScreen({ state }: { state: "list" | "rule" | "tooltip" | "e
 		);
 	return (
 		<Page>
-			<Code name="src/counter.tsx" rulesOpen={card}>
+			<Code name="src/counter.tsx" rulesOpen={card} folds={false}>
 				<Lines looks={{}} fold="none" words={state === "list" ? RULE_WORDS : {}} />
 			</Code>
 		</Page>
@@ -957,7 +955,7 @@ export function CodeLinkScreen({ state }: { state: "picking" | "ready" | "linked
 						</FloatingBar>
 					</At>
 				) : null}
-				<Code name="src/counter.tsx">
+				<Code name="src/counter.tsx" folds={false}>
 					<Lines
 						looks={state === "broken" ? {} : looks}
 						fold="none"

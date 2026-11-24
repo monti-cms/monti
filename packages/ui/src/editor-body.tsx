@@ -3,7 +3,8 @@ import { BodyScope } from "./body-scope";
 import { cn } from "./cn";
 
 /**
- * The editor's text as it is written: the reading type (17 / 30), 20 under a paragraph, 32 over and 12 under a heading, list items line under line,
+ * The editor's text as it is written: the reading type (17 / 30), 14 under a paragraph, over and under a heading 36 · 10 (h2), 28 · 8 (h3), 24 · 6 (h4, 17 / 28)
+ * (2026-11 editor mockup `editor.html`), a code block 4 over and 20 under, list items line under line,
  * code and tables in the inner box. The editor engine draws plain elements (`p`, `h2`, `ul`, `pre` …)
  * and marks a state with a `data-` attribute; this part gives them their looks:
  *
@@ -33,11 +34,11 @@ const EDITOR_BODY = cn(
 	"relative flex grow flex-col text-monti-reading text-monti-default outline-none [&_.ProseMirror]:outline-none",
 	"[&_.ProseMirror>*:first-child]:mt-0",
 	// Text blocks.
-	"[&_p]:mt-0 [&_p]:mb-monti-20",
+	"[&_p]:mt-0 [&_p]:mb-[14px]",
 	"[&_[data-align=center]]:text-center [&_[data-align=right]]:text-right",
-	"[&_h2]:mt-monti-32 [&_h2]:mb-monti-12 [&_h2]:text-monti-heading",
-	"[&_h3]:mt-monti-32 [&_h3]:mb-monti-12 [&_h3]:text-monti-subheading",
-	"[&_h4]:mt-monti-32 [&_h4]:mb-monti-12 [&_h4]:text-monti-reading [&_h4]:font-semibold",
+	"[&_h2]:mt-[36px] [&_h2]:mb-[10px] [&_h2]:text-monti-heading",
+	"[&_h3]:mt-[28px] [&_h3]:mb-monti-8 [&_h3]:text-monti-subheading",
+	"[&_h4]:mt-monti-24 [&_h4]:mb-monti-6 [&_h4]:text-monti-reading [&_h4]:font-semibold [&_h4]:leading-[28px]",
 	// Lists: their items line under line, the marker in the margin.
 	"[&_ul]:mt-0 [&_ul]:mb-monti-20 [&_ul]:list-disc [&_ul]:pl-monti-24 [&_ol]:mt-0 [&_ol]:mb-monti-20 [&_ol]:list-decimal [&_ol]:pl-monti-24",
 	"[&_li]:my-0 [&_li]:pl-monti-4",
@@ -85,7 +86,7 @@ const EDITOR_BODY = cn(
 	"[&_.ProseMirror-selectednode:not(:focus-within)_[data-block=file]]:selection:bg-transparent!",
 	// A site block's own margin (its look on the site: 1.5rem) gives way to the body's plain gap; it is unlayered, so it takes `!` to: one reading rhythm.
 	// A picture and a file stand off the next block as a paragraph does (2026-11-10, owner: 20px above them, none under, read as stuck to what follows).
-	"[&_[data-block=image]]:mb-monti-20 [&_[data-block=file]]:mb-monti-20 [&_[data-slot=block-box]>[class*=monti-block-]]:mt-0! [&_[data-slot=block-box]>[class*=monti-block-]]:mb-monti-20! [&_[data-block]>[class*=monti-block-]]:mt-0! [&_[data-block]>[class*=monti-block-]]:mb-monti-20! [&_[data-block=codeBlock]]:relative [&_[data-block=codeBlock]]:mb-monti-20",
+	"[&_[data-block=image]]:mb-monti-20 [&_[data-block=file]]:mb-monti-20 [&_[data-slot=block-box]>[class*=monti-block-]]:mt-0! [&_[data-slot=block-box]>[class*=monti-block-]]:mb-monti-20! [&_[data-block]>[class*=monti-block-]]:mt-0! [&_[data-block]>[class*=monti-block-]]:mb-monti-20! [&_[data-block=codeBlock]]:relative [&_[data-block=codeBlock]]:mt-monti-4 [&_[data-block=codeBlock]]:mb-monti-20",
 	// A container block (callout, tabs, collapsible, columns) holds its blocks one level deeper, in the editor's content holder (in a body that is only read, the
 	// blocks `ReadBody` marks `data-first-in-container` / `data-last-in-container`: one rule for both): the first block in it has no room over it and
 	// the last none under it, whatever kind it is (a paragraph, or a site block whose own margin the rule above makes 0 / 20px, which is why these take `!` too).

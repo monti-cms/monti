@@ -61,6 +61,7 @@ function Row({
 	name,
 	count,
 	tone,
+	countLabel,
 	railDot,
 	children,
 }: {
@@ -70,6 +71,8 @@ function Row({
 	name: string;
 	count?: string;
 	tone?: "danger";
+	/** The word before the count ("실패"). */
+	countLabel?: string;
 	/** Folded, the count cannot show: a dot on the icon stands for it, named by these words. */
 	railDot?: string;
 	children?: React.ReactNode;
@@ -79,13 +82,17 @@ function Row({
 		<SidebarMenuItem>
 			<SidebarMenuButton
 				isActive={active}
-				tooltip={count ? `${name} ${count}` : name}
+				tooltip={count ? `${name} ${countLabel ? `${countLabel} ` : ""}${count}` : name}
 				railDot={count ? railDot : undefined}
 				render={<Link href={`#${place}`} aria-current={active ? "page" : undefined} />}
 			>
 				{icon}
 				<span>{name}</span>
-				{count ? <SidebarMenuBadge tone={tone}>{count}</SidebarMenuBadge> : null}
+				{count ? (
+					<SidebarMenuBadge tone={tone} label={countLabel}>
+						{count}
+					</SidebarMenuBadge>
+				) : null}
 			</SidebarMenuButton>
 			{children}
 		</SidebarMenuItem>
@@ -172,8 +179,24 @@ export function AdminFrame({
 				))}
 			</SidebarMenuSub>
 		) : null;
-	const row = (place: FramePlace, icon: React.ReactNode, name: string, tone?: "danger", railDot?: string) => (
-		<Row place={place} open={open} icon={icon} name={name} count={count[place]} tone={tone} railDot={railDot}>
+	const row = (
+		place: FramePlace,
+		icon: React.ReactNode,
+		name: string,
+		tone?: "danger",
+		railDot?: string,
+		countLabel?: string,
+	) => (
+		<Row
+			place={place}
+			open={open}
+			icon={icon}
+			name={name}
+			count={count[place]}
+			tone={tone}
+			countLabel={countLabel}
+			railDot={railDot}
+		>
 			{place === open ? sub : null}
 		</Row>
 	);
@@ -206,7 +229,7 @@ export function AdminFrame({
 						<SidebarMenu aria-label="관리">
 							{row("trash", <TrashCan />, "휴지통")}
 							{/* Failed deliveries are counted on the log that shows them (doc 13, 2026-11-12). */}
-							{row("activity", <RecentlyViewed />, "활동 기록", "danger", "실패한 전송")}
+							{row("activity", <RecentlyViewed />, "활동 기록", "danger", "실패한 전송", "실패")}
 							{row("tools", <Tools />, "도구")}
 							{row("settings", <SettingsAdjust />, "설정")}
 						</SidebarMenu>

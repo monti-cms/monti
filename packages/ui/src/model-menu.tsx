@@ -17,6 +17,7 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "./dropdown-menu";
+import { ChevronDown } from "./icons";
 import { MENU_EMPTY, MenuShortcut } from "./menu-parts";
 import { SELECT_TRIGGER } from "./select";
 
@@ -272,7 +273,8 @@ export function MenuField({
 					</>
 				)}
 			</span>
-			<Caret solo className="size-3.5 shrink-0" />
+			{/* The chevron of a closed `Select`: 16px, faint, its box 3px short of the underline's end. */}
+			<ChevronDown aria-hidden className="-mr-[5px] size-4 shrink-0 text-monti-faint" />
 		</button>
 	);
 }

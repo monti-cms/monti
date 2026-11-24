@@ -6,7 +6,7 @@ import { cn } from "./cn";
 import { CutWords } from "./cut-words";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "./dropdown-menu";
 import { HIT_AREA } from "./hit-area";
-import { Add, ArrowDown, ArrowUp } from "./icons";
+import { Add, ArrowDown, ArrowUp, ChevronDown, Close } from "./icons";
 import type { SelectAll } from "./page-header";
 import { ResizeHandle } from "./resize-handle";
 import { TABLE_TITLE_MIN, TableHead, TableHeader } from "./table";
@@ -24,6 +24,13 @@ type ListHeadColumn = {
 	sort?: "asc" | "desc";
 	/** A filter is on in this column: a dot follows its name. */
 	filtered?: boolean;
+	/**
+	 * 이 열의 필터. 이름이 서던 자리의 칩으로 보인다(필터 버튼 없음): `bg-selected` 바탕의 24px 칩이 칸의 왼쪽 변(열의 시작 선)에서 시작해 칸의 안쪽
+	 * 여백을 덮고, 글자는 필터가 꺼졌을 때의 이름과 같은 x에 선다. `named`면 흐린 열 이름("상태 · 초안"), 아니면 값만("김하늘"), 그 뒤에 지우는
+	 * ×(`clearLabel`). 점은 없다: 칩의 바탕만으로 필터가 켜졌음을 말한다. 켜고 꺼도 th 안의 글자가 움직이지 않는다(2026-11-24 소유자 결정). 칩은
+	 * 이름처럼 열의 메뉴를 연다.
+	 */
+	filter?: { value: React.ReactNode; named?: boolean; clearLabel: string; onClear?: () => void };
 	/** What the menu under the name holds: the rows of a menu (sort, values to filter by, hide). Without it the name is plain. */
 	menu?: React.ReactNode;
 };
@@ -42,6 +49,8 @@ const LIST_COLUMN_SIZE = {
 	date: 84,
 	time: 120,
 	end: 38,
+	/** The column of the rows' checks (`RowCheck place="cell"`, `ListHead checkColumn`): the check 12px in, the next column's words 44px from the edge. */
+	check: 34,
 } as const;
 type ListColumnSize = keyof typeof LIST_COLUMN_SIZE;
 /** How narrow and how wide a column can be dragged (core's `list.savePrefs` keeps no more); the title, which takes the room left, keeps `TITLE_MIN`. */
@@ -131,6 +140,7 @@ function ListHead({
 	end,
 	add,
 	selectAll,
+	checkColumn = false,
 	moveLabel,
 	onPlace,
 	onStep,
@@ -146,6 +156,11 @@ function ListHead({
 	add?: ListHeadAdd;
 	/** The select-all of the page. Leave it out while rows are picked: the bulk bar holds it then. */
 	selectAll?: SelectAll;
+	/**
+	 * The checks stand in a column of their own at the start (`LIST_COLUMN_SIZE.check`), not in the left margin: the head's first cell holds the
+	 * select-all. Pair with `RowCheck place="cell"` in each row's first cell.
+	 */
+	checkColumn?: boolean;
 	/** What each name's description says about moving it ("Alt+← → moves the column"). */
 	moveLabel?: string;
 	/** Moves a column onto the place of another. Without it (and `onStep`) the names do not move: a list whose columns are fixed. */
@@ -295,12 +310,32 @@ function ListHead({
 				onPointerUp={() => finish(true)}
 				onPointerCancel={() => finish(false)}
 			>
+				{checkColumn && (
+					<TableHead size={LIST_COLUMN_SIZE.check}>
+						{selectAll && (
+							<span data-slot="select-all" className="flex">
+								<Checkbox
+									checked={selectAll.state === "all"}
+									indeterminate={selectAll.state === "some"}
+									onCheckedChange={(next) => selectAll.onChange(next === true)}
+									aria-label={selectAll.label}
+								/>
+							</span>
+						)}
+					</TableHead>
+				)}
 				{columns.map((column, index) => {
 					// The column on the other side of this column's right edge: the edge between them has the handle.
 					const next = columns[index + 1];
 					const held = drag?.id === column.id;
 					const isOpen = open?.id === column.id;
-					const name = (
+					const name = column.filter ? (
+						<>
+							{column.filter.named && <span className="shrink-0 font-normal text-monti-subtle">{column.label} ·</span>}
+							{!column.filter.named && <span className="sr-only">{column.label}</span>}
+							<CutWords className="truncate">{column.filter.value}</CutWords>
+						</>
+					) : (
 						<>
 							<CutWords className="truncate">{column.label}</CutWords>
 							{column.filtered && (
@@ -312,15 +347,20 @@ function ListHead({
 							)}
 							{column.sort === "desc" && <ArrowDown aria-hidden />}
 							{column.sort === "asc" && <ArrowUp aria-hidden />}
+							{/* A name with a menu and no sort says it opens with a quiet ▾. */}
+							{column.menu && !column.sort && <ChevronDown aria-hidden className="opacity-70" />}
 						</>
 					);
 					const buttonClass = cn(
 						HIT_AREA,
-						"inline-flex max-w-full items-center gap-monti-4 border-0 bg-transparent p-0 font-normal text-inherit outline-none focus-visible:rounded-monti-sm focus-visible:ring-2 focus-visible:ring-monti-contrast/60 [&_svg]:size-3 [&_svg]:shrink-0",
+						"inline-flex max-w-full items-center gap-monti-4 border-0 bg-transparent p-0 font-medium text-inherit outline-none focus-visible:rounded-monti-sm focus-visible:ring-2 focus-visible:ring-monti-contrast/60 [&_svg]:size-3 [&_svg]:shrink-0",
 						column.menu && "hover:text-monti-default",
 						(column.sort || isOpen) && "text-monti-default",
 						// A name opens its menu on a press and moves on a drag: the hand of a press, and a grabbing one only while it is moved.
 						column.menu && "cursor-pointer",
+						// 칩의 글자는 칸의 안쪽 여백만큼 들어가, 필터가 꺼졌을 때의 이름과 같은 x(그 열 칸의 글자 x)에 선다(2026-11-24).
+						column.filter &&
+							"h-monti-control-xs gap-monti-6 pl-monti-10 font-medium text-monti-default [th:first-child_&]:pl-monti-12",
 						onPlace && !column.menu && "cursor-grab",
 						held && "cursor-grabbing",
 					);
@@ -340,7 +380,7 @@ function ListHead({
 							aria-sort={column.sort === "asc" ? "ascending" : column.sort === "desc" ? "descending" : undefined}
 							// The select-all inside the first name would be read as part of it.
 							aria-label={index === 0 && selectAll ? column.label : undefined}
-							className="relative touch-none select-none font-normal data-held:z-20 data-held:bg-monti-selected data-held:shadow-monti-floating data-held:outline data-held:outline-1 data-held:outline-monti-emphasis data-held:-outline-offset-1"
+							className="relative touch-none select-none font-medium data-held:z-20 data-held:bg-monti-selected data-held:shadow-monti-floating data-held:outline data-held:outline-1 data-held:outline-monti-emphasis data-held:-outline-offset-1"
 							style={held ? { transform: `translateX(${drag.offset}px)` } : undefined}
 							// A right click on a name opens its menu, as a right click on a row opens the row's.
 							onContextMenu={(event) => {
@@ -358,7 +398,7 @@ function ListHead({
 								dragged.current = false;
 							}}
 						>
-							{index === 0 && selectAll && !drag && (
+							{index === 0 && selectAll && !drag && !checkColumn && (
 								<span data-slot="select-all" className="absolute top-1/2 -left-[26px] z-1 flex -translate-y-1/2">
 									<Checkbox
 										checked={selectAll.state === "all"}
@@ -369,7 +409,36 @@ function ListHead({
 									/>
 								</span>
 							)}
-							{column.menu ? (
+							{column.filter ? (
+								// 칩: 바탕, 메뉴를 여는 이름, ×. 바탕은 칸의 왼쪽 변(열의 시작 선)에서 시작해 칸의 안쪽 여백을 덮고 그 왼쪽으로 나가지 않는다(2026-11-24).
+								<span className="-my-monti-4 -ml-monti-10 inline-flex max-w-full items-center rounded-monti-md bg-monti-selected pr-[2px] [th:first-child>&]:-ml-monti-12">
+									{column.menu ? (
+										<DropdownMenu
+											open={isOpen}
+											onOpenChange={(next) =>
+												setOpen((current) =>
+													next ? { id: column.id, flip: false } : current?.id === column.id ? null : current,
+												)
+											}
+										>
+											<DropdownMenuTrigger className={buttonClass}>{name}</DropdownMenuTrigger>
+											<DropdownMenuContent align="start" sideOffset={4} className="w-[200px] min-w-0">
+												{column.menu}
+											</DropdownMenuContent>
+										</DropdownMenu>
+									) : (
+										<span className={buttonClass}>{name}</span>
+									)}
+									<button
+										type="button"
+										aria-label={column.filter.clearLabel}
+										onClick={column.filter.onClear}
+										className="ml-monti-4 flex size-5 shrink-0 cursor-pointer items-center justify-center rounded-monti-sm border-0 bg-transparent p-0 text-monti-subtle outline-none hover:bg-monti-current hover:text-monti-default focus-visible:ring-2 focus-visible:ring-monti-contrast/60 [&_svg]:size-3"
+									>
+										<Close aria-hidden />
+									</button>
+								</span>
+							) : column.menu ? (
 								<DropdownMenu
 									open={isOpen}
 									// Closing (Escape, a press outside, a pick) comes from the menu; so does opening with ↓ from the keyboard.

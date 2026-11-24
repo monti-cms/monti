@@ -5,20 +5,59 @@ import { cn } from "./cn";
 /**
  * A code block in the editor (doc 17): the box (`bg-muted`, `radius-lg`, as the body's other boxes), its head row (the language and the file name, a
  * hairline under it), and the code. The block's tools are not in the box: they stand in the block's tool row over it (`BlockBarPlace`).
+ *
+ * 머리 줄(2026-11-24 소유자 결정): 글자는 코드 줄의 첫 글자, 곧 한 자리 줄 번호(`CodeNumber`의 글자)가 시작하는 선에서 시작하고 줄 가운데에 선다. 언어(`language`)와 파일
+ * 이름(`file`)은 12px 띄워 둘이 다른 값으로 읽힌다. `head`는 그 뒤, 줄 끝에 서는 것(읽기 전용의 복사)이다.
  */
-function CodeFrame({ head, children, className, ...props }: React.ComponentProps<"div"> & { head?: React.ReactNode }) {
+function CodeFrame({
+	head,
+	language,
+	file,
+	folds = false,
+	compact = false,
+	children,
+	className,
+	...props
+}: React.ComponentProps<"div"> & {
+	/** 코드 칸의 줄 번호 열에 접기 단추 자리가 있다(`CodeNumber folds`): 머리 글자도 그만큼 안쪽에서 시작한다. */
+	folds?: boolean;
+	/** 코드 칸이 `compact`다(12px 글자): 머리 글자의 시작을 그 글자 너비로 잰다. */
+	compact?: boolean;
+	/** 머리 줄 끝에 서는 것(읽기 전용의 복사). `language` 없이 쓰면 머리 줄 전체다. */
+	head?: React.ReactNode;
+	/** 머리 줄의 언어(`Text variant="caption"`). */
+	language?: React.ReactNode;
+	/** 언어 뒤 12px의 파일 이름(`Text variant="caption" mono`). 없으면 언어만. */
+	file?: React.ReactNode;
+}) {
 	return (
 		<div
 			data-slot="code-frame"
 			className={cn("relative flex flex-col rounded-monti-lg bg-monti-muted", className)}
 			{...props}
 		>
-			{head ? (
+			{head || language || file ? (
 				<div
 					data-slot="code-frame-head"
 					contentEditable={false}
-					className="flex min-h-monti-control-sm select-none items-center justify-between gap-monti-8 border-monti-default border-b px-monti-12"
+					className="flex min-h-monti-control-sm select-none items-center justify-between gap-monti-8 border-monti-default border-b pr-monti-12 pl-monti-8"
 				>
+					{language || file ? (
+						<span data-slot="code-frame-name" className="flex min-w-0 items-center">
+							<span
+								aria-hidden
+								className={cn(
+									"flex shrink-0 font-mono",
+									compact ? "text-monti-code" : "text-monti-editor-code",
+									folds && "pl-monti-24 [&>span]:ml-monti-2",
+								)}
+							>
+								<span className="w-[1ch]" />
+							</span>
+							{language}
+							{file ? <span className={cn("flex min-w-0 items-center", language && "ml-monti-12")}>{file}</span> : null}
+						</span>
+					) : null}
 					{head}
 				</div>
 			) : null}
