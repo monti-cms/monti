@@ -110,9 +110,15 @@ function SelectTrigger({
 			{...props}
 		>
 			{children}
-			{/* A 16px chevron in the faint ink whose box ends 3px short of the underline's end (the 2026-11 redesign's model select). */}
-			<SelectPrimitive.Icon data-slot="select-icon" className="-mr-[5px] flex text-monti-faint">
-				<ChevronDown aria-hidden className="size-4" />
+			{/*
+			 * 페이지의 선택 칸: 16px 갈매기가 밑줄 끝보다 3px 안에서 끝난다(2026-11 시안의 모델 선택). 대화상자 안(키 추가의 서비스): 14px로 작아지고
+			 * 오른쪽 끝이 밑줄 끝에 맞닿는다(시안 v7 keys7-add). 값 칸이 남는 폭을 받으므로 크기가 바뀌어도 아무것도 움직이지 않는다.
+			 */}
+			<SelectPrimitive.Icon
+				data-slot="select-icon"
+				className="-mr-[5px] in-data-[slot=dialog-content]:mr-[calc(var(--monti-field-end,var(--monti-space-8))*-1)] flex text-monti-faint"
+			>
+				<ChevronDown aria-hidden className="in-data-[slot=dialog-content]:size-monti-icon-sm size-monti-icon-md" />
 			</SelectPrimitive.Icon>
 		</SelectPrimitive.Trigger>
 	);
