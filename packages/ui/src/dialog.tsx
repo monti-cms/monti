@@ -156,7 +156,7 @@ function DialogOverlay({ className, ...props }: DialogPrimitive.Backdrop.Props) 
 	return <DialogPrimitive.Backdrop data-slot="dialog-overlay" className={cn(BACKDROP, className)} {...props} />;
 }
 
-const DIALOG_WIDTH = { default: "", lg: "sm:max-w-2xl", xl: "sm:max-w-4xl" } as const;
+const DIALOG_WIDTH = { default: "", md: "sm:max-w-[480px]", lg: "sm:max-w-2xl", xl: "sm:max-w-4xl" } as const;
 
 function DialogContent({
 	className,
@@ -164,11 +164,17 @@ function DialogContent({
 	size = "default",
 	scroll = false,
 	form = false,
+	place = "center",
 	...props
 }: DialogPrimitive.Popup.Props & {
+	/**
+	 * `center` (the default): in the middle of the window. `top`: 112px from the top of the window, in the middle sideways: a form whose list opens
+	 * downward (a service picker) keeps the room under it, and its head does not move as the form grows (the API key dialog of the 2026-11 redesign).
+	 */
+	place?: "center" | "top";
 	/** A dialog that holds fields: they sit 16px under the title (the text of a question sits there too), not the 24px between the other parts. */
 	form?: boolean;
-	/** Width on a wide screen: 420px by default (a question, a short form); `lg` for a form with a preview, `xl` for a review of many changes. */
+	/** Width on a wide screen: 420px by default (a question, a short form); `md` 480px for a form of a few fields (a key); `lg` for a form with a preview, `xl` for a review of many changes. */
 	size?: keyof typeof DIALOG_WIDTH;
 	/** Scrolls inside, up to 85% of the window's height (a long review or preview). */
 	scroll?: boolean;
@@ -188,6 +194,7 @@ function DialogContent({
 					DIALOG_WIDTH[size],
 					scroll && "max-h-[85vh] overflow-y-auto *:shrink-0",
 					form && "gap-monti-16",
+					place === "top" && "top-[112px] translate-y-0",
 					className,
 				)}
 				{...props}

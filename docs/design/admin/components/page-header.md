@@ -47,3 +47,5 @@
 ### 코드
 
 `EditorHeader`가 그 띠다(`min-height: header`, 아래 선, 양 끝 정렬). 편집기처럼 사이드바 틀 밖에 서는 화면은 `StandalonePage` 안에 머리 줄부터 쌓고, 그 화면의 알림 띠는 `StandalonePage`의 `banner`로 머리 줄 위에 둔다([status.md](status.md)의 "알림 띠"). `EditorTitleRule`은 제목 아래 잉크색 선이다.
+
+`Section`은 설정 한 절이다(왼쪽에 제목, 오른쪽에 필드). `layout="grid"`는 설정과 도구 페이지의 절이다: 200px 열에 제목(14px 600)과 그 아래 6px의 `description`(12px, 흐림, 190px 안에서 줄을 바꿈), 40px 뒤에 20px 간격의 필드, 위아래 28px, 마지막 절이 아니면 아래 `border-muted` 선.

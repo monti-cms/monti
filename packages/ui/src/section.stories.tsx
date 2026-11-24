@@ -60,3 +60,17 @@ export const Stacked: Story = {
 		</Stack>
 	),
 };
+
+/** `layout="grid"`: the settings and tools pages of the 2026-11 redesign, the title and a short line under it in a 200px column. */
+export const Grid: Story = {
+	render: () => (
+		<Stack gap={0} width="content">
+			<Section layout="grid" title="사이트" description="사이트 이름과 주소는 공개 화면과 피드에 쓰입니다.">
+				{field("grid-site-name", "사이트 이름", "몬티 블로그")}
+			</Section>
+			<Section layout="grid" title="공개 주소" description="한 번 정하면 바꾸기 어렵습니다." last>
+				{field("grid-site-url", "주소", "https://monti.blog")}
+			</Section>
+		</Stack>
+	),
+};

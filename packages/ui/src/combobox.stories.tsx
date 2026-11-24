@@ -12,6 +12,8 @@ import {
 	ComboboxInput,
 	ComboboxItem,
 	ComboboxList,
+	ComboboxScroll,
+	ComboboxSeparator,
 	useComboboxAnchor,
 } from "./combobox";
 import { Stack } from "./stack";
@@ -234,6 +236,46 @@ export const CreateRowAlone: Story = {
 				<ComboboxInput placeholder="태그 고르기" />
 				<ComboboxContent>
 					<ComboboxList>{(item: string) => <ComboboxCreate value={item}>새로 만들기: 사</ComboboxCreate>}</ComboboxList>
+				</ComboboxContent>
+			</Combobox>
+		</Stack>
+	),
+};
+
+const SERVICES = [
+	"AI21 Labs",
+	"Amazon Bedrock",
+	"Azure OpenAI",
+	"Baseten",
+	"Cerebras",
+	"Cohere",
+	"DeepInfra",
+	"DeepSeek",
+	"Fireworks AI",
+	"Groq",
+];
+
+/**
+ * `ComboboxContent width="field"` with `ComboboxList fit="content"`: the list is as wide as the field's underline, and only its long group scrolls (up to
+ * 252px, its last rows fading) while the row under it stays in view (the API key dialog's service picker).
+ */
+export const FieldWidthScroll: Story = {
+	render: () => (
+		<Stack className="min-h-[420px] max-w-sm">
+			<Combobox items={[...SERVICES, "compatible"]} defaultOpen filter={null}>
+				<ComboboxInput showTrigger={false} placeholder="서비스 이름으로 찾기" aria-label="서비스" />
+				<ComboboxContent sideOffset={4} width="field">
+					<ComboboxList fit="content">
+						<ComboboxScroll>
+							{SERVICES.map((name) => (
+								<ComboboxItem key={name} value={name}>
+									{name}
+								</ComboboxItem>
+							))}
+						</ComboboxScroll>
+						<ComboboxSeparator />
+						<ComboboxItem value="compatible">목록에 없나요? OpenAI 호환 주소 직접 넣기</ComboboxItem>
+					</ComboboxList>
 				</ComboboxContent>
 			</Combobox>
 		</Stack>

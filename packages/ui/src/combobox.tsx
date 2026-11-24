@@ -146,11 +146,18 @@ function ComboboxContent({
 	side = "bottom",
 	sideOffset = 6,
 	align = "start",
-	alignOffset = 0,
+	alignOffset,
 	anchor,
+	width = "default",
 	...props
 }: ComboboxPrimitive.Popup.Props &
-	Pick<ComboboxPrimitive.Positioner.Props, "side" | "align" | "sideOffset" | "alignOffset" | "anchor">) {
+	Pick<ComboboxPrimitive.Positioner.Props, "side" | "align" | "sideOffset" | "alignOffset" | "anchor"> & {
+		/**
+		 * `default`: 28px wider than the field, so the rows' words line up with the field's. `field`: edge to edge with its field's underline (8px past the words on each side), a list that stands
+		 * under a dialog's field as part of it (the service picker of the API key dialog).
+		 */
+		width?: "default" | "field";
+	}) {
 	const placement = usePlacementPadding();
 	return (
 		<ComboboxPrimitive.Portal>
@@ -160,19 +167,21 @@ function ComboboxContent({
 				side={side}
 				sideOffset={sideOffset}
 				align={align}
-				alignOffset={alignOffset}
+				// The field's underline runs 8px past its words on each side (`FIELD_INSET`): a list as wide as the field starts there.
+				alignOffset={alignOffset ?? (width === "field" ? -8 : 0)}
 				anchor={anchor}
 				className="isolate z-50"
 			>
 				<ComboboxPrimitive.Popup
 					data-slot="combobox-content"
 					data-chips={!!anchor}
+					data-width={width}
 					className={cn(
 						MENU_CARD,
 						MENU_MOTION,
 						"group/combobox-content relative",
 						FIT_HEIGHT,
-						"w-(--anchor-width) min-w-[calc(var(--anchor-width)+--spacing(7))] max-w-(--available-width) overflow-hidden data-[chips=true]:min-w-(--anchor-width)",
+						"w-(--anchor-width) min-w-[calc(var(--anchor-width)+--spacing(7))] max-w-(--available-width) overflow-hidden data-[width=field]:w-[calc(var(--anchor-width)+--spacing(4))] data-[chips=true]:min-w-(--anchor-width) data-[width=field]:min-w-0",
 						className,
 					)}
 					{...props}
@@ -182,13 +191,37 @@ function ComboboxContent({
 	);
 }
 
-function ComboboxList({ className, ...props }: ComboboxPrimitive.List.Props) {
+function ComboboxList({
+	className,
+	fit = "scroll",
+	...props
+}: ComboboxPrimitive.List.Props & {
+	/**
+	 * `scroll`: the whole list scrolls, up to 252px. `content`: the list stands at its full height and only a long group inside it scrolls, in a
+	 * {@link ComboboxScroll}: the few rows above it (the often used) and the row under it (the way out of the list) stay in view.
+	 */
+	fit?: "scroll" | "content";
+}) {
 	return (
 		<ComboboxPrimitive.List
 			data-slot="combobox-list"
 			className={cn(
-				"no-scrollbar scroll-py-1 overflow-y-auto overscroll-contain p-monti-4 data-empty:p-0",
-				FIT_LIST,
+				"p-monti-4 data-empty:p-0",
+				fit === "scroll" && cn("no-scrollbar scroll-py-1 overflow-y-auto overscroll-contain", FIT_LIST),
+				className,
+			)}
+			{...props}
+		/>
+	);
+}
+
+/** The long group of a `ComboboxList fit="content"`: it scrolls by itself, up to 252px, and its last rows fade out so the list reads as going on. */
+function ComboboxScroll({ className, ...props }: React.ComponentProps<"div">) {
+	return (
+		<div
+			data-slot="combobox-scroll"
+			className={cn(
+				"no-scrollbar mask-b-from-85% mask-b-to-100% max-h-[252px] scroll-py-1 overflow-y-auto overscroll-contain",
 				className,
 			)}
 			{...props}
@@ -406,6 +439,7 @@ export {
 	ComboboxLabel,
 	ComboboxCollection,
 	ComboboxEmpty,
+	ComboboxScroll,
 	ComboboxSeparator,
 	ComboboxChips,
 	ComboboxChip,

@@ -71,6 +71,7 @@ export {
 	ComboboxItem,
 	ComboboxLabel,
 	ComboboxList,
+	ComboboxScroll,
 	ComboboxSeparator,
 	ComboboxTrigger,
 	ComboboxValue,
@@ -195,6 +196,7 @@ export { Icon } from "./icon";
 export { IconButton } from "./icon-button";
 export { Image } from "./image";
 export { Input } from "./input";
+export { ControlRow, KeyList, KeyListEmpty, KeyRow, LetterMark } from "./key-list";
 export { Label, RequiredMark } from "./label";
 export { DEFAULT_UI_LABELS, type UiLabels, UiLabelsProvider, useUiLabels } from "./labels";
 export { LanguageRow, LanguageSource } from "./language-row";
