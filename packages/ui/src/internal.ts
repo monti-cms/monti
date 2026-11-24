@@ -256,6 +256,15 @@ export { PickList, PickListItem, PickListLabel, PickListSeparator } from "./pick
 export { Popover, PopoverContent, PopoverDescription, PopoverHeader, PopoverTitle, PopoverTrigger } from "./popover";
 export { Progress } from "./progress";
 export { PropertyGroup, PropertyPanel } from "./property-list";
+export {
+	PropertyCover,
+	PropertyFile,
+	PropertyNote,
+	PropertyRow,
+	PropertySection,
+	PropertyValue,
+	SearchPreview,
+} from "./property-section";
 export { ProposalBar } from "./proposal-bar";
 export { ProposalBubble, ProposalBubbleDock } from "./proposal-bubble";
 export { ProposalCard } from "./proposal-card";

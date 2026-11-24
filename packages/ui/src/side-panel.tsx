@@ -44,12 +44,14 @@ const SIDE_PANEL_WIDTH = {
 	side: 360,
 	panel: 300,
 	assistant: 380,
+	fill: 360,
 } as const;
 /** The same start widths as a floor: short of room a panel gives way to them, never below (the tokens themselves). */
 const MIN_WIDTH = {
 	side: "sm:min-w-monti-side-panel",
 	panel: "sm:min-w-monti-panel",
 	assistant: "sm:min-w-monti-assistant",
+	fill: "",
 } as const;
 
 /**
@@ -100,6 +102,10 @@ export function SidePanel({
 	footer?: ReactNode;
 	/** The box to type in, pinned under the body with no line over it (the assistant's chat input), 12px above it and 16 at the sides and below. */
 	composer?: ReactNode;
+	/**
+	 * `fill` takes the box it stands in and cannot be dragged: a panel drawn on a page or a board, not docked at the window's edge. It is framed all round
+	 * by the 1px line with `radius-lg` corners, and its buttons are of the square family (2026-11-24, 시안 v5 `panel-states.html`).
+	 */
 	width?: keyof typeof SIDE_PANEL_WIDTH;
 	/** The body keeps no padding or gap of its own: for content that lays out its own sections edge to edge (tabs, bands). */
 	bleed?: boolean;
@@ -196,9 +202,13 @@ export function SidePanel({
 	return (
 		<aside
 			data-slot="side-panel"
+			data-shape={width === "fill" ? "square" : undefined}
 			aria-labelledby={title ? titleId : undefined}
 			className={cn(
-				"relative z-20 flex min-h-0 w-full min-w-0 shrink flex-col bg-monti-tool shadow-[inset_1px_0_0_var(--monti-border-default)] [--monti-ground:var(--monti-bg-tool)] sm:w-(--side-panel-width)",
+				"relative z-20 flex min-h-0 w-full min-w-0 shrink flex-col bg-monti-tool [--monti-ground:var(--monti-bg-tool)]",
+				width === "fill"
+					? "h-full overflow-hidden rounded-monti-lg shadow-[inset_0_0_0_1px_var(--monti-border-default)]"
+					: "shadow-[inset_1px_0_0_var(--monti-border-default)] sm:w-(--side-panel-width)",
 				// Never narrower than its start: what was dragged wider gives way first, then the page, and the panel does not go under its start.
 				MIN_WIDTH[width],
 				className,
@@ -215,16 +225,18 @@ export function SidePanel({
 				props.onPointerDownCapture?.(event);
 			}}
 		>
-			<ResizeHandle
-				value={resize.width}
-				min={resize.min}
-				max={resize.max}
-				onChange={resize.setWidth}
-				onReset={resize.reset}
-				edge="start"
-				resizing={resize.resizing}
-				className="max-sm:hidden"
-			/>
+			{width !== "fill" && (
+				<ResizeHandle
+					value={resize.width}
+					min={resize.min}
+					max={resize.max}
+					onChange={resize.setWidth}
+					onReset={resize.reset}
+					edge="start"
+					resizing={resize.resizing}
+					className="max-sm:hidden"
+				/>
+			)}
 			{title && (
 				<header data-slot="side-panel-header" className={PANEL_HEAD}>
 					{back && (
