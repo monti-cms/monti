@@ -207,8 +207,8 @@ export function SidePanel({
 			className={cn(
 				"relative z-20 flex min-h-0 w-full min-w-0 shrink flex-col bg-monti-tool [--monti-ground:var(--monti-bg-tool)]",
 				width === "fill"
-					? "h-full overflow-hidden rounded-monti-lg shadow-[inset_0_0_0_1px_var(--monti-border-default)]"
-					: "shadow-[inset_1px_0_0_var(--monti-border-default)] sm:w-(--side-panel-width)",
+					? "h-full overflow-hidden rounded-monti-lg border border-monti-default"
+					: "border-monti-default border-l sm:w-(--side-panel-width)",
 				// Never narrower than its start: what was dragged wider gives way first, then the page, and the panel does not go under its start.
 				MIN_WIDTH[width],
 				className,
@@ -234,7 +234,8 @@ export function SidePanel({
 					onReset={resize.reset}
 					edge="start"
 					resizing={resize.resizing}
-					className="max-sm:hidden"
+					// 패널의 선은 상자 안의 진짜 1px 선이라 손잡이를 그 선 위로 1px 당긴다.
+					className="-left-px max-sm:hidden"
 				/>
 			)}
 			{title && (

@@ -79,7 +79,8 @@ function PickField({
 			<SelectTrigger size="md" width="full" caret="active" aria-label={label}>
 				<SelectValue placeholder={placeholder} />
 			</SelectTrigger>
-			<SelectContent width="field">
+			{/* 시안처럼 목록이 칸의 상자와 같은 폭으로 칸 아래 3px에 선다. */}
+			<SelectContent width="field" sideOffset={3}>
 				{items.map((item) => (
 					<SelectItem key={item.value} value={item.value}>
 						{item.label}
@@ -141,7 +142,7 @@ function TagField({
 				<ComboboxChipsInput aria-label={label} placeholder={tags.length ? undefined : placeholder} />
 			</ComboboxChips>
 			{typed !== undefined && (
-				<ComboboxContent anchor={anchor}>
+				<ComboboxContent anchor={anchor} sideOffset={3}>
 					<ComboboxList>
 						{found.map((each) => (
 							<ComboboxItem key={each.value} value={each.value}>

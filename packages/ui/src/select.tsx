@@ -182,7 +182,7 @@ function SelectLabel({ className, ...props }: SelectPrimitive.GroupLabel.Props) 
 function SelectItem({ className, children, ...props }: SelectPrimitive.Item.Props) {
 	return (
 		<SelectPrimitive.Item data-slot="select-item" className={cn(MENU_ITEM, "w-full", className)} {...props}>
-			<SelectPrimitive.ItemText className="flex min-w-0 flex-1 gap-monti-8 whitespace-nowrap">
+			<SelectPrimitive.ItemText className="flex min-w-0 flex-1 items-center gap-monti-8 whitespace-nowrap">
 				{menuWords(children)}
 			</SelectPrimitive.ItemText>
 			<SelectPrimitive.ItemIndicator render={<MenuTick />} />

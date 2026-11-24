@@ -473,7 +473,8 @@ function ComboboxChipsInput({ className, ...props }: ComboboxPrimitive.Input.Pro
 	return (
 		<ComboboxPrimitive.Input
 			data-slot="combobox-chip-input"
-			className={cn(CHIPS_INPUT, className)}
+			// 속성 패널의 줄에서는 치는 자리가 32px까지 좁아져, 친 글자가 칩 뒤 같은 줄에 선다(시안 v5 `panel-states.html` ③, 2026-11-24).
+			className={cn(CHIPS_INPUT, "in-data-[slot=property-row]:min-w-8", className)}
 			// In a field that is only read the keyboard stops on this input, which holds nothing, and does not walk the chips: the values
 			// are said with it, as its description.
 			render={(given, state) => (
