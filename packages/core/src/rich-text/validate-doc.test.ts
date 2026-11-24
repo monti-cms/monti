@@ -213,9 +213,11 @@ function nestedQuotes(levels: number): Doc {
 	return { blocks: [block] };
 }
 
-it("RT-BLK-8 블록을 32단계보다 깊게 넣으면 처음 한도를 넘긴 블록이 문제로 보고된다", () => {
+it("RT-BLK-8 블록 중첩은 32단계까지 통과하고 이를 넘으면 처음 한도를 넘긴 블록이 문제로 보고된다", () => {
 	// RT-BLK-8.1
 	expect(pathsOf(nestedQuotes(33))).toContain(`blocks[0]${".children[0]".repeat(32)}`);
+	// RT-BLK-8.2
+	expect(pathsOf(nestedQuotes(32))).toEqual([]);
 });
 
 it("RT-INL-1 인라인 노드가 객체가 아니거나 등록되지 않은 종류이거나 각주 참조 ID가 문자열이 아니면 문제를 돌려준다", () => {

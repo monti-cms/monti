@@ -723,7 +723,11 @@ const lateCases: LateCase[] = [
  * `run`의 콜백에서 행 하나를 기다려 저장한 뒤 `late`의 작업을 기다리지 않고 반환한다. 호출이 던졌는지를 돌려주고, 돌려주기
  * 전에 멈춘 작업을 모두 풀어 끝까지 실행시킨다.
  */
-async function runWithLate(run: "transaction" | "dryRun", late: LateCase): Promise<boolean> {
+async function runWithLate(
+	run: "transaction" | "dryRun",
+	late: LateCase,
+	onEvent: (event: MontiEvent) => void,
+): Promise<boolean> {
 	// 엔진은 콜백이 끝난 뒤 커밋·롤백 전에 `select 1`로 트랜잭션을 확인한다: 그 결과를 붙잡아 둔 동안 늦은 작업을 시작한다.
 	const held = gate();
 	const parked = gate();
@@ -744,6 +748,7 @@ async function runWithLate(run: "transaction" | "dryRun", late: LateCase): Promi
 		},
 	});
 	const monti = createMonti(holdingAfter(db, /^select 1$/, held.pass), { folders: { add, addTwo, addLater } });
+	monti.onEvent(onEvent);
 	// 거절된 늦은 작업이 처리되지 않은 거절로 남지 않게, 시작하자마자 결과를 받아 둔다.
 	const started: Promise<unknown>[] = [];
 	const start = (work: Promise<unknown>) => started.push(work.catch(() => undefined));
@@ -772,15 +777,20 @@ async function runWithLate(run: "transaction" | "dryRun", late: LateCase): Promi
 	}
 }
 
-it("ENG-TX-11 콜백이 기다리지 않은 쓰기가 있으면 트랜잭션은 실패하고 아무것도 저장하지 않는다", async () => {
+it("ENG-TX-11 콜백이 기다리지 않은 쓰기가 있으면 트랜잭션과 드라이런은 실패하고 아무것도 저장하지 않는다", async () => {
+	const listener = vi.fn();
 	const runs = ["transaction", "dryRun"] as const;
 	const outcomes = [];
 	for (const run of runs) {
-		for (const late of lateCases) outcomes.push({ run, late: late.name, threw: await runWithLate(run, late) });
+		for (const late of lateCases) {
+			outcomes.push({ run, late: late.name, threw: await runWithLate(run, late, listener) });
+		}
 	}
 
 	// ENG-TX-11.1
 	expect(outcomes).toEqual(runs.flatMap((run) => lateCases.map((late) => ({ run, late: late.name, threw: true }))));
 	// ENG-TX-11.2
 	expect(await folderNames()).toEqual([]);
+	// ENG-TX-11.3
+	expect(listener).not.toHaveBeenCalled();
 });

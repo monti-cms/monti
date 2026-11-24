@@ -292,7 +292,7 @@
 <summary><strong><code>KEY-USE-2</code></strong> 암호화 비밀값이 없으면 저장된 키를 받아 쓸 수 없다</summary>
 
 - **전제**: 키가 하나 저장되어 있고 암호화 비밀값(`secret`)이 설정되지 않은 엔진이다
-- **행동**: 저장된 키의 `id`와 `service`로 `withStoredKey({ id, service }, use)`를 실행한다
+- **행동**: 저장된 키의 `id`와 `service`로 `monti.withStoredKey({ id, service }, use)`를 실행한다
 - **결과**:
   - `KEY-USE-2.1` `BAD_REQUEST` 오류를 던진다
   - `KEY-USE-2.2` `use`가 호출되지 않는다
@@ -303,7 +303,7 @@
 <summary><strong><code>KEY-USE-3</code></strong> 존재하지 않는 키는 받아 쓸 수 없다</summary>
 
 - **전제**: `api_keys`가 비어 있다
-- **행동**: 존재하지 않는 `id`로 `withStoredKey({ id, service }, use)`를 실행한다
+- **행동**: 존재하지 않는 `id`로 `monti.withStoredKey({ id, service }, use)`를 실행한다
 - **결과**:
   - `KEY-USE-3.1` `NOT_FOUND` 오류를 던진다
   - `KEY-USE-3.2` `use`가 호출되지 않는다
@@ -314,7 +314,7 @@
 <summary><strong><code>KEY-USE-4</code></strong> 다른 서비스의 키로 저장된 키는 받아 쓸 수 없다</summary>
 
 - **전제**: 키가 하나 저장되어 있다
-- **행동**: 저장된 키의 `id`와, 저장된 것과 다른 `service`로 `withStoredKey({ id, service }, use)`를 실행한다
+- **행동**: 저장된 키의 `id`와, 저장된 것과 다른 `service`로 `monti.withStoredKey({ id, service }, use)`를 실행한다
 - **결과**:
   - `KEY-USE-4.1` `BAD_REQUEST` 오류를 던진다
   - `KEY-USE-4.2` `use`가 호출되지 않는다

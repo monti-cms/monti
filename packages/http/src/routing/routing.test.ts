@@ -68,7 +68,6 @@ const BAD_REQUEST = { code: "BAD_REQUEST" };
 /** 본문 허용 크기: 1 MiB. */
 const MIB = 1_048_576;
 
-/** `bytes`를 64 KiB 조각으로 흘려보내는 본문 스트림. `Content-Length` 헤더가 붙지 않는다. */
 /** 64 KiB씩 1 MiB를 넘길 때까지 내보낸 뒤 끝나지 않는 JSON 본문 스트림. */
 function unendingStream(): ReadableStream<Uint8Array> {
 	const chunk = new TextEncoder().encode("a".repeat(65_536));
@@ -369,8 +368,12 @@ it("HTTP-RUT-22 점(`.`) 중첩 쿼리의 위험한 프로토타입 키와 키 �
 	expect(conflictCodes).toEqual(["BAD_REQUEST", "BAD_REQUEST"]);
 });
 
-it("HTTP-RUT-23 허용 크기(1 MiB)를 넘는 요청 본문은 끝까지 읽지 않고 거절한다", async () => {
+it("HTTP-RUT-23 허용 크기(1 MiB)를 넘는 요청 본문은 끝까지 읽지 않고 거절하고, 정확히 1 MiB인 JSON 본문은 조립한다", async () => {
 	const tooLarge = parse(core, "POST", "/api/templates", { body: unendingStream(), type: "application/json" });
+	const name = "a".repeat(MIB - JSON.stringify({ name: "" }).length);
+	const exact = await parse(core, "POST", "/api/templates", json({ name }));
 	// HTTP-RUT-23.1
 	await expect(tooLarge).rejects.toMatchObject({ code: "PAYLOAD_TOO_LARGE" });
+	// HTTP-RUT-23.2
+	expect(exact.input).toEqual({ name });
 });
