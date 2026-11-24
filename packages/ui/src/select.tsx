@@ -2,7 +2,6 @@
 
 import { Select as SelectPrimitive } from "@base-ui/react/select";
 import type * as React from "react";
-import { Caret } from "./caret";
 import { cn } from "./cn";
 import { CutWords } from "./cut-words";
 import { FIELD_HOVER, FIELD_INSET } from "./hover";
@@ -103,8 +102,9 @@ function SelectTrigger({
 			{...props}
 		>
 			{children}
-			<SelectPrimitive.Icon data-slot="select-icon" className="flex">
-				<Caret solo className="size-3.5" />
+			{/* A 16px chevron in the faint ink whose box ends 3px short of the underline's end (the 2026-11 redesign's model select). */}
+			<SelectPrimitive.Icon data-slot="select-icon" className="-mr-[5px] flex text-monti-faint">
+				<ChevronDown aria-hidden className="size-4" />
 			</SelectPrimitive.Icon>
 		</SelectPrimitive.Trigger>
 	);

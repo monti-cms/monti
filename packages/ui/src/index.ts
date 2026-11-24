@@ -194,6 +194,7 @@ export const PageToolbarEnd = close(open.PageToolbarEnd);
 export const FormField = close(open.FormField);
 export const FormFieldDescription = close(open.FormFieldDescription);
 export const FormFieldError = close(open.FormFieldError);
+export const FormFieldHint = close(open.FormFieldHint);
 export const FormFieldGroup = close(open.FormFieldGroup);
 export const FormFieldLabel = close(open.FormFieldLabel);
 export const FormFieldLegend = close(open.FormFieldLegend);

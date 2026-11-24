@@ -12,7 +12,7 @@ function KeyList({ className, ...props }: React.ComponentProps<"div">) {
 /**
  * One saved key: its name (14px 500, ink) with what identifies it after it in mono (`identifier`: the key's last characters "sk-or-…8e42", an address
  * "localhost:11434"), a line under it saying where it is used (`meta`, 13px on an 18px line, subtle; `danger` when the service refused it), then at the end its state
- * (`status`, an `EntryStatus`) with a fix 8px before it (`action`, a small pill), and the row's ⋯ (`more`) in a 32px column. At least 60px, 10px above and
+ * (`status`, an `EntryStatus`; a taken key's name is muted, green on the dark ground) with a fix 8px before it (`action`, a small pill), and the row's ⋯ (`more`) in a 32px column. At least 60px, 10px above and
  * below; a long name wraps, it is not cut.
  */
 function KeyRow({
@@ -64,7 +64,8 @@ function KeyRow({
 					</div>
 				)}
 			</div>
-			<div className="flex items-center gap-monti-8">
+			{/* Its status at the normal weight; a key the service took ("확인됨", a quiet `published` status) says so in the muted ink, and in the success green on the dark ground. */}
+			<div className="flex items-center gap-monti-8 [&_[data-slot=entry-status][data-status=published]]:text-monti-muted monti-dark:[&_[data-slot=entry-status][data-status=published]]:text-monti-success [&_[data-slot=entry-status]]:font-normal">
 				{action}
 				{status}
 			</div>

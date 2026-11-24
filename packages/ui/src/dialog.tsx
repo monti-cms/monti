@@ -32,13 +32,19 @@ export const DIALOG_ACTIONS = "flex flex-wrap items-center justify-end gap-monti
 
 /**
  * Where focus lands when a modal opens: the first text field if there is one, else the modal itself, so no button shows a focus ring the moment it
- * appears. A focus ring is for the keyboard moving on from there.
+ * appears. A focus ring is for the keyboard moving on from there. The input a select keeps for its form is not a field: it is hidden from the
+ * keyboard, and focus sent to it went on to the select's button and drew its line. `field: false` puts it on the modal itself whatever it holds.
  */
-export function useModalFocus() {
+export function useModalFocus({ field = true }: { field?: boolean } = {}) {
 	const popup = React.useRef<HTMLDivElement>(null);
 	const initialFocus = React.useCallback(
-		() => popup.current?.querySelector<HTMLElement>("input:not([type=hidden]), textarea, select") ?? popup.current,
-		[],
+		() =>
+			(field
+				? popup.current?.querySelector<HTMLElement>(
+						"input:not([type=hidden]):not([aria-hidden=true]):not([tabindex='-1']), textarea:not([tabindex='-1']), select:not([aria-hidden=true])",
+					)
+				: null) ?? popup.current,
+		[field],
 	);
 	return { popup, initialFocus };
 }
@@ -165,6 +171,7 @@ function DialogContent({
 	scroll = false,
 	form = false,
 	place = "center",
+	openFocus = "field",
 	...props
 }: DialogPrimitive.Popup.Props & {
 	/**
@@ -172,14 +179,22 @@ function DialogContent({
 	 * downward (a service picker) keeps the room under it, and its head does not move as the form grows (the API key dialog of the 2026-11 redesign).
 	 */
 	place?: "center" | "top";
-	/** A dialog that holds fields: they sit 16px under the title (the text of a question sits there too), not the 24px between the other parts. */
-	form?: boolean;
+	/**
+	 * A dialog that holds fields: they sit 16px under the title (the text of a question sits there too), not the 24px between the other parts.
+	 * `lead`: 20px under a one-line `DialogDescription size="lead"` and 24px over the buttons (the API key dialog of the 2026-11 redesign).
+	 */
+	form?: boolean | "lead";
+	/**
+	 * Where focus lands when it opens: `field` (the default) its first text field, else itself; `dialog` itself, for a form opened again on a
+	 * value a check refused, whose field is marked and would show a caret over the value it holds. The keyboard goes on from there.
+	 */
+	openFocus?: "field" | "dialog";
 	/** Width on a wide screen: 420px by default (a question, a short form); `md` 480px for a form of a few fields (a key); `lg` for a form with a preview, `xl` for a review of many changes. */
 	size?: keyof typeof DIALOG_WIDTH;
 	/** Scrolls inside, up to 85% of the window's height (a long review or preview). */
 	scroll?: boolean;
 }) {
-	const { popup, initialFocus } = useModalFocus();
+	const { popup, initialFocus } = useModalFocus({ field: openFocus === "field" });
 	return (
 		<DialogPortal>
 			<DialogOverlay />
@@ -193,7 +208,8 @@ function DialogContent({
 					DIALOG_SURFACE,
 					DIALOG_WIDTH[size],
 					scroll && "max-h-[85vh] overflow-y-auto *:shrink-0",
-					form && "gap-monti-16",
+					form === true && "gap-monti-16",
+					form === "lead" && "gap-monti-20 *:data-[slot=dialog-footer]:mt-monti-4",
 					place === "top" && "top-[112px] translate-y-0",
 					className,
 				)}
@@ -253,11 +269,16 @@ function DialogTitle({ className, of, children, ...props }: DialogPrimitive.Titl
 	);
 }
 
-function DialogDescription({ className, ...props }: DialogPrimitive.Description.Props) {
+/** `lead`: one quiet line under the title, 13px in the subtle ink, over a form's fields (the API key dialog of the 2026-11 redesign). */
+function DialogDescription({
+	size = "prose",
+	className,
+	...props
+}: DialogPrimitive.Description.Props & { size?: "prose" | "lead" }) {
 	return (
 		<DialogPrimitive.Description
 			data-slot="dialog-description"
-			className={cn(DIALOG_DESCRIPTION, className)}
+			className={cn(DIALOG_DESCRIPTION, size === "lead" && "font-normal text-monti-label text-monti-subtle", className)}
 			{...props}
 		/>
 	);

@@ -1,4 +1,4 @@
-import { Add, Link as LinkIcon, OverflowMenuHorizontal } from "../icons";
+import { Add, Link as LinkIcon, OverflowMenuHorizontal, Search, Warning } from "../icons";
 import {
 	Box,
 	Button,
@@ -20,7 +20,7 @@ import {
 	DialogTitle,
 	EntryStatus,
 	FormField,
-	FormFieldError,
+	FormFieldHint,
 	FormFieldLabel,
 	IconButton,
 	Inline,
@@ -150,8 +150,14 @@ function ServicePicker({ query }: { query?: string }) {
 	const items = found ?? [...FREQUENT.map((item) => item.name), ...ALL_SERVICES];
 	return (
 		<Combobox items={items} defaultOpen inputValue={query ?? ""} filter={null} autoHighlight>
-			<ComboboxInput showTrigger={false} placeholder="서비스 이름으로 찾기" aria-label="서비스" autoFocus />
-			<ComboboxContent sideOffset={4} width="field">
+			<ComboboxInput
+				showTrigger={false}
+				icon={<Search aria-hidden />}
+				placeholder="서비스 이름으로 찾기"
+				aria-label="서비스"
+				autoFocus
+			/>
+			<ComboboxContent sideOffset={5} width="field">
 				<ComboboxList fit="content">
 					{found ? (
 						<ComboboxGroup>
@@ -214,14 +220,17 @@ function ServicePicker({ query }: { query?: string }) {
 function AddKeyDialog({ stage }: { stage: "pick" | "search" | "fail" }) {
 	return (
 		<Dialog defaultOpen>
-			<DialogContent size="md" place="top" form>
+			{/* 거부된 키를 다시 연 대화상자는 대화상자 자신이 포커스를 받는다: 고칠 칸은 이미 빨갛고, 커서가 그 값을 가리면 안 된다. */}
+			<DialogContent size="md" place="top" form="lead" openFocus={stage === "fail" ? "dialog" : "field"}>
 				<DialogHeader>
 					<DialogTitle>키 추가</DialogTitle>
-					<DialogDescription>추가하면 서비스에 한 번 접속해 키를 확인합니다.</DialogDescription>
+					<DialogDescription size="lead">추가하면 서비스에 한 번 접속해 키를 확인합니다.</DialogDescription>
 				</DialogHeader>
 				<Stack gap={16}>
-					<FormField>
-						<FormFieldLabel htmlFor="key-service">서비스</FormFieldLabel>
+					<FormField spacing="label">
+						<FormFieldLabel size="label" htmlFor="key-service">
+							서비스
+						</FormFieldLabel>
 						{stage === "fail" ? (
 							<Select items={[{ value: "anthropic", label: "Anthropic" }]} value="anthropic">
 								<SelectTrigger id="key-service" width="full">
@@ -237,13 +246,16 @@ function AddKeyDialog({ stage }: { stage: "pick" | "search" | "fail" }) {
 							<ServicePicker query={stage === "search" ? "deep" : undefined} />
 						)}
 					</FormField>
-					<FormField data-invalid={stage === "fail" || undefined}>
-						<FormFieldLabel htmlFor="key-secret">키</FormFieldLabel>
+					<FormField spacing="label" data-invalid={stage === "fail" || undefined}>
+						<FormFieldLabel size="label" htmlFor="key-secret">
+							키
+						</FormFieldLabel>
 						{stage === "fail" ? (
 							<SecretInput
 								id="key-secret"
 								aria-invalid
-								defaultValue="sk-ant-not-a-real-key-Q2a"
+								defaultValue="sk-ant-api03-not-a-real-key-Q2a"
+								peek={{ start: 13, end: 3 }}
 								showLabel="키 보기"
 								hideLabel="키 가리기"
 							/>
@@ -251,12 +263,14 @@ function AddKeyDialog({ stage }: { stage: "pick" | "search" | "fail" }) {
 							<Input id="key-secret" disabled placeholder="서비스를 먼저 고르세요" />
 						)}
 						{stage === "fail" && (
-							<FormFieldError>Anthropic이 이 키를 받지 않았습니다. 키 전체를 다시 복사해 붙여 넣으세요.</FormFieldError>
+							<FormFieldHint tone="danger" icon={<Warning aria-hidden />}>
+								Anthropic이 이 키를 받지 않았습니다. 키 전체를 다시 복사해 붙여 넣으세요.
+							</FormFieldHint>
 						)}
 					</FormField>
 					{stage === "fail" && (
-						<FormField>
-							<FormFieldLabel htmlFor="key-name">
+						<FormField spacing="label">
+							<FormFieldLabel size="label" htmlFor="key-name">
 								이름
 								<Text tone="faint" weight="role">
 									· 선택

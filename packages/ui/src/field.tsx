@@ -70,12 +70,23 @@ function FormFieldGroup({
  * A labeled field: the label above (sans 12), the control, then at most one line of error. The assistant's fill action sits on the label row and
  * always shows (one hidden until the pointer came was not found, AS-27); while it works, `AiWorking` stands in its place.
  */
-function FormField({ className, ...props }: React.ComponentProps<"div">) {
+function FormField({
+	spacing = "tight",
+	className,
+	...props
+}: React.ComponentProps<"div"> & {
+	/** `label`: 6px between the label, the control and its hint (the settings pages and the API key dialog of the 2026-11 redesign); `tight` (the default) 4px. */
+	spacing?: "tight" | "label";
+}) {
 	return (
 		<div
 			role="group"
 			data-slot="field"
-			className={cn("group/field flex w-full flex-col gap-monti-4 data-[invalid=true]:text-monti-danger", className)}
+			className={cn(
+				"group/field flex w-full flex-col data-[invalid=true]:text-monti-danger",
+				spacing === "label" ? "gap-monti-6" : "gap-monti-4",
+				className,
+			)}
 			{...props}
 		/>
 	);
@@ -109,12 +120,52 @@ function FormFieldLabel({
 	className,
 	action,
 	changed,
+	size = "caption",
+	count,
+	countTone,
 	...props
-}: React.ComponentProps<typeof Label> & { action?: React.ReactNode; changed?: FormFieldChange }) {
+}: Omit<React.ComponentProps<typeof Label>, "size"> & {
+	action?: React.ReactNode;
+	changed?: FormFieldChange;
+	/**
+	 * `label`: 13px at 500 in the muted ink on an 18px row (the settings pages and the API key dialog of the 2026-11 redesign); a `changed` field there
+	 * shows the dot alone, after the words. `caption` (the default): 12px in the subtle ink.
+	 */
+	size?: "caption" | "label";
+	/** With `size="label"`: the length at the row's end ("0 / 2,000"), 12px faint; `danger` once it runs over. */
+	count?: React.ReactNode;
+	countTone?: "danger";
+}) {
+	if (size === "label") {
+		return (
+			<div data-slot="label-row" className="flex items-center gap-monti-6">
+				<Label
+					data-slot="field-label"
+					size="label"
+					tone="muted"
+					className={cn("peer/field-label w-fit group-data-[disabled=true]/field:opacity-45", className)}
+					{...props}
+				/>
+				{changed && <ChangeDot tone={changed.tone} label={changed.label} />}
+				{count !== undefined && (
+					<span
+						data-slot="field-count"
+						className={cn(
+							"ml-auto font-mono text-monti-caption tabular-nums",
+							countTone === "danger" ? "text-monti-danger" : "text-monti-faint",
+						)}
+					>
+						{count}
+					</span>
+				)}
+				{action}
+			</div>
+		);
+	}
 	const label = (
 		<Label
 			data-slot="field-label"
-			size="caption"
+			size={size}
 			tone="subtle"
 			className={cn("peer/field-label w-fit group-data-[disabled=true]/field:opacity-45", className)}
 			{...props}
@@ -252,6 +303,35 @@ function FormFieldError({
 	);
 }
 
+/**
+ * One quiet line under a control, always shown (unlike a `FormFieldError` hint): what the value does, or the empty value's fallback. 12px faint;
+ * `danger` while the value is wrong (what to fix, "14자를 줄여 주세요."); `icon` leads it at 12px (an ⓘ for a note about what saving will do, a ⚠ for
+ * what a check refused). It stands 10px under the control in a `FormField spacing="label"`.
+ */
+function FormFieldHint({
+	tone,
+	icon,
+	className,
+	children,
+	...props
+}: React.ComponentProps<"div"> & { tone?: "danger"; icon?: React.ReactNode }) {
+	return (
+		<div
+			data-slot="field-hint"
+			role={tone === "danger" ? "alert" : undefined}
+			className={cn(
+				"mt-monti-4 flex items-center gap-monti-6 text-monti-caption [&_svg]:size-3 [&_svg]:shrink-0",
+				tone === "danger" ? "text-monti-danger" : "text-monti-faint",
+				className,
+			)}
+			{...props}
+		>
+			{icon}
+			<span className="min-w-0">{children}</span>
+		</div>
+	);
+}
+
 /** The saved value an assistant's proposal would replace, struck through in blue right under the control. */
 function FormFieldWas({ className, ...props }: React.ComponentProps<"del">) {
 	return <Del data-slot="field-was" className={cn("block pt-monti-4 text-monti-caption", className)} {...props} />;
@@ -264,6 +344,7 @@ export {
 	FormFieldDescription,
 	FormFieldError,
 	FormFieldGroup,
+	FormFieldHint,
 	FormFieldLegend,
 	FormFieldSet,
 	FormFieldTitle,

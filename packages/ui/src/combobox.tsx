@@ -81,8 +81,14 @@ function ComboboxInput({
 	size = "default",
 	mono = false,
 	proposal = false,
+	icon,
 	...props
 }: Omit<ComboboxPrimitive.Input.Props, "size"> & {
+	/**
+	 * A 14px mark before the words, 8px from them, in the faint ink (the magnifier of a field that finds). It stands in the input's own room, so the
+	 * list still opens from the field's start.
+	 */
+	icon?: React.ReactNode;
 	showTrigger?: boolean;
 	showClear?: boolean;
 	size?: "sm" | "md" | "default";
@@ -96,13 +102,21 @@ function ComboboxInput({
 			className={cn(
 				cn(
 					FIELD_HOVER,
-					"group/combobox-input flex w-full min-w-0 items-center gap-monti-4 border-transparent border-b transition-colors focus-within:border-monti-contrast has-[input[readonly]]:has-focus-visible:ring-2 has-[input[readonly]]:has-focus-visible:ring-monti-contrast/60 has-[input:disabled]:pointer-events-none has-[[aria-invalid=true]]:border-monti-danger has-data-proposal:border-monti-proposal has-data-proposal:border-b-[1.5px] has-[input:disabled]:opacity-45 has-[input[readonly]]:focus-within:border-transparent",
+					"group/combobox-input relative flex w-full min-w-0 items-center gap-monti-4 border-transparent border-b transition-colors focus-within:border-monti-contrast has-[input[readonly]]:has-focus-visible:ring-2 has-[input[readonly]]:has-focus-visible:ring-monti-contrast/60 has-[input:disabled]:pointer-events-none has-[[aria-invalid=true]]:border-monti-danger has-data-proposal:border-monti-proposal has-data-proposal:border-b-[1.5px] has-[input:disabled]:opacity-45 has-[input[readonly]]:focus-within:border-transparent",
 					FIELD_INSET,
 				),
 				size === "sm" ? "h-monti-control-sm" : "h-monti-control-md",
 				className,
 			)}
 		>
+			{icon && (
+				<span
+					data-slot="combobox-icon"
+					className="pointer-events-none absolute left-monti-8 flex text-monti-faint [&_svg]:size-3.5"
+				>
+					{icon}
+				</span>
+			)}
 			<ComboboxPrimitive.Input
 				// A combobox that is off (`Combobox disabled`) marks its input but leaves it in the Tab order: the input itself is turned off here, so the field is
 				// off for the keyboard too, as an `Input disabled` is.
@@ -116,6 +130,7 @@ function ComboboxInput({
 						// The field around it holds the room, the tint and the dimming of a field that is off; the input inside takes none of them.
 						className={cn(
 							"h-full flex-1 border-b-0 px-0 hover:bg-transparent disabled:opacity-100 data-proposal:border-b-0",
+							icon && "pl-[22px]",
 							given.className,
 						)}
 					/>
@@ -154,7 +169,8 @@ function ComboboxContent({
 	Pick<ComboboxPrimitive.Positioner.Props, "side" | "align" | "sideOffset" | "alignOffset" | "anchor"> & {
 		/**
 		 * `default`: 28px wider than the field, so the rows' words line up with the field's. `field`: edge to edge with its field's underline (8px past the words on each side), a list that stands
-		 * under a dialog's field as part of it (the service picker of the API key dialog).
+		 * under a dialog's field as part of it (the service picker of the API key dialog). Its rows are 13px in ink, its group names 12px on a 28px row,
+		 * and its rules stand inside the card's padding, as wide as the rows.
 		 */
 		width?: "default" | "field";
 	}) {
@@ -229,9 +245,15 @@ function ComboboxScroll({ className, ...props }: React.ComponentProps<"div">) {
 	);
 }
 
+/** A row and a group name in a `ComboboxContent width="field"` (see there). */
+const PICKER_ITEM =
+	"group-data-[width=field]/combobox-content:font-normal group-data-[width=field]/combobox-content:text-monti-default group-data-[width=field]/combobox-content:text-monti-label";
+const PICKER_LABEL =
+	"group-data-[width=field]/combobox-content:text-monti-caption group-data-[width=field]/combobox-content:font-medium";
+
 function ComboboxItem({ className, children, ...props }: ComboboxPrimitive.Item.Props) {
 	return (
-		<ComboboxPrimitive.Item data-slot="combobox-item" className={cn(MENU_ITEM, className)} {...props}>
+		<ComboboxPrimitive.Item data-slot="combobox-item" className={cn(MENU_ITEM, PICKER_ITEM, className)} {...props}>
 			{menuWords(children)}
 			<ComboboxPrimitive.ItemIndicator render={<MenuTick />} />
 		</ComboboxPrimitive.Item>
@@ -264,7 +286,13 @@ function ComboboxGroup({ className, ...props }: ComboboxPrimitive.Group.Props) {
 }
 
 function ComboboxLabel({ className, ...props }: ComboboxPrimitive.GroupLabel.Props) {
-	return <ComboboxPrimitive.GroupLabel data-slot="combobox-label" className={cn(MENU_LABEL, className)} {...props} />;
+	return (
+		<ComboboxPrimitive.GroupLabel
+			data-slot="combobox-label"
+			className={cn(MENU_LABEL, PICKER_LABEL, className)}
+			{...props}
+		/>
+	);
 }
 
 function ComboboxCollection({ ...props }: ComboboxPrimitive.Collection.Props) {
@@ -283,7 +311,11 @@ function ComboboxEmpty({ className, ...props }: ComboboxPrimitive.Empty.Props) {
 
 function ComboboxSeparator({ className, ...props }: ComboboxPrimitive.Separator.Props) {
 	return (
-		<ComboboxPrimitive.Separator data-slot="combobox-separator" className={cn(MENU_SEPARATOR, className)} {...props} />
+		<ComboboxPrimitive.Separator
+			data-slot="combobox-separator"
+			className={cn(MENU_SEPARATOR, "group-data-[width=field]/combobox-content:mx-0", className)}
+			{...props}
+		/>
 	);
 }
 

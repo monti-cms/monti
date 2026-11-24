@@ -162,6 +162,7 @@ export {
 	FormFieldDescription,
 	FormFieldError,
 	FormFieldGroup,
+	FormFieldHint,
 	FormFieldLabel,
 	FormFieldLegend,
 	FormFieldSet,
