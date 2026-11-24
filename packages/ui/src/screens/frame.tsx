@@ -112,12 +112,15 @@ function Row({
 export function ScreenFrame({
 	open = "posts",
 	folders,
+	counts,
 	panel,
 	children,
 }: {
 	open?: ScreenPlace | null;
 	/** 열린 행 아래에 펼친 폴더. */
 	folders?: readonly ScreenFolder[];
+	/** 행의 개수를 시안 값 대신(빈 목록의 글 행처럼, `null`이면 개수 없음). */
+	counts?: Partial<Record<ScreenPlace, string | null>>;
 	/** 페이지 오른쪽에 붙은 패널. */
 	panel?: React.ReactNode;
 	children?: React.ReactNode;
@@ -143,7 +146,7 @@ export function ScreenFrame({
 					</SidebarHeader>
 					<SidebarContent>
 						<SidebarMenu aria-label="콘텐츠">
-							{row("posts", <Document />, "글", "26")}
+							{row("posts", <Document />, "글", counts?.posts === null ? undefined : (counts?.posts ?? "26"))}
 							{row("tags", <Tag />, "태그", "8")}
 							{row("people", <User />, "사람", "2")}
 							{row("series", <Layers />, "연재", "2")}

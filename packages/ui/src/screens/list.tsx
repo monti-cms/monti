@@ -254,7 +254,11 @@ export function ListScreen({
 	const posts = rows.filter((row) => row.kind === "post").length;
 	const picked = rows.filter((row) => row.kind === "post" && row.selected).length;
 	return (
-		<ScreenFrame open="posts" folders={POST_FOLDERS}>
+		<ScreenFrame
+			open="posts"
+			folders={rows.length > 0 ? POST_FOLDERS : undefined}
+			counts={rows.length > 0 ? undefined : { posts: null }}
+		>
 			<PageColumn width="full">
 				<PageHeader
 					layout="bar"
