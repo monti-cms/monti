@@ -21,11 +21,11 @@ import { Inline } from "./stack";
 import { Text } from "./text";
 
 /**
- * The look of a tool panel, shared by `SidePanel` and `Sheet`: a cream ground, a 48px head (`height-panebar`: title 13px 600 at the start, icon buttons
- * at the end, 24px in and 16 out, so a 32px button's middle stands 32px from the edge, on the column of every trailing icon), a body with 20px above and 24 at the sides, and a foot that holds the one pill.
+ * 도구 패널의 모양(`SidePanel`과 `Sheet`가 함께 쓴다): 크림색 바탕, 48px 머리(`height-panebar`: 시작에 13px 600 제목, 끝에 아이콘 버튼. 양쪽 24px 안이라
+ * 끝 버튼의 상자가 본문의 칸 · 선과 같은 끝선에서 끝나고 가리킨 바탕도 그 선을 넘지 않는다, 2026-11-24 소유자), 위 20px · 양옆 24px의 본문, 알약 하나를 담는 바닥.
  */
 export const PANEL_HEAD =
-	"flex h-monti-panebar shrink-0 items-center gap-monti-4 border-monti-default border-b pr-monti-16 pl-monti-24";
+	"flex h-monti-panebar shrink-0 items-center gap-monti-4 border-monti-default border-b px-monti-24";
 export const PANEL_TITLE = "min-w-0 grow font-semibold text-monti-default text-monti-label";
 export const PANEL_BODY = "flex flex-col gap-monti-20 px-monti-24 py-monti-20";
 export const PANEL_FOOT =

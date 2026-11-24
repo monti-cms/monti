@@ -97,6 +97,8 @@ DS README는 이 부품을 `TextLink`라고 부른다. 그런 export는 없다. 
 
 `IconButton`: `label`은 접근성 이름이자 호버 툴팁이다. `variant`는 `ghost`(기본)나 `primary`(검은 바탕), `size`는 `md`(32px), `sm`(28px), `xs`(24px, 아이콘 14px, 모서리 `radius-sm`)다. 켜진 토글(`pressed`)은 `bg-selected`이고, 어두운 테마에서는 `border-emphasis` 안쪽 1px 선을 더한다. 20px 같은 그 밖의 크기는 없다. `pressed`는 켜져 있는 동안 배경을 유지하는 토글로 만든다. `tone="danger"`는 빨간 버전이고, `tone="quiet"`는 가리키기 전까지 `fg-faint`인 조용한 버전이다(메시지 아래 동작, 대기 중인 말). 자기가 그리지 않는 아이콘 버튼을 담는 부품은 `IconButtonContext`로 크기와 톤을 정해 준다. 입력 칸의 끝 컨트롤은 칸보다 한 단계 작고(`Input`, `Textarea`), 메시지 아래 줄은 `xs` + `quiet`다(`ChatMessageActions`). 버튼에 직접 준 prop이 이긴다. 부모가 자손 선택자로 버튼의 크기나 색을 덮어쓰지 않는다. 메뉴나 팝오버를 열려면 `trigger`를 넘긴다. 예: `trigger={(button) => <PopoverTrigger render={button} />}`.
 
+**줄 끝의 버튼(2026-11-24 소유자).** 행과 막대 안의 버튼(체크박스, 행의 ⋯, ✦, ×, 그 밖의 아이콘 버튼)은 행이나 가리킨 바탕 안에 넉넉한 여백을 두고 서며, 시작 선이나 끝선에 붙이지 않는다. 끝선에 맞추는 것은 버튼이 아닌 가장자리다: 선, 칸, 입력 칸의 상자와 밑줄, 그리고 버튼의 **상자**. 보이는 아이콘(글리프)의 끝은 끝선에 맞추지 않으며(상자를 안쪽 여백만큼 끝선 밖으로 내밀지 않는다), 어떤 가리킨 바탕도 그 선을 넘지 않는다. 목록 행: 체크 상자는 행 바탕의 시작에서 12px 안, ⋯ 상자는 끝에서 12px 안에 서서 양쪽 여백이 같고, 둘의 가리킨 바탕도 행 안이다([list.md](list.md)). 머리 줄과 막대(`PageHeader`, `EditorHeader`, 사이드 패널의 머리): 끝 아이콘 버튼의 상자가 그 줄의 끝선에서 끝난다([page-header.md](page-header.md), [overlay.md](overlay.md)). 선택 칸의 갈매기는 칸의 상자 안에 칸의 보통 끝 여백을 두고 선다([field.md](field.md)). 같은 날 앞서 정했던 "보이는 아이콘의 끝을 끝선에 세운다"(`IconButton edge="end"`)와 "목록의 체크를 시작 선에 붙인다"는 이것으로 바뀌어 없어졌다.
+
 `IconButton tone="proposal"`은 필드를 채우는 어시스턴트의 ✦다(미디어 패널의 대체 글, 2026-11 개편 시안 `media.html`): 파랑이고, 포인터를 대도 파랑이다. 파랑은 어시스턴트만 쓰는 색이라 다른 아이콘 버튼에는 쓰지 않는다.
 
 ## 나뉜 알약
