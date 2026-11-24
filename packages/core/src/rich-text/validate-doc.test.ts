@@ -88,9 +88,7 @@ it("RT-DOC-3 블록이 객체가 아니면 해당 블록 경로의 문제를 돌
 it("RT-DOC-4 블록에 식별자나 종류가 빠졌으면 해당 속성 경로의 문제를 돌려준다", () => {
 	const paths = pathsOf({ blocks: [{ type: "paragraph" }, { id: "b1" }] });
 	// RT-DOC-4.1
-	expect(paths).toContain("blocks[0].id");
-	// RT-DOC-4.2
-	expect(paths).toContain("blocks[1].type");
+	expect(paths).toEqual(expect.arrayContaining(["blocks[0].id", "blocks[1].type"]));
 });
 
 it("RT-DOC-5 블록의 속성·인라인 목록·하위 블록 목록 형식이 잘못되었으면 해당 경로의 문제를 돌려준다", () => {
@@ -102,11 +100,7 @@ it("RT-DOC-5 블록의 속성·인라인 목록·하위 블록 목록 형식이 
 		],
 	});
 	// RT-DOC-5.1
-	expect(paths).toContain("blocks[0].attrs");
-	// RT-DOC-5.2
-	expect(paths).toContain("blocks[1].content");
-	// RT-DOC-5.3
-	expect(paths).toContain("blocks[2].children");
+	expect(paths).toEqual(expect.arrayContaining(["blocks[0].attrs", "blocks[1].content", "blocks[2].children"]));
 });
 
 it("RT-DOC-6 같은 ID를 가진 블록이 중복되면 나중에 나온 블록을 문제로 돌려준다", () => {
@@ -228,11 +222,9 @@ it("RT-INL-1 인라인 노드가 객체가 아니거나 등록되지 않은 종�
 	const content = [null, { type: "emoji", name: "smile" }, { type: "footnoteRef" }];
 	const paths = pathsOf({ blocks: [{ id: "b0", type: "paragraph", content }] });
 	// RT-INL-1.1
-	expect(paths).toContain("blocks[0].content[0]");
-	// RT-INL-1.2
-	expect(paths).toContain("blocks[0].content[1].type");
-	// RT-INL-1.3
-	expect(paths).toContain("blocks[0].content[2].id");
+	expect(paths).toEqual(
+		expect.arrayContaining(["blocks[0].content[0]", "blocks[0].content[1].type", "blocks[0].content[2].id"]),
+	);
 });
 
 it("RT-INL-2 글자 노드의 텍스트가 문자열이 아니면 문제를 돌려준다", () => {
@@ -250,13 +242,14 @@ it("RT-INL-3 마크 목록이나 마크 항목 형식이 잘못되었거나 등�
 	];
 	const paths = pathsOf({ blocks: [{ id: "b0", type: "paragraph", content }] });
 	// RT-INL-3.1
-	expect(paths).toContain("blocks[0].content[0].marks[0].type");
-	// RT-INL-3.2
-	expect(paths).toContain("blocks[0].content[1].marks[0].type");
-	// RT-INL-3.3
-	expect(paths).toContain("blocks[0].content[2].marks");
-	// RT-INL-3.4
-	expect(paths).toContain("blocks[0].content[3].marks[0]");
+	expect(paths).toEqual(
+		expect.arrayContaining([
+			"blocks[0].content[0].marks[0].type",
+			"blocks[0].content[1].marks[0].type",
+			"blocks[0].content[2].marks",
+			"blocks[0].content[3].marks[0]",
+		]),
+	);
 });
 
 it("RT-INL-4 추가로 등록한 사용자 정의 마크의 속성을 스키마로 검사한다", () => {
@@ -318,9 +311,7 @@ it("RT-MED-1 블록의 단건 미디어 예약 속성이 유효한 UUID가 아�
 		],
 	});
 	// RT-MED-1.1
-	expect(paths).toContain("blocks[1].attrs.mediaId");
-	// RT-MED-1.2
-	expect(paths).toContain("blocks[2].attrs.mediaId");
+	expect(paths).toEqual(expect.arrayContaining(["blocks[1].attrs.mediaId", "blocks[2].attrs.mediaId"]));
 	// RT-MED-1.3
 	expect(under(paths, "blocks[0]")).toEqual([]);
 });
@@ -334,9 +325,7 @@ it("RT-MED-2 블록의 다건 미디어 예약 속성이 유효한 UUID 배열�
 		],
 	});
 	// RT-MED-2.1
-	expect(paths).toContain("blocks[1].attrs.mediaIds");
-	// RT-MED-2.2
-	expect(paths).toContain("blocks[2].attrs.mediaIds");
+	expect(paths).toEqual(expect.arrayContaining(["blocks[1].attrs.mediaIds", "blocks[2].attrs.mediaIds"]));
 	// RT-MED-2.3
 	expect(under(paths, "blocks[0]")).toEqual([]);
 });

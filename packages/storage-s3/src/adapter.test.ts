@@ -149,14 +149,11 @@ it("S3-ADP-4 업로드 허가에 서명된 형식·크기·표시 헤더를 바�
 	});
 
 	// S3-ADP-4.1
-	expect({ status: wrongType.status, stored: fakeS3.objects.has(key1) }).toEqual({ status: 403, stored: false });
-	// S3-ADP-4.2
-	expect({ status: wrongSize.status, stored: fakeS3.objects.has(key2) }).toEqual({ status: 403, stored: false });
-	// S3-ADP-4.3
-	expect({ status: missingDisposition.status, stored: fakeS3.objects.has(key3) }).toEqual({
-		status: 403,
-		stored: false,
-	});
+	expect([
+		{ status: wrongType.status, stored: fakeS3.objects.has(key1) },
+		{ status: wrongSize.status, stored: fakeS3.objects.has(key2) },
+		{ status: missingDisposition.status, stored: fakeS3.objects.has(key3) },
+	]).toEqual(Array(3).fill({ status: 403, stored: false }));
 });
 
 it("S3-ADP-5 허용되지 않은 파일 형식이나 최대 크기 초과 파일은 업로드 허가를 받을 수 없다", async () => {
@@ -198,14 +195,15 @@ it("S3-ADP-9 공개 기준 주소와 파일 키를 합친 읽기 주소를 돌�
 it("S3-ADP-10 UUID가 아닌 파일 키로는 어떤 저장소 작업도 실행할 수 없다", async () => {
 	const adapter = adapterOf();
 
+	const codes = [
+		await asyncCodeOf(adapter.ticket("../secret", { mime: "image/png", size: 16 })),
+		await asyncCodeOf(adapter.stat("../secret")),
+		syncCodeOf(() => adapter.url("../secret")),
+		await asyncCodeOf(adapter.remove("../secret")),
+	];
+
 	// S3-ADP-10.1
-	expect(await asyncCodeOf(adapter.ticket("../secret", { mime: "image/png", size: 16 }))).toBe("BAD_REQUEST");
-	// S3-ADP-10.2
-	expect(await asyncCodeOf(adapter.stat("../secret"))).toBe("BAD_REQUEST");
-	// S3-ADP-10.3
-	expect(syncCodeOf(() => adapter.url("../secret"))).toBe("BAD_REQUEST");
-	// S3-ADP-10.4
-	expect(await asyncCodeOf(adapter.remove("../secret"))).toBe("BAD_REQUEST");
+	expect(codes).toEqual(Array(4).fill("BAD_REQUEST"));
 });
 
 it("S3-ADP-11 버킷에 있는 파일을 삭제한다", async () => {

@@ -4,6 +4,16 @@ import { resolveS3Config } from "./config";
 
 const UUID = "550e8400-e29b-41d4-a716-446655440000";
 
+/** `fn`이 `Error`를 던지면 `true`. */
+function throwsError(fn: () => unknown): boolean {
+	try {
+		fn();
+		return false;
+	} catch (error) {
+		return error instanceof Error;
+	}
+}
+
 function awsEnv(overrides: Record<string, string | undefined> = {}): Record<string, string | undefined> {
 	return {
 		S3_BUCKET: "my-bucket",
@@ -226,11 +236,11 @@ it("S3-CFG-9 업로드 허가 유효 시간이 1초~3600초 범위의 정수가 
 		resolveS3Config({ env, ticketSeconds: 3600 }).ticketSeconds,
 	]).toEqual([1, 3600]);
 	// S3-CFG-9.2
-	expect(() => resolveS3Config({ env, ticketSeconds: 0 })).toThrow(Error);
-	// S3-CFG-9.3
-	expect(() => resolveS3Config({ env, ticketSeconds: 1.5 })).toThrow(Error);
-	// S3-CFG-9.4
-	expect(() => resolveS3Config({ env, ticketSeconds: 3601 })).toThrow(Error);
+	expect([0, 1.5, 3601].map((ticketSeconds) => throwsError(() => resolveS3Config({ env, ticketSeconds })))).toEqual([
+		true,
+		true,
+		true,
+	]);
 });
 
 it("S3-CFG-10 최대 파일 크기가 1바이트~2,147,483,647바이트 범위의 정수가 아니면 설정을 거절한다", () => {
@@ -242,11 +252,11 @@ it("S3-CFG-10 최대 파일 크기가 1바이트~2,147,483,647바이트 범위�
 		resolveS3Config({ env, maxSize: 2_147_483_647 }).policy.maxSize,
 	]).toEqual([1, 2_147_483_647]);
 	// S3-CFG-10.2
-	expect(() => resolveS3Config({ env, maxSize: 0 })).toThrow(Error);
-	// S3-CFG-10.3
-	expect(() => resolveS3Config({ env, maxSize: 10.5 })).toThrow(Error);
-	// S3-CFG-10.4
-	expect(() => resolveS3Config({ env, maxSize: 2_147_483_648 })).toThrow(Error);
+	expect([0, 10.5, 2_147_483_648].map((maxSize) => throwsError(() => resolveS3Config({ env, maxSize })))).toEqual([
+		true,
+		true,
+		true,
+	]);
 });
 
 it("S3-CFG-11 허용 파일 형식 목록이 비어 있거나 잘못된 형식 문자열을 포함하면 설정을 거절한다", () => {
@@ -255,19 +265,9 @@ it("S3-CFG-11 허용 파일 형식 목록이 비어 있거나 잘못된 형식 �
 	// S3-CFG-11.1
 	expect(() => resolveS3Config({ env, allowedMimeTypes: [] })).toThrow(Error);
 	// S3-CFG-11.2
-	expect(() => resolveS3Config({ env, allowedMimeTypes: [""] })).toThrow(Error);
-	// S3-CFG-11.3
 	expect(
-		[
-			() => resolveS3Config({ env, allowedMimeTypes: ["image/png; charset=utf-8"] }),
-			() => resolveS3Config({ env, allowedMimeTypes: ["bad image/png"] }),
-		].every((fn) => {
-			try {
-				fn();
-				return false;
-			} catch {
-				return true;
-			}
-		}),
-	).toBe(true);
+		["", "image/png; charset=utf-8", "bad image/png"].map((mime) =>
+			throwsError(() => resolveS3Config({ env, allowedMimeTypes: [mime] })),
+		),
+	).toEqual([true, true, true]);
 });
