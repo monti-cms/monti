@@ -26,8 +26,9 @@ type ListHeadColumn = {
 	filtered?: boolean;
 	/**
 	 * 이 열의 필터. 이름이 서던 자리의 칩으로 보인다(필터 버튼 없음): `bg-selected` 바탕의 24px 칩이 칸의 왼쪽 변(열의 시작 선)에서 시작해 칸의 안쪽
-	 * 여백을 덮고, 글자는 필터가 꺼졌을 때의 이름과 같은 x에 선다. `named`면 흐린 열 이름("상태 · 초안"), 아니면 값만("김하늘"), 그 뒤에 잉크 점과
-	 * 지우는 ×(`clearLabel`). 켜고 꺼도 th 안의 글자가 움직이지 않는다(2026-11-24 소유자 결정). 칩은 이름처럼 열의 메뉴를 연다.
+	 * 여백을 덮고, 글자는 필터가 꺼졌을 때의 이름과 같은 x에 선다. `named`면 흐린 열 이름("상태 · 초안"), 아니면 값만("김하늘"), 그 뒤에 지우는
+	 * ×(`clearLabel`). 점은 없다: 칩의 바탕만으로 필터가 켜졌음을 말한다. 켜고 꺼도 th 안의 글자가 움직이지 않는다(2026-11-24 소유자 결정). 칩은
+	 * 이름처럼 열의 메뉴를 연다.
 	 */
 	filter?: { value: React.ReactNode; named?: boolean; clearLabel: string; onClear?: () => void };
 	/** What the menu under the name holds: the rows of a menu (sort, values to filter by, hide). Without it the name is plain. */
@@ -333,8 +334,6 @@ function ListHead({
 							{column.filter.named && <span className="shrink-0 font-normal text-monti-subtle">{column.label} ·</span>}
 							{!column.filter.named && <span className="sr-only">{column.label}</span>}
 							<CutWords className="truncate">{column.filter.value}</CutWords>
-							{/* 점은 값 뒤에: 앞에 두면 이름이 밀린다(2026-11-24 소유자 결정, th 안에서 밀림 없음). */}
-							<span aria-hidden className="size-[6px] shrink-0 rounded-monti-full bg-monti-emphasis" />
 						</>
 					) : (
 						<>

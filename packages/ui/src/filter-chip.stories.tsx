@@ -29,6 +29,25 @@ export const InHeadRow: Story = {
 	),
 };
 
+/**
+ * 꺼진 조건과 켜진 칩은 한 짜임이다: 둘 다 상자가 줄의 시작 선에서 시작하고 글자는 그 안 8px에 선다. 그래서 "종류"는 켜고 꺼도 x도 y도 같다. 칩에는
+ * 점이 없다: 바탕만으로 필터가 켜졌음을 말한다(2026-11-24 소유자).
+ */
+export const OffAndOn: Story = {
+	render: () => (
+		<div className="flex flex-col">
+			<PageToolbar size="head">
+				<FilterButton size="caption">종류</FilterButton>
+				<FilterButton size="caption">쓰임</FilterButton>
+			</PageToolbar>
+			<PageToolbar size="head">
+				<FilterChip name="종류" value="이미지" named clearLabel="종류 필터 지우기" />
+				<FilterButton size="caption">쓰임</FilterButton>
+			</PageToolbar>
+		</div>
+	),
+};
+
 /** A long value is cut at its end; the condition's name and the × stay. */
 export const LongValue: Story = {
 	render: () => (

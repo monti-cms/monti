@@ -8,8 +8,9 @@ import { Close } from "./icons";
 
 /**
  * A filter that is on, in a filter row (the media library's head row) where its name stood: a 24px chip on the selected ground, its left edge on the
- * start line where the name started (nothing sticks out of it, 2026-11-24). 글자는 8px 안에서 시작하고, `named`면 흐린 조건 이름("종류 · 이미지": 조건을
- * 말하지 않는 값) 아니면 값만, 그 뒤에 잉크 점(목록 열 머리의 칩과 같이 값 뒤, 2026-11-24), 끝에 지우는 ×(`clearLabel`). The chip itself opens the
+ * start line where the name started (nothing sticks out of it, 2026-11-24). 글자는 8px 안에서 시작해, 꺼진 조건(`FilterButton size="caption"`, 같은
+ * 짜임의 상자)의 이름과 같은 x에 선다. `named`면 흐린 조건 이름("종류 · 이미지": 조건을 말하지 않는 값) 아니면 값만, 끝에 지우는 ×(`clearLabel`). 점은
+ * 없다: 칩의 바탕만으로 필터가 켜졌음을 말한다(2026-11-24 소유자). The chip itself opens the
  * condition's menu: `render` on the trigger, `<DropdownMenuTrigger render={<FilterChip … />}>`, takes the chip's main part. The same look as a list's
  * filtered column head (`ListHeadColumn` `filter`).
  */
@@ -53,8 +54,6 @@ function FilterChip({
 					<span className="sr-only">{name}</span>
 				)}
 				<CutWords className="truncate">{value}</CutWords>
-				{/* 점은 값 뒤에, 목록 열 머리의 칩과 같다(2026-11-24). */}
-				<span aria-hidden className="size-[6px] shrink-0 rounded-monti-full bg-monti-emphasis" />
 			</ButtonPrimitive>
 			<button
 				type="button"

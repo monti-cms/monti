@@ -205,7 +205,8 @@ function PageToolbar({
 	inset?: boolean;
 	/**
 	 * `toolbar` (the default): 48px. `head`: as tall as a table's head (36px, `height-thead`), its words 12px at 500 and faint, one line under it, as a
-	 * list's column heads: the filter row of the media library (2026-11 redesign), which stands where a table's head would.
+	 * list's column heads: the filter row of the media library (2026-11 redesign), which stands where a table's head would. 그 줄의 조건은 8px 안쪽 여백을 가진
+	 * 상자(`FilterButton size="caption"`, `FilterChip`)라 사이는 4px다: 이름 사이의 거리는 앞의 20px(끝 무리 12px)과 같다(2026-11-24).
 	 */
 	size?: "toolbar" | "head";
 }) {
@@ -216,7 +217,7 @@ function PageToolbar({
 			className={cn(
 				"flex flex-wrap items-center gap-monti-20 border-monti-default border-b",
 				size === "head"
-					? "h-monti-thead shrink-0 flex-nowrap font-medium text-monti-caption text-monti-faint"
+					? "h-monti-thead shrink-0 flex-nowrap gap-monti-4 font-medium text-monti-caption text-monti-faint"
 					: "min-h-monti-toolbar",
 				inset && "px-monti-12",
 				className,
@@ -234,7 +235,7 @@ function PageToolbarEnd({ className, ...props }: React.ComponentProps<"span">) {
 		<span
 			data-slot="page-toolbar-end"
 			className={cn(
-				"ml-auto flex flex-wrap items-center justify-end gap-x-monti-20 gap-y-monti-8 [[data-size=head]>&]:gap-x-monti-12",
+				"ml-auto flex flex-wrap items-center justify-end gap-x-monti-20 gap-y-monti-8 [[data-size=head]>&]:gap-x-monti-4",
 				className,
 			)}
 			{...props}
