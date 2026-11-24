@@ -51,10 +51,10 @@
 <details>
 <summary><strong><code>TPL-CRT-4</code></strong> 본문 블록 트리의 미디어 참조를 대소문자 무시하고 한 번씩 기록한다</summary>
 
-- **전제**: 스키마에 컬렉션이 하나 있고 활성 미디어 세 개가 있으며 `media_uses`가 비어 있다
-- **행동**: 최상위 블록이 첫 번째 미디어를 `attrs.mediaId`로, `quote`의 `children` 안 블록 하나가 두 번째 미디어를 `attrs.mediaId`로, 다른 `children` 블록이 대문자 표기의 두 번째 미디어와 세 번째 미디어를 `attrs.mediaIds`로 참조하는 `content`로 `templates.create`를 실행한다
+- **전제**: 스키마에 컬렉션이 하나 있고 활성 미디어 여럿이 있으며 `media_uses`가 비어 있다
+- **행동**: 하위 블록을 포함한 블록 트리 곳곳에서 미디어를 참조하고, 같은 미디어를 대소문자만 달리해 다시 참조하는 `content`로 `templates.create`를 실행한다
 - **결과**:
-  - `TPL-CRT-4.1` `media_uses`에 `source_kind`가 `"template"`, `source_id`가 반환된 `id`, `field_path`가 `"content"`인 행이 세 미디어당 하나씩 정확히 세 개 생긴다
+  - `TPL-CRT-4.1` `media_uses`에 `source_kind`가 `"template"`, `source_id`가 반환된 `id`, `field_path`가 `"content"`인 행이 참조한 미디어마다 정확히 하나씩 생긴다
 
 </details>
 

@@ -29,19 +29,19 @@
 <summary><strong><code>CLI-PRS-2</code></strong> `--input`으로 JSON 문자열이나 표준 입력(`--input -`)을 넘겨 명령 입력 전체를 만든다</summary>
 
 - **전제**: 객체 입력을 받는 Operation 명세와, JSON 문자열을 담은 `--input` 및 표준 입력(`-`)이 준비되어 있다
-- **행동**: `--input '{"collection":"posts","status":"draft"}'`와 `--input -`(표준 입력에서 같은 JSON 읽기)로 각각 입력을 해석한다
+- **행동**: 같은 JSON을 `--input` 문자열과 `--input -`로 넘겨 입력을 해석한다
 - **결과**:
-  - `CLI-PRS-2.1` 두 경우 모두 `{ collection: "posts", status: "draft" }` 객체를 돌려준다
+  - `CLI-PRS-2.1` 두 경우 모두 그 JSON 객체를 돌려준다
 
 </details>
 
 <details>
 <summary><strong><code>CLI-PRS-3</code></strong> `--key value`·`--flag` 옵션을 작업 명세의 타입(글자·숫자·참거짓)에 맞게 변환한다</summary>
 
-- **전제**: 문자열(`key`), 숫자(`width`, `nullable` `anyOf` 포함), 불리언(`all`) 속성을 가진 Operation 명세가 있다
-- **행동**: `{ key: "abc", width: "800", all: true }` 개별 플래그로 입력을 해석한다
+- **전제**: 문자열·숫자(`null` 허용 포함)·불리언 속성을 가진 Operation 명세가 있다
+- **행동**: 각 속성을 개별 플래그로 넘겨 입력을 해석한다
 - **결과**:
-  - `CLI-PRS-3.1` 반환 객체가 `{ key: "abc", width: 800, all: true }`이다 (`width`는 숫자, `all`은 불리언)
+  - `CLI-PRS-3.1` 각 값이 명세 타입으로 변환된 객체를 돌려준다
 
 </details>
 
@@ -102,43 +102,43 @@
 <details>
 <summary><strong><code>CLI-PRS-9</code></strong> `-h`와 `-v` 별칭을 인식하고 앞 옵션의 값으로 삼키지 않는다</summary>
 
-- **전제**: `["-h"]`, `["-v"]`, `["--config", "-h"]` 인자 배열이 준비되어 있다
+- **전제**: `-h`나 `-v`만 담은 인자 배열과, 값이 필요한 옵션 바로 뒤에 `-h`가 온 인자 배열이 있다
 - **행동**: 각 인자 배열을 파싱한다
 - **결과**:
-  - `CLI-PRS-9.1` `["-h"]`는 `help: true`로, `["-v"]`는 `version: true`로 해석된다
-  - `CLI-PRS-9.2` `["--config", "-h"]`는 값 누락으로 사용법 오류(`exitCode: 2`)를 던진다
+  - `CLI-PRS-9.1` `-h`는 `help: true`로, `-v`는 `version: true`로 해석된다
+  - `CLI-PRS-9.2` 값이 필요한 옵션 뒤의 `-h`는 값 누락으로 사용법 오류(`exitCode: 2`)를 던진다
 
 </details>
 
 <details>
 <summary><strong><code>CLI-PRS-10</code></strong> 불리언 옵션의 `"true"`·`"false"` 문자열을 변환하고 잘못된 값은 거절한다</summary>
 
-- **전제**: 불리언 속성 `all`을 가진 Operation 명세가 있다
-- **행동**: `{ all: "true" }`, `{ all: "false" }`, `{ all: "yes" }`로 각각 입력을 해석한다
+- **전제**: 불리언 속성을 가진 Operation 명세가 있다
+- **행동**: 그 속성에 `"true"`, `"false"`, 그 밖의 문자열을 넘겨 입력을 해석한다
 - **결과**:
   - `CLI-PRS-10.1` `"true"`는 `true`로, `"false"`는 `false`로 변환된다
-  - `CLI-PRS-10.2` `"yes"`는 사용법 오류(`exitCode: 2`)를 던진다
+  - `CLI-PRS-10.2` 그 밖의 문자열은 사용법 오류(`exitCode: 2`)를 던진다
 
 </details>
 
 <details>
 <summary><strong><code>CLI-PRS-11</code></strong> 숫자 옵션의 빈 문자열과 정수 옵션의 소수 값은 거절한다</summary>
 
-- **전제**: 숫자(`number`) 속성 `score`와 정수(`integer | null`) 속성 `width`를 가진 Operation 명세가 있다
-- **행동**: `{ score: "" }`와 `{ width: "1.5" }`로 각각 입력을 해석한다
+- **전제**: 숫자(`number`) 속성과 정수(`integer | null`) 속성을 가진 Operation 명세가 있다
+- **행동**: 숫자 속성에 빈 문자열, 정수 속성에 소수 값을 넘겨 입력을 해석한다
 - **결과**:
-  - `CLI-PRS-11.1` `{ score: "" }`는 사용법 오류(`exitCode: 2`)를 던진다
-  - `CLI-PRS-11.2` `{ width: "1.5" }`는 사용법 오류(`exitCode: 2`)를 던진다
+  - `CLI-PRS-11.1` 숫자 속성의 빈 문자열은 사용법 오류(`exitCode: 2`)를 던진다
+  - `CLI-PRS-11.2` 정수 속성의 소수 값은 사용법 오류(`exitCode: 2`)를 던진다
 
 </details>
 
 <details>
 <summary><strong><code>CLI-PRS-12</code></strong> 명세에 없는 알 수 없는 옵션이나 객체·배열 속성의 개별 플래그는 거절한다</summary>
 
-- **전제**: `collection`(문자열)과 `fields`(객체) 속성을 가진 Operation 명세가 있다
-- **행동**: 오타 옵션 `{ colecton: "posts" }`와 객체 개별 플래그 `{ fields: "{}" }`로 각각 입력을 해석한다
+- **전제**: 문자열 속성과 객체 속성을 가진 Operation 명세가 있다
+- **행동**: 명세에 없는 옵션과 객체 속성의 개별 플래그로 입력을 해석한다
 - **결과**:
-  - `CLI-PRS-12.1` 알 수 없는 옵션 `{ colecton: "posts" }`는 사용법 오류(`exitCode: 2`)를 던진다
-  - `CLI-PRS-12.2` 객체 개별 플래그 `{ fields: "{}" }`는 `--input` 안내와 함께 사용법 오류(`exitCode: 2`)를 던진다
+  - `CLI-PRS-12.1` 명세에 없는 옵션은 사용법 오류(`exitCode: 2`)를 던진다
+  - `CLI-PRS-12.2` 객체 속성의 개별 플래그는 `--input` 안내와 함께 사용법 오류(`exitCode: 2`)를 던진다
 
 </details>

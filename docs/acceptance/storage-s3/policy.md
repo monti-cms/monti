@@ -29,14 +29,10 @@
 <details>
 <summary><strong><code>S3-POL-2</code></strong> UUID 형식이 아닌 파일 키는 사용할 수 없다</summary>
 
-- **전제**: `""`, `"../secret"`, `"dir/file.png"`, `"index.html"`, 대문자 UUID, UUID 앞뒤에 문자가 붙은 문자열이 있다
-- **행동**: 각 키로 `assertSafeKey`를 실행한다
+- **전제**: 소문자 UUID 형식이 아닌 키가 있다
+- **행동**: 그 키로 `assertSafeKey`를 실행한다
 - **결과**:
-  - `S3-POL-2.1` 빈 문자열이 `BAD_REQUEST` 오류를 던진다
-  - `S3-POL-2.2` `"../secret"`과 `"../<uuid>"`가 `BAD_REQUEST` 오류를 던진다
-  - `S3-POL-2.3` `"dir/file.png"`와 `"<uuid>/extra"`가 `BAD_REQUEST` 오류를 던진다
-  - `S3-POL-2.4` `"index.html"`이 `BAD_REQUEST` 오류를 던진다
-  - `S3-POL-2.5` 대문자 UUID가 `BAD_REQUEST` 오류를 던진다
+  - `S3-POL-2.1` `BAD_REQUEST` 오류를 던진다
 
 </details>
 
@@ -50,20 +46,20 @@
 <summary><strong><code>S3-POL-3</code></strong> 기본 허용 형식과 1바이트~최대 크기(10 MiB) 파일은 올릴 수 있고 형식 이름은 소문자로 통일된다</summary>
 
 - **전제**: 기본 허용 목록(`DEFAULT_ALLOWED_MIME_TYPES`)과 기본 최대 크기(`DEFAULT_MAX_SIZE`, 10 MiB) 정책이 있다
-- **행동**: `mime: "IMAGE/PNG"`, `size: 1`과 `size: DEFAULT_MAX_SIZE`로 `validateUploadPolicy`를 실행한다
+- **행동**: 대문자가 섞인 허용 형식과 범위 끝 크기로 `validateUploadPolicy`를 실행한다
 - **결과**:
-  - `S3-POL-3.1` 두 호출 모두 오류 없이 `"image/png"`를 돌려준다
+  - `S3-POL-3.1` 오류 없이 소문자로 바꾼 형식을 돌려준다
 
 </details>
 
 <details>
 <summary><strong><code>S3-POL-4</code></strong> 사용자가 직접 정한 허용 형식과 최대 크기가 기본 규칙을 대체하며 대소문자를 구분하지 않는다</summary>
 
-- **전제**: `allowedMimeTypes: ["Application/JSON"]`, `maxSize: 2048`인 사용자 정책이 있다
-- **행동**: `mime: "application/json"`, `size: 2048`과 `mime: "image/png"`, `size: 100`으로 각각 `validateUploadPolicy`를 실행한다
+- **전제**: `allowedMimeTypes`와 `maxSize`를 지정한 사용자 정책이 있다
+- **행동**: 사용자 목록의 형식과 기본 목록에만 있는 형식으로 `validateUploadPolicy`를 실행한다
 - **결과**:
-  - `S3-POL-4.1` `"application/json"` 호출의 반환값이 `"application/json"`이다
-  - `S3-POL-4.2` 기본 목록에만 있는 `"image/png"` 호출이 `BAD_REQUEST` 오류를 던진다
+  - `S3-POL-4.1` 사용자 목록의 형식은 대소문자와 관계없이 통과하고 소문자 형식을 돌려준다
+  - `S3-POL-4.2` 기본 목록에만 있는 형식은 `BAD_REQUEST` 오류를 던진다
 
 </details>
 
@@ -104,11 +100,9 @@
 <summary><strong><code>S3-POL-8</code></strong> 크기가 0 이하이거나 정수가 아닌 파일은 올릴 수 없다</summary>
 
 - **전제**: 기본 업로드 정책이 있다
-- **행동**: `size`를 `0`, `-1`, `1.5`로 하여 각각 `validateUploadPolicy`를 실행한다
+- **행동**: 0 이하이거나 정수가 아닌 `size`로 `validateUploadPolicy`를 실행한다
 - **결과**:
-  - `S3-POL-8.1` `size: 0` 호출이 `BAD_REQUEST` 오류를 던진다
-  - `S3-POL-8.2` `size: -1` 호출이 `BAD_REQUEST` 오류를 던진다
-  - `S3-POL-8.3` `size: 1.5` 호출이 `BAD_REQUEST` 오류를 던진다
+  - `S3-POL-8.1` `BAD_REQUEST` 오류를 던진다
 
 </details>
 

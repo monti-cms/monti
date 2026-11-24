@@ -120,12 +120,12 @@
 <details>
 <summary><strong><code>CLI-OPS-9</code></strong> 함수나 순환 참조가 섞인 설정 객체도 비순환 공유 참조와 직렬화 가능한 값을 보존하며 JSON으로 출력한다</summary>
 
-- **전제**: 함수, 자기 자신에 대한 순환 참조 속성, 두 경로가 함께 가리키는 공유 객체와 `name: "custom"`을 가진 플러그인을 등록한 프로젝트와 유효한 `DATABASE_URL`이 있다
+- **전제**: 함수·순환 참조·두 경로가 함께 가리키는 공유 객체를 가진 플러그인을 등록한 프로젝트와 유효한 `DATABASE_URL`이 있다
 - **행동**: `runCli(["config", "get"], io)`를 실행한다
 - **결과**:
   - `CLI-OPS-9.1` 반환 종료 코드가 `0`이다
   - `CLI-OPS-9.2` `stdout`을 파싱한 JSON에 설정의 `name`과 공유 객체 값이 두 경로 모두 보존되어 있다
-  - `CLI-OPS-9.3` `stdout`을 파싱한 JSON의 `plugins`에 `"custom"` 이름이 보존되어 있다
+  - `CLI-OPS-9.3` `stdout`을 파싱한 JSON의 `plugins`에 플러그인 이름이 보존되어 있다
 
 </details>
 
@@ -254,9 +254,9 @@
 <summary><strong><code>CLI-OPS-20</code></strong> `spec --dry-run`이나 오타 옵션을 붙인 작업은 DB를 열지 않고 사용법 오류로 거절한다</summary>
 
 - **전제**: `posts` 컬렉션이 정의된 프로젝트와 `DATABASE_URL`이 비어 있는 `io`가 있다
-- **행동**: `runCli(["spec", "--dry-run"], io)`와 `runCli(["folders", "list", "--scoep", "posts"], io)`를 각각 실행한다
+- **행동**: `spec --dry-run`이나 오타 옵션을 붙인 작업을 `runCli`로 실행한다
 - **결과**:
-  - `CLI-OPS-20.1` 두 호출 모두 반환 종료 코드가 `2`이다
-  - `CLI-OPS-20.2` 두 호출 모두 `stderr`에 오류 메시지가 출력되고 `stdout`이 비어 있다
+  - `CLI-OPS-20.1` 반환 종료 코드가 `2`이다
+  - `CLI-OPS-20.2` `stderr`에 오류 메시지가 출력되고 `stdout`이 비어 있다
 
 </details>

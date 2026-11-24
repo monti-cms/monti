@@ -135,8 +135,8 @@
 <details>
 <summary><strong><code>START-11</code></strong> 빈 스냅샷과 새 스키마의 차이를 SQL로 생성해 적용하면 개발 서버 동기화와 같은 테이블과 열이 만들어진다</summary>
 
-- **전제**: 코어 마이그레이션만 적용된 DB와 `body: true`, 단건·다건 `media`·`relation`, `conditional` 필드를 가진 컬렉션 스키마가 있다
-- **행동**: 빈 스냅샷(`snapshotOf({ locales: ["ko"], collections: {} })`)과 해당 스키마로 `planSchemaDiff`를 호출해 얻은 SQL을 DB에 실행한다
+- **전제**: 코어 마이그레이션만 적용된 DB와 여러 종류의 필드를 가진 컬렉션 스키마가 있다
+- **행동**: 빈 스냅샷과 해당 스키마로 `planSchemaDiff`를 호출해 얻은 SQL을 DB에 실행한다
 - **결과**:
   - `START-11.1` `<collection>`, `<collection>_data`, `<collection>_rels` 테이블과 모든 필드 열·외래 키가 생성된다
   - `START-11.2` 조건부 열(`<field>__<option>__<subfield>`)이 들어 있는 `snapshotOf(schema)`와 같은 스키마로 다시 `planSchemaDiff`를 호출하면 오류 없이 빈 배열 `[]`을 돌려준다
@@ -146,12 +146,12 @@
 <details>
 <summary><strong><code>START-12</code></strong> 스키마 변경 SQL은 열 추가·타입 변환·외래 키 대상 교체·열 삭제·컬렉션 삭제를 실제 DB에서 정상 실행한다</summary>
 
-- **전제**: `authors`·`members`·`legacy` 컬렉션과 `posts` 컬렉션(`number` `code`, 단건 `select` `category`, `authors`를 가리키는 단건 `relation` `author`와 `writer`, `old_col`)에 데이터가 저장된 DB와 그 직전 스냅샷이 있다
-- **행동**: `legacy` 컬렉션을 제거하고, `posts`에서 `code`를 `text`로, `category`를 다건 `select`로, `author`를 `text`로, `writer`의 `to`를 `members`로 바꾸고 `old_col`을 삭제·`new_col`을 추가한 스키마로 `planSchemaDiff` SQL을 생성해 DB에 실행한다
+- **전제**: 여러 종류의 필드와 관계 필드에 데이터가 저장된 컬렉션들이 있는 DB와 그 직전 스냅샷이 있다
+- **행동**: 컬렉션 하나를 지우고, 남은 컬렉션의 필드를 추가·삭제하고 필드 종류와 관계 대상을 바꾼 스키마로 `planSchemaDiff` SQL을 생성해 DB에 실행한다
 - **결과**:
-  - `START-12.1` `legacy` 컬렉션 테이블들이 삭제되고 `posts_data`에 `new_col`이 추가·`old_col`이 삭제된다
-  - `START-12.2` `code`는 문자열로, `category`는 1개짜리 배열(`text[]`)로 기존 값이 유지된다
-  - `START-12.3` `author`는 외래 키 없이 `text` 열로, `writer`는 `members(id)` 외래 키 열로 바뀌며 기존 값은 `null`로 비워진다
+  - `START-12.1` 지운 컬렉션의 테이블들이 삭제되고 추가한 필드의 열은 생기며 뺀 필드의 열은 삭제된다
+  - `START-12.2` 숫자를 글자로 바꾼 필드는 문자열로, 단건 `select`를 다건으로 바꾼 필드는 1개짜리 배열(`text[]`)로 기존 값이 유지된다
+  - `START-12.3` 관계 필드를 글자로 바꾸면 외래 키 없는 `text` 열로, 관계 대상을 바꾸면 새 대상의 외래 키 열로 바뀌며 두 경우 모두 기존 값은 `null`로 비워진다
 
 </details>
 

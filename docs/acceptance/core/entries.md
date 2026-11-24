@@ -50,7 +50,7 @@
 <details>
 <summary><strong><code>ENT-CRT-3</code></strong> 단일 값 필드와 본문, 폴더를 담아 작업본을 저장한다</summary>
 
-- **전제**: 스키마에 `body: true`이고 `text`, `number`, `boolean`, `date`, 단건·다건 `select` 필드를 가진 컬렉션과 해당 컬렉션 `scope`의 활성 폴더가 있다
+- **전제**: 스키마에 `body: true`이고 단일 값 필드들을 가진 컬렉션과 해당 컬렉션 `scope`의 활성 폴더가 있다
 - **행동**: 해당 `folder_id`, 유효한 `slug`, 각 필드 값을 담은 `fields`와 유효한 `body`로 `entries.create`를 실행한다
 - **결과**:
   - `ENT-CRT-3.1` 반환값의 `folder_id`, `slug`, `fields`, `body`가 입력과 같다
@@ -74,10 +74,10 @@
 <details>
 <summary><strong><code>ENT-CRT-5</code></strong> 본문·최상위 미디어·조건부 하위 미디어의 참조를 경로별로 한 번씩 사용처에 기록한다</summary>
 
-- **전제**: 스키마에 `body: true`이고 최상위 `media`(`many: true`) 필드와 하위 `media` 필드가 있는 `conditional` 필드를 가진 컬렉션이 있고, 활성 미디어 세 개가 있으며 `media_uses`가 비어 있다
-- **행동**: 최상위 `media` 필드가 첫 번째 미디어를 소문자와 대문자로 중복 참조하고, `conditional` 하위 `media` 필드가 두 번째 미디어를 참조하는 `fields`와 첫 번째 미디어와 세 번째 미디어를 참조하는 `body`로 `entries.create`를 실행한다
+- **전제**: 스키마에 `body: true`이고 최상위 `media` 필드와 `conditional` 하위 `media` 필드를 가진 컬렉션이 있고, 활성 미디어 여럿이 있으며 `media_uses`가 비어 있다
+- **행동**: 최상위 미디어 필드, 조건부 하위 미디어 필드, `body`에서 미디어를 참조하고 같은 경로에서 같은 미디어를 대소문자만 달리해 다시 참조하는 입력으로 `entries.create`를 실행한다
 - **결과**:
-  - `ENT-CRT-5.1` `media_uses`에 `source_kind`가 `"entry"`, `source_id`가 반환된 `id`인 행이 `"<미디어필드>"`(첫 번째 미디어), `"<조건필드>.<분기>.<하위미디어필드>"`(두 번째 미디어), `"body"`(첫 번째 미디어와 세 번째 미디어 각 하나)로 정확히 네 개 생긴다
+  - `ENT-CRT-5.1` `media_uses`에 `source_kind`가 `"entry"`, `source_id`가 반환된 `id`인 행이 경로(`"<미디어필드>"`, `"<조건필드>.<분기>.<하위미디어필드>"`, `"body"`)와 미디어의 쌍마다 정확히 하나씩 생긴다
 
 </details>
 
@@ -129,10 +129,10 @@
 <details>
 <summary><strong><code>ENT-CRT-10</code></strong> 필드의 타입이나 길이 제한에 어긋난 값이면 글을 만들 수 없다</summary>
 
-- **전제**: 스키마에 `number` 필드와 `max`가 설정된 `text` 필드가 있는 컬렉션이 있고 `<collection>` 테이블이 비어 있다
-- **행동**: `number` 필드에 문자열만 담은 입력과 `text` 필드에 `max`를 넘는 문자열만 담은 입력으로 각각 `entries.create`를 실행한다
+- **전제**: 스키마에 타입과 길이 제한이 있는 필드를 가진 컬렉션이 있고 `<collection>` 테이블이 비어 있다
+- **행동**: 필드 타입이나 길이 제한에 어긋난 값을 담은 입력으로 `entries.create`를 실행한다
 - **결과**:
-  - `ENT-CRT-10.1` 두 경우 모두 `BAD_REQUEST` 오류를 던진다
+  - `ENT-CRT-10.1` `BAD_REQUEST` 오류를 던진다
   - `ENT-CRT-10.2` `<collection>` 테이블이 비어 있다
 
 </details>
@@ -707,10 +707,10 @@
 <details>
 <summary><strong><code>ENT-PUB-11</code></strong> 참조 필드나 본문이 가리키던 대상이 휴지통에 들어가 있으면 필수 여부와 관계없이 발행할 수 없다</summary>
 
-- **전제**: 유효한 `slug`와 필수값이 모두 채워진 미발행 글이 필수가 아닌(`required: false`) `media` 필드, 필수(`required: true`)인 `relation` 필드, 또는 `body` 블록(`attrs.mediaId`)으로 활성 대상을 가리키도록 저장된 뒤, 가리키던 대상이 휴지통으로 이동했다(`trashed_at` 설정)
+- **전제**: 유효한 `slug`와 필수값이 모두 채워진 미발행 글의 참조 필드나 `body` 블록이 가리키던 대상이 휴지통으로 이동했다(`trashed_at` 설정)
 - **행동**: 해당 글의 `id`로 `entries.publish`를 실행한다
 - **결과**:
-  - `ENT-PUB-11.1` 세 경우 모두 `BAD_REQUEST` 오류를 던진다
+  - `ENT-PUB-11.1` 필드의 필수 여부와 관계없이 `BAD_REQUEST` 오류를 던진다
   - `ENT-PUB-11.2` `<collection>_data` 테이블에 `status = 'published'` 행이 없다
 
 </details>
@@ -731,10 +731,10 @@
 <details>
 <summary><strong><code>ENT-PUB-5</code></strong> 필수 필드가 비어 있으면 글을 발행할 수 없다</summary>
 
-- **전제**: 유효한 `slug`는 있지만 필수(`required: true`)인 `text` 필드가 생략되었거나 빈 문자열(`""`)이거나 필수 다건 `select` 필드가 빈 배열(`[]`)인 미발행 글이 있다
-- **행동**: 각 글의 `id`로 `entries.publish`를 실행한다
+- **전제**: 유효한 `slug`는 있지만 필수(`required: true`) 필드가 비어 있는(생략, 빈 문자열, 빈 배열) 미발행 글이 있다
+- **행동**: 그 글의 `id`로 `entries.publish`를 실행한다
 - **결과**:
-  - `ENT-PUB-5.1` 세 경우 모두 `BAD_REQUEST` 오류를 던진다
+  - `ENT-PUB-5.1` `BAD_REQUEST` 오류를 던진다
   - `ENT-PUB-5.2` `<collection>_data` 테이블에 `status = 'published'` 행이 없다
 
 </details>

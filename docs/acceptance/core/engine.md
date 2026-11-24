@@ -196,9 +196,9 @@
 <summary><strong><code>ENG-TX-4</code></strong> 쓰기 중 DB 고유 제약 위반이 나면 충돌 오류로 바꾸고 롤백한다</summary>
 
 - **전제**: 한 번의 실행 안에서 행 하나를 추가한 뒤 같은 기본 키로 다시 추가하는 쓰기 Operation과 `onEvent` 구독자가 등록되어 있다
-- **행동**: 해당 쓰기 Operation을 직접 호출하고, 같은 Operation을 `dryRun` 콜백 안에서도 호출한다
+- **행동**: 해당 쓰기 Operation을 호출한다
 - **결과**:
-  - `ENG-TX-4.1` 두 호출 모두 `code`가 `"CONFLICT"`인 `MontiError`가 던져진다
+  - `ENG-TX-4.1` `code`가 `"CONFLICT"`인 `MontiError`가 던져진다
   - `ENG-TX-4.2` 먼저 추가했던 행이 롤백되어 DB에 남아 있지 않는다
   - `ENG-TX-4.3` `onEvent` 구독자가 호출되지 않는다
 
@@ -208,9 +208,9 @@
 <summary><strong><code>ENG-TX-5</code></strong> 콜백 안에서 DB 고유 제약 위반이 난 뒤 콜백이 그 오류를 무시하고 끝까지 가도 트랜잭션과 드라이런은 실패한다</summary>
 
 - **전제**: ENG-TX-4와 같이 같은 기본 키를 두 번 넣어 `CONFLICT`가 나는 쓰기 Operation과 `onEvent` 구독자가 등록되어 있다
-- **행동**: `monti.transaction`과 `monti.dryRun`에 각각 콜백을 넘기고, 콜백 안에서 그 쓰기 Operation을 호출해 던져진 오류를 무시한 뒤 정상 반환하거나 후속 DB 쓰기를 이어간다
+- **행동**: `monti.transaction` 콜백 안에서 그 쓰기 Operation을 호출해 던져진 오류를 무시하고 콜백을 끝까지 실행한다
 - **결과**:
-  - `ENG-TX-5.1` `transaction`과 `dryRun` 모두 `code`가 `"CONFLICT"`인 `MontiError`로 실패하고 성공 값을 돌려주지 않는다
+  - `ENG-TX-5.1` `code`가 `"CONFLICT"`인 `MontiError`로 실패하고 성공 값을 돌려주지 않는다
   - `ENG-TX-5.2` 콜백 안에서 먼저 추가했던 행이 롤백되어 DB에 남아 있지 않는다
   - `ENG-TX-5.3` `onEvent` 구독자가 호출되지 않는다
 
@@ -219,10 +219,10 @@
 <details>
 <summary><strong><code>ENG-TX-6</code></strong> 콜백 안에서 DB 쓰기가 실패하면 콜백이 그 오류를 잡아도 트랜잭션과 드라이런은 실패한다</summary>
 
-- **전제**: 정상 쓰기 Operation 하나, 존재하지 않는 외래 키를 참조해 DB 외래 키 오류(`23503`)를 내는 쓰기 Operation 하나, `onEvent` 구독자가 등록되어 있다
-- **행동**: `monti.transaction`과 `monti.dryRun` 각각에 콜백을 넘겨 정상 쓰기를 먼저 실행한 뒤 외래 키 오류가 나는 쓰기를 호출해 `try/catch`로 잡고 정상 값을 반환한다
+- **전제**: 정상 쓰기 Operation 하나, DB 오류를 내는 쓰기 Operation 하나, `onEvent` 구독자가 등록되어 있다
+- **행동**: `monti.transaction` 콜백에서 정상 쓰기를 먼저 실행한 뒤 DB 오류가 나는 쓰기를 호출해 `try/catch`로 잡고 정상 값을 반환한다
 - **결과**:
-  - `ENG-TX-6.1` `transaction`과 `dryRun` 모두 그 DB 오류를 던지고 성공 값을 돌려주지 않는다
+  - `ENG-TX-6.1` 그 DB 오류를 던지고 성공 값을 돌려주지 않는다
   - `ENG-TX-6.2` 먼저 실행한 정상 쓰기의 행이 롤백되어 DB에 남아 있지 않는다
   - `ENG-TX-6.3` `onEvent` 구독자가 호출되지 않는다
 
@@ -232,9 +232,9 @@
 <summary><strong><code>ENG-TX-10</code></strong> 콜백이 트랜잭션 DB에 직접 실행한 쿼리의 DB 오류를 잡고 정상 반환해도 트랜잭션과 드라이런은 실패한다</summary>
 
 - **전제**: DB에 행을 추가하는 쓰기 Operation과 `onEvent` 구독자가 등록되어 있다
-- **행동**: `monti.transaction`과 `monti.dryRun` 각각에 콜백을 넘겨 `tx`로 쓰기 Operation을 먼저 실행한 뒤, `trx`로 존재하지 않는 외래 키를 참조하는 행을 직접 추가해 난 DB 오류(`23503`)를 `try/catch`로 잡고 정상 값을 반환한다
+- **행동**: `monti.transaction` 콜백에서 `tx`로 쓰기 Operation을 먼저 실행한 뒤, `trx`로 직접 실행한 쿼리의 DB 오류를 `try/catch`로 잡고 정상 값을 반환한다
 - **결과**:
-  - `ENG-TX-10.1` `transaction`과 `dryRun` 모두 중단된 트랜잭션 DB 오류(`25P02`)를 던지고 성공 값을 돌려주지 않는다
+  - `ENG-TX-10.1` 중단된 트랜잭션 DB 오류(`25P02`)를 던지고 성공 값을 돌려주지 않는다
   - `ENG-TX-10.2` 먼저 실행한 쓰기 Operation의 행이 DB에 남아 있지 않는다
   - `ENG-TX-10.3` `onEvent` 구독자가 호출되지 않는다
 

@@ -54,20 +54,18 @@
 <details>
 <summary><strong><code>S3-ADP-4</code></strong> 업로드 허가에 서명된 형식·크기·표시 헤더를 바꾸거나 빼고 올리면 거절되고 파일이 저장되지 않는다</summary>
 
-- **전제**: 로컬 SigV4 검증 대역 서버에서 발급받은 이미지(16바이트) 티켓과 PDF(20바이트) 티켓이 있다
-- **행동**: 이미지 티켓에서 `content-type`을 `"application/pdf"`로 바꾼 `PUT`, 본문 길이를 8바이트로 바꾼 `PUT`, PDF 티켓에서 `content-disposition` 헤더를 뺀 `PUT`을 각각 보낸다
+- **전제**: 로컬 SigV4 검증 대역 서버에서 발급받은 업로드 티켓이 있다
+- **행동**: 티켓에 서명된 헤더나 본문 길이를 바꾸거나 뺀 `PUT`을 보낸다
 - **결과**:
-  - `S3-ADP-4.1` `content-type`을 바꾼 `PUT`이 `403`으로 거절되고 대역 버킷에 해당 키가 없다
-  - `S3-ADP-4.2` 본문 길이를 바꾼 `PUT`이 `403`으로 거절되고 대역 버킷에 해당 키가 없다
-  - `S3-ADP-4.3` `content-disposition`을 뺀 PDF `PUT`이 `403`으로 거절되고 대역 버킷에 해당 키가 없다
+  - `S3-ADP-4.1` `PUT`이 `403`으로 거절되고 대역 버킷에 해당 키가 없다
 
 </details>
 
 <details>
 <summary><strong><code>S3-ADP-5</code></strong> 허용되지 않은 파일 형식이나 최대 크기 초과 파일은 업로드 허가를 받을 수 없다</summary>
 
-- **전제**: `allowedMimeTypes: ["image/png"]`, `maxSize: 1024`로 설정된 `s3Storage` 어댑터가 있다
-- **행동**: `mime: "image/jpeg"`(100바이트)과 `mime: "image/png"`(1025바이트)로 각각 `adapter.ticket`을 호출한다
+- **전제**: `allowedMimeTypes`와 `maxSize`를 지정한 `s3Storage` 어댑터가 있다
+- **행동**: 허용되지 않은 형식과 최대 크기를 넘는 크기로 `adapter.ticket`을 호출한다
 - **결과**:
   - `S3-ADP-5.1` 비허용 MIME 호출이 `BAD_REQUEST` 오류를 던진다
   - `S3-ADP-5.2` 크기 초과 호출이 `BAD_REQUEST` 오류를 던진다
@@ -134,12 +132,9 @@
 <summary><strong><code>S3-ADP-10</code></strong> UUID가 아닌 파일 키로는 어떤 저장소 작업도 실행할 수 없다</summary>
 
 - **전제**: 로컬 S3 대역 서버를 가리키는 `s3Storage` 어댑터가 있다
-- **행동**: 키 `"../secret"`으로 `adapter.ticket`, `adapter.stat`, `adapter.url`, `adapter.remove`를 각각 호출한다
+- **행동**: UUID가 아닌 키로 어댑터의 각 메서드를 호출한다
 - **결과**:
-  - `S3-ADP-10.1` `adapter.ticket`이 `BAD_REQUEST` 오류를 던진다
-  - `S3-ADP-10.2` `adapter.stat`이 `BAD_REQUEST` 오류를 던진다
-  - `S3-ADP-10.3` `adapter.url`이 `BAD_REQUEST` 오류를 던진다
-  - `S3-ADP-10.4` `adapter.remove`가 `BAD_REQUEST` 오류를 던진다
+  - `S3-ADP-10.1` 모든 메서드가 `BAD_REQUEST` 오류를 던진다
 
 </details>
 

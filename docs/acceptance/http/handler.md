@@ -89,12 +89,12 @@
 <summary><strong><code>HTTP-HDL-6</code></strong> 표준 CRUD 작업은 생성(`201`), 조회·수정(`200`), 빈 반환 삭제(`204`)의 상태 코드와 본문을 돌려준다</summary>
 
 - **전제**: `posts` 컬렉션이 있는 스키마와 로그인된 세션 쿠키가 있다
-- **행동**: `POST /api/templates`로 템플릿을 만든 뒤 `GET /api/templates`, `GET /api/templates/:id`, `PATCH /api/templates/:id`, `DELETE /api/templates/:id`를 순서대로 호출한다
+- **행동**: 템플릿 하나를 표준 CRUD 경로로 생성·조회·수정·삭제한다
 - **결과**:
-  - `HTTP-HDL-6.1` `POST /api/templates`는 `201`로 생성된 템플릿을 반환한다
-  - `HTTP-HDL-6.2` `GET /api/templates`와 `GET /api/templates/:id`는 `200`으로 생성된 템플릿을 반환한다
-  - `HTTP-HDL-6.3` `PATCH /api/templates/:id`는 `200`으로 바뀐 이름의 템플릿을 반환한다
-  - `HTTP-HDL-6.4` `DELETE /api/templates/:id`는 `204`이고 본문이 비어 있으며 DB `templates` 테이블에서 행이 삭제된다
+  - `HTTP-HDL-6.1` 생성은 `201`로 생성된 템플릿을 반환한다
+  - `HTTP-HDL-6.2` 목록·단건 조회는 `200`으로 생성된 템플릿을 반환한다
+  - `HTTP-HDL-6.3` 수정은 `200`으로 바뀐 템플릿을 반환한다
+  - `HTTP-HDL-6.4` 삭제는 `204`이고 본문이 비어 있으며 DB `templates` 테이블에서 행이 삭제된다
 
 </details>
 
@@ -156,11 +156,11 @@
 <summary><strong><code>HTTP-HDL-12</code></strong> 인증·관리자 쓰기에 `?dryRun=true`를 붙이면 세션 쿠키를 발급하거나 지우지 않으며 토큰 원문도 노출하지 않는다</summary>
 
 - **전제**: 관리자가 없는 DB로 만든 핸들러(최초 관리자 생성용)와, 관리자가 있고 로그인된 세션 쿠키가 있는 핸들러(로그인·로그아웃용)가 있다
-- **행동**: `POST /api/admin?dryRun=true`, `POST /api/session?dryRun=true`, `DELETE /api/session?dryRun=true`를 각각 호출하고, 로그아웃 시험 실행 뒤 같은 쿠키로 `GET /api/templates`를 호출한다
+- **행동**: 최초 관리자 생성·로그인·로그아웃을 `?dryRun=true`로 시험 실행한다
 - **결과**:
-  - `HTTP-HDL-12.1` `POST /api/admin?dryRun=true`는 `201`, `{ id, email }` 본문(`token` 키 없음), `set-cookie` 헤더 없음이고 DB `admin` 테이블에 행이 없다
-  - `HTTP-HDL-12.2` `POST /api/session?dryRun=true`는 `200`, `{ ok: true }` 본문(`token` 키 없음), `set-cookie` 헤더 없음이고 DB `session` 행 수가 늘지 않는다
-  - `HTTP-HDL-12.3` `DELETE /api/session?dryRun=true`는 `204`, `set-cookie` 헤더 없음이고 이어서 같은 쿠키로 보낸 `GET /api/templates`가 `200`으로 통과한다
+  - `HTTP-HDL-12.1` 최초 관리자 생성은 `201`, `token` 키 없는 본문, `set-cookie` 헤더 없음이고 DB `admin` 테이블에 행이 없다
+  - `HTTP-HDL-12.2` 로그인은 `200`, `token` 키 없는 본문, `set-cookie` 헤더 없음이고 DB `session` 행 수가 늘지 않는다
+  - `HTTP-HDL-12.3` 로그아웃은 `204`, `set-cookie` 헤더 없음이고 같은 쿠키로 보낸 다음 요청이 `200`으로 통과한다
 
 </details>
 
@@ -181,11 +181,11 @@
 <summary><strong><code>HTTP-HDL-14</code></strong> 없는 경로·허용되지 않은 메서드는 인증보다 먼저 거절하고(`404`, `405`), 미인증 요청의 깨진 본문은 로그인 거절(`401`)이 먼저 돌아온다</summary>
 
 - **전제**: 관리자가 생성된 DB로 `createHttpHandler(monti)`를 만들었다
-- **행동**: 쿠키 없이 `GET /api/unknown`, `DELETE /api/schema`, 깨진 JSON 본문의 `POST /api/templates`를 각각 호출한다
+- **행동**: 쿠키 없이 없는 경로, 허용되지 않은 메서드, 깨진 JSON 본문의 쓰기 요청을 보낸다
 - **결과**:
-  - `HTTP-HDL-14.1` `GET /api/unknown`은 `404`와 `error.code === "NOT_FOUND"` JSON을 돌려준다
-  - `HTTP-HDL-14.2` `DELETE /api/schema`는 `405`, `allow: "GET, PATCH"`, `error.code === "METHOD_NOT_ALLOWED"` JSON을 돌려준다
-  - `HTTP-HDL-14.3` 쿠키 없는 깨진 JSON의 `POST /api/templates`는 `400`이 아니라 `401`과 `error.code === "UNAUTHORIZED"` JSON을 돌려준다
+  - `HTTP-HDL-14.1` 없는 경로는 `404`와 `error.code === "NOT_FOUND"` JSON을 돌려준다
+  - `HTTP-HDL-14.2` 허용되지 않은 메서드는 `405`, 열린 메서드를 담은 `allow` 헤더, `error.code === "METHOD_NOT_ALLOWED"` JSON을 돌려준다
+  - `HTTP-HDL-14.3` 깨진 JSON 본문은 `400`이 아니라 `401`과 `error.code === "UNAUTHORIZED"` JSON을 돌려준다
 
 </details>
 
@@ -193,7 +193,7 @@
 <summary><strong><code>HTTP-HDL-15</code></strong> 로그인하지 않았거나 만료·위조된 세션 쿠키로 보호된 API를 호출하면 거절하고(`401`) DB를 바꾸지 않는다</summary>
 
 - **전제**: 관리자가 생성되어 있고, 만료된 세션 쿠키와 위조 토큰 쿠키가 준비되어 있다
-- **행동**: 쿠키 없이, 만료 쿠키로, 위조 쿠키로 `GET /api/templates`와 `POST /api/templates`를 호출한다
+- **행동**: 쿠키 없이, 또는 만료·위조 쿠키로 템플릿 조회와 생성 API를 호출한다
 - **결과**:
   - `HTTP-HDL-15.1` 모든 요청이 상태 `401`이고 본문의 `error.code`가 `"UNAUTHORIZED"`이다
   - `HTTP-HDL-15.2` DB `templates` 테이블에 행이 저장되지 않는다
@@ -204,14 +204,14 @@
 <summary><strong><code>HTTP-HDL-16</code></strong> 검증 실패·잘못된 로그인·권한 없음·없는 대상·중복 관리자가 각각의 HTTP 오류 상태와 JSON 형식으로 반환된다</summary>
 
 - **전제**: 운영 모드(`dev: false`)로 시작한 `monti`에 관리자와 로그인된 세션 쿠키, 활성 글 1건이 있다
-- **행동**: 잘못된 본문의 `POST /api/templates`, 틀린 비밀번호의 `POST /api/session`, 운영 서버의 `PATCH /api/config`, 없는 UUID의 `GET /api/templates/:id`, 중복 관리자 생성 `POST /api/admin`, 그리고 잘못된 경로 `:id`로 다건 이동·슬러그 조회를 시도하는 `PATCH /api/entries/invalid-id`·`GET /api/entries/invalid-id?collection=posts&locale=ko&slug=...`를 각각 호출한다
+- **행동**: 검증 실패, 잘못된 로그인, 운영 서버의 설정 변경, 없는 대상 조회, 중복 관리자 생성, 잘못된 경로 `:id`의 요청을 보낸다
 - **결과**:
-  - `HTTP-HDL-16.1` 잘못된 본문의 `POST /api/templates`는 `400`과 `error.code === "BAD_REQUEST"`이다
-  - `HTTP-HDL-16.2` 틀린 비밀번호의 `POST /api/session`은 `401`과 `error.code === "UNAUTHORIZED"`이고 `set-cookie` 헤더가 없다
-  - `HTTP-HDL-16.3` 운영 서버의 `PATCH /api/config`는 `403`과 `error.code === "FORBIDDEN"`이다
-  - `HTTP-HDL-16.4` 없는 UUID의 `GET /api/templates/:id`는 `404`과 `error.code === "NOT_FOUND"`이다
-  - `HTTP-HDL-16.5` 중복 관리자 생성 `POST /api/admin`은 `409`와 `error.code === "CONFLICT"`이고 `set-cookie` 헤더가 없다
-  - `HTTP-HDL-16.6` 잘못된 경로 `:id`의 단건 `PATCH`·`GET`은 다건/슬러그 분기로 넘어가지 않고 모두 `400`(`BAD_REQUEST`)으로 거절된다
+  - `HTTP-HDL-16.1` 검증 실패는 `400`과 `error.code === "BAD_REQUEST"`이다
+  - `HTTP-HDL-16.2` 잘못된 로그인은 `401`과 `error.code === "UNAUTHORIZED"`이고 `set-cookie` 헤더가 없다
+  - `HTTP-HDL-16.3` 운영 서버의 설정 변경은 `403`과 `error.code === "FORBIDDEN"`이다
+  - `HTTP-HDL-16.4` 없는 대상 조회는 `404`과 `error.code === "NOT_FOUND"`이다
+  - `HTTP-HDL-16.5` 중복 관리자 생성은 `409`와 `error.code === "CONFLICT"`이고 `set-cookie` 헤더가 없다
+  - `HTTP-HDL-16.6` 잘못된 경로 `:id`의 단건 요청은 다건·슬러그 분기로 넘어가지 않고 `400`(`BAD_REQUEST`)으로 거절된다
 
 </details>
 

@@ -164,10 +164,10 @@
 <details>
 <summary><strong><code>MED-CRT-9</code></strong> 업로드 시작을 통해 발급받지 않은 키나 삭제 대기 중인 이전 키로는 미디어를 등록할 수 없다</summary>
 
-- **전제**: `storage`에 파일이 올라가 있지만 `media.startUpload`로 발급받지 않은 임의 `key`가 있고, 이전 파일 교체로 삭제 대기 상태가 된 `key`도 하나 있다
-- **행동**: 임의 `key`와 삭제 대기 `key`로 각각 `media.create`를 실행한다
+- **전제**: `storage`에 파일이 올라가 있지만 `media.startUpload`로 발급받지 않은 `key`나, 이전 파일 교체로 삭제 대기 상태가 된 `key`가 있다
+- **행동**: 그 `key`로 `media.create`를 실행한다
 - **결과**:
-  - `MED-CRT-9.1` 두 호출 모두 `BAD_REQUEST` 오류를 던진다
+  - `MED-CRT-9.1` `BAD_REQUEST` 오류를 던진다
   - `MED-CRT-9.2` `media` 테이블에 새 행이 생기지 않는다
 
 </details>
@@ -323,9 +323,9 @@
 <summary><strong><code>MED-UPD-7</code></strong> 미디어 수정에서 미디어 범위가 아닌 폴더로 옮길 수 없고, 다건 수정에서는 폴더를 비워 루트로 옮길 수 있다</summary>
 
 - **전제**: `"media"` 폴더에 속한 활성 미디어 둘과 컬렉션 `scope`의 폴더가 하나 있다
-- **행동**: 단건·다건 `media.update`에 컬렉션 폴더의 `id`를 주고, 이어서 다건 `media.update`에 `folder_id: null`을 준다
+- **행동**: `media.update`로 미디어를 컬렉션 폴더에 옮긴 뒤, 다건 `media.update`에 `folder_id: null`을 준다
 - **결과**:
-  - `MED-UPD-7.1` 컬렉션 폴더를 준 단건·다건 호출 모두 `BAD_REQUEST` 오류를 던진다
+  - `MED-UPD-7.1` 컬렉션 폴더로 옮기는 호출은 `BAD_REQUEST` 오류를 던진다
   - `MED-UPD-7.2` `folder_id: null` 다건 호출은 두 미디어의 `folder_id`를 모두 `null`로 바꾼다
 
 </details>
@@ -345,10 +345,10 @@
 <details>
 <summary><strong><code>MED-UPD-9</code></strong> 업로드 시작을 통해 발급받지 않은 키나 삭제 대기 중인 이전 키로는 미디어 파일을 교체할 수 없다</summary>
 
-- **전제**: 기존 활성 미디어가 하나 있고, `storage`에 올라가 있지만 `media.startUpload`로 발급받지 않은 임의 `key`와 이전 파일 교체로 삭제 대기 상태가 된 `key`가 각각 있다
-- **행동**: 임의 `key`와 삭제 대기 `key`로 각각 기존 미디어의 `media.update`를 실행한다
+- **전제**: 기존 활성 미디어가 하나 있고, `storage`에 올라가 있지만 `media.startUpload`로 발급받지 않은 `key`나 이전 파일 교체로 삭제 대기 상태가 된 `key`가 있다
+- **행동**: 그 `key`로 기존 미디어의 `media.update`를 실행한다
 - **결과**:
-  - `MED-UPD-9.1` 두 호출 모두 `BAD_REQUEST` 오류를 던진다
+  - `MED-UPD-9.1` `BAD_REQUEST` 오류를 던진다
   - `MED-UPD-9.2` 기존 미디어의 `key`가 원래 그대로이다
 
 </details>

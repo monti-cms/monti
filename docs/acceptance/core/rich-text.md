@@ -16,7 +16,7 @@
 <details>
 <summary><strong><code>RT-DOC-1</code></strong> 유효한 본문 문서는 빈 문제 목록을 돌려준다</summary>
 
-- **전제**: 13종 내장 블록(`content`·`children` 생략과 빈 배열 포함), 세 종류 인라인 노드(`text`·`hardBreak`·`footnoteRef`)와 8종 내장 `marks`, 중첩 목록이 담긴 문서가 있다
+- **전제**: 모든 내장 블록·인라인 노드·마크와 중첩 목록이 담긴 유효한 문서가 있다(`content`·`children`은 생략하거나 빈 배열이어도 된다)
 - **행동**: `validateDoc`으로 문서를 검사한다
 - **결과**:
   - `RT-DOC-1.1` 빈 배열 `[]`을 돌려준다
@@ -48,23 +48,20 @@
 <details>
 <summary><strong><code>RT-DOC-4</code></strong> 블록에 식별자나 종류가 빠졌으면 해당 속성 경로의 문제를 돌려준다</summary>
 
-- **전제**: `blocks[0]`은 `id`가 누락되고 `blocks[1]`은 `type`이 누락된 문서가 주어진다
+- **전제**: `id`가 빠진 블록과 `type`이 빠진 블록이 든 문서가 주어진다
 - **행동**: `validateDoc`으로 문서를 검사한다
 - **결과**:
-  - `RT-DOC-4.1` `blocks[0].id` 경로의 문제가 보고된다
-  - `RT-DOC-4.2` `blocks[1].type` 경로의 문제가 보고된다
+  - `RT-DOC-4.1` 빠진 속성마다 그 경로(`blocks[n].id`, `blocks[n].type`)의 문제가 보고된다
 
 </details>
 
 <details>
 <summary><strong><code>RT-DOC-5</code></strong> 블록의 속성·인라인 목록·하위 블록 목록 형식이 잘못되었으면 해당 경로의 문제를 돌려준다</summary>
 
-- **전제**: `blocks[0]`은 객체가 아닌 `attrs`, `blocks[1]`은 배열이 아닌 `content`를 가진 `paragraph`, `blocks[2]`는 배열이 아닌 `children`을 가진 `quote`인 문서가 주어진다
+- **전제**: `attrs`가 객체가 아니거나 `content`·`children`이 배열이 아닌 블록이 든 문서가 주어진다
 - **행동**: `validateDoc`으로 문서를 검사한다
 - **결과**:
-  - `RT-DOC-5.1` `blocks[0].attrs` 경로의 문제가 보고된다
-  - `RT-DOC-5.2` `blocks[1].content` 경로의 문제가 보고된다
-  - `RT-DOC-5.3` `blocks[2].children` 경로의 문제가 보고된다
+  - `RT-DOC-5.1` 잘못된 속성마다 그 경로(`blocks[n].attrs`, `blocks[n].content`, `blocks[n].children`)의 문제가 보고된다
 
 </details>
 
@@ -200,12 +197,10 @@
 <details>
 <summary><strong><code>RT-INL-1</code></strong> 인라인 노드가 객체가 아니거나 등록되지 않은 종류이거나 각주 참조 ID가 문자열이 아니면 문제를 돌려준다</summary>
 
-- **전제**: `blocks[0]` `paragraph`의 `content[0]`에 객체가 아닌 값(`null`), `content[1]`에 알 수 없는 인라인 `type`, `content[2]`에 문자열 `id`가 없는 `footnoteRef`가 들어 있다
+- **전제**: `paragraph`의 `content`에 객체가 아닌 노드, 등록되지 않은 종류의 노드, 문자열 `id`가 없는 `footnoteRef`가 들어 있다
 - **행동**: `validateDoc`으로 문서를 검사한다
 - **결과**:
-  - `RT-INL-1.1` `blocks[0].content[0]` 경로의 문제가 보고된다
-  - `RT-INL-1.2` `blocks[0].content[1].type` 경로의 문제가 보고된다
-  - `RT-INL-1.3` `blocks[0].content[2].id` 경로의 문제가 보고된다
+  - `RT-INL-1.1` 잘못된 노드마다 그 경로(노드 자체, `type`, 각주 참조의 `id`)의 문제가 보고된다
 
 </details>
 
@@ -222,26 +217,23 @@
 <details>
 <summary><strong><code>RT-INL-3</code></strong> 마크 목록이나 마크 항목 형식이 잘못되었거나 등록되지 않은 마크이면 문제를 돌려준다</summary>
 
-- **전제**: `blocks[0]` `paragraph`의 `content[0]`은 첫 마크에 `type`이 없는 `text`, `content[1]`은 등록되지 않은 마크 `type`을 가진 `text`, `content[2]`는 배열이 아닌 `marks`를 가진 `text`, `content[3]`은 객체가 아닌 마크(`null`)를 가진 `text`이다
+- **전제**: `paragraph`의 `content`에 `marks`가 배열이 아니거나, 객체가 아닌 마크, `type`이 없는 마크, 등록되지 않은 마크를 가진 `text` 노드들이 들어 있다
 - **행동**: `validateDoc`으로 문서를 검사한다
 - **결과**:
-  - `RT-INL-3.1` `blocks[0].content[0].marks[0].type` 경로의 문제가 보고된다
-  - `RT-INL-3.2` `blocks[0].content[1].marks[0].type` 경로의 문제가 보고된다
-  - `RT-INL-3.3` `blocks[0].content[2].marks` 경로의 문제가 보고된다
-  - `RT-INL-3.4` `blocks[0].content[3].marks[0]` 경로의 문제가 보고된다
+  - `RT-INL-3.1` 잘못된 마크마다 그 경로(`marks`, `marks[n]`, `marks[n].type`)의 문제가 보고된다
 
 </details>
 
 <details>
 <summary><strong><code>RT-INL-6</code></strong> 내장 링크 마크의 주소에 허용되지 않은 스킴이나 스킴 없는 네트워크 경로가 들어 있으면 문제를 돌려준다</summary>
 
-- **전제**: `blocks[0]` `paragraph` 안에 허용 주소(`https://example.com`, `http://example.com`, `mailto:a@example.com`, 상대 경로 `/about`, 문서 내 조각 `#top`)를 가진 `link` 마크들과 위험 주소(`javascript:alert(1)`, `JavaScript:alert(1)`, `data:text/html,<script>`, `//example.com`, `/`와 `/` 사이에 탭 문자가 든 `/<탭>/evil.com`)를 가진 `link` 마크들이 들어 있다
+- **전제**: `paragraph` 안에 허용 주소와 위험 주소를 가진 `link` 마크들이 들어 있다
 - **행동**: 추가 마크 정의 없이 `validateDoc`으로 문서를 검사한다
 - **결과**:
   - `RT-INL-6.1` `https:`, `http:`, `mailto:` 주소의 `link` 마크 경로에는 문제가 보고되지 않는다
-  - `RT-INL-6.2` 상대 경로(`/about`)와 문서 내 조각(`#top`)의 `link` 마크 경로에는 문제가 보고되지 않는다
-  - `RT-INL-6.3` `javascript:`, `JavaScript:`, `data:`, `//example.com` 주소의 각 `link` 마크 경로(`blocks[0].content[n].marks[0]`)에는 각각 문제가 보고된다
-  - `RT-INL-6.4` 탭 문자가 든 `/<탭>/evil.com` 주소의 `link` 마크 경로에는 문제가 보고된다
+  - `RT-INL-6.2` 상대 경로와 문서 내 조각(`#`)의 `link` 마크 경로에는 문제가 보고되지 않는다
+  - `RT-INL-6.3` 그 밖의 스킴(대소문자 무관)과 `//`로 시작하는 주소의 `link` 마크 경로(`blocks[0].content[n].marks[0]`)마다 문제가 보고된다
+  - `RT-INL-6.4` 슬래시 사이에 탭 문자가 든 주소의 `link` 마크 경로에는 문제가 보고된다
 
 </details>
 
@@ -250,23 +242,21 @@
 <details>
 <summary><strong><code>RT-MED-1</code></strong> 블록의 단건 미디어 예약 속성이 유효한 UUID가 아니면 문제를 돌려준다</summary>
 
-- **전제**: `blocks[0]`은 유효한 UUID `attrs.mediaId`, `blocks[1]`은 UUID가 아닌 문자열 `attrs.mediaId`, `blocks[2]`는 `null`인 `attrs.mediaId`를 가진다
+- **전제**: `attrs.mediaId`가 유효한 UUID인 블록, UUID가 아닌 문자열인 블록, `null`인 블록이 있다
 - **행동**: `validateDoc`으로 문서를 검사한다
 - **결과**:
-  - `RT-MED-1.1` `blocks[1].attrs.mediaId` 경로의 문제가 보고된다
-  - `RT-MED-1.2` `blocks[2].attrs.mediaId` 경로의 문제가 보고된다
-  - `RT-MED-1.3` `blocks[0]`과 그 하위 경로에는 문제가 보고되지 않는다
+  - `RT-MED-1.1` UUID가 아니거나 `null`인 블록의 `attrs.mediaId` 경로에 문제가 보고된다
+  - `RT-MED-1.3` 유효한 UUID 블록과 그 하위 경로에는 문제가 보고되지 않는다
 
 </details>
 
 <details>
 <summary><strong><code>RT-MED-2</code></strong> 블록의 다건 미디어 예약 속성이 유효한 UUID 배열이 아니면 문제를 돌려준다</summary>
 
-- **전제**: `blocks[0]`은 유효한 UUID 배열 `attrs.mediaIds`, `blocks[1]`은 UUID가 아닌 원소가 섞인 `attrs.mediaIds`, `blocks[2]`는 배열이 아닌 `attrs.mediaIds`를 가진다
+- **전제**: `attrs.mediaIds`가 유효한 UUID 배열인 블록, UUID가 아닌 원소가 섞인 블록, 배열이 아닌 블록이 있다
 - **행동**: `validateDoc`으로 문서를 검사한다
 - **결과**:
-  - `RT-MED-2.1` `blocks[1].attrs.mediaIds` 경로의 문제가 보고된다
-  - `RT-MED-2.2` `blocks[2].attrs.mediaIds` 경로의 문제가 보고된다
-  - `RT-MED-2.3` `blocks[0]`과 그 하위 경로에는 문제가 보고되지 않는다
+  - `RT-MED-2.1` 유효한 UUID 배열이 아닌 블록의 `attrs.mediaIds` 경로에 문제가 보고된다
+  - `RT-MED-2.3` 유효한 UUID 배열 블록과 그 하위 경로에는 문제가 보고되지 않는다
 
 </details>

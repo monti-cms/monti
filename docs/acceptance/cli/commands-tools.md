@@ -133,12 +133,12 @@
 <details>
 <summary><strong><code>CLI-TLS-17</code></strong> 명령이 실패해도 DB 비밀번호와 서비스 비밀값이 표준 오류에 나오지 않는다</summary>
 
-- **전제**: `DATABASE_URL`(`postgres://admin:super-secret-pw@127.0.0.1:5432/monti`)과 `MONTI_SECRET`이 설정되어 있고, 실행 중 일반 진단 문구와 함께 그 비밀번호·`MONTI_SECRET` 원문이 섞인 오류가 던져진다
+- **전제**: 비밀번호가 든 `DATABASE_URL`과 `MONTI_SECRET`이 설정되어 있고, 실행 중 일반 진단 문구와 함께 그 비밀번호·`MONTI_SECRET` 원문이 섞인 오류가 던져진다
 - **행동**: 실패하는 명령을 `runCli(argv, io)`로 실행한다
 - **결과**:
   - `CLI-TLS-17.1` 종료 코드가 `1`이다
   - `CLI-TLS-17.2` `stdout`이 비어 있고 `stderr`에 일반 진단 문구는 출력된다
-  - `CLI-TLS-17.3` `stderr`에 `"super-secret-pw"`가 없다
+  - `CLI-TLS-17.3` `stderr`에 DB 비밀번호가 없다
   - `CLI-TLS-17.4` `stderr`에 `MONTI_SECRET` 원문이 없다
 
 </details>
@@ -227,9 +227,9 @@
 <summary><strong><code>CLI-TLS-15</code></strong> `migrate`·`clean-files`에 오타 옵션·남는 인자나 `migrate status --dry-run`을 주면 DB를 열지 않고 사용법 오류로 거절한다</summary>
 
 - **전제**: 유효한 프로젝트와 `DATABASE_URL`이 비어 있는 `io`가 있다
-- **행동**: `runCli(["migrate", "up", "--dry-rnu"], io)`, `runCli(["migrate", "status", "--dry-run"], io)`, `runCli(["clean-files", "extra"], io)`를 각각 실행한다
+- **행동**: `migrate`·`clean-files`에 오타 옵션이나 남는 인자를 붙이거나 `migrate status`에 `--dry-run`을 붙여 `runCli`로 실행한다
 - **결과**:
-  - `CLI-TLS-15.1` 세 호출 모두 반환 종료 코드가 `2`이다
-  - `CLI-TLS-15.2` 세 호출 모두 `stderr`에 오류 메시지가 출력되고 `stdout`이 비어 있다
+  - `CLI-TLS-15.1` 반환 종료 코드가 `2`이다
+  - `CLI-TLS-15.2` `stderr`에 오류 메시지가 출력되고 `stdout`이 비어 있다
 
 </details>
