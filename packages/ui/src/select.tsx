@@ -6,7 +6,17 @@ import { cn } from "./cn";
 import { CutWords } from "./cut-words";
 import { FIELD_HOVER, FIELD_INSET } from "./hover";
 import { ChevronDown, ChevronUp } from "./icons";
-import { MENU_CARD, MENU_ITEM, MENU_LABEL, MENU_MOTION, MENU_SEPARATOR, MenuTick } from "./menu-parts";
+import {
+	MENU_CARD,
+	MENU_ITEM,
+	MENU_LABEL,
+	MENU_MOTION,
+	MENU_SEPARATOR,
+	MenuTick,
+	PICK_CARD_PAD,
+	PICK_ROW_INSET,
+	PICK_SEPARATOR,
+} from "./menu-parts";
 import { menuWords } from "./menu-words";
 import { FIRST_PASS, FIT_HEIGHT, usePlacementPadding } from "./placement";
 import { useProposalDescription } from "./proposal-cue";
@@ -161,7 +171,8 @@ function SelectContent({
 						"relative isolate z-50",
 						FIT_HEIGHT,
 						width === "field" ? "w-(--anchor-width)" : "w-max min-w-[max(var(--monti-width-menu),var(--anchor-width))]",
-						"max-w-(--available-width) overflow-y-auto overflow-x-hidden p-monti-4 data-[align-trigger=true]:animate-none",
+						"max-w-(--available-width) overflow-y-auto overflow-x-hidden data-[align-trigger=true]:animate-none",
+						PICK_CARD_PAD,
 						className,
 					)}
 					{...props}
@@ -176,12 +187,22 @@ function SelectContent({
 }
 
 function SelectLabel({ className, ...props }: SelectPrimitive.GroupLabel.Props) {
-	return <SelectPrimitive.GroupLabel data-slot="select-label" className={cn(MENU_LABEL, className)} {...props} />;
+	return (
+		<SelectPrimitive.GroupLabel
+			data-slot="select-label"
+			className={cn(MENU_LABEL, PICK_ROW_INSET, className)}
+			{...props}
+		/>
+	);
 }
 
 function SelectItem({ className, children, ...props }: SelectPrimitive.Item.Props) {
 	return (
-		<SelectPrimitive.Item data-slot="select-item" className={cn(MENU_ITEM, "w-full", className)} {...props}>
+		<SelectPrimitive.Item
+			data-slot="select-item"
+			className={cn(MENU_ITEM, PICK_ROW_INSET, "w-full", className)}
+			{...props}
+		>
 			<SelectPrimitive.ItemText className="flex min-w-0 flex-1 items-center gap-monti-8 whitespace-nowrap">
 				{menuWords(children)}
 			</SelectPrimitive.ItemText>
@@ -194,7 +215,7 @@ function SelectSeparator({ className, ...props }: SelectPrimitive.Separator.Prop
 	return (
 		<SelectPrimitive.Separator
 			data-slot="select-separator"
-			className={cn("pointer-events-none", MENU_SEPARATOR, className)}
+			className={cn("pointer-events-none", MENU_SEPARATOR, PICK_SEPARATOR, className)}
 			{...props}
 		/>
 	);

@@ -10,7 +10,18 @@ import { ICON_BUTTON } from "./icon-button";
 import { Add, Close } from "./icons";
 import { Input } from "./input";
 import { useUiLabels } from "./labels";
-import { MENU_CARD, MENU_EMPTY, MENU_ITEM, MENU_LABEL, MENU_MOTION, MENU_SEPARATOR, MenuTick } from "./menu-parts";
+import {
+	MENU_CARD,
+	MENU_EMPTY,
+	MENU_ITEM,
+	MENU_LABEL,
+	MENU_MOTION,
+	MENU_SEPARATOR,
+	MenuTick,
+	PICK_CARD_PAD,
+	PICK_ROW_INSET,
+	PICK_SEPARATOR,
+} from "./menu-parts";
 import { menuWords } from "./menu-words";
 import { FIRST_PASS, FIT_HEIGHT, FIT_LIST, usePlacementPadding } from "./placement";
 
@@ -180,9 +191,10 @@ function ComboboxContent({
 }: ComboboxPrimitive.Popup.Props &
 	Pick<ComboboxPrimitive.Positioner.Props, "side" | "align" | "sideOffset" | "alignOffset" | "anchor"> & {
 		/**
-		 * `default`: 28px wider than the field, so the rows' words line up with the field's. `field`: edge to edge with its field's underline (wherever the field's words start in it), a list that stands
-		 * under a dialog's field as part of it (the service picker of the API key dialog). Its rows are 13px in ink, its group names 12px on a 28px row,
-		 * and its rules stand inside the card's padding, as wide as the rows.
+		 * 어느 쪽이든 목록은 칸의 상자 시작에서 칸과 같은 폭으로 연다. 칸 안에서 글자가 어디서 시작하든 상자는 칸 밖으로 나가지 않고, 행의 글자는
+		 * 상자에서 8px 안(칸의 `FIELD_INSET`과 같은 줄)에 선다({@link PICK_CARD_PAD}, 2026-11-24 소유자). `field`: 대화상자의 칸에 딸린 목록(API 키
+		 * 대화상자의 서비스 고르기). Its rows are 13px in ink, its group names 12px on a 28px row, and its rules stand inside the card's padding, as wide
+		 * as the rows.
 		 */
 		width?: "default" | "field";
 	}) {
@@ -197,8 +209,8 @@ function ComboboxContent({
 				sideOffset={sideOffset}
 				align={align}
 				alignOffset={alignOffset}
-				// A list as wide as the field stands under the field's own box, not its words: the words' inset (`FIELD_INSET`) changes with the place.
-				anchor={anchor ?? (width === "field" ? field : undefined)}
+				// 목록은 칸의 글자가 아니라 칸의 상자 아래에 선다: 글자의 안쪽 여백(`FIELD_INSET`)은 자리마다 다르다.
+				anchor={anchor ?? field ?? undefined}
 				className="isolate z-50"
 			>
 				<ComboboxPrimitive.Popup
@@ -210,7 +222,7 @@ function ComboboxContent({
 						MENU_MOTION,
 						"group/combobox-content relative",
 						FIT_HEIGHT,
-						"w-(--anchor-width) min-w-[calc(var(--anchor-width)+--spacing(7))] max-w-(--available-width) overflow-hidden data-[chips=true]:min-w-(--anchor-width) data-[width=field]:min-w-0",
+						"w-(--anchor-width) max-w-(--available-width) overflow-hidden",
 						className,
 					)}
 					{...props}
@@ -235,7 +247,8 @@ function ComboboxList({
 		<ComboboxPrimitive.List
 			data-slot="combobox-list"
 			className={cn(
-				"p-monti-4 data-empty:p-0",
+				PICK_CARD_PAD,
+				"data-empty:p-0",
 				fit === "scroll" && cn("no-scrollbar scroll-py-1 overflow-y-auto overscroll-contain", FIT_LIST),
 				className,
 			)}
@@ -282,6 +295,7 @@ function ComboboxItem({
 			data-tone={tone}
 			className={cn(
 				MENU_ITEM,
+				PICK_ROW_INSET,
 				PICKER_ITEM,
 				"data-[tone=exit]:gap-monti-10 group-data-[width=field]/combobox-content:data-[tone=exit]:not-data-highlighted:text-monti-muted data-[tone=exit]:[&>svg]:size-3.5 data-[tone=exit]:[&>svg]:text-monti-faint",
 				className,
@@ -304,6 +318,7 @@ function ComboboxCreate({ className, children, ...props }: ComboboxPrimitive.Ite
 			data-slot="combobox-create"
 			className={cn(
 				MENU_ITEM,
+				PICK_ROW_INSET,
 				"relative mt-monti-8 before:pointer-events-none before:absolute before:inset-x-monti-2 before:-top-[5px] before:h-px before:bg-monti-divider first:mt-0 first:before:hidden",
 				className,
 			)}
@@ -323,7 +338,7 @@ function ComboboxLabel({ className, ...props }: ComboboxPrimitive.GroupLabel.Pro
 	return (
 		<ComboboxPrimitive.GroupLabel
 			data-slot="combobox-label"
-			className={cn(MENU_LABEL, PICKER_LABEL, className)}
+			className={cn(MENU_LABEL, PICK_ROW_INSET, PICKER_LABEL, className)}
 			{...props}
 		/>
 	);
@@ -347,7 +362,7 @@ function ComboboxSeparator({ className, ...props }: ComboboxPrimitive.Separator.
 	return (
 		<ComboboxPrimitive.Separator
 			data-slot="combobox-separator"
-			className={cn(MENU_SEPARATOR, "group-data-[width=field]/combobox-content:mx-0", className)}
+			className={cn(MENU_SEPARATOR, PICK_SEPARATOR, "group-data-[width=field]/combobox-content:mx-0", className)}
 			{...props}
 		/>
 	);
