@@ -21,7 +21,7 @@
 
 | 자리 | 부품 | 이렇게 쓴다 |
 |---|---|---|
-| 열 이름 행 | `ListHead`(`columns`, `end`, `selectAll`, `add`, `moveLabel`, `onPlace`, `onStep`, `onPreview`, `onResize`, `resizeLabel`) | `columns`의 열마다 `id`, `label`, `size`, `sort`, `filtered`, `menu`. 필터, 정렬, 열 숨기기는 모두 이름을 누르면 열리는 그 열의 메뉴에서 한다. 필터가 걸린 열은 `filtered`로 점, 정렬된 열은 `sort`로 화살표. |
+| 열 이름 행 | `ListHead`(`columns`, `end`, `selectAll`, `add`, `moveLabel`, `onPlace`, `onStep`, `onPreview`, `onResize`, `resizeLabel`) | `columns`의 열마다 `id`, `label`, `size`, `sort`, `filter`, `menu`. 필터, 정렬, 열 숨기기는 모두 이름을 누르면 열리는 그 열의 메뉴에서 한다. 정렬된 열은 `sort`로 화살표. 필터가 걸린 열은 이름이 서던 자리가 칩이 된다(`filter`: 24px, `bg-selected`, `named`면 흐린 "상태 ·" 뒤에 값, 끝에 지우는 ×(`clearLabel`)). 점은 없다: 칩의 바탕만으로 필터가 켜졌음을 말한다. 칩의 바탕은 칸의 왼쪽 변(열의 시작 선)에서 시작해 칸 밖으로 나가지 않고, 글자는 필터가 꺼졌을 때의 이름과 같은 x다(1440 기준 "상태" 칸 306에서 칩 306–394, 글자 316은 켜고 꺼도 같다. "글쓴이" 칸 1034에서 칩 1034–1100, 글자 1044). 칩도 이름처럼 그 열의 메뉴를 연다(2026-11-24 소유자, [list.md](../components/list.md)). |
 | 모두 선택 | `ListHead`의 `selectAll`(`state` `none`·`some`·`all`) | 포인터가 머리 위에 있을 때 보인다. 지금 쪽만 고른다. |
 | 열 메뉴의 정렬 (제목, 날짜) | `SortRows`(`DropdownMenuRadioGroup` + `DropdownMenuRadioItem`) | 제목은 "오름차순 · 내림차순", 날짜는 "최근부터 · 오래전부터". 고르면 닫힌다. |
 | 열 메뉴의 거를 값 | `DropdownMenuCheckboxItem box`, 끝에 개수 `MenuShortcut` | 상태: 발행됨 · 수정 중 · 초안 · 보관됨. 관계(카테고리, 태그): 맨 위 `DropdownMenuSearch`, "없음", `DropdownMenuSeparator`, 항목(많으면 `DropdownMenuScroll`). 언어: 관리자 화면 언어로 된 언어 이름들("한국어", "영어"), 구분선, `DropdownMenuLabel` "번역", 번역 없음 · 원문 변경 · 최신. 텍스트 필드(검색 설명): "비어 있음" 하나. 골라도 메뉴는 열려 있다. |
@@ -72,7 +72,7 @@
 
 | 자리 | 부품 | 이렇게 쓴다 |
 |---|---|---|
-| 행 | `PageToolbar inset` | 어시스턴트가 필터를 걸었을 때만 있다. 사람이 건 필터 자체는 열 이름 뒤의 점으로 보인다(2026-11-09 소유자). 폴더 안에서 찾는 곳은 이 행이 아니라 검색창 앞 칩이다(2026-11-10 소유자). |
+| 행 | `PageToolbar inset` | 어시스턴트가 필터를 걸었을 때만 있다. 사람이 건 필터 자체는 그 열 머리의 칩으로 보인다(2026-11-24 소유자. 앞서 2026-11-09에는 열 이름 뒤의 점이었다). 폴더 안에서 찾는 곳은 이 행이 아니라 검색창 앞 칩이다(2026-11-10 소유자). |
 | AI가 건 필터 "✦ 요약 비어 있음 ×" | `Chip proposal`(`onRemove`, `removeLabel` "필터 지우기") | ✦와 파랑은 `Chip`이 그린다. 바꾸거나 지우면 AI 표시가 끝난다. |
 
 #### 일괄 막대 (행을 고른 동안, 열 이름 행 자리)
@@ -114,7 +114,7 @@
 
 | 상태 | 단계 | 더해지는 것 | 스토리 |
 |---|---|---|---|
-| "언어 메뉴" | 3.12 | 언어 열 메뉴(언어, `DropdownMenuLabel` "번역", 번역 상태), 언어 열 `filtered` | Controls/Menu/DropdownMenu |
+| "언어 메뉴" | 3.12 | 언어 열 메뉴(언어, `DropdownMenuLabel` "번역", 번역 상태), 언어 열 필터 칩(`filter`) | Controls/Menu/DropdownMenu |
 
 ### 흐름 5 · 휴지통
 
@@ -140,14 +140,14 @@
 | 상태 | 단계 | 더해지는 것 | 스토리 |
 |---|---|---|---|
 | "바꾸기 메뉴" | 7.10 | "바꾸기 ▾" `DropdownMenu`와 태그 `DropdownMenuSub`(검색, 세 상태 체크) | Controls/Menu/DropdownMenu |
-| "상태 메뉴" | 7.04 | 상태 열 메뉴(`DropdownMenuCheckboxItem` 넷과 개수, "열 숨기기"), 상태 열 `filtered` | Controls/Menu/DropdownMenu |
-| "여러 필터" | 7.04e | 상태 열과 수정일 열이 함께 `filtered` |  |
+| "상태 메뉴" | 7.04 | 상태 열 메뉴(`DropdownMenuCheckboxItem` 넷과 개수, "열 숨기기"), 상태 열 필터 칩(`filter`) | Controls/Menu/DropdownMenu |
+| "여러 필터" | 7.04e | 상태 열과 수정일 열이 함께 필터 칩(`filter`) |  |
 | "태그 메뉴" | 7.04b | 태그 열 메뉴(`DropdownMenuSearch`, "없음", `DropdownMenuScroll`) | Controls/Menu/DropdownMenu |
-| "언어 메뉴" | 7.04c | 언어 열 메뉴(언어, `DropdownMenuLabel` "번역", 번역 상태), 언어 열 `filtered` | Controls/Menu/DropdownMenu |
-| "수정일 메뉴" | 7.05 | 수정일 열 메뉴(정렬과 기간 `DropdownMenuRadioItem`), `filtered` | Controls/Menu/DropdownMenu |
+| "언어 메뉴" | 7.04c | 언어 열 메뉴(언어, `DropdownMenuLabel` "번역", 번역 상태), 언어 열 필터 칩(`filter`) | Controls/Menu/DropdownMenu |
+| "수정일 메뉴" | 7.05 | 수정일 열 메뉴(정렬과 기간 `DropdownMenuRadioItem`), 필터 칩(`filter`) | Controls/Menu/DropdownMenu |
 | "기간 고르기" | 7.05b | 날짜 메뉴 옆 `Calendar`, 시작 날만 | Controls/Field/Calendar |
-| "기간 걸림" | 7.05c | `Calendar`가 기간을 보이며 열려 있음, 수정일 열 `filtered` | Controls/Field/Calendar |
-| "검색 설명 메뉴" | 7.04d | +로 켠 검색 설명 열과 그 메뉴("비어 있음"), `filtered` |  |
+| "기간 걸림" | 7.05c | `Calendar`가 기간을 보이며 열려 있음, 수정일 열 필터 칩(`filter`) | Controls/Field/Calendar |
+| "검색 설명 메뉴" | 7.04d | +로 켠 검색 설명 열과 그 메뉴("비어 있음"), 필터 칩(`filter`) |  |
 | "제목 메뉴" | 7.01 | 제목 열 메뉴(오름차순 · 내림차순) |  |
 | "제목 오름차순" | 7.01b | 메뉴 닫힘, 제목 열 `sort="asc"` |  |
 | "열 추가" | 7.02 | `ListHead`의 `add` 메뉴(숨긴 열만) | Patterns/List/ListHead |
