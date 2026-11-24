@@ -73,6 +73,9 @@ function Affix({
 				className={cn(
 					"h-full min-w-[3ch] rounded-none border-0 bg-transparent px-monti-8 py-0 text-monti-default outline-none placeholder:font-sans placeholder:text-monti-faint group-data-proposal/affix:text-monti-proposal",
 					width === "fit" ? "field-sizing-content flex-initial" : "flex-1",
+					// The fixed parts touch the typed part, so the address reads as one ("example.com/articles"); a suffix of words keeps the room.
+					prefix && "pl-0",
+					suffix && !suffixWords && "pr-0",
 				)}
 				{...props}
 			/>
