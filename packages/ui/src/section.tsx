@@ -13,6 +13,8 @@ function Section({
 	stacked = false,
 	dense = false,
 	layout = "flow",
+	titleWidth = "default",
+	tone,
 	description,
 	className,
 	...props
@@ -22,6 +24,10 @@ function Section({
 	 * its `description` (12px, faint, wrapping inside 190px), 40px, then the fields 20px apart; 28px above and below, a `border-muted` line under it.
 	 */
 	layout?: "flow" | "grid";
+	/** With `layout="grid"`: `narrow` is a 160px title column and 32px before the fields, for a grid beside a rail (a collection's basics). */
+	titleWidth?: "default" | "narrow";
+	/** With `layout="grid"`: `danger` sets the title in the danger ink (the danger zone). */
+	tone?: "danger";
 	/** With `layout="grid"`: a short line under the title, saying what the section is for. */
 	description?: ReactNode;
 	title: ReactNode;
@@ -41,14 +47,20 @@ function Section({
 				data-layout={layout}
 				aria-labelledby={titleId}
 				className={cn(
-					"grid grid-cols-[200px_minmax(0,1fr)] gap-x-monti-40 border-monti-muted py-[28px]",
+					"grid border-monti-muted py-[28px]",
+					titleWidth === "narrow"
+						? "grid-cols-[160px_minmax(0,1fr)] gap-x-monti-32"
+						: "grid-cols-[200px_minmax(0,1fr)] gap-x-monti-40",
 					!last && "border-b",
 					className,
 				)}
 				{...props}
 			>
 				<div className="flex min-w-0 flex-col gap-monti-6">
-					<h2 id={titleId} className="m-0 font-semibold text-monti-body">
+					<h2
+						id={titleId}
+						className={cn("m-0 font-semibold text-monti-body", tone === "danger" && "text-monti-danger")}
+					>
 						{title}
 					</h2>
 					{description && (

@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent } from "storybook/test";
 import { SettingsSiteScreen } from "./settings";
 import { SettingsAdminScreen } from "./settings-admin";
+import { SettingsCollectionScreen } from "./settings-collection";
 import { SettingsLanguagesScreen } from "./settings-languages";
 
 /**
@@ -39,3 +40,5 @@ export const SettingsToolbarHidden: Story = { render: () => <SettingsAdminScreen
 export const SettingsToolbarDrag: Story = {
 	render: () => <SettingsAdminScreen tools={{ view: "bar", dragging: true }} />,
 };
+/** 시안 `settings-basics.html`: 컬렉션 › 글 › 기본. */
+export const SettingsBasics: Story = { render: () => <SettingsCollectionScreen /> };
