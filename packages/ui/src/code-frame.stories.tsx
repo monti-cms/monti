@@ -52,6 +52,7 @@ const LINES = [
 export const Editing: Story = {
 	args: {
 		...name,
+		folds: true,
 		children: (
 			<CodeArea
 				picking
@@ -92,6 +93,7 @@ export const Editing: Story = {
 export const Folded: Story = {
 	args: {
 		...name,
+		folds: true,
 		children: (
 			<CodeArea
 				gutter={[0, 1, 2, 5, 6].map((line) => (

@@ -358,17 +358,27 @@ function Code({
 	language,
 	readOnly = false,
 	copied = false,
+	folds = true,
 	children,
 	...tools
-}: React.ComponentProps<typeof Tools> & { name?: string; readOnly?: boolean; children: React.ReactNode }) {
+}: React.ComponentProps<typeof Tools> & {
+	name?: string;
+	readOnly?: boolean;
+	/** The lines carry the fold column (`Lines fold` is not "none"). */
+	folds?: boolean;
+	children: React.ReactNode;
+}) {
 	return (
 		<Box position="relative">
 			{readOnly ? null : <Tools language={language} copied={copied} {...tools} />}
 			<CodeFrame
+				folds={folds}
 				language={
-					<Text variant="caption" tone="muted">
-						{language}
-					</Text>
+					language ? (
+						<Text variant="caption" tone="muted">
+							{language}
+						</Text>
+					) : undefined
 				}
 				file={
 					name ? (
@@ -457,7 +467,7 @@ export function CodeBoxScreen({
 	if (state === "unknown")
 		return (
 			<Page>
-				<Code name="lib/counter.ex" language="elixir">
+				<Code name="lib/counter.ex" language="elixir" folds={false}>
 					<Lines
 						fold="none"
 						looks={{}}
@@ -667,6 +677,7 @@ export function FormatInCodeScreen({ state }: { state: "more" | "tooltip" | "fol
 			<Box position="relative">
 				<Code
 					name="src/counter.tsx"
+					folds={false}
 					words={state === "fold" ? "fold" : state === "marked" ? "tip" : "picked"}
 					tipOpen={
 						state === "tooltip" ? (
@@ -804,7 +815,7 @@ export function RulesScreen({ state }: { state: "list" | "rule" | "tooltip" | "e
 		);
 	return (
 		<Page>
-			<Code name="src/counter.tsx" rulesOpen={card}>
+			<Code name="src/counter.tsx" rulesOpen={card} folds={false}>
 				<Lines looks={{}} fold="none" words={state === "list" ? RULE_WORDS : {}} />
 			</Code>
 		</Page>
@@ -944,7 +955,7 @@ export function CodeLinkScreen({ state }: { state: "picking" | "ready" | "linked
 						</FloatingBar>
 					</At>
 				) : null}
-				<Code name="src/counter.tsx">
+				<Code name="src/counter.tsx" folds={false}>
 					<Lines
 						looks={state === "broken" ? {} : looks}
 						fold="none"
