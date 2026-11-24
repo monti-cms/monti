@@ -10,10 +10,10 @@ function KeyList({ className, ...props }: React.ComponentProps<"div">) {
 }
 
 /**
- * One saved key: its name (14px 500, ink) with what identifies it after it in mono (`identifier`: the key's last characters "sk-or-…8e42", an address
- * "localhost:11434"), a line under it saying where it is used (`meta`, 13px on an 18px line, subtle; `danger` when the service refused it), then at the end its state
- * (`status`, an `EntryStatus`; a taken key's name is muted, green on the dark ground) with a fix 8px before it (`action`, a small pill), and the row's ⋯ (`more`) in a 32px column. At least 60px, 10px above and
- * below; a long name wraps, it is not cut.
+ * 저장된 키 하나: 이름(14px 500, 잉크)과 그 뒤 mono로 키를 알아보는 값(`identifier`: 키의 끝 "sk-or-…8e42", 주소 "localhost:11434"), 그 아래 쓰는 곳 한 줄
+ * (`meta`, 13px · 18px 줄, subtle. 서비스가 키를 받지 않았으면 `danger`), 끝에 상태(`status`, `EntryStatus`. 받아들여진 키는 흐린 잉크, 어두운 바탕에서 초록)와
+ * 그 앞 8px의 고칠 단추(`action`, 작은 알약), 그리고 40px 열의 ⋯(`more`): 목록 행의 ⋯처럼 상자가 끝선에서 12px 안에서 끝나고 가리킨 바탕도 선을 넘지 않는다
+ * (2026-11-24 소유자). 적어도 60px, 위아래 10px. 긴 이름은 자르지 않고 줄을 바꾼다.
  */
 function KeyRow({
 	name,
@@ -39,7 +39,7 @@ function KeyRow({
 			role="listitem"
 			data-slot="key-row"
 			className={cn(
-				"grid min-h-[60px] grid-cols-[minmax(0,1fr)_auto_32px] items-center gap-x-monti-16 border-monti-muted border-b py-monti-10 first:border-t",
+				"grid min-h-[60px] grid-cols-[minmax(0,1fr)_auto_40px] items-center gap-x-monti-16 border-monti-muted border-b py-monti-10 first:border-t",
 				className,
 			)}
 			{...props}
@@ -69,7 +69,7 @@ function KeyRow({
 				{action}
 				{status}
 			</div>
-			<div className="flex justify-end [&_[data-slot=icon-button]]:text-monti-faint">{more}</div>
+			<div className="flex justify-end pr-monti-12 [&_[data-slot=icon-button]]:text-monti-faint">{more}</div>
 		</div>
 	);
 }
